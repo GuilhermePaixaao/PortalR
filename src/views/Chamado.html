@@ -3,329 +3,486 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chamados</title>
+    <title>Chamados - Portal Supermercado</title>
     
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="icon" type="image/png" href="/logo.png">
-    <link rel="stylesheet" href="css/chamado.css">
-    <link rel="stylesheet" href="css/ticket.css">
+    
+    <!-- CSS Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Seus CSS Específicos -->
+    <link rel="stylesheet" href="css/chamado.css"> <!-- Assumindo que este existe -->
+    <link rel="stylesheet" href="css/ticket.css"> <!-- Assumindo que este existe -->
+    
     <style>
-        /* Garantir que <dialog> fique oculto quando não aberto (fallback para navegadores sem suporte) */
+        /* Estilos do Modal (Dialog) */
         dialog:not([open]) { display: none; }
-        /* Backdrop básico quando suportado */
-        dialog::backdrop { background: rgba(0,0,0,0.4); }
-        /* Ajustes simples de aparência do dialog */
-        dialog { border: none; border-radius: 6px; padding: 1rem; max-width: 640px; width: calc(100% - 2rem); }
+        dialog::backdrop { background: rgba(0,0,0,0.6); }
+        dialog { 
+            border: none; 
+            border-radius: 8px; 
+            padding: 1.5rem; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            max-width: 600px; 
+            width: calc(100% - 2rem); 
+        }
+        .grupo-form { margin-bottom: 1rem; }
+        .grupo-form label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
+        .grupo-form input[type="text"],
+        .grupo-form textarea,
+        .grupo-form select,
+        .grupo-form input[type="file"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        .form-actions { margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 0.5rem; }
+        .form-actions button { padding: 0.75rem 1.5rem; border: none; border-radius: 4px; cursor: pointer; }
+        #fecharModal { background-color: #6c757d; color: white; }
+        #criarTicket { background-color: #198754; color: white; }
+
+        /* Ajuste Main Content */
+         .main-content {
+            grid-area: main;
+            overflow-y: auto;
+            padding: 2rem; 
+            background-color: #f8f9fa; 
+        }
+        .page-actions { /* Botão Novo Ticket no canto */
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1050;
+        }
+        .btn-new-ticket {
+            background-color: #0d6efd; /* Azul Bootstrap */
+            color: white;
+            padding: 1rem 1.5rem;
+            border: none;
+            border-radius: 50px; 
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            transition: background-color 0.2s ease;
+        }
+        .btn-new-ticket:hover {
+            background-color: #0b5ed7; /* Azul mais escuro */
+        }
+        /* Alertas */
+        .alert { padding: 1rem; margin-top: 1rem; border-radius: 4px; }
+        .alert-success { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+        .alert-danger { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
+        .alert-warning { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
+        
+        /* Ajustes para a lista de tickets (baseado no seu HTML) */
+        .ticket-list { display: flex; flex-direction: column; }
+        .ticket-row { display: flex; border-bottom: 1px solid #eee; padding: 1rem 0.5rem; align-items: center; }
+        .ticket-row.header { background-color: #f8f9fa; font-weight: bold; border-bottom: 2px solid #dee2e6; }
+        .ticket-cell { padding: 0 0.5rem; }
+        .ticket-id { flex: 0 0 80px; text-align: center;}
+        .ticket-priority { flex: 0 0 100px; text-align: center; }
+        .ticket-subject { flex: 1 1 auto; min-width: 200px; } /* Cresce para preencher */
+        .ticket-category { flex: 0 0 150px; }
+        .ticket-status { flex: 0 0 80px; text-align: center; }
+        .ticket-operator, .ticket-requester { flex: 0 0 120px; } /* Ajustado o nome */
+        .ticket-created { flex: 0 0 100px; text-align: center; }
+        .ticket-actions { flex: 0 0 60px; text-align: center; cursor: pointer; }
+        
+        /* Badges (similares aos do seu HTML de exemplo) */
+        .priority-badge, .status-badge { padding: 0.2em 0.6em; border-radius: 0.25rem; font-size: 0.85em; font-weight: 600; }
+        .priority-badge.alta, .priority-badge.high { background-color: #f8d7da; color: #842029; }
+        .priority-badge.média, .priority-badge.medium, .priority-badge.media { background-color: #fff3cd; color: #664d03; }
+        .priority-badge.baixa, .priority-badge.low { background-color: #cfe2ff; color: #084298; }
+        .status-badge.aberto, .status-badge.open { background-color: #ffc107; color: #000; }
+        .status-badge.concluído, .status-badge.completed { background-color: #d1e7dd; color: #0f5132; }
+        .status-badge.em-andamento { background-color: #cfe2ff; color: #084298; } /* Exemplo */
+
+        #loadingIndicator { padding: 2rem; text-align: center; color: #6c757d; }
+
     </style>
 </head>
 <body>
 
     <div class="dashboard-container">
         
+        <!-- HEADER -->
         <header class="header">
             <div class="logo">PORTAL SUPERMERCADO</div>
             <div class="search-bar">
                 <input type="text" placeholder="Buscar produtos, relatórios, chamados...">
             </div>
             <div class="user-profile">
-                <span class="icon">🔔</span> <span class="icon">👤</span> 
+                <span class="icon">🔔</span> <span id="userNameDisplay" class="icon">👤</span> 
             </div>
         </header>
         
+        <!-- SIDEBAR -->
         <aside class="sidebar">
             <nav>
                 <ul>
-                    <li>
-                        <a href="dashboard.html" title="Início">
-                            <span class="icon">🏠</span>
-                            <span class="text">Início</span>
-                        </a>
-                    </li>
-                    
-                    <li>
-                        <a href="imprimir.html" title="Impressão de Preços">
-                            <span class="icon">🖨️</span>
-                            <span class="text">Imprimir</span>
-                        </a>
-                    </li>
-
-                    <li class="ticket-item active"> 
-                        <a href="chamado.html" title="Abrir Chamado (Airus)">
-                            <span class="icon">➕</span>
-                            <span class="text">Chamado</span>
-                        </a>
-                    </li>
-
-                    <li>
-                        <a href="Chatbot.html" title="Chatbot">
-                            <span class="icon">🤖</span>
-                            <span class="text">Chatbot</span>
-                        </a>
-                    </li>
-
-                    <li>
-                        <a href="Funcionarios.html" title="funcionario">
-                            <span class="icon">💼</span>
-                            <span class="text">Funcionários</span>
-                        </a>
-                    </li>
-
-                    <li style="margin-top: 30px;">
-                        <a href="#" title="Configurações">
-                            <span class="icon">⚙️</span>
-                            <span class="text">Ajustes</span>
-                        </a>
-                    </li>
+                    <li><a href="Dashboard.html" title="Início"><span class="icon">🏠</span><span class="text">Início</span></a></li>
+                    <li><a href="Imprimir.html" title="Impressão de Preços"><span class="icon">🖨️</span><span class="text">Imprimir</span></a></li>
+                    <li class="active"><a href="Chamado.html" title="Abrir Chamado"><span class="icon">➕</span><span class="text">Chamado</span></a></li>
+                    <li><a href="Chatbot.html" title="Chatbot"><span class="icon">🤖</span><span class="text">Chatbot</span></a></li>
+                    <li><a href="Funcionarios.html" title="Funcionários"><span class="icon">💼</span><span class="text">Funcionários</span></a></li>
+                   
+                    <li style="margin-top: 30px;"><a href="#" title="Configurações"><span class="icon">⚙️</span><span class="text">Ajustes</span></a></li>
                 </ul>
             </nav>
         </aside>
         
+        <!-- MODAL (DIALOG) PARA NOVO CHAMADO -->
         <dialog id="modalTicket" aria-labelledby="modalTitle">
-            <form id="ticketForm" method="dialog">
+            <form id="ticketForm"> 
                 <h2 id="modalTitle">Novo Chamado</h2>
+                <hr>
 
                 <div class="grupo-form">
-                    <label for="assunto">Assunto <span aria-hidden="true">*</span></label>
+                    <label for="assunto">Assunto <span aria-hidden="true" style="color:red;">*</span></label>
                     <input type="text" id="assunto" name="assunto" required>
                 </div>
 
                 <div class="grupo-form">
-                    <label for="descricao">Descrição <span aria-hidden="true">*</span></label>
+                    <label for="descricao">Descrição <span aria-hidden="true" style="color:red;">*</span></label>
                     <textarea id="descricao" name="descricao" rows="5" required></textarea>
                 </div>
 
-                <div class="grupo-form">
-                    <label for="prioridade">Prioridade</label>
-                    <select id="prioridade" name="prioridade">
-                        <option value="media">Média</option>
-                        <option value="alta">Alta</option>
-                        <option value="baixa">Baixa</option>
-                    </select>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="grupo-form">
+                            <label for="prioridade">Prioridade</label>
+                            <select id="prioridade" name="prioridade" class="form-select">
+                                <!-- CORRIGIDO: Valores correspondem aos textos -->
+                                <option value="Média">Média</option> 
+                                <option value="Alta">Alta</option>
+                                <option value="Baixa">Baixa</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="grupo-form">
+                            <label for="categoria">Categoria</label>
+                            <select id="categoria" name="categoria" class="form-select">
+                                <option value="">-- Selecionar --</option>
+                                <!-- Opções carregadas via JS -->
+                            </select>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="grupo-form">
-                    <label for="categoria">Categoria</label>
-                    <select id="categoria" name="categoria">
-                        <option value="">-- Selecionar --</option>
-                        <option value="infra">Infraestrutura</option>
-                        <option value="sistema">Sistema</option>
-                        <option value="outro">Outro</option>
-                    </select>
-                </div>
+                <!-- Campo Anexo REMOVIDO por enquanto -->
 
-                <div class="grupo-form">
-                    <label for="anexo">Anexo (opcional)</label>
-                    <input type="file" id="anexo" name="anexo" accept="image/*,.pdf">
-                </div>
+                <div id="modalResposta" class="mt-3"></div>
 
                 <div class="form-actions">
                     <button type="button" id="fecharModal">Cancelar</button>
-                    <button type="submit" id="criarTicket">Criar Ticket</button>
+                    <button type="submit" id="criarTicket">Criar Chamado</button>
                 </div>
             </form>
         </dialog>
 
+        <!-- CONTEÚDO PRINCIPAL -->
         <main class="main-content">
             <h1>Meus Chamados</h1>
+            <hr>
             
-            <div class="widget">
-                <div class="filters">
-                    <input type="text" placeholder="Filtrar por assunto...">
-                    <select>
-                        <option value="">Todas Prioridades</option>
-                        <option value="media">Média</option>
-                        <option value="alta">Alta</option>
-                        <option value="baixa">Baixa</option>
-                    </select>
-                    <select>
-                        <option value="">Todos Status</option>
-                        <option value="aberto">Aberto</option>
-                        <option value="concluido">Concluído</option>
-                    </select>
-                </div>
+             <div id="divRespostaGeral" class="mb-3"></div>
 
-                <div class="ticket-list">
-                    <div class="ticket-row header">
-                        <div class="ticket-cell ticket-id">Ticket</div>
-                        <div class="ticket-cell ticket-priority">Prioridade</div>
-                        <div class="ticket-cell ticket-subject">Assunto/Descrição</div>
-                        <div class="ticket-cell ticket-category">Categorias</div>
-                        <div class="ticket-cell ticket-status">St.</div>
-                        <div class="ticket-cell ticket-operator">Operador</div>
-                        <div class="ticket-cell ticket-created">Criado</div>
-                        <div class="ticket-cell ticket-actions">Ação</div>
-                    </div>
-
-                    <div class="ticket-row data-row" data-ticket-id="432">
-                        <div class="ticket-cell ticket-id">Conteudo</div>
-                        <div class="ticket-cell ticket-priority">
-                            <span class="priority-badge medium">Médio</span>
+            <div class="widget card shadow-sm">
+                 <div class="card-body">
+                    <!-- FILTROS -->
+                    <div class="filters mb-3 row g-2">
+                        <div class="col-md-4">
+                             <label for="filtroAssunto" class="form-label">Filtrar por Assunto</label>
+                            <input type="text" id="filtroAssunto" class="form-control" placeholder="Digite o assunto...">
                         </div>
-                        <div class="ticket-cell ticket-subject">Conteudo...</div>
-                        <div class="ticket-cell ticket-category">Conteudo</div>
-                        <div class="ticket-cell ticket-status">
-                            <span class="status-badge completed">✔</span>
+                         <div class="col-md-3">
+                             <label for="filtroPrioridade" class="form-label">Prioridade</label>
+                            <select id="filtroPrioridade" class="form-select">
+                                <option value="">Todas</option>
+                                <option value="Alta">Alta</option>
+                                <option value="Média">Média</option>
+                                <option value="Baixa">Baixa</option>
+                            </select>
+                         </div>
+                        <div class="col-md-3">
+                            <label for="filtroStatus" class="form-label">Status</label>
+                            <select id="filtroStatus" class="form-select">
+                                <option value="">Todos</option>
+                                <option value="Aberto">Aberto</option>
+                                <option value="Em Andamento">Em Andamento</option> 
+                                <option value="Concluído">Concluído</option>
+                            </select>
                         </div>
-                        <div class="ticket-cell ticket-operator">By Paixão</div>
-                        <div class="ticket-cell ticket-created">há 3 meses</div>
-                        <div class="ticket-cell ticket-actions">
-                            <span class="view-icon">👁️</span>
+                        <div class="col-md-2 d-flex align-items-end">
+                             <button id="btnFiltrar" class="btn btn-primary w-100">Filtrar</button>
                         </div>
                     </div>
 
-                    <div class="ticket-row data-row" data-ticket-id="433">
-                        <div class="ticket-cell ticket-id">#Conteudo</div>
-                        <div class="ticket-cell ticket-priority">
-                            <span class="priority-badge high">Conteudo</span>
+                    <!-- LISTA DE TICKETS (DIV com rows) -->
+                    <div id="ticketList" class="ticket-list"> 
+                        <!-- Cabeçalho (igual ao seu HTML) -->
+                        <div class="ticket-row header">
+                            <div class="ticket-cell ticket-id">Ticket</div>
+                            <div class="ticket-cell ticket-priority">Prioridade</div>
+                            <div class="ticket-cell ticket-subject">Assunto</div> 
+                            <div class="ticket-cell ticket-category">Categoria</div> 
+                            <div class="ticket-cell ticket-status">Status</div> 
+                            <div class="ticket-cell ticket-operator">Requisitante</div> <!-- Nome da coluna ajustado -->
+                            <div class="ticket-cell ticket-created">Criado em</div> 
+                            <div class="ticket-cell ticket-actions">Ação</div>
                         </div>
-                        <div class="ticket-cell ticket-subject">Conteudo...</div>
-                        <div class="ticket-cell ticket-category">Conteudo</div>
-                        <div class="ticket-cell ticket-status">
-                            <span class="status-badge open">!</span>
-                        </div>
-                        <div class="ticket-cell ticket-operator">Conteudo</div>
-                        <div class="ticket-cell ticket-created">há 2 horas</div>
-                        <div class="ticket-cell ticket-actions">
-                            <span class="view-icon">👁️</span>
-                        </div>
+                        <!-- Linhas de dados serão inseridas aqui via JS -->
+                         <div id="loadingIndicator"><p>Carregando chamados...</p></div>
                     </div>
-                </div>
 
-                <div class="pagination-container">
-                    <span class="pagination-info">Mostrando de 1 a 2 de 2 itens.</span>
-                    <div class="pagination-controls">
-                        <button disabled>&laquo;</button>
-                        <button disabled>&lsaquo;</button>
-                        <button class="active-page">1</button>
-                        <button>&rsaquo;</button>
-                        <button>&raquo;</button>
-                    </div>
-                </div>
-
+                 </div>
             </div>
         </main>
         
+        <!-- BOTÃO NOVO CHAMADO -->
         <div class="page-actions">
             <button id="newTicketButton" class="btn-new-ticket">
-                Novo Ticket
+                Novo Chamado
             </button>
         </div>
         
     </div>
 
-    <script>
-        // Modal e formulário
+    <!-- SCRIPT DA PÁGINA (ADAPTADO) -->
+    <script type="module">
+        const API_URL = "http://localhost:3000";
+
+        // --- Autenticação ---
+        let userData;
+        let userId;
+        try {
+            const userDataString = localStorage.getItem("userData");
+            if (!userDataString) throw new Error("Usuário não logado.");
+            userData = JSON.parse(userDataString);
+            userId = userData?.data?.id; 
+            if (!userId) throw new Error("ID do usuário não encontrado.");
+            const userNameDisplay = document.getElementById('userNameDisplay');
+            if(userNameDisplay && userData?.data?.nomeFuncionario) {
+                 userNameDisplay.textContent = `👤 ${userData.data.nomeFuncionario.split(' ')[0]}`; 
+            }
+        } catch (error) {
+            alert(error.message + " Redirecionando para login.");
+            window.location.href = "Login.html"; 
+        }
+
+        // --- Referências ---
         const modal = document.getElementById("modalTicket");
         const btnAbrir = document.getElementById("newTicketButton");
         const btnFechar = document.getElementById("fecharModal");
         const ticketForm = document.getElementById("ticketForm");
-        const ticketList = document.querySelector('.ticket-list');
+        const ticketList = document.getElementById("ticketList"); // A DIV que contém as rows
+        const loadingIndicator = document.getElementById("loadingIndicator");
+        const selectCategoriaModal = document.getElementById("categoria");
+        const modalResposta = document.getElementById("modalResposta");
+        const divRespostaGeral = document.getElementById("divRespostaGeral");
+        // Filtros
+        const filtroAssunto = document.getElementById("filtroAssunto");
+        const filtroPrioridade = document.getElementById("filtroPrioridade");
+        const filtroStatus = document.getElementById("filtroStatus");
+        const btnFiltrar = document.getElementById("btnFiltrar");
 
-        // Abre o modal
-        btnAbrir.addEventListener('click', () => {
-            if (typeof modal.showModal === 'function') {
-                modal.showModal();
-            } else {
-                // fallback simples
-                modal.setAttribute('open', '');
+        // --- Funções Auxiliares ---
+        function exibirMensagem(elemento, mensagem, sucesso = true) {
+            elemento.textContent = mensagem;
+            elemento.className = sucesso ? 'alert alert-success' : 'alert alert-danger';
+        }
+        function limparMensagem(elemento) {
+             elemento.textContent = '';
+             elemento.className = '';
+        }
+        function escapeHtml(text) { /* ... (igual ao anterior) ... */ 
+            if (!text) return '';
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+         function formatarData(isoString) { /* ... (igual ao anterior) ... */ 
+             if (!isoString) return 'N/A';
+             try {
+                const data = new Date(isoString);
+                // Ajustado para dia/mes/ano apenas
+                return data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+             } catch (e) {
+                 return 'Data inválida';
+             }
+         }
+
+        // --- Carregar Categorias ---
+        async function carregarCategorias() {
+            try {
+                const response = await fetch(`${API_URL}/categorias`);
+                if (!response.ok) throw new Error("Erro ao carregar categorias.");
+                const categorias = await response.json();
+                selectCategoriaModal.innerHTML = '<option value="">-- Selecionar --</option>'; 
+                categorias.forEach(cat => {
+                    const option = document.createElement("option");
+                    option.value = cat.id; 
+                    option.textContent = cat.nome;
+                    selectCategoriaModal.appendChild(option);
+                });
+            } catch (error) { console.error(error); }
+        }
+
+        // --- Renderizar Lista de Chamados (Adaptado para o seu HTML) ---
+        function renderizarChamados(chamados) {
+             if(loadingIndicator) loadingIndicator.style.display = 'none'; // Esconde o loading
+             ticketList.querySelectorAll('.data-row').forEach(row => row.remove()); // Limpa rows antigas
+
+             if (!chamados || chamados.length === 0) {
+                 const noDataRow = document.createElement('div');
+                 noDataRow.className = 'ticket-row data-row';
+                 noDataRow.innerHTML = `<div class="ticket-cell" style="grid-column: 1 / -1; text-align: center; padding: 1rem;">Nenhum chamado encontrado.</div>`; // Ocupa todas as colunas
+                 ticketList.appendChild(noDataRow);
+                 return;
+             }
+
+             chamados.forEach(chamado => {
+                 const row = document.createElement('div');
+                 row.className = 'ticket-row data-row';
+                 row.setAttribute('data-ticket-id', chamado.id);
+
+                 const prioridadeClass = (chamado.prioridade || 'Média').toLowerCase();
+                 // Normaliza o status para usar como classe CSS
+                 const statusClass = (chamado.status || 'Aberto').toLowerCase().replace(/\s+/g, '-'); 
+
+                 row.innerHTML = `
+                    <div class="ticket-cell ticket-id">#${chamado.id}</div>
+                    <div class="ticket-cell ticket-priority">
+                        <span class="priority-badge ${prioridadeClass}">${escapeHtml(chamado.prioridade)}</span>
+                    </div>
+                    <div class="ticket-cell ticket-subject">${escapeHtml(chamado.assunto)}</div>
+                    <div class="ticket-cell ticket-category">${escapeHtml(chamado.Categorias?.nome || 'N/A')}</div>
+                    <div class="ticket-cell ticket-status">
+                         <span class="status-badge ${statusClass}">${escapeHtml(chamado.status)}</span>
+                    </div>
+                    <div class="ticket-cell ticket-operator">${escapeHtml(chamado.Funcionario?.nomeFuncionario || 'Desconhecido')}</div>
+                    <div class="ticket-cell ticket-created">${formatarData(chamado.created_at)}</div>
+                    <div class="ticket-cell ticket-actions">
+                        <span class="view-icon" title="Visualizar">👁️</span>
+                    </div>
+                 `;
+                 
+                 row.querySelector('.view-icon').addEventListener('click', (e) => {
+                     e.stopPropagation(); 
+                     alert(`Visualizando Chamado #${chamado.id}\n\nAssunto: ${chamado.assunto}\nDescrição: ${chamado.descricao}\nStatus: ${chamado.status}\nPrioridade: ${chamado.prioridade}`);
+                 });
+                 ticketList.appendChild(row);
+             });
+        }
+
+        // --- Listar Chamados (Adaptado para Filtros) ---
+        async function listarChamados() {
+             limparMensagem(divRespostaGeral); 
+             ticketList.querySelectorAll('.data-row').forEach(row => row.remove()); 
+             if(loadingIndicator) loadingIndicator.style.display = 'block'; // Mostra loading
+
+             const params = new URLSearchParams();
+             if (filtroAssunto.value.trim()) {
+                 params.append('assunto', filtroAssunto.value.trim());
+             }
+             if (filtroPrioridade.value) {
+                 params.append('prioridade', filtroPrioridade.value);
+             }
+             if (filtroStatus.value) {
+                 params.append('status', filtroStatus.value);
+             }
+             // !!! IMPORTANTE: Adicionar filtro por requisitante_id !!!
+             params.append('requisitante_id', userId); 
+
+             const url = `${API_URL}/chamados?${params.toString()}`;
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error("Erro ao buscar chamados.");
+                const chamados = await response.json();
+                renderizarChamados(chamados);
+            } catch (error) {
+                exibirMensagem(divRespostaGeral, error.message, false);
+                 if(loadingIndicator) loadingIndicator.innerHTML = '<p style="color:red;">Falha ao carregar.</p>';
             }
-            // foco no primeiro campo
-            document.getElementById('assunto').focus();
-        });
+        }
 
-        // Fecha via botão cancelar
-        btnFechar.addEventListener('click', () => {
-            modal.close();
-            ticketForm.reset();
-        });
-
-        // Fecha ao clicar fora (backdrop) ou pressionar Esc
-        modal.addEventListener('click', (e) => {
-            const rect = modal.getBoundingClientRect();
-            const isInDialog = (
-                e.clientX >= rect.left && e.clientX <= rect.right &&
-                e.clientY >= rect.top && e.clientY <= rect.bottom
-            );
-            if (!isInDialog) {
-                modal.close();
-                ticketForm.reset();
-            }
-        });
-
-        modal.addEventListener('cancel', (e) => {
-            // allow Esc to close (native behavior) and reset form
-            ticketForm.reset();
-        });
-
-        // Submissão do formulário — validação básica e inserção simulada na lista
-        ticketForm.addEventListener('submit', (e) => {
-            e.preventDefault();
+        // --- Criar Novo Chamado ---
+        async function criarChamado(event) {
+            event.preventDefault();
+            limparMensagem(modalResposta); 
 
             const assunto = ticketForm.assunto.value.trim();
             const descricao = ticketForm.descricao.value.trim();
-            const prioridade = ticketForm.prioridade.value || 'media';
-            const categoria = ticketForm.categoria.value || '';
+            const prioridade = ticketForm.prioridade.value || 'Média';
+            const categoriaId = ticketForm.categoria.value || null; 
 
             if (!assunto || !descricao) {
-                alert('Preencha Assunto e Descrição antes de criar o chamado.');
+                exibirMensagem(modalResposta, 'Assunto e Descrição são obrigatórios.', false);
                 return;
             }
 
-            // criar um elemento de ticket simples e adicionar ao topo da lista
-            const newId = Date.now().toString().slice(-4);
-            const row = document.createElement('div');
-            row.className = 'ticket-row data-row';
-            row.setAttribute('data-ticket-id', newId);
-            row.innerHTML = `
-                <div class="ticket-cell ticket-id">#${newId}</div>
-                <div class="ticket-cell ticket-priority">
-                    <span class="priority-badge ${prioridade}">${prioridade.charAt(0).toUpperCase() + prioridade.slice(1)}</span>
-                </div>
-                <div class="ticket-cell ticket-subject">${escapeHtml(assunto)}</div>
-                <div class="ticket-cell ticket-category">${escapeHtml(categoria)}</div>
-                <div class="ticket-cell ticket-status"><span class="status-badge open">!</span></div>
-                <div class="ticket-cell ticket-operator">—</div>
-                <div class="ticket-cell ticket-created">agora</div>
-                <div class="ticket-cell ticket-actions"><span class="view-icon">👁️</span></div>
-            `;
+            const dadosChamado = {
+                chamado: {
+                    assunto: assunto,
+                    descricao: descricao,
+                    prioridade: prioridade,
+                    requisitante_id: userId, 
+                    categoria_id: categoriaId ? parseInt(categoriaId) : null
+                }
+            };
 
-            // adicionar handler para abrir
-            row.addEventListener('click', () => openTicket(newId, assunto, descricao));
+            try {
+                const response = await fetch(`${API_URL}/chamados`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dadosChamado)
+                });
+                const respostaAPI = await response.json();
+                if (!response.ok) { throw new Error(respostaAPI.message || "Erro ao criar chamado."); }
 
-            // inserir logo após o header
-            const header = ticketList.querySelector('.ticket-row.header');
-            if (header && header.nextSibling) {
-                ticketList.insertBefore(row, header.nextSibling);
-            } else {
-                ticketList.appendChild(row);
+                exibirMensagem(divRespostaGeral, "Chamado criado com sucesso!", true); 
+                modal.close(); 
+                ticketForm.reset(); 
+                listarChamados(); // Atualiza a lista principal
+            } catch (error) {
+                exibirMensagem(modalResposta, error.message, false); 
             }
-
-            modal.close();
-            ticketForm.reset();
-        });
-
-        // Initial binding for existing ticket rows (removendo onclick inline)
-        document.querySelectorAll('.ticket-row.data-row').forEach(row => {
-            const id = row.getAttribute('data-ticket-id') || 'unknown';
-            row.addEventListener('click', () => openTicket(id));
-        });
-
-        function openTicket(id, assunto = '', descricao = '') {
-            // exibe um modal simples com dados — aqui apenas um alert para demo
-            const msg = `Abrindo ticket #${id}` + (assunto ? `\nAssunto: ${assunto}` : '');
-            alert(msg);
         }
 
-        // Pequena função de escape para evitar injeção de HTML ao inserir texto simples
-        function escapeHtml(text) {
-            return text
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
+        // --- Lógica do Modal ---
+        btnAbrir.addEventListener('click', () => {
+            limparMensagem(modalResposta); 
+            if (typeof modal.showModal === 'function') modal.showModal();
+            else modal.setAttribute('open', '');
+            document.getElementById('assunto').focus();
+        });
+        btnFechar.addEventListener('click', () => { modal.close(); ticketForm.reset(); });
+        modal.addEventListener('click', (e) => { /* ... (igual ao anterior) ... */ 
+            const rect = modal.getBoundingClientRect();
+            const isInDialog = (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom);
+            if (!isInDialog) { modal.close(); ticketForm.reset(); }
+        });
+        modal.addEventListener('cancel', () => { ticketForm.reset(); });
+
+        // --- Event Listeners ---
+        ticketForm.addEventListener('submit', criarChamado);
+        btnFiltrar.addEventListener('click', listarChamados); // Agora o filtro funciona
+
+        // --- Inicialização ---
+        async function init() {
+            await carregarCategorias();
+            await listarChamados(); // Lista chamados do usuário logado
         }
+        init(); 
+
     </script>
 
+    <!-- JS Bootstrap -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

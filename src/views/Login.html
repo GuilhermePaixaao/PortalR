@@ -60,7 +60,7 @@
     import ApiService from './ApiService.js';
     // 2. Configure a URL base da sua API aqui.
     // Use localhost para testes ou a URL do Render para produção.
-    const API_BASE_URL = "http://localhost:8080"; 
+    const API_BASE_URL = "http://localhost:3000"; 
     // const API_BASE_URL = "https://portal-uohu.onrender.com";
     
     const api = new ApiService(API_BASE_URL);
@@ -95,7 +95,7 @@
         // 7. Monta o objeto de dados para enviar à API
         const dadosLogin = {
             "funcionario": {
-                "email": username.value.trim(),
+                "usuario": username.value.trim(),
                 "senha": password.value.trim()
             }
         }
@@ -103,7 +103,7 @@
         try {
             // 8. Chama a API
             // (Seu endpoint de login é /api/v1/funcionarios/login)
-            const respostaAPI = await api.post("/api/v1/funcionarios/login", dadosLogin);
+            const respostaAPI = await api.post("/login", dadosLogin);
             
             console.log("Resposta da API:", respostaAPI);
 

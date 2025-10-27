@@ -1,41 +1,57 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  // A linha 'output' foi removida. O padrão é 'node_modules/@prisma/client'
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
-// ... (o datasource e generator ficam lá em cima) ...
 
 model Cargo {
-  idCargo Int     @id @default(autoincrement())
-  nome    String  @unique
-  // Um cargo pode ter vários funcionários
+  idCargo      Int           @id @default(autoincrement())
+  nome         String        @unique
   funcionarios Funcionario[]
+
+  @@map("Cargo") // Mapeia para a tabela "Cargo"
 }
 
 model Funcionario {
-  id        Int      @id @default(autoincrement())
+  id              Int        @id @default(autoincrement())
   nomeFuncionario String
-  email     String   @unique
-  usuario   String   @unique
-  senha     String
+  email           String     @unique
+  usuario         String     @unique
+  senha           String
+  cargoId         Int
+  createdAt       DateTime   @default(now())
+  cargo           Cargo      @relation(fields: [cargoId], references: [idCargo])
+  Chamados        Chamados[] // Relação: Um funcionário pode ter vários chamados
 
-  // Chave estrangeira
-  cargoId   Int
+  @@map("Funcionario") // Mapeia para a tabela "Funcionario"
+}
 
-  // Define a Relação:
-  // Este campo 'cargo' representa o Cargo relacionado
-  // Ele usa a chave 'cargoId' para se ligar ao 'idCargo' do Cargo
-  cargo     Cargo    @relation(fields: [cargoId], references: [idCargo])
+// NOVO MODEL PARA CATEGORIAS
+model Categorias {
+  id       Int        @id @default(autoincrement())
+  nome     String     @unique
+  Chamados Chamados[] // Relação: Uma categoria pode estar em vários chamados
 
-  createdAt DateTime @default(now())
+  @@map("Categorias") // Mapeia para a tabela "Categorias"
+}
+
+// NOVO MODEL PARA CHAMADOS
+model Chamados {
+  id              Int        @id @default(autoincrement())
+  assunto         String
+  descricao       String
+  prioridade      String?    @default("Média") // Permite nulo, mas tem padrão
+  status          String     @default("Aberto")
+  requisitante_id Int
+  categoria_id    Int?       // Permite nulo
+  created_at      DateTime?  @default(now())   // Permite nulo, mas tem padrão
+
+  // RELAÇÕES
+  Funcionario     Funcionario @relation(fields: [requisitante_id], references: [id])
+  Categorias      Categorias? @relation(fields: [categoria_id], references: [id]) // Relação opcional
+
+  @@map("Chamados") // Mapeia para a tabela "Chamados"
 }

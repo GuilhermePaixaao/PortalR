@@ -130,9 +130,7 @@
         }
 
         /* Destaque para "Abrir Chamados" em vermelho */
-        .sidebar nav li.ticket-item a {
-            color: var(--primary-red);
-        }
+        
         .sidebar nav li.ticket-item a:hover {
             background-color: rgba(217, 48, 37, 0.1);
         }
