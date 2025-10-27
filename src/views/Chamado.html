@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chamados</title>
+    
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="icon" type="image/png" href="/logo.png">
+    <link rel="stylesheet" href="css/chamado.css">
+    <link rel="stylesheet" href="css/ticket.css">
+    <style>
+        /* Garantir que <dialog> fique oculto quando não aberto (fallback para navegadores sem suporte) */
+        dialog:not([open]) { display: none; }
+        /* Backdrop básico quando suportado */
+        dialog::backdrop { background: rgba(0,0,0,0.4); }
+        /* Ajustes simples de aparência do dialog */
+        dialog { border: none; border-radius: 6px; padding: 1rem; max-width: 640px; width: calc(100% - 2rem); }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        
+        <header class="header">
+            <div class="logo">PORTAL SUPERMERCADO</div>
+            <div class="search-bar">
+                <input type="text" placeholder="Buscar produtos, relatórios, chamados...">
+            </div>
+            <div class="user-profile">
+                <span class="icon">🔔</span> <span class="icon">👤</span> 
+            </div>
+        </header>
+        
+        <aside class="sidebar">
+            <nav>
+                <ul>
+                    <li>
+                        <a href="dashboard.html" title="Início">
+                            <span class="icon">🏠</span>
+                            <span class="text">Início</span>
+                        </a>
+                    </li>
+                    
+                    <li>
+                        <a href="imprimir.html" title="Impressão de Preços">
+                            <span class="icon">🖨️</span>
+                            <span class="text">Imprimir</span>
+                        </a>
+                    </li>
+
+                    <li class="ticket-item active"> 
+                        <a href="chamado.html" title="Abrir Chamado (Airus)">
+                            <span class="icon">➕</span>
+                            <span class="text">Chamado</span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="Chatbot.html" title="Chatbot">
+                            <span class="icon">🤖</span>
+                            <span class="text">Chatbot</span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="Funcionarios.html" title="funcionario">
+                            <span class="icon">💼</span>
+                            <span class="text">Funcionários</span>
+                        </a>
+                    </li>
+
+                    <li style="margin-top: 30px;">
+                        <a href="#" title="Configurações">
+                            <span class="icon">⚙️</span>
+                            <span class="text">Ajustes</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+        
+        <dialog id="modalTicket" aria-labelledby="modalTitle">
+            <form id="ticketForm" method="dialog">
+                <h2 id="modalTitle">Novo Chamado</h2>
+
+                <div class="grupo-form">
+                    <label for="assunto">Assunto <span aria-hidden="true">*</span></label>
+                    <input type="text" id="assunto" name="assunto" required>
+                </div>
+
+                <div class="grupo-form">
+                    <label for="descricao">Descrição <span aria-hidden="true">*</span></label>
+                    <textarea id="descricao" name="descricao" rows="5" required></textarea>
+                </div>
+
+                <div class="grupo-form">
+                    <label for="prioridade">Prioridade</label>
+                    <select id="prioridade" name="prioridade">
+                        <option value="media">Média</option>
+                        <option value="alta">Alta</option>
+                        <option value="baixa">Baixa</option>
+                    </select>
+                </div>
+
+                <div class="grupo-form">
+                    <label for="categoria">Categoria</label>
+                    <select id="categoria" name="categoria">
+                        <option value="">-- Selecionar --</option>
+                        <option value="infra">Infraestrutura</option>
+                        <option value="sistema">Sistema</option>
+                        <option value="outro">Outro</option>
+                    </select>
+                </div>
+
+                <div class="grupo-form">
+                    <label for="anexo">Anexo (opcional)</label>
+                    <input type="file" id="anexo" name="anexo" accept="image/*,.pdf">
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" id="fecharModal">Cancelar</button>
+                    <button type="submit" id="criarTicket">Criar Ticket</button>
+                </div>
+            </form>
+        </dialog>
+
+        <main class="main-content">
+            <h1>Meus Chamados</h1>
+            
+            <div class="widget">
+                <div class="filters">
+                    <input type="text" placeholder="Filtrar por assunto...">
+                    <select>
+                        <option value="">Todas Prioridades</option>
+                        <option value="media">Média</option>
+                        <option value="alta">Alta</option>
+                        <option value="baixa">Baixa</option>
+                    </select>
+                    <select>
+                        <option value="">Todos Status</option>
+                        <option value="aberto">Aberto</option>
+                        <option value="concluido">Concluído</option>
+                    </select>
+                </div>
+
+                <div class="ticket-list">
+                    <div class="ticket-row header">
+                        <div class="ticket-cell ticket-id">Ticket</div>
+                        <div class="ticket-cell ticket-priority">Prioridade</div>
+                        <div class="ticket-cell ticket-subject">Assunto/Descrição</div>
+                        <div class="ticket-cell ticket-category">Categorias</div>
+                        <div class="ticket-cell ticket-status">St.</div>
+                        <div class="ticket-cell ticket-operator">Operador</div>
+                        <div class="ticket-cell ticket-created">Criado</div>
+                        <div class="ticket-cell ticket-actions">Ação</div>
+                    </div>
+
+                    <div class="ticket-row data-row" data-ticket-id="432">
+                        <div class="ticket-cell ticket-id">Conteudo</div>
+                        <div class="ticket-cell ticket-priority">
+                            <span class="priority-badge medium">Médio</span>
+                        </div>
+                        <div class="ticket-cell ticket-subject">Conteudo...</div>
+                        <div class="ticket-cell ticket-category">Conteudo</div>
+                        <div class="ticket-cell ticket-status">
+                            <span class="status-badge completed">✔</span>
+                        </div>
+                        <div class="ticket-cell ticket-operator">By Paixão</div>
+                        <div class="ticket-cell ticket-created">há 3 meses</div>
+                        <div class="ticket-cell ticket-actions">
+                            <span class="view-icon">👁️</span>
+                        </div>
+                    </div>
+
+                    <div class="ticket-row data-row" data-ticket-id="433">
+                        <div class="ticket-cell ticket-id">#Conteudo</div>
+                        <div class="ticket-cell ticket-priority">
+                            <span class="priority-badge high">Conteudo</span>
+                        </div>
+                        <div class="ticket-cell ticket-subject">Conteudo...</div>
+                        <div class="ticket-cell ticket-category">Conteudo</div>
+                        <div class="ticket-cell ticket-status">
+                            <span class="status-badge open">!</span>
+                        </div>
+                        <div class="ticket-cell ticket-operator">Conteudo</div>
+                        <div class="ticket-cell ticket-created">há 2 horas</div>
+                        <div class="ticket-cell ticket-actions">
+                            <span class="view-icon">👁️</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pagination-container">
+                    <span class="pagination-info">Mostrando de 1 a 2 de 2 itens.</span>
+                    <div class="pagination-controls">
+                        <button disabled>&laquo;</button>
+                        <button disabled>&lsaquo;</button>
+                        <button class="active-page">1</button>
+                        <button>&rsaquo;</button>
+                        <button>&raquo;</button>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+        
+        <div class="page-actions">
+            <button id="newTicketButton" class="btn-new-ticket">
+                Novo Ticket
+            </button>
+        </div>
+        
+    </div>
+
+    <script>
+        // Modal e formulário
+        const modal = document.getElementById("modalTicket");
+        const btnAbrir = document.getElementById("newTicketButton");
+        const btnFechar = document.getElementById("fecharModal");
+        const ticketForm = document.getElementById("ticketForm");
+        const ticketList = document.querySelector('.ticket-list');
+
+        // Abre o modal
+        btnAbrir.addEventListener('click', () => {
+            if (typeof modal.showModal === 'function') {
+                modal.showModal();
+            } else {
+                // fallback simples
+                modal.setAttribute('open', '');
+            }
+            // foco no primeiro campo
+            document.getElementById('assunto').focus();
+        });
+
+        // Fecha via botão cancelar
+        btnFechar.addEventListener('click', () => {
+            modal.close();
+            ticketForm.reset();
+        });
+
+        // Fecha ao clicar fora (backdrop) ou pressionar Esc
+        modal.addEventListener('click', (e) => {
+            const rect = modal.getBoundingClientRect();
+            const isInDialog = (
+                e.clientX >= rect.left && e.clientX <= rect.right &&
+                e.clientY >= rect.top && e.clientY <= rect.bottom
+            );
+            if (!isInDialog) {
+                modal.close();
+                ticketForm.reset();
+            }
+        });
+
+        modal.addEventListener('cancel', (e) => {
+            // allow Esc to close (native behavior) and reset form
+            ticketForm.reset();
+        });
+
+        // Submissão do formulário — validação básica e inserção simulada na lista
+        ticketForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const assunto = ticketForm.assunto.value.trim();
+            const descricao = ticketForm.descricao.value.trim();
+            const prioridade = ticketForm.prioridade.value || 'media';
+            const categoria = ticketForm.categoria.value || '';
+
+            if (!assunto || !descricao) {
+                alert('Preencha Assunto e Descrição antes de criar o chamado.');
+                return;
+            }
+
+            // criar um elemento de ticket simples e adicionar ao topo da lista
+            const newId = Date.now().toString().slice(-4);
+            const row = document.createElement('div');
+            row.className = 'ticket-row data-row';
+            row.setAttribute('data-ticket-id', newId);
+            row.innerHTML = `
+                <div class="ticket-cell ticket-id">#${newId}</div>
+                <div class="ticket-cell ticket-priority">
+                    <span class="priority-badge ${prioridade}">${prioridade.charAt(0).toUpperCase() + prioridade.slice(1)}</span>
+                </div>
+                <div class="ticket-cell ticket-subject">${escapeHtml(assunto)}</div>
+                <div class="ticket-cell ticket-category">${escapeHtml(categoria)}</div>
+                <div class="ticket-cell ticket-status"><span class="status-badge open">!</span></div>
+                <div class="ticket-cell ticket-operator">—</div>
+                <div class="ticket-cell ticket-created">agora</div>
+                <div class="ticket-cell ticket-actions"><span class="view-icon">👁️</span></div>
+            `;
+
+            // adicionar handler para abrir
+            row.addEventListener('click', () => openTicket(newId, assunto, descricao));
+
+            // inserir logo após o header
+            const header = ticketList.querySelector('.ticket-row.header');
+            if (header && header.nextSibling) {
+                ticketList.insertBefore(row, header.nextSibling);
+            } else {
+                ticketList.appendChild(row);
+            }
+
+            modal.close();
+            ticketForm.reset();
+        });
+
+        // Initial binding for existing ticket rows (removendo onclick inline)
+        document.querySelectorAll('.ticket-row.data-row').forEach(row => {
+            const id = row.getAttribute('data-ticket-id') || 'unknown';
+            row.addEventListener('click', () => openTicket(id));
+        });
+
+        function openTicket(id, assunto = '', descricao = '') {
+            // exibe um modal simples com dados — aqui apenas um alert para demo
+            const msg = `Abrindo ticket #${id}` + (assunto ? `\nAssunto: ${assunto}` : '');
+            alert(msg);
+        }
+
+        // Pequena função de escape para evitar injeção de HTML ao inserir texto simples
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+    </script>
+
+</body>
+</html>

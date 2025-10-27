@@ -1,0 +1,179 @@
+/* --- Estilos para a página do Chatbot --- */
+
+.chat-widget {
+    background-color: var(--light-bg); 
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    height: 75vh; 
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* 1. Área do Histórico de Mensagens */
+.chat-history {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    scroll-behavior: smooth; /* Rolagem suave */
+}
+
+.chat-message {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    max-width: 85%;
+}
+
+.chat-message .avatar {
+    font-size: 2rem;
+    width: 40px;
+    text-align: center;
+}
+
+.chat-message .message-bubble {
+    padding: 12px 18px;
+    border-radius: 20px;
+    line-height: 1.5;
+    position: relative; /* Para o timestamp */
+}
+
+.chat-message .message-bubble p {
+    margin: 0 0 10px 0; /* Espaço para o timestamp */
+}
+
+/* Timestamp (data/hora) */
+.timestamp {
+    font-size: 0.75rem;
+    color: #888;
+    position: absolute;
+    bottom: 8px;
+    right: 18px;
+}
+
+/* --- Estilos para o BOT (Esquerda) --- */
+.chat-message.message-bot {
+    align-self: flex-start;
+}
+.chat-message.message-bot .message-bubble {
+    background-color: #f1f0f0;
+    color: var(--text-dark);
+    border-bottom-left-radius: 5px;
+}
+.chat-message.message-bot .timestamp {
+    color: #777;
+}
+
+/* --- Estilos para o USUÁRIO (Direita) --- */
+.chat-message.message-user {
+    align-self: flex-end;
+    flex-direction: row-reverse; /* Inverte a ordem (balão, avatar) */
+}
+.chat-message.message-user .message-bubble {
+    background-color: var(--primary-blue);
+    color: var(--light-bg);
+    border-bottom-right-radius: 5px;
+}
+.chat-message.message-user .timestamp {
+    color: #eee;
+    left: 18px; /* Timestamp na esquerda para o usuário */
+    right: auto;
+}
+
+/* 2. Botões de Sugestão */
+.suggestion-area {
+    padding: 10px 24px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    background-color: #fcfcfc;
+}
+.suggestion-btn {
+    padding: 8px 15px;
+    font-size: 0.9rem;
+    background-color: #fff;
+    border: 1px solid var(--primary-blue);
+    color: var(--primary-blue);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.suggestion-btn:hover {
+    background-color: var(--primary-blue);
+    color: white;
+}
+
+/* 3. Indicador de "Digitando..." */
+.typing-indicator {
+    padding: 10px 24px;
+    display: none; /* Escondido por padrão */
+    align-items: center;
+    gap: 10px;
+}
+.typing-indicator .message-bubble {
+    padding: 12px 18px;
+    border-radius: 20px;
+    background-color: #f1f0f0;
+    border-bottom-left-radius: 5px;
+}
+.typing-indicator .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background-color: #aaa;
+    border-radius: 50%;
+    margin: 0 2px;
+    animation: blink 1.4s infinite both;
+}
+.typing-indicator .dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator .dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes blink {
+    0% { opacity: 0.2; }
+    20% { opacity: 1; }
+    100% { opacity: 0.2; }
+}
+
+/* 4. Área de Digitação (Rodapé) */
+.chat-input-area {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    border-top: 1px solid var(--border-color);
+    background-color: #fdfdfd;
+    gap: 10px;
+}
+
+.chat-input-area input[type="text"] {
+    flex-grow: 1;
+    padding: 12px 18px;
+    font-size: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    outline: none;
+}
+.chat-input-area input[type="text"]:focus {
+    border-color: var(--primary-blue);
+}
+
+.chat-input-area .send-btn {
+    background-color: var(--primary-blue);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.chat-input-area .send-btn:hover {
+    background-color: #004494;
+}

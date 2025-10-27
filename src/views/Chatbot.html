@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot - Portal Supermercado</title>
+    
+    <link rel="stylesheet" href="css/dashboard.css">
+    
+    <link rel="stylesheet" href="css/chatbot.css">
+</head>
+<body>
+
+    <div class="dashboard-container">
+        
+        <header class="header">
+            <div class="logo">PORTAL SUPERMERCADO</div>
+            <div class="search-bar">
+                <input type="text" placeholder="Buscar produtos, relatórios, chamados...">
+            </div>
+            <div class="user-profile">
+                <span class="icon">🔔</span> <span class="icon">👤</span> 
+            </div>
+        </header>
+        
+        <aside class="sidebar">
+            <nav>
+                <ul>
+                    <li>
+                        <a href="dashboard.html" title="Início">
+                            <span class="icon">🏠</span>
+                            <span class="text">Início</span>
+                        </a>
+                    </li>
+                    
+                    <li>
+                        <a href="imprimir.html" title="Impressão de Preços">
+                            <span class="icon">🖨️</span>
+                            <span class="text">Imprimir</span>
+                        </a>
+                    </li>
+
+                    <li class="ticket-item">
+                        <a href="chamado.html" title="Abrir Chamado (Airus)">
+                            <span class="icon">➕</span>
+                            <span class="text">Chamado</span>
+                        </a>
+                    </li>
+
+                    <li class="active">
+                        <a href="Chatbot.html" title="Chatbot">
+                            <span class="icon">🤖</span>
+                            <span class="text">Chatbot</span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="Funcionarios.html" title="funcionario">
+                            <span class="icon">💼</span>
+                            <span class="text">Funcionários</span>
+                        </a>
+                    </li>
+
+                    <li style="margin-top: 30px;">
+                        <a href="#" title="Configurações">
+                            <span class="icon">⚙️</span>
+                            <span class="text">Ajustes</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+        
+        <main class="main-content">
+            <h1>Chatbot - Assistente Virtual</h1>
+            
+            <div class="chat-widget">
+                
+                <div class="chat-history" id="chatHistory">
+                    
+                    <div class="chat-message message-bot">
+                        <span class="avatar">🤖</span>
+                        <div class="message-bubble">
+                            <p>Olá! Eu sou o assistente virtual do Portal Supermercado. Como posso ajudar você hoje?</p>
+                            <span class="timestamp">9:00 AM</span>
+                        </div>
+                    </div>
+                    
+                    </div>
+                
+                <div class="suggestion-area" id="suggestionArea">
+                    <button class="suggestion-btn" data-message="Status de um ticket">Status de um ticket</button>
+                    <button class="suggestion-btn" data-message="Imprimir etiquetas">Imprimir etiquetas</button>
+                    <button class="suggestion-btn" data-message="Abrir um chamado">Abrir um chamado</button>
+                </div>
+
+                <div class="typing-indicator" id="typingIndicator">
+                    <span class="avatar">🤖</span>
+                    <div class="message-bubble">
+                        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                    </div>
+                </div>
+
+                <div class="chat-input-area">
+                    <input type="text" id="chatInput" placeholder="Digite sua mensagem...">
+                    <button id="sendButton" class="send-btn" title="Enviar">
+                        <span class="icon">➤</span>
+                    </button>
+                </div>
+
+            </div>
+        </main>
+        
+    </div>
+
+<script src="js/chatbot.js"></script>
+
+</body>
+</html>

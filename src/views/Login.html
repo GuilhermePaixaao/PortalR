@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Portal Supermercado</title>
+    <link rel="stylesheet" href="css/login.css">
+    <link rel="icon" type="image/png" href="/logo.png">
+
+    <style>
+        .login-error {
+            color: red;
+            text-align: center;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="login-container">
+        <div class="login-card">
+            
+            <div class="login-header">
+                <h2>PORTAL SUPERMERCADO</h2>
+                <p>Bem-vindo! Faça login para continuar.</p>
+            </div>
+            
+            <form class="login-form" id="loginForm">
+                <div class="input-group">
+                    <label for="username">Usuário</label>
+                    <input type="text" id="username" name="username" placeholder="seu.usuario" required>
+                </div>
+                
+                <div class="input-group">
+                    <label for="password">Senha</label>
+                    <input type="password" id="password" name="password" placeholder="••••••••" required>
+                </div>
+                
+                <button type="submit" class="login-button">Entrar</button>
+            </form>
+            
+            <div id="divResposta"></div>
+            
+            <div class="login-footer">
+                <a href="#">Esqueceu sua senha?</a>
+            </div>
+            <div class="semconta-footer">
+                <a>Sem conta?</a>
+            </div>
+            <div class="cadastro-footer">
+                <a href="Cadastro.html">Cadastre aqui !</a>
+            </div>
+
+        </div>
+    </div>
+
+<script type="module">
+    // 1. Importa o ApiService. 
+    // Certifique-se que o caminho './ApiService.js' está correto.
+    import ApiService from './ApiService.js';
+    // 2. Configure a URL base da sua API aqui.
+    // Use localhost para testes ou a URL do Render para produção.
+    const API_BASE_URL = "http://localhost:8080"; 
+    // const API_BASE_URL = "https://portal-uohu.onrender.com";
+    
+    const api = new ApiService(API_BASE_URL);
+
+    // 3. Referências para os elementos do DOM
+    const loginForm = document.getElementById("loginForm");
+    const username = document.getElementById("username");
+    const password = document.getElementById("password");
+    const divResposta = document.getElementById("divResposta");
+
+    // 4. Adiciona um "ouvinte" ao evento de SUBMIT do formulário
+    loginForm.addEventListener("submit", async (event) => {
+        
+        // 5. Previne que o formulário recarregue a página
+        event.preventDefault(); 
+        
+        // Limpa erros antigos
+        divResposta.textContent = "";
+        divResposta.className = "";
+
+        // 6. Validação dos campos
+        if (username.value.trim() === "") {
+            divResposta.textContent = "Usuário Inválido";
+            divResposta.className = "login-error"; // Adiciona classe de erro
+            return;
+        } else if (password.value.trim() === "") {
+            divResposta.textContent = "Senha Inválida";
+            divResposta.className = "login-error"; // Adiciona classe de erro
+            return;
+        }
+
+        // 7. Monta o objeto de dados para enviar à API
+        const dadosLogin = {
+            "funcionario": {
+                "email": username.value.trim(),
+                "senha": password.value.trim()
+            }
+        }
+
+        try {
+            // 8. Chama a API
+            // (Seu endpoint de login é /api/v1/funcionarios/login)
+            const respostaAPI = await api.post("/api/v1/funcionarios/login", dadosLogin);
+            
+            console.log("Resposta da API:", respostaAPI);
+
+            if (respostaAPI.success === true) {
+                // 9. Sucesso: Salva os dados no localStorage e redireciona
+                localStorage.setItem("userData", JSON.stringify(respostaAPI)); 
+                window.location.href = "dashboard.html"; // Redireciona para o painel
+            } else {
+                // 10. Erro de login (ex: senha errada) vindo da API
+                divResposta.textContent = respostaAPI.message || "Falha no login. Verifique usuário e senha.";
+                divResposta.className = "login-error";
+            }
+
+        } catch (error) {
+            // 11. Erro de rede ou servidor (ex: API offline, erro 500)
+            console.error("Erro ao tentar logar:", error);
+            divResposta.textContent = "Não foi possível conectar ao servidor. Tente novamente mais tarde.";
+            divResposta.className = "login-error";
+        }
+    });
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Supermercado</title>
+    <link rel="icon" type="image/png" href="/logo.png">
+    <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body>
+
+    <div class="dashboard-container">
+        
+        <header class="header">
+            <div class="logo">PORTAL SUPERMERCADO</div>
+            
+            <div class="search-bar">
+                <input type="text" placeholder="Buscar produtos, relatórios, chamados...">
+            </div>
+            
+            <div class="user-profile">
+                <span class="icon">🔔</span> <span class="icon">👤</span> </div>
+        </header>
+        
+        <aside class="sidebar">
+            <nav>
+                <ul>
+                    <li class="active">
+                        <a href="#" title="Início">
+                            <span class="icon">🏠</span>
+                            <span class="text">Início</span>
+                        </a>
+                    </li>
+                    
+                    <li>
+                        <a href="imprimir.html" title="Impressão de Preços">
+                            <span class="icon">🖨️</span>
+                            <span class="text">Imprimir</span>
+                        </a>
+                    </li>
+
+                    <li class="ticket-item">
+                        <a href="chamado.html" title="Abrir Chamado (Airus)">
+                            <span class="icon">➕</span>
+                            <span class="text">Chamado</span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="Chatbot.html" title="Chatbot">
+                            <span class="icon">🤖</span>
+                            <span class="text">Chatbot</span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="Funcionarios.html" title="funcionario">
+                            <span class="icon">💼</span>
+                            <span class="text">Funcionários</span>
+                        </a>
+                    </li>
+
+                    <li style="margin-top: 30px;">
+                        <a href="#" title="Configurações">
+                            <span class="icon">⚙️</span>
+                            <span class="text">Ajustes</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+        
+        <main class="main-content">
+            <h1>Dashboard</h1>
+            
+            <div class="widget-grid">
+                
+                <div class="widget large">
+                    <h3>Vendas Diárias</h3>
+                    <div class="placeholder-chart">(Gráfico de Linha: Vendas R$)</div>
+                </div>
+
+                <div class="widget large">
+                    <h3>Nível de Estoque (Categorias)</h3>
+                    <div class="placeholder-chart">(Gráfico de Barras: Estoque)</div>
+                </div>
+
+                <div class="widget">
+                    <h3>Promoções Ativas</h3>
+                    <div class="placeholder-image">(Imagem da promoção da semana)</div>
+                </div>
+
+                <div class="widget">
+                    <h3>Status das Filiais</h3>
+                    <div class="placeholder-chart">(Gráfico Radial: Filiais Online)</div>
+                </div>
+                
+                <div class="widget stat-card">
+                    <div class="stat-info">
+                        <h3>Pedidos Online (Hoje)</h3>
+                        <span class="stat-value">142</span>
+                    </div>
+                    <div class="icon">🛒</div>
+                </div>
+
+                <div class="widget stat-card">
+                    <div class="stat-info">
+                        <h3>Visitantes na Loja (Agora)</h3>
+                        <span class="stat-value">87</span>
+                    </div>
+                    <div class="icon">👀</div>
+                </div>
+
+            </div>
+        </main>
+        
+    </div>
+
+</body>
+</html>

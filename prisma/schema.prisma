@@ -1,0 +1,41 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  // A linha 'output' foi removida. O padrão é 'node_modules/@prisma/client'
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+// ... (o datasource e generator ficam lá em cima) ...
+
+model Cargo {
+  idCargo Int     @id @default(autoincrement())
+  nome    String  @unique
+  // Um cargo pode ter vários funcionários
+  funcionarios Funcionario[]
+}
+
+model Funcionario {
+  id        Int      @id @default(autoincrement())
+  nomeFuncionario String
+  email     String   @unique
+  usuario   String   @unique
+  senha     String
+
+  // Chave estrangeira
+  cargoId   Int
+
+  // Define a Relação:
+  // Este campo 'cargo' representa o Cargo relacionado
+  // Ele usa a chave 'cargoId' para se ligar ao 'idCargo' do Cargo
+  cargo     Cargo    @relation(fields: [cargoId], references: [idCargo])
+
+  createdAt DateTime @default(now())
+}

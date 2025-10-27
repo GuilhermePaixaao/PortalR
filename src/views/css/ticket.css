@@ -1,0 +1,278 @@
+/* Estilos para o botão "Novo Ticket" (flutuante) */
+.page-actions {
+    position: fixed; /* Fixa na tela */
+    bottom: 30px;    /* 30px do fundo */
+    right: 30px;     /* 30px da direita */
+    z-index: 1000;   /* Garante que fique acima de outros elementos */
+}
+
+.btn-new-ticket {
+    background-color: #007bff; /* Azul vibrante */
+    color: white;
+    padding: 15px 25px;
+    border: none;
+    border-radius: 30px; /* Borda bem arredondada (pill shape) */
+    font-size: 1.1em;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 123, 255, 0.3); /* Sombra suave */
+    transition: all 0.3s ease; /* Animação suave */
+}
+
+.btn-new-ticket:hover {
+    background-color: #0056b3; /* Azul mais escuro no hover */
+    box-shadow: 0 6px 15px rgba(0, 123, 255, 0.4); /* Sombra mais intensa */
+    transform: translateY(-2px); /* Efeito de "levitar" */
+}
+
+/* -------------------------------------------------------------------------- */
+/* Estilos para o Dialog (o Modal em si)                                     */
+/* -------------------------------------------------------------------------- */
+
+/* Estilização geral do elemento <dialog> */
+#modalTicket {
+    border: none;
+    border-radius: 12px; /* Cantos mais arredondados */
+    padding: 0; /* Remove padding padrão para controlar com o conteúdo */
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2); /* Sombra mais profunda */
+    width: clamp(300px, 90vw, 600px); /* Largura responsiva: min 300px, max 90% da viewport, ideal 600px */
+    max-height: 90vh; /* Altura máxima para não estourar em telas pequenas */
+    overflow-y: auto; /* Adiciona scroll se o conteúdo for muito grande */
+    background-color: #f8f9fa; /* Fundo suave, tipo cinza claro */
+    display: flex; /* Para usar flexbox no layout interno */
+    flex-direction: column;
+}
+
+/* Garantir que #modalTicket fique oculto quando não tiver o atributo open
+   (corrige conflito de especificidade com o seletor #modalTicket acima) */
+#modalTicket:not([open]) {
+    display: none !important;
+}
+
+/* Estilo do fundo escurecido/embaçado (backdrop) */
+#modalTicket::backdrop {
+    background-color: rgba(0, 0, 0, 0.6); /* Mais escuro */
+    backdrop-filter: blur(4px); /* Embaça mais o fundo */
+}
+
+/* -------------------------------------------------------------------------- */
+/* Estilos para o FORM dentro do Modal                                        */
+/* -------------------------------------------------------------------------- */
+#modalTicket form {
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* Ocupa toda a altura do dialog */
+}
+
+/* Cabeçalho do Modal */
+#modalTicket h2 {
+    font-size: 1.8em;
+    color: #343a40; /* Cor escura para o título */
+    margin: 0;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #dee2e6; /* Linha sutil separando o cabeçalho */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #fff; /* Fundo branco para o cabeçalho */
+    border-top-left-radius: 12px; /* Arredonda cantos do cabeçalho */
+    border-top-right-radius: 12px;
+}
+
+/* Estilo para o botão de fechar (X) no canto superior direito */
+#modalTicket .close-button {
+    background: none;
+    border: none;
+    font-size: 2em;
+    color: #6c757d;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    transition: color 0.2s ease;
+}
+
+#modalTicket .close-button:hover {
+    color: #dc3545; /* Vermelho no hover */
+}
+
+
+/* Área do corpo do formulário */
+#modalTicket form > div:not(:last-child) { /* Todos os divs, exceto o último (botões) */
+    padding: 1.5rem 2rem;
+    flex-grow: 1; /* Permite que o corpo cresça e ocupe o espaço */
+    overflow-y: auto; /* Adiciona scroll se o conteúdo do form for muito grande */
+}
+
+/* Grupo de formulário (label + input/textarea) */
+.grupo-form {
+    margin-bottom: 1.2rem;
+}
+
+.grupo-form label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.95em;
+}
+
+.grupo-form label span {
+    color: #dc3545; /* Cor para o asterisco de obrigatório */
+    margin-left: 3px;
+}
+
+.grupo-form input[type="text"],
+.grupo-form textarea {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    border: 1px solid #ced4da;
+    border-radius: 8px;
+    font-size: 1em;
+    box-sizing: border-box; /* Garante que padding e border não aumentem a largura */
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.grupo-form input[type="text"]:focus,
+.grupo-form textarea:focus {
+    border-color: #007bff; /* Borda azul no focus */
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25); /* Sombra azul no focus */
+    outline: none; /* Remove outline padrão do navegador */
+}
+
+.grupo-form textarea {
+    min-height: 100px; /* Altura mínima para textarea */
+    resize: vertical; /* Permite redimensionar verticalmente */
+}
+
+/* Estilo para a caixa de anexo */
+.anexo-dropzone {
+    border: 2px dashed #a7b0bb; /* Borda tracejada suave */
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    background-color: #e9ecef; /* Fundo cinza claro */
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.anexo-dropzone:hover {
+    background-color: #dee2e6; /* Fundo um pouco mais escuro no hover */
+    border-color: #8898a8; /* Borda um pouco mais escura no hover */
+}
+
+.anexo-dropzone .icon-clip {
+    font-size: 2.5em; /* Ícone grande */
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+}
+
+.anexo-dropzone span {
+    color: #6c757d;
+    font-size: 0.9em;
+}
+
+/* Informações adicionais (Contato Email) */
+.info-text {
+    font-size: 0.85em;
+    color: #6c757d;
+    margin-top: 0.5rem;
+}
+
+/* Rodapé do Modal (botões de ação) */
+#modalTicket form > div:last-child {
+    display: flex;
+    justify-content: flex-end; /* Alinha os botões à direita */
+    gap: 10px; /* Espaçamento entre os botões */
+    padding: 1.5rem 2rem;
+    border-top: 1px solid #dee2e6; /* Linha sutil separando o rodapé */
+    background-color: #fff; /* Fundo branco para o rodapé */
+    border-bottom-left-radius: 12px; /* Arredonda cantos do rodapé */
+    border-bottom-right-radius: 12px;
+}
+
+#modalTicket button {
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+#fecharModal {
+    background-color: #6c757d; /* Cinza para "Cancelar" */
+    color: white;
+    border: none;
+}
+
+#fecharModal:hover {
+    background-color: #5a6268;
+}
+
+#modalTicket button[type="submit"] {
+    background-color: #28a745; /* Verde para "Criar Ticket" */
+    color: white;
+    border: none;
+}
+
+#modalTicket button[type="submit"]:hover {
+    background-color: #218838;
+}
+
+/* Estilo para a barra de rolagem customizada (Webkit browsers) */
+#modalTicket::-webkit-scrollbar {
+  width: 8px;
+  background-color: #f1f1f1;
+}
+
+#modalTicket::-webkit-scrollbar-thumb {
+  background-color: #adb5bd;
+  border-radius: 10px;
+}
+
+#modalTicket::-webkit-scrollbar-thumb:hover {
+  background-color: #6c757d;
+}
+
+/* Responsividade básica para telas menores */
+@media (max-width: 768px) {
+    #modalTicket {
+        width: 95vw; /* Ocupa quase toda a largura em telas menores */
+        max-height: 95vh;
+    }
+
+    #modalTicket h2 {
+        font-size: 1.5em;
+        padding: 1rem 1.5rem;
+    }
+
+    #modalTicket form > div:not(:last-child),
+    #modalTicket form > div:last-child {
+        padding: 1rem 1.5rem;
+    }
+
+    .btn-new-ticket {
+        padding: 12px 20px;
+        font-size: 1em;
+        bottom: 20px;
+        right: 20px;
+    }
+}
+/* Animação de "shake" para quando tentar fechar indevidamente */
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  50% {
+    transform: translateX(5px);
+  }
+  75% {
+    transform: translateX(-5px);
+  }
+}
