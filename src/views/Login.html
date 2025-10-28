@@ -110,7 +110,7 @@
             if (respostaAPI.success === true) {
                 // 9. Sucesso: Salva os dados no localStorage e redireciona
                 localStorage.setItem("userData", JSON.stringify(respostaAPI)); 
-                window.location.href = "dashboard.html"; // Redireciona para o painel
+                window.location.href = "Dashboard.html"; // Redireciona para o painel
             } else {
                 // 10. Erro de login (ex: senha errada) vindo da API
                 divResposta.textContent = respostaAPI.message || "Falha no login. Verifique usuário e senha.";
