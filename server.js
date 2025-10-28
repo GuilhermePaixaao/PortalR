@@ -9,6 +9,9 @@ const prisma = new PrismaClient();
 // CONFIGURAÇÕES DO APP
 app.use(cors()); 
 app.use(express.json());
+app.get('/', (req, res) => {
+  res.redirect('/Login.html');
+});
 // Certifique-se que 'src/views' é a pasta correta onde estão seus HTML
 app.use(express.static('src/views')); 
 
@@ -431,9 +434,13 @@ app.delete('/chamados/:id', async (req, res) => {
   //console.log(`API disponível em: http://localhost:${PORT}`);
   //console.log(`Página de Login: http://localhost:${PORT}/Login.html`);
 //});
+
 // No final do server.js
 const PORT = process.env.PORT || 3000; // Usa a porta do Render ou 3000 localmente
 app.listen(PORT, () => {
   console.log(`Servidor rodando liso na porta ${PORT}`);
-  // ... resto dos logs
+  console.log(`API disponível em: http://localhost:${PORT}`);
+  console.log(`Página de Login: http://localhost:${PORT}/Login.html`);
 });
+
+// No final do server.js
