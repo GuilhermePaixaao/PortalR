@@ -58,10 +58,13 @@
     // 1. Importa o ApiService. 
     // Certifique-se que o caminho './ApiService.js' está correto.
     import ApiService from './ApiService.js';
+
     // 2. Configure a URL base da sua API aqui.
-    // Use localhost para testes ou a URL do Render para produção.
-    const API_BASE_URL = "http://localhost:3000"; 
-    // const API_BASE_URL = "https://portal-uohu.onrender.com";
+    // ***** ESTA É A CORREÇÃO *****
+    // Deixar a URL base como "" (vazia) faz com que o script
+    // use caminhos relativos. Ele procurará a API no mesmo
+    // servidor onde o HTML está (seja localhost:3000 ou onrender.com)
+    const API_BASE_URL = ""; 
     
     const api = new ApiService(API_BASE_URL);
 

@@ -86,9 +86,12 @@
     import ApiService from './ApiService.js';
 
     // 2. Configure a URL base da sua API.
-    //    !!! CORRIGIDO PARA A PORTA 3000 !!!
-    const API_BASE_URL = "http://localhost:3000"; 
+    // *** CORREÇÃO APLICADA ***
+    // Usar "" (vazio) faz o script usar o caminho relativo.
+    // Funciona em 'localhost:3000' e em 'portal-uohu.onrender.com'
+    const API_BASE_URL = ""; 
     
+    // Instancia o ApiService com a nova classe corrigida
     const api = new ApiService(API_BASE_URL);
 
     // 3. Referências para os elementos do DOM
@@ -108,27 +111,17 @@
         // Limpa opções antigas e mostra "Carregando..."
         cargo.innerHTML = '<option value="" disabled selected>Carregando cargos...</option>'; 
         try {
-            // !!! CORRIGIDO PARA A ROTA /cargos !!!
-            const resposta = await api.get("/cargos"); 
-
-            let listaCargos = []; // <--- REMOVIDO o valor padrão ['ADM']
-
-            if (Array.isArray(resposta)) {
-                listaCargos = resposta;
-            } 
-            // Você pode remover esta parte se sua API sempre retorna o array direto
-            else if (resposta.success === true && Array.isArray(resposta.data)) {
-                 listaCargos = resposta.data;
-            }
+            // Chama a rota /cargos (o ApiService vai montar a URL)
+            const listaCargos = await api.get("/cargos"); 
 
             // Remove o "Carregando..."
             cargo.innerHTML = '<option value="" disabled selected>Selecione um cargo...</option>'; 
 
             // Popula o <select>
-            if (listaCargos.length > 0) {
+            if (listaCargos && listaCargos.length > 0) {
                 listaCargos.forEach(cargoItem => {
                     const option = document.createElement("option");
-                    option.value = cargoItem.idCargo;     
+                    option.value = cargoItem.idCargo;    
                     option.textContent = cargoItem.nome;  
                     cargo.appendChild(option);
                 });
@@ -140,7 +133,7 @@
             
         } catch (error) {
             console.error("Erro ao carregar cargos:", error);
-            divResposta.textContent = "Erro ao carregar lista de cargos. Verifique se o servidor está rodando.";
+            divResposta.textContent = `Erro ao carregar lista de cargos. (${error.message})`;
             divResposta.className = "login-error";
             // Em caso de erro, desabilita o select
             cargo.innerHTML = '<option value="" disabled selected>Erro ao carregar</option>';
@@ -190,8 +183,7 @@
         }
 
         try {
-            // 8. Chama a API
-            //    !!! CORRIGIDO PARA A ROTA /usuarios !!!
+            // 8. Chama a API (rota /usuarios)
             const respostaAPI = await api.post("/usuarios", dadosCadastro);
             
             console.log("Resposta da API:", respostaAPI);
@@ -207,22 +199,14 @@
 
             } else {
                 // 10. Erro de cadastro vindo da API
-                // (O backend agora manda 'message' diretamente)
                 divResposta.textContent = respostaAPI.message || "Falha no cadastro. Verifique os dados.";
                 divResposta.className = "login-error";
             }
 
         } catch (error) {
-            // 11. Erro de rede ou servidor
+            // 11. Erro de rede ou servidor (agora pego do 'throw' do ApiService)
             console.error("Erro ao tentar cadastrar:", error);
-            
-            // Tenta pegar a mensagem de erro da resposta (se o backend enviar)
-            let msgErro = "Não foi possível conectar ao servidor. Verifique se ele está rodando.";
-            if (error.response && error.response.data && error.response.data.message) {
-                 msgErro = error.response.data.message;
-            }
-
-            divResposta.textContent = msgErro;
+            divResposta.textContent = error.message || "Não foi possível conectar ao servidor.";
             divResposta.className = "login-error";
         }
     });

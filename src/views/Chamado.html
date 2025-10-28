@@ -8,14 +8,9 @@
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="icon" type="image/png" href="/logo.png">
     
-    <!-- CSS Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     
-    <!-- Seus CSS Específicos -->
-    <link rel="stylesheet" href="css/chamado.css"> <!-- Assumindo que este existe -->
-    <link rel="stylesheet" href="css/ticket.css"> <!-- Assumindo que este existe -->
-    
-    <style>
+    <link rel="stylesheet" href="css/chamado.css"> <link rel="stylesheet" href="css/ticket.css"> <style>
         /* Estilos do Modal (Dialog) */
         dialog:not([open]) { display: none; }
         dialog::backdrop { background: rgba(0,0,0,0.6); }
@@ -50,7 +45,7 @@
             overflow-y: auto;
             padding: 2rem; 
             background-color: #f8f9fa; 
-        }
+         }
         .page-actions { /* Botão Novo Ticket no canto */
             position: fixed;
             bottom: 2rem;
@@ -109,7 +104,6 @@
 
     <div class="dashboard-container">
         
-        <!-- HEADER -->
         <header class="header">
             <div class="logo">PORTAL SUPERMERCADO</div>
             <div class="search-bar">
@@ -120,7 +114,6 @@
             </div>
         </header>
         
-        <!-- SIDEBAR -->
         <aside class="sidebar">
             <nav>
                 <ul>
@@ -129,13 +122,12 @@
                     <li class="active"><a href="Chamado.html" title="Abrir Chamado"><span class="icon">➕</span><span class="text">Chamado</span></a></li>
                     <li><a href="Chatbot.html" title="Chatbot"><span class="icon">🤖</span><span class="text">Chatbot</span></a></li>
                     <li><a href="Funcionarios.html" title="Funcionários"><span class="icon">💼</span><span class="text">Funcionários</span></a></li>
-                   
+                    
                     <li style="margin-top: 30px;"><a href="#" title="Configurações"><span class="icon">⚙️</span><span class="text">Ajustes</span></a></li>
                 </ul>
             </nav>
         </aside>
         
-        <!-- MODAL (DIALOG) PARA NOVO CHAMADO -->
         <dialog id="modalTicket" aria-labelledby="modalTitle">
             <form id="ticketForm"> 
                 <h2 id="modalTitle">Novo Chamado</h2>
@@ -156,7 +148,6 @@
                         <div class="grupo-form">
                             <label for="prioridade">Prioridade</label>
                             <select id="prioridade" name="prioridade" class="form-select">
-                                <!-- CORRIGIDO: Valores correspondem aos textos -->
                                 <option value="Média">Média</option> 
                                 <option value="Alta">Alta</option>
                                 <option value="Baixa">Baixa</option>
@@ -168,13 +159,10 @@
                             <label for="categoria">Categoria</label>
                             <select id="categoria" name="categoria" class="form-select">
                                 <option value="">-- Selecionar --</option>
-                                <!-- Opções carregadas via JS -->
-                            </select>
+                                </select>
                         </div>
                     </div>
                 </div>
-
-                <!-- Campo Anexo REMOVIDO por enquanto -->
 
                 <div id="modalResposta" class="mt-3"></div>
 
@@ -185,7 +173,6 @@
             </form>
         </dialog>
 
-        <!-- CONTEÚDO PRINCIPAL -->
         <main class="main-content">
             <h1>Meus Chamados</h1>
             <hr>
@@ -194,57 +181,51 @@
 
             <div class="widget card shadow-sm">
                  <div class="card-body">
-                    <!-- FILTROS -->
-                    <div class="filters mb-3 row g-2">
-                        <div class="col-md-4">
-                             <label for="filtroAssunto" class="form-label">Filtrar por Assunto</label>
-                            <input type="text" id="filtroAssunto" class="form-control" placeholder="Digite o assunto...">
-                        </div>
-                         <div class="col-md-3">
-                             <label for="filtroPrioridade" class="form-label">Prioridade</label>
-                            <select id="filtroPrioridade" class="form-select">
-                                <option value="">Todas</option>
-                                <option value="Alta">Alta</option>
-                                <option value="Média">Média</option>
-                                <option value="Baixa">Baixa</option>
-                            </select>
+                     <div class="filters mb-3 row g-2">
+                         <div class="col-md-4">
+                              <label for="filtroAssunto" class="form-label">Filtrar por Assunto</label>
+                             <input type="text" id="filtroAssunto" class="form-control" placeholder="Digite o assunto...">
                          </div>
-                        <div class="col-md-3">
-                            <label for="filtroStatus" class="form-label">Status</label>
-                            <select id="filtroStatus" class="form-select">
-                                <option value="">Todos</option>
-                                <option value="Aberto">Aberto</option>
-                                <option value="Em Andamento">Em Andamento</option> 
-                                <option value="Concluído">Concluído</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2 d-flex align-items-end">
-                             <button id="btnFiltrar" class="btn btn-primary w-100">Filtrar</button>
-                        </div>
-                    </div>
+                          <div class="col-md-3">
+                               <label for="filtroPrioridade" class="form-label">Prioridade</label>
+                             <select id="filtroPrioridade" class="form-select">
+                                 <option value="">Todas</option>
+                                 <option value="Alta">Alta</option>
+                                 <option value="Média">Média</option>
+                                 <option value="Baixa">Baixa</option>
+                             </select>
+                          </div>
+                         <div class="col-md-3">
+                             <label for="filtroStatus" class="form-label">Status</label>
+                             <select id="filtroStatus" class="form-select">
+                                 <option value="">Todos</option>
+                                 <option value="Aberto">Aberto</option>
+                                 <option value="Em Andamento">Em Andamento</option> 
+                                 <option value="Concluído">Concluído</option>
+                             </select>
+                         </div>
+                         <div class="col-md-2 d-flex align-items-end">
+                              <button id="btnFiltrar" class="btn btn-primary w-100">Filtrar</button>
+                         </div>
+                     </div>
 
-                    <!-- LISTA DE TICKETS (DIV com rows) -->
-                    <div id="ticketList" class="ticket-list"> 
-                        <!-- Cabeçalho (igual ao seu HTML) -->
-                        <div class="ticket-row header">
-                            <div class="ticket-cell ticket-id">Ticket</div>
-                            <div class="ticket-cell ticket-priority">Prioridade</div>
-                            <div class="ticket-cell ticket-subject">Assunto</div> 
-                            <div class="ticket-cell ticket-category">Categoria</div> 
-                            <div class="ticket-cell ticket-status">Status</div> 
-                            <div class="ticket-cell ticket-operator">Requisitante</div> <!-- Nome da coluna ajustado -->
-                            <div class="ticket-cell ticket-created">Criado em</div> 
-                            <div class="ticket-cell ticket-actions">Ação</div>
-                        </div>
-                        <!-- Linhas de dados serão inseridas aqui via JS -->
+                     <div id="ticketList" class="ticket-list"> 
+                         <div class="ticket-row header">
+                             <div class="ticket-cell ticket-id">Ticket</div>
+                             <div class="ticket-cell ticket-priority">Prioridade</div>
+                             <div class="ticket-cell ticket-subject">Assunto</div> 
+                             <div class="ticket-cell ticket-category">Categoria</div> 
+                             <div class="ticket-cell ticket-status">Status</div> 
+                             <div class="ticket-cell ticket-operator">Requisitante</div> <div class="ticket-cell ticket-created">Criado em</div> 
+                             <div class="ticket-cell ticket-actions">Ação</div>
+                         </div>
                          <div id="loadingIndicator"><p>Carregando chamados...</p></div>
-                    </div>
+                     </div>
 
                  </div>
             </div>
         </main>
         
-        <!-- BOTÃO NOVO CHAMADO -->
         <div class="page-actions">
             <button id="newTicketButton" class="btn-new-ticket">
                 Novo Chamado
@@ -253,9 +234,10 @@
         
     </div>
 
-    <!-- SCRIPT DA PÁGINA (ADAPTADO) -->
     <script type="module">
-        const API_URL = "http://localhost:3000";
+        // *** CORREÇÃO APLICADA ***
+        // Usar "" (vazio) faz o script usar o caminho relativo.
+        const API_URL = "";
 
         // --- Autenticação ---
         let userData;
@@ -308,11 +290,11 @@
          function formatarData(isoString) { /* ... (igual ao anterior) ... */ 
              if (!isoString) return 'N/A';
              try {
-                const data = new Date(isoString);
-                // Ajustado para dia/mes/ano apenas
-                return data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                 const data = new Date(isoString);
+                 // Ajustado para dia/mes/ano apenas
+                 return data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
              } catch (e) {
-                 return 'Data inválida';
+                  return 'Data inválida';
              }
          }
 
@@ -338,44 +320,44 @@
              ticketList.querySelectorAll('.data-row').forEach(row => row.remove()); // Limpa rows antigas
 
              if (!chamados || chamados.length === 0) {
-                 const noDataRow = document.createElement('div');
-                 noDataRow.className = 'ticket-row data-row';
-                 noDataRow.innerHTML = `<div class="ticket-cell" style="grid-column: 1 / -1; text-align: center; padding: 1rem;">Nenhum chamado encontrado.</div>`; // Ocupa todas as colunas
-                 ticketList.appendChild(noDataRow);
-                 return;
+                  const noDataRow = document.createElement('div');
+                  noDataRow.className = 'ticket-row data-row';
+                  noDataRow.innerHTML = `<div class="ticket-cell" style="grid-column: 1 / -1; text-align: center; padding: 1rem;">Nenhum chamado encontrado.</div>`; // Ocupa todas as colunas
+                  ticketList.appendChild(noDataRow);
+                  return;
              }
 
              chamados.forEach(chamado => {
-                 const row = document.createElement('div');
-                 row.className = 'ticket-row data-row';
-                 row.setAttribute('data-ticket-id', chamado.id);
+                  const row = document.createElement('div');
+                  row.className = 'ticket-row data-row';
+                  row.setAttribute('data-ticket-id', chamado.id);
 
-                 const prioridadeClass = (chamado.prioridade || 'Média').toLowerCase();
-                 // Normaliza o status para usar como classe CSS
-                 const statusClass = (chamado.status || 'Aberto').toLowerCase().replace(/\s+/g, '-'); 
+                  const prioridadeClass = (chamado.prioridade || 'Média').toLowerCase();
+                  // Normaliza o status para usar como classe CSS
+                  const statusClass = (chamado.status || 'Aberto').toLowerCase().replace(/\s+/g, '-'); 
 
-                 row.innerHTML = `
-                    <div class="ticket-cell ticket-id">#${chamado.id}</div>
-                    <div class="ticket-cell ticket-priority">
-                        <span class="priority-badge ${prioridadeClass}">${escapeHtml(chamado.prioridade)}</span>
-                    </div>
-                    <div class="ticket-cell ticket-subject">${escapeHtml(chamado.assunto)}</div>
-                    <div class="ticket-cell ticket-category">${escapeHtml(chamado.Categorias?.nome || 'N/A')}</div>
-                    <div class="ticket-cell ticket-status">
-                         <span class="status-badge ${statusClass}">${escapeHtml(chamado.status)}</span>
-                    </div>
-                    <div class="ticket-cell ticket-operator">${escapeHtml(chamado.Funcionario?.nomeFuncionario || 'Desconhecido')}</div>
-                    <div class="ticket-cell ticket-created">${formatarData(chamado.created_at)}</div>
-                    <div class="ticket-cell ticket-actions">
-                        <span class="view-icon" title="Visualizar">👁️</span>
-                    </div>
-                 `;
-                 
-                 row.querySelector('.view-icon').addEventListener('click', (e) => {
-                     e.stopPropagation(); 
-                     alert(`Visualizando Chamado #${chamado.id}\n\nAssunto: ${chamado.assunto}\nDescrição: ${chamado.descricao}\nStatus: ${chamado.status}\nPrioridade: ${chamado.prioridade}`);
-                 });
-                 ticketList.appendChild(row);
+                  row.innerHTML = `
+                       <div class="ticket-cell ticket-id">#${chamado.id}</div>
+                       <div class="ticket-cell ticket-priority">
+                           <span class="priority-badge ${prioridadeClass}">${escapeHtml(chamado.prioridade)}</span>
+                       </div>
+                       <div class="ticket-cell ticket-subject">${escapeHtml(chamado.assunto)}</div>
+                       <div class="ticket-cell ticket-category">${escapeHtml(chamado.Categorias?.nome || 'N/A')}</div>
+                       <div class="ticket-cell ticket-status">
+                            <span class="status-badge ${statusClass}">${escapeHtml(chamado.status)}</span>
+                       </div>
+                       <div class="ticket-cell ticket-operator">${escapeHtml(chamado.Funcionario?.nomeFuncionario || 'Desconhecido')}</div>
+                       <div class="ticket-cell ticket-created">${formatarData(chamado.created_at)}</div>
+                       <div class="ticket-cell ticket-actions">
+                           <span class="view-icon" title="Visualizar">👁️</span>
+                       </div>
+                  `;
+                  
+                  row.querySelector('.view-icon').addEventListener('click', (e) => {
+                       e.stopPropagation(); 
+                       alert(`Visualizando Chamado #${chamado.id}\n\nAssunto: ${chamado.assunto}\nDescrição: ${chamado.descricao}\nStatus: ${chamado.status}\nPrioridade: ${chamado.prioridade}`);
+                  });
+                  ticketList.appendChild(row);
              });
         }
 
@@ -400,15 +382,15 @@
 
              const url = `${API_URL}/chamados?${params.toString()}`;
 
-            try {
-                const response = await fetch(url);
-                if (!response.ok) throw new Error("Erro ao buscar chamados.");
-                const chamados = await response.json();
-                renderizarChamados(chamados);
-            } catch (error) {
-                exibirMensagem(divRespostaGeral, error.message, false);
-                 if(loadingIndicator) loadingIndicator.innerHTML = '<p style="color:red;">Falha ao carregar.</p>';
-            }
+             try {
+                 const response = await fetch(url);
+                 if (!response.ok) throw new Error("Erro ao buscar chamados.");
+                 const chamados = await response.json();
+                 renderizarChamados(chamados);
+             } catch (error) {
+                 exibirMensagem(divRespostaGeral, error.message, false);
+                  if(loadingIndicator) loadingIndicator.innerHTML = '<p style="color:red;">Falha ao carregar.</p>';
+             }
         }
 
         // --- Criar Novo Chamado ---
@@ -482,7 +464,6 @@
 
     </script>
 
-    <!-- JS Bootstrap -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
