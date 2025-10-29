@@ -6,4 +6,4 @@ const chatController = require('../controllers/chatController'); // Importa o co
 // (Ela vai virar /api/chat no index.js)
 router.post('/', chatController.handleChat);
 
-module.exports = router;
+export default router;
