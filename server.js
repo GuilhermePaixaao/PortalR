@@ -28,8 +28,12 @@ app.get('/', (req, res) => {
 });
 
 // 2. Servir os arquivos estáticos (HTML, CSS, JS)
-// Agora aponta corretamente para sua pasta 'src/views'
+// Sua linha original, servindo a pasta 'views'
 app.use(express.static(path.join(__dirname, 'src', 'views')));
+// --- LINHA ADICIONADA ---
+// Servindo a nova pasta 'public' para o widget de chat
+app.use(express.static(path.join(__dirname, 'public')));
+
 
 // 3. Usar TODAS as suas rotas da API
 // O mainRouter vai gerenciar /login, /usuarios, /cargos, etc.
@@ -45,3 +49,4 @@ app.listen(PORT, () => {
   console.log(`API disponível em: http://localhost:${PORT}`);
   console.log(`Página de Login: http://localhost:${PORT}/Login.html`);
 });
+                                                
