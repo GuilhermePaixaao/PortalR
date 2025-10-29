@@ -1,9 +1,12 @@
-const express = require('express');
+import express from 'express';
+// Importa a função 'handleChat' especificamente do controller
+import { handleChat } from '../controllers/chatController.js';
+
 const router = express.Router();
-const chatController = require('../controllers/chatController'); // Importa o controller
 
 // Define a rota POST para /
-// (Ela vai virar /api/chat no index.js)
-router.post('/', chatController.handleChat);
+// (Ela vai virar /api/chat no seu roteador principal, o index.js)
+router.post('/', handleChat);
 
+// Usa 'export default' para exportar o roteador
 export default router;

@@ -1,6 +1,8 @@
-const openai = require('../config/openai'); // Importa o cliente configurado
+// Importa o cliente configurado
+import openai from '../config/openai.js';
 
-const handleChat = async (req, res) => {
+// Exporta a função 'handleChat' diretamente
+export const handleChat = async (req, res) => {
     try {
         const history = req.body.history; // Pega o histórico do frontend
 
@@ -20,8 +22,4 @@ const handleChat = async (req, res) => {
         console.error('Erro ao chamar API da OpenAI:', error);
         res.status(500).json({ error: 'Erro no servidor.' });
     }
-};
-
-module.exports = {
-    handleChat
 };

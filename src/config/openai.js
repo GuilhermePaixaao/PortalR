@@ -1,8 +1,11 @@
-require('dotenv').config({ path: '../../.env' }); // Sobe dois níveis para achar o .env
-const { OpenAI } = require('openai');
+// O seu server.js já carrega o 'dotenv/config',
+// então não precisamos importar ele aqui. O process.env já vai funcionar.
+import { OpenAI } from 'openai';
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
 
-module.exports = openai;
+// Usa 'export default' para exportar o cliente
+export default openai;
+
