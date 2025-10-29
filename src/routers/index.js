@@ -19,6 +19,6 @@ router.use(chamadoRouter);
 // 2. USA O NOVO ROUTER COM O PREFIXO /chat
 // Se o seu src/index.js principal montar este arquivo em '/api',
 // a rota final para o chat será '/api/chat'
-router.use('/chat', chatRouter); 
+router.use(chatRouter); 
 
 export default router;
