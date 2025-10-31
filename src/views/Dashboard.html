@@ -18,7 +18,7 @@
                 <input type="text" placeholder="Buscar produtos, relatórios, chamados...">
             </div>
             
-             <div class="user-profile">
+            <div class="user-profile">
                 <span class="icon">🔔</span> <span id="userNameDisplay" class="icon">👤</span> 
             </div>
         </header>
@@ -116,6 +116,41 @@
         </main>
         
     </div>
+
+<script type="module">
+    document.addEventListener('DOMContentLoaded', () => {
+        
+        // 1. Tenta pegar os dados do usuário do localStorage
+        const userDataString = localStorage.getItem("userData");
+
+        // 2. Se não houver dados, redireciona para o Login
+        if (!userDataString) {
+            window.location.href = "Login.html";
+            return; // Para a execução do script
+        }
+
+        // 3. Se houver dados, tenta processá-los
+        try {
+            const userData = JSON.parse(userDataString); 
+            
+            // 4. Encontra o elemento <span> no header
+            const userNameDisplay = document.getElementById('userNameDisplay'); 
+
+            // 5. Verifica se o elemento foi encontrado E se o nome existe nos dados
+            if (userNameDisplay && userData?.data?.nomeFuncionario) {
+                
+                // 6. Atualiza o texto do <span> com o primeiro nome
+                userNameDisplay.textContent = `👤 ${userData.data.nomeFuncionario.split(' ')[0]}`;
+            }
+
+        } catch (error) {
+            // Se os dados estiverem corrompidos (JSON inválido)
+            console.error("Erro ao processar dados do usuário:", error);
+            localStorage.removeItem("userData"); // Limpa os dados ruins
+            window.location.href = "Login.html";
+        }
+    });
+</script>
 
 </body>
 </html>

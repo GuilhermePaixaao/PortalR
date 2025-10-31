@@ -1,485 +1,464 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head>
-    <meta charset="UTF-8" />
-    <title>Funcionários - Portal Supermercado</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    
-    <link href="css/dashboard.css" rel="stylesheet" />
-    
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <link rel="icon" type="image/png" href="/logo.png">
-</head>
-<body>
+    <head>
+        <meta charset="UTF-8" />
+        <title>Funcionários - Portal Supermercado</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-<div class="dashboard-container">
-    
-    <header class="header">
-        <div class="logo">PORTAL SUPERMERCADO</div>
-        <div class="search-bar">
-            <input type="text" placeholder="Buscar produtos, relatórios, chamados...">
-        </div>
-         <div class="user-profile">
-                <span class="icon">🔔</span> <span id="userNameDisplay" class="icon">👤</span> 
-            </div>
-    </header>
-    
-    <aside class="sidebar">
-        <nav>
-            <ul>
-                <li>
-                    <a href="Dashboard.html" title="Início">
-                        <span class="icon">🏠</span>
-                        <span class="text">Início</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="Imprimir.html" title="Impressão de Preços">
-                        <span class="icon">🖨️</span>
-                        <span class="text">Imprimir</span>
-                    </a>
-                </li>
-                <li class="ticket-item">
-                    <a href="Chamado.html" title="Abrir Chamado (Airus)">
-                        <span class="icon">➕</span>
-                        <span class="text">Chamado</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="Chatbot.html" title="Chatbot">
-                        <span class="icon">🤖</span>
-                        <span class="text">Chatbot</span>
-                    </a>
-                </li>
-                <li class="active">
-                    <a href="Funcionarios.html" title="Funcionários">
-                        <span class="icon">💼</span>
-                        <span class="text">Funcionários</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="Cargos.html" title="Cargos">
-                        <span class="icon">🏷️</span>
-                        <span class="text">Cargos</span>
-                    </a>
-                </li>
-                <li style="margin-top: 30px;">
-                    <a href="#" title="Configurações">
-                        <span class="icon">⚙️</span>
-                        <span class="text">Ajustes</span>
-                    </a>
-                </li>
-            </ul>
-        </nav>
-    </aside>
+        <link href="css/dashboard.css" rel="stylesheet" />
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link rel="icon" type="image/png" href="/logo.png">
+    </head>
 
-    <main class="main-content container-fluid">
-        <h2>Gerenciamento de Funcionários</h2>
-        <hr>
-
-        <div class="row g-4">
-            <div class="col-lg-4">
-                <div class="card shadow-sm">
-                    <div class="card-header">
-                        <strong>Cadastro / Edição</strong>
-                    </div>
-                    <div class="card-body">
-                        <form id="formFuncionario">
-                            <div class="mb-3">
-                                <label for="txtId" class="form-label">ID</label>
-                                <input type="text" id="txtId" class="form-control" disabled>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="txtNomeFuncionario" class="form-label">Nome Completo</label>
-                                <input type="text" id="txtNomeFuncionario" class="form-control" required>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="txtUsuario" class="form-label">Usuário (para login)</label>
-                                <input type="text" id="txtUsuario" class="form-control" required>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="txtEmail" class="form-label">E-mail</label>
-                                <input type="email" id="txtEmail" class="form-control" required>
-                            </div>
-
-                            <div class="mb-3">
-                                <label for="txtSenha" class="form-label">Senha</label>
-                                <input type="password" id="txtSenha" class="form-control" placeholder="Deixe em branco para não alterar">
-                                <div class="form-text">Mínimo 6 caracteres, 1 maiúscula, 1 número, 1 especial.</div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                <label for="cboCargos" class="form-label">Cargo</label>
-                                <select id="cboCargos" class="form-select" required>
-                                    <option value="-1" disabled selected>Carregando...</option>
-                                </select>
-                            </div>
-                        </form>
-                        
-                        <div id="divBotoes" class="d-grid gap-2 d-md-flex"></div>
-                        
-                        <div id="divResposta" class="mt-3"></div>
-                    </div>
+    <body>
+        <div class="dashboard-container">
+            <header class="header">
+                <div class="logo">PORTAL SUPERMERCADO</div>
+                <div class="search-bar">
+                    <input type="text" placeholder="Buscar produtos, relatórios, chamados...">
                 </div>
-            </div>
+                <div class="user-profile">
+                    <span class="icon">🔔</span>
+                    <span id="userNameDisplay" class="icon">👤</span>
+                </div>
+            </header>
 
-            <div class="col-lg-8">
-                <div class="card shadow-sm mb-4">
-                    <div class="card-header">
-                        <strong>Filtros</strong>
-                    </div>
-                    <div class="card-body">
-                        <div class="row g-2">
-                            <div class="col-md-6">
-                                <label for="txtFiltroNome" class="form-label">Filtrar por Nome ou Usuário</label>
-                                <input type="text" id="txtFiltroNome" class="form-control" placeholder="Digite um nome ou usuário...">
+            <aside class="sidebar">
+                <nav>
+                    <ul>
+                        <li>
+                            <a href="Dashboard.html" title="Início">
+                                <span class="icon">🏠</span>
+                                <span class="text">Início</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="Imprimir.html" title="Impressão de Preços">
+                                <span class="icon">🖨️</span>
+                                <span class="text">Imprimir</span>
+                            </a>
+                        </li>
+                        <li class="ticket-item">
+                            <a href="Chamado.html" title="Abrir Chamado (Airus)">
+                                <span class="icon">➕</span>
+                                <span class="text">Chamado</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="Chatbot.html" title="Chatbot">
+                                <span class="icon">🤖</span>
+                                <span class="text">Chatbot</span>
+                            </a>
+                        </li>
+                        <li class="active">
+                            <a href="Funcionarios.html" title="Funcionários">
+                                <span class="icon">💼</span>
+                                <span class="text">Funcionários</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a href="Cargos.html" title="Cargos">
+                                <span class="icon">🏷️</span>
+                                <span class="text">Cargos</span>
+                            </a>
+                        </li>
+                        <li style="margin-top: 30px;">
+                            <a href="#" title="Configurações">
+                                <span class="icon">⚙️</span>
+                                <span class="text">Ajustes</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            </aside>
+
+            <main class="main-content container-fluid">
+                <h2>Gerenciamento de Funcionários</h2>
+                <hr>
+
+                <div class="row g-4">
+                    <div class="col-lg-4">
+                        <div class="card shadow-sm">
+                            <div class="card-header">
+                                <strong>Cadastro / Edição</strong>
                             </div>
-                            <div class="col-md-6">
-                                <label for="cboCargosFiltro" class="form-label">Filtrar por Cargo</label>
-                                <select id="cboCargosFiltro" class="form-select">
-                                    <option value="-1" selected>Todos os cargos</option>
-                                </select>
+                            <div class="card-body">
+                                <form id="formFuncionario">
+                                    <div class="mb-3">
+                                        <label for="txtId" class="form-label">ID</label>
+                                        <input type="text" id="txtId" class="form-control" disabled>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="txtNomeFuncionario" class="form-label">Nome Completo</label>
+                                        <input type="text" id="txtNomeFuncionario" class="form-control" required>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="txtUsuario" class="form-label">Usuário (para login)</label>
+                                        <input type="text" id="txtUsuario" class="form-control" required>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="txtEmail" class="form-label">E-mail</label>
+                                        <input type="email" id="txtEmail" class="form-control" required>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="txtSenha" class="form-label">Senha</label>
+                                        <input type="password" id="txtSenha" class="form-control" placeholder="Deixe em branco para não alterar">
+                                        <div class="form-text">Mínimo 6 caracteres, 1 maiúscula, 1 número, 1 especial.</div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="cboCargos" class="form-label">Cargo</label>
+                                        <select id="cboCargos" class="form-select" required>
+                                            <option value="-1" disabled selected>Carregando...</option>
+                                        </select>
+                                    </div>
+                                </form>
+
+                                <div id="divBotoes" class="d-grid gap-2 d-md-flex"></div>
+                                <div id="divResposta" class="mt-3"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-8">
+                        <div class="card shadow-sm mb-4">
+                            <div class="card-header">
+                                <strong>Filtros</strong>
+                            </div>
+                            <div class="card-body">
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label for="txtFiltroNome" class="form-label">Filtrar por Nome ou Usuário</label>
+                                        <input type="text" id="txtFiltroNome" class="form-control" placeholder="Digite um nome ou usuário...">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="cboCargosFiltro" class="form-label">Filtrar por Cargo</label>
+                                        <select id="cboCargosFiltro" class="form-select">
+                                            <option value="-1" selected>Todos os cargos</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card shadow-sm">
+                            <div class="card-header">
+                                <strong>Funcionários Cadastrados</strong>
+                            </div>
+                            <div class="card-body">
+                                <div id="divTabela" class="table-responsive">
+                                    <p>Carregando...</p>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                
-                <div class="card shadow-sm">
-                    <div class="card-header">
-                        <strong>Funcionários Cadastrados</strong>
-                    </div>
-                    <div class="card-body">
-                        <div id="divTabela" class="table-responsive">
-                            <p>Carregando...</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            </main>
         </div>
-    </main>
-</div>
 
+        <script type="module">
+            // *** CORREÇÃO APLICADA ***
+            // URL Base da API (vazio para usar caminho relativo)
+            const API_URL = "";
 
-<script type="module">
-    // *** CORREÇÃO APLICADA ***
-    // URL Base da API (vazio para usar caminho relativo)
-    const API_URL = "";
-
-    // --- AUTENTICAÇÃO SIMPLES ---
-    let userData = localStorage.getItem("userData");
-    if (!userData) {
-        window.location.href = "Login.html"; 
-    }
-
-    let API_DATA_FUNCIONARIOS; // Guarda os dados dos funcionários
-    let LISTA_CARGOS; // Guarda os dados dos cargos
-
-    // ======================== REFERÊNCIAS AOS ELEMENTOS HTML ========================
-    const txtId = document.getElementById("txtId");
-    const txtNomeFuncionario = document.getElementById("txtNomeFuncionario");
-    const txtUsuario = document.getElementById("txtUsuario"); 
-    const txtEmail = document.getElementById("txtEmail");
-    const txtSenha = document.getElementById("txtSenha");
-    const cboCargos = document.getElementById("cboCargos");
-    
-    const divBotoes = document.getElementById("divBotoes");
-    const divResposta = document.getElementById("divResposta");
-    const divTabela = document.getElementById("divTabela");
-
-    // ======================== FUNÇÃO AUXILIAR PARA CRIAR BOTÕES ========================
-    function createButton(text, id, className) {
-        const btn = document.createElement("button");
-        btn.textContent = text;
-        btn.id = id;
-        btn.className = `btn ${className} flex-fill`;
-        return btn;
-    }
-    
-    // --- Função para Limpar o Formulário ---
-    function limparFormulario(message = "") {
-        if (message) {
-             divResposta.textContent = message;
-             divResposta.className = "alert alert-success mt-3";
-        } else {
-             divResposta.textContent = "";
-             divResposta.className = "";
-        }
-        txtId.value = "";
-        txtNomeFuncionario.value = "";
-        txtUsuario.value = "";
-        txtEmail.value = "";
-        txtSenha.value = "";
-        cboCargos.value = "-1";
-    }
-
-    // --- Função para Exibir Mensagens de Erro ---
-    function exibirErro(mensagem) {
-        divResposta.textContent = mensagem;
-        divResposta.className = 'alert alert-danger mt-3';
-    }
-
-    // ======================== BOTÕES CRUD (Adicionados via JS) ========================
-    
-    // BOTÃO CRIAR
-    const btnCriar = createButton("Criar", "btnCriar", "btn-success");
-    btnCriar.onclick = async () => {
-        if (txtNomeFuncionario.value.trim() === "" || txtUsuario.value.trim() === "" || txtEmail.value.trim() === "" || txtSenha.value.trim() === "" || cboCargos.value === "-1") {
-            exibirErro("Por favor, preencha todos os campos (Nome, Usuário, Email, Senha e Cargo).");
-            return;
-        }
-        
-        // (Validação de senha opcional, mas recomendada)
-        const senhaRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{6,}$/;
-        if (!senhaRegex.test(txtSenha.value)) {
-            exibirErro("Senha inválida: deve ter no mínimo 6 caracteres, 1 número, 1 maiúscula e 1 caractere especial.");
-            return;
-        }
-
-        const dadosCadastro = {
-            "funcionario": {
-                "nomeFuncionario": txtNomeFuncionario.value.trim(),
-                "usuario": txtUsuario.value.trim(),
-                "email": txtEmail.value.trim(),
-                "senha": txtSenha.value.trim(),
-                // CORRIGIDO: Passando o ID do Cargo como 'idCargo'
-                "cargo": { "idCargo": parseInt(cboCargos.value) }
+            // --- AUTENTICAÇÃO SIMPLES ---
+            let userDataString = localStorage.getItem("userData"); // Renomeado para 'userDataString'
+            if (!userDataString) {
+                window.location.href = "Login.html";
             }
-        };
 
-        try {
-            const response = await fetch(`${API_URL}/usuarios`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(dadosCadastro)
-            });
-            const respostaAPI = await response.json();
-            if (!response.ok) throw new Error(respostaAPI.message || "Erro desconhecido");
-
-            limparFormulario("Funcionário criado com sucesso!");
-            listAll(); // Atualiza a tabela
-        } catch (error) {
-            exibirErro(error.message);
-        }
-    };
-    divBotoes.appendChild(btnCriar);
-
-    // BOTÃO ATUALIZAR
-    const btnAtualizar = createButton("Atualizar", "btnAtualizar", "btn-warning");
-    btnAtualizar.onclick = async () => {
-        const id = txtId.value; // Pega o ID do formulário
-        if (!id) {
-            exibirErro("Selecione um funcionário da lista para atualizar.");
-            return;
-        }
-        
-        if (txtNomeFuncionario.value.trim() === "" || txtUsuario.value.trim() === "" || txtEmail.value.trim() === "" || cboCargos.value === "-1") {
-            exibirErro("Nome, Usuário, Email e Cargo são obrigatórios para atualizar.");
-            return;
-        }
-
-        const dadosAtualizar = {
-            "funcionario": {
-                "nomeFuncionario": txtNomeFuncionario.value.trim(),
-                "usuario": txtUsuario.value.trim(),
-                "email": txtEmail.value.trim(),
-                "senha": txtSenha.value.trim(), 
-                // CORRIGIDO: Passando o ID do Cargo como 'idCargo'
-                "cargo": { "idCargo": parseInt(cboCargos.value) }
-            }
-        };
-
-        try {
-            // Envia o ID na URL
-            const response = await fetch(`${API_URL}/usuarios/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(dadosAtualizar)
-            });
-            const respostaAPI = await response.json();
-            if (!response.ok) throw new Error(respostaAPI.message || "Erro desconhecido");
-
-            limparFormulario("Funcionário atualizado com sucesso!");
-            listAll(); // Atualiza a tabela
-        } catch (error) {
-            exibirErro(error.message);
-        }
-    };
-    divBotoes.appendChild(btnAtualizar);
-
-    // BOTÃO EXCLUIR
-    const btnExcluir = createButton("Excluir", "btnExcluir", "btn-danger");
-    btnExcluir.onclick = async () => {
-        const id = txtId.value; // Pega o ID do formulário
-        if (!id) {
-            exibirErro("Selecione um funcionário da lista para excluir.");
-            return;
-        }
-
-        if (confirm("Tem certeza que deseja excluir este funcionário?")) {
+            // --- LÓGICA INSERIDA PARA O NOME DO USUÁRIO ---
             try {
-                // Envia o ID na URL
-                const response = await fetch(`${API_URL}/usuarios/${id}`, {
-                    method: 'DELETE'
-                });
-                const respostaAPI = await response.json();
-                if (!response.ok) throw new Error(respostaAPI.message || "Erro desconhecido");
-
-                limparFormulario("Funcionário excluído com sucesso!");
-                listAll(); // Atualiza a tabela
+                const userData = JSON.parse(userDataString);
+                const userNameDisplay = document.getElementById('userNameDisplay');
+                if (userNameDisplay && userData?.data?.nomeFuncionario) {
+                    userNameDisplay.textContent = `👤 ${userData.data.nomeFuncionario.split(' ')[0]}`;
+                }
             } catch (error) {
-                exibirErro(error.message);
+                console.error("Erro ao tentar exibir o nome do usuário:", error);
             }
-        }
-    };
-    divBotoes.appendChild(btnExcluir);
 
-    // ======================== FUNÇÕES DE SUPORTE ========================
+            let API_DATA_FUNCIONARIOS; // Guarda os dados dos funcionários
+            let LISTA_CARGOS; // Guarda os dados dos cargos
 
-    // Busca todos os funcionários na API
-    async function listAll() {
-        try {
-            const response = await fetch(`${API_URL}/usuarios`);
-            if (!response.ok) throw new Error("Erro ao buscar funcionários.");
-            API_DATA_FUNCIONARIOS = await response.json();
-            renderTable(API_DATA_FUNCIONARIOS); 
-        } catch (error) {
-            exibirErro(error.message);
-        }
-    }
+            // Referências aos elementos HTML
+            const txtId = document.getElementById("txtId");
+            const txtNomeFuncionario = document.getElementById("txtNomeFuncionario");
+            const txtUsuario = document.getElementById("txtUsuario");
+            const txtEmail = document.getElementById("txtEmail");
+            const txtSenha = document.getElementById("txtSenha");
+            const cboCargos = document.getElementById("cboCargos");
 
-    // Renderiza a tabela de funcionários
-    function renderTable(funcionarios) {
-        divTabela.innerHTML = ""; // Limpa
+            const divBotoes = document.getElementById("divBotoes");
+            const divResposta = document.getElementById("divResposta");
+            const divTabela = document.getElementById("divTabela");
 
-        const table = document.createElement("table");
-        table.className = "table table-bordered table-striped table-hover";
-        
-        table.innerHTML = `
-            <thead class="table-light">
-                <tr>
-                    <th>ID</th>
-                    <th>Nome</th>
-                    <th>Usuário</th>
-                    <th>Email</th>
-                    <th>Cargo</th>
-                    <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        `;
-        const tbody = table.querySelector("tbody");
+            // Função auxiliar para criar botões
+            function createButton(text, id, className) {
+                const btn = document.createElement("button");
+                btn.textContent = text;
+                btn.id = id;
+                btn.className = `btn ${className} flex-fill`;
+                return btn;
+            }
 
-        if (funcionarios && funcionarios.length > 0) {
-            funcionarios.forEach(func => {
-                const tr = document.createElement("tr");
-                
-                // =======================================================
-                // CORREÇÃO PRINCIPAL (AQUI)
-                // Seu schema diz que o ID do Funcionario é 'id'
-                // =======================================================
-                tr.innerHTML = `
-                    <td>${func.id}</td> 
-                    <td>${func.nomeFuncionario}</td>
-                    <td>${func.usuario}</td>
-                    <td>${func.email}</td>
-                    <td>${func.cargo.nome}</td>
-                    <td>
-                        <button class="btn btn-sm btn-info btn-selecionar">Selecionar</button>
-                    </td>
+            // Limpar formulário
+            function limparFormulario(message = "") {
+                if (message) {
+                    divResposta.textContent = message;
+                    divResposta.className = "alert alert-success mt-3";
+                } else {
+                    divResposta.textContent = "";
+                    divResposta.className = "";
+                }
+                txtId.value = "";
+                txtNomeFuncionario.value = "";
+                txtUsuario.value = "";
+                txtEmail.value = "";
+                txtSenha.value = "";
+                cboCargos.value = "-1";
+            }
+
+            // Exibir erro
+            function exibirErro(mensagem) {
+                divResposta.textContent = mensagem;
+                divResposta.className = 'alert alert-danger mt-3';
+            }
+
+            // BOTÕES CRUD (adicionados via JS)
+            const btnCriar = createButton("Criar", "btnCriar", "btn-success");
+            btnCriar.onclick = async () => {
+                if (txtNomeFuncionario.value.trim() === "" || txtUsuario.value.trim() === "" || txtEmail.value.trim() === "" || txtSenha.value.trim() === "" || cboCargos.value === "-1") {
+                    exibirErro("Por favor, preencha todos os campos (Nome, Usuário, Email, Senha e Cargo).");
+                    return;
+                }
+
+                const senhaRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/\?]).{6,}$/;
+                if (!senhaRegex.test(txtSenha.value)) {
+                    exibirErro("Senha inválida: deve ter no mínimo 6 caracteres, 1 número, 1 maiúscula e 1 caractere especial.");
+                    return;
+                }
+
+                const dadosCadastro = {
+                    funcionario: {
+                        nomeFuncionario: txtNomeFuncionario.value.trim(),
+                        usuario: txtUsuario.value.trim(),
+                        email: txtEmail.value.trim(),
+                        senha: txtSenha.value.trim(),
+                        cargo: { idCargo: parseInt(cboCargos.value) }
+                    }
+                };
+
+                try {
+                    const response = await fetch(`${API_URL}/usuarios`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(dadosCadastro)
+                    });
+                    const respostaAPI = await response.json();
+                    if (!response.ok) throw new Error(respostaAPI.message || "Erro desconhecido");
+
+                    limparFormulario("Funcionário criado com sucesso!");
+                    listAll();
+                } catch (error) {
+                    exibirErro(error.message);
+                }
+            };
+            divBotoes.appendChild(btnCriar);
+
+            const btnAtualizar = createButton("Atualizar", "btnAtualizar", "btn-warning");
+            btnAtualizar.onclick = async () => {
+                const id = txtId.value;
+                if (!id) {
+                    exibirErro("Selecione um funcionário da lista para atualizar.");
+                    return;
+                }
+
+                if (txtNomeFuncionario.value.trim() === "" || txtUsuario.value.trim() === "" || txtEmail.value.trim() === "" || cboCargos.value === "-1") {
+                    exibirErro("Nome, Usuário, Email e Cargo são obrigatórios para atualizar.");
+                    return;
+                }
+
+                const dadosAtualizar = {
+                    funcionario: {
+                        nomeFuncionario: txtNomeFuncionario.value.trim(),
+                        usuario: txtUsuario.value.trim(),
+                        email: txtEmail.value.trim(),
+                        senha: txtSenha.value.trim(),
+                        cargo: { idCargo: parseInt(cboCargos.value) }
+                    }
+                };
+
+                try {
+                    const response = await fetch(`${API_URL}/usuarios/${id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(dadosAtualizar)
+                    });
+                    const respostaAPI = await response.json();
+                    if (!response.ok) throw new Error(respostaAPI.message || "Erro desconhecido");
+
+                    limparFormulario("Funcionário atualizado com sucesso!");
+                    listAll();
+                } catch (error) {
+                    exibirErro(error.message);
+                }
+            };
+            divBotoes.appendChild(btnAtualizar);
+
+            const btnExcluir = createButton("Excluir", "btnExcluir", "btn-danger");
+            btnExcluir.onclick = async () => {
+                const id = txtId.value;
+                if (!id) {
+                    exibirErro("Selecione um funcionário da lista para excluir.");
+                    return;
+                }
+
+                if (confirm("Tem certeza que deseja excluir este funcionário?")) {
+                    try {
+                        const response = await fetch(`${API_URL}/usuarios/${id}`, { method: 'DELETE' });
+                        const respostaAPI = await response.json();
+                        if (!response.ok) throw new Error(respostaAPI.message || "Erro desconhecido");
+
+                        limparFormulario("Funcionário excluído com sucesso!");
+                        listAll();
+                    } catch (error) {
+                        exibirErro(error.message);
+                    }
+                }
+            };
+            divBotoes.appendChild(btnExcluir);
+
+            // Funções de suporte
+            async function listAll() {
+                try {
+                    const response = await fetch(`${API_URL}/usuarios`);
+                    if (!response.ok) throw new Error("Erro ao buscar funcionários.");
+                    API_DATA_FUNCIONARIOS = await response.json();
+                    renderTable(API_DATA_FUNCIONARIOS);
+                } catch (error) {
+                    exibirErro(error.message);
+                }
+            }
+
+            function renderTable(funcionarios) {
+                divTabela.innerHTML = "";
+
+                const table = document.createElement("table");
+                table.className = "table table-bordered table-striped table-hover";
+                table.innerHTML = `
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Nome</th>
+                            <th>Usuário</th>
+                            <th>Email</th>
+                            <th>Cargo</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
                 `;
 
-                // Botão "Selecionar" da tabela
-                tr.querySelector('.btn-selecionar').addEventListener('click', () => {
-                    // =======================================================
-                    // CORREÇÃO PRINCIPAL (AQUI)
-                    // Devemos usar 'func.id' para preencher o formulário
-                    // =======================================================
-                    txtId.value = func.id; 
-                    txtNomeFuncionario.value = func.nomeFuncionario;
-                    txtUsuario.value = func.usuario;
-                    txtEmail.value = func.email;
-                    // O ID do cargo (func.cargo.idCargo) estava correto
-                    cboCargos.value = func.cargo.idCargo; 
-                    txtSenha.value = ""; 
-                    divResposta.innerHTML = ""; 
+                const tbody = table.querySelector("tbody");
+
+                if (funcionarios && funcionarios.length > 0) {
+                    funcionarios.forEach(func => {
+                        const tr = document.createElement("tr");
+                        tr.innerHTML = `
+                            <td>${func.id}</td>
+                            <td>${func.nomeFuncionario}</td>
+                            <td>${func.usuario}</td>
+                            <td>${func.email}</td>
+                            <td>${func.cargo?.nome ?? ''}</td>
+                            <td>
+                                <button class="btn btn-sm btn-info btn-selecionar">Selecionar</button>
+                            </td>
+                        `;
+
+                        tr.querySelector('.btn-selecionar').addEventListener('click', () => {
+                            txtId.value = func.id;
+                            txtNomeFuncionario.value = func.nomeFuncionario || '';
+                            txtUsuario.value = func.usuario || '';
+                            txtEmail.value = func.email || '';
+                            cboCargos.value = func.cargo?.idCargo ?? "-1";
+                            txtSenha.value = "";
+                            divResposta.innerHTML = "";
+                        });
+
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center">Nenhum funcionário encontrado.</td></tr>';
+                }
+
+                divTabela.appendChild(table);
+            }
+
+            async function preencherSelectCargos() {
+                try {
+                    const response = await fetch(`${API_URL}/cargos`);
+                    if (!response.ok) throw new Error("Erro ao carregar cargos.");
+                    LISTA_CARGOS = await response.json();
+
+                    const selects = [cboCargos, document.getElementById("cboCargosFiltro")];
+                    selects.forEach(cbo => {
+                        if (cbo) {
+                            const primeiroValor = cbo.options[0]?.value ?? "-1";
+                            const primeiroTexto = cbo.options[0]?.text ?? "";
+                            cbo.innerHTML = `<option value="${primeiroValor}">${primeiroTexto}</option>`;
+
+                            LISTA_CARGOS.forEach(cargo => {
+                                const option = document.createElement("option");
+                                option.value = cargo.idCargo;
+                                option.textContent = cargo.nome;
+                                cbo.appendChild(option);
+                            });
+                        }
+                    });
+                } catch (error) {
+                    exibirErro(error.message);
+                }
+            }
+
+            const txtFiltroNome = document.getElementById("txtFiltroNome");
+            const cboCargosFiltro = document.getElementById("cboCargosFiltro");
+
+            function filterData() {
+                if (!API_DATA_FUNCIONARIOS) return;
+
+                const nomeFiltro = txtFiltroNome.value.trim().toLowerCase();
+                const cargoFiltro = parseInt(cboCargosFiltro.value, 10);
+
+                const dadosFiltrados = API_DATA_FUNCIONARIOS.filter(f => {
+                    let match = true;
+                    if (nomeFiltro) {
+                        match = match && (f.nomeFuncionario.toLowerCase().includes(nomeFiltro) || f.usuario.toLowerCase().includes(nomeFiltro));
+                    }
+                    if (!isNaN(cargoFiltro) && cargoFiltro !== -1) {
+                        match = match && (f.cargo?.idCargo === cargoFiltro);
+                    }
+                    return match;
                 });
 
-                tbody.appendChild(tr);
-            });
-        } else {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center">Nenhum funcionário encontrado.</td></tr>';
-        }
-        divTabela.appendChild(table);
-    }
-
-    // Preenche o select de cargos
-    async function preencherSelectCargos() {
-        try {
-            const response = await fetch(`${API_URL}/cargos`);
-            if (!response.ok) throw new Error("Erro ao carregar cargos.");
-            LISTA_CARGOS = await response.json();
-            
-            const selects = [cboCargos, document.getElementById("cboCargosFiltro")];
-
-            selects.forEach(cbo => {
-                if (cbo) {
-                    const primeiroValor = cbo.options[0].value;
-                    cbo.innerHTML = `<option value="${primeiroValor}">${cbo.options[0].text}</option>`; // Reseta
-                    
-                    LISTA_CARGOS.forEach(cargo => {
-                        const option = document.createElement("option");
-                        // CORRIGIDO: Seu schema diz que o ID do Cargo é 'idCargo'
-                        option.value = cargo.idCargo; 
-                        option.textContent = cargo.nome;
-                        cbo.appendChild(option);
-                    });
-                }
-            });
-        } catch (error) {
-            exibirErro(error.message);
-        }
-    }
-
-    // ======================== INICIALIZAÇÃO ========================
-    const txtFiltroNome = document.getElementById("txtFiltroNome");
-    const cboCargosFiltro = document.getElementById("cboCargosFiltro");
-
-    function filterData() {
-        if (!API_DATA_FUNCIONARIOS) return;
-
-        const nomeFiltro = txtFiltroNome.value.trim().toLowerCase();
-        const cargoFiltro = parseInt(cboCargosFiltro.value);
-
-        const dadosFiltrados = API_DATA_FUNCIONARIOS.filter(f => {
-            let match = true;
-            if (nomeFiltro) {
-                match = match && (f.nomeFuncionario.toLowerCase().includes(nomeFiltro) || f.usuario.toLowerCase().includes(nomeFiltro));
+                renderTable(dadosFiltrados);
             }
-            if (!isNaN(cargoFiltro) && cargoFiltro != -1) {
-                // CORRIGIDO: Comparar com 'f.cargo.idCargo'
-                match = match && f.cargo.idCargo === cargoFiltro;
+
+            if (txtFiltroNome) txtFiltroNome.addEventListener("input", filterData);
+            if (cboCargosFiltro) cboCargosFiltro.addEventListener("change", filterData);
+
+            async function init() {
+                await preencherSelectCargos();
+                await listAll();
             }
-            return match;
-        });
-        renderTable(dadosFiltrados); 
-    }
 
-    if(txtFiltroNome) txtFiltroNome.addEventListener("input", filterData);
-    if(cboCargosFiltro) cboCargosFiltro.addEventListener("change", filterData);
+            init();
+        </script>
 
-    async function init() {
-        await preencherSelectCargos(); 
-        await listAll(); 
-    }
-
-    init(); // Inicia a página
-</script>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-</body>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    </body>
 </html>
