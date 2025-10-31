@@ -185,7 +185,7 @@
                 const botReply = data.reply;
                 
                 // Salva o ID da Thread para lembrar da conversa
-             currentThreadId = data.threadId; 
+              currentThreadId = data.threadId; 
 
                 // --- FUNÇÃO PARA SALVAR THREAD ID ---
                 sessionStorage.setItem('chatThreadId', currentThreadId);
@@ -194,7 +194,7 @@
                 addMessage(botReply, 'bot'); // Salva automaticamente
 
             } catch (error) {
-                console.error('Erro ao contatar o bot:', error);
+               console.error('Erro ao contatar o bot:', error);
              hideTyping();
                 addMessage('Desculpe, não foi possível conectar ao assistente.', 'bot');
             }
@@ -207,7 +207,7 @@
         chatInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 handleSendMessage(chatInput.value);
-          }
+         }
         });
         suggestionArea.addEventListener('click', (e) => {
             if (e.target.classList.contains('suggestion-btn')) {
