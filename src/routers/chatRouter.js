@@ -8,7 +8,6 @@ import path from 'path'; // Módulo nativo do Node para lidar com caminhos
 import { fileURLToPath } from 'url'; // Módulo nativo do Node
 
 // Importa o "Roteador Chefe" que vai unificar todas as suas rotas
-import mainRouter from './src/routers/index.js';
 
 // Configuração para __dirname funcionar com ES Modules
 const __filename = fileURLToPath(import.meta.url);
