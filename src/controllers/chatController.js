@@ -1,55 +1,80 @@
-// controllers/chatController.js
-
 import openai from '../config/openai.js';
 
-// Nota: a SDK marca a API de Assistants/Threads como deprecated.
-// Aqui migramos o fluxo para a Responses API (recomendado).
+// O ID do seu assistente
+const MEU_ASSISTENTE_ID = "asst_XypLIE41vk9VgGDtIfkAEpOi";
 
-// --- Função de chat usando Responses API ---
+/**
+ * Função auxiliar para esperar o assistente terminar de "pensar".
+ */
+async function esperarRunCompletar(threadId, runId) {
+    let run = await openai.beta.threads.runs.retrieve(threadId, runId);
+    
+    // Continua verificando o status a cada 1 segundo
+    while (run.status === 'queued' || run.status === 'in_progress') {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Espera 1 seg
+        run = await openai.beta.threads.runs.retrieve(threadId, runId);
+    }
+    
+    // Se o status for 'failed' ou 'cancelled', joga um erro
+    if (run.status !== 'completed') {
+        console.error('Detalhes do Run falho:', run.last_error);
+        throw new Error(`O Run do assistente falhou com status: ${run.status}`);
+    }
+    return run; // Retorna o 'run' completo
+}
+
+
+// --- ESTA É A SUA FUNÇÃO DE CHAT ATUALIZADA ---
 export const handleChat = async (req, res) => {
-    const { message, threadId } = req.body;
-    if (!message) return res.status(400).json({ error: 'Mensagem não fornecida.' });
+    
+    // O frontend agora envia a MENSAGEM ATUAL e o ID DA CONVERSA (threadId)
+    const { message, threadId } = req.body; 
+
+    if (!message) {
+        return res.status(400).json({ error: 'Mensagem não fornecida.' });
+    }
 
     try {
-        // Monta o payload para a Responses API
-        const payload = {
-            model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-            input: message
-        };
+        // Passo 1: Determina o ID da Thread (a conversa)
+        // Se o frontend não mandou um (threadId), nós criamos um novo
+        const currentThreadId = threadId || (await openai.beta.threads.create()).id;
 
-        // Algumas versões/implementações aceitam passar o id da conversa
-        if (threadId) {
-            // Campo 'conversation' ou 'conversation_id' pode variar entre versões; tentamos a forma mais comum
-            payload.conversation = { id: threadId };
-        }
+        // Passo 2: Adiciona a nova mensagem do usuário na Thread
+        await openai.beta.threads.messages.create(
+            currentThreadId,
+            {
+                role: "user",
+                content: message // A mensagem do usuário
+            }
+        );
 
-        const response = await openai.responses.create(payload);
+        // Passo 3: Roda o assistente usando o ID dele
+        const run = await openai.beta.threads.runs.create(
+            currentThreadId, // Diz em qual conversa ele deve rodar
+            { 
+                assistant_id: MEU_ASSISTENTE_ID // Diz qual assistente deve rodar
+            }
+        );
 
-        // Extrai o texto da resposta de forma defensiva (várias formas retornadas pela SDK)
-        let botReply = null;
-        if (response.output_text) {
-            botReply = response.output_text;
-        } else if (response.output && Array.isArray(response.output)) {
-            // Junta possíveis blocos de conteúdo
-            botReply = response.output
-                .map(item => {
-                    if (item.content && Array.isArray(item.content)) {
-                        return item.content.map(c => c.text || c?.text?.value || '').join(' ');
-                    }
-                    return item.text || '';
-                })
-                .join('\n')
-                .trim();
-        } else if (response.output && response.output[0] && response.output[0].content && response.output[0].content[0]) {
-            botReply = response.output[0].content[0].text || response.output[0].content[0].text?.value;
-        }
+        // Passo 4: Espera o "run" completar (o assistente pensar)
+        await esperarRunCompletar(currentThreadId, run.id);
 
-        // A Responses API pode retornar um id de conversa em 'conversation.id' ou usar 'id' no próprio objeto
-        const newThreadId = response.conversation?.id || response.id || threadId || null;
+        // Passo 5: Pega TODAS as mensagens da thread
+        const messages = await openai.beta.threads.messages.list(currentThreadId);
 
-        res.json({ reply: botReply || 'Não obtive resposta do assistente.', threadId: newThreadId });
+        // Passo 6: Encontra a última resposta do assistente
+        // O '.data[0]' pega a resposta mais recente
+        const botReply = messages.data[0]?.content[0]?.text?.value;
+
+        // Passo 7: Envia a resposta E o threadId de volta para o frontend
+        res.json({ 
+            reply: botReply || "Não obtive resposta do assistente.", 
+            threadId: currentThreadId // Devolve o ID da conversa
+        });
+
     } catch (error) {
-        console.error('Erro ao chamar Responses API:', error);
+        // Esta é a linha que vai aparecer nos seus logs do Railway
+        console.error('Erro ao chamar API de Assistentes:', error);
         res.status(500).json({ error: 'Erro no servidor.' });
     }
 };
