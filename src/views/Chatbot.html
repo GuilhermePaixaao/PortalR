@@ -66,9 +66,9 @@
         </main>
     </div>
 
-
 <script type="module">
     document.addEventListener('DOMContentLoaded', () => {
+
         // --- AUTENTICAÇÃO E NOME DE USUÁRIO ---
         let userDataString = localStorage.getItem("userData");
         if (!userDataString) {
@@ -86,7 +86,6 @@
             window.location.href = "Login.html";
         }
 
-
         // --- LÓGICA DO CHATBOT ---
         const chatHistory = document.getElementById('chatHistory');
         const chatInput = document.getElementById('chatInput');
@@ -94,17 +93,15 @@
         const typingIndicator = document.getElementById('typingIndicator');
         const suggestionArea = document.getElementById('suggestionArea');
 
-
         if (!chatHistory || !chatInput || !sendButton || !typingIndicator || !suggestionArea) {
             console.error("ERRO: Elementos do chat não encontrados. Verifique os IDs.");
             return;
         }
 
-
         // Guarda o ID da "conversa" (Thread)
         let currentThreadId = null;
 
-        // Função para salvar o histórico e threadId no localStorage
+        // Novas funções para salvar e restaurar estado, sem alterar layout
         function saveChatState() {
             localStorage.setItem('chatHistory', chatHistory.innerHTML);
             if (currentThreadId) {
@@ -112,7 +109,6 @@
             }
         }
 
-        // Função para restaurar estado ao carregar a página
         function restoreChatState() {
             const savedChat = localStorage.getItem('chatHistory');
             if (savedChat) {
@@ -162,6 +158,7 @@
             chatHistory.appendChild(messageWrapper);
             chatHistory.scrollTop = chatHistory.scrollHeight;
 
+            // Salvar estado após adicionar mensagem
             saveChatState();
         }
 
@@ -193,8 +190,9 @@
                 const data = await response.json();
                 const botReply = data.reply;
                 
-                // Salva o ID da Thread para lembrar da conversa
+                // Atualiza e salva o ID da Thread para manter contexto
                 currentThreadId = data.threadId; 
+                saveChatState();
 
                 hideTyping();
                 addMessage(botReply, 'bot');
