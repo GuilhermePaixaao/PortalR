@@ -11,11 +11,11 @@ async function esperarRunCompletar(threadId, runId) {
         throw new Error("threadId está undefined em esperarRunCompletar");
     }
 
-    let run = await openai.beta.threads.runs.retrieve(threadId, runId);
+    let run = await openai.beta.threads.runs.retrieve(runId, { thread_id: threadId });
 
     while (run.status === 'queued' || run.status === 'in_progress') {
         await new Promise(resolve => setTimeout(resolve, 1000));
-        run = await openai.beta.threads.runs.retrieve(threadId, runId);
+        run = await openai.beta.threads.runs.retrieve(runId, { thread_id: threadId });
     }
 
     if (run.status !== 'completed') {
@@ -24,6 +24,7 @@ async function esperarRunCompletar(threadId, runId) {
     }
     return run;
 }
+
 
 // --- ESTA É A SUA FUNÇÃO DE CHAT ATUALIZADA ---
 export const handleChat = async (req, res) => {
