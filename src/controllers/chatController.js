@@ -1,4 +1,6 @@
-// Importa o cliente configurado
+// controllers/chatController.js
+
+// Importa o cliente configurado do seu arquivo de config
 import openai from '../config/openai.js';
 
 // Exporta a função 'handleChat' diretamente

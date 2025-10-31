@@ -1,5 +1,7 @@
-// O seu server.js já carrega o 'dotenv/config',
-// então não precisamos importar ele aqui. O process.env já vai funcionar.
+// config/openai.js
+
+// O seu server.js já deve carregar o 'dotenv',
+// então 'process.env' já estará disponível aqui.
 import { OpenAI } from 'openai';
 
 const openai = new OpenAI({
@@ -8,4 +10,3 @@ const openai = new OpenAI({
 
 // Usa 'export default' para exportar o cliente
 export default openai;
-
