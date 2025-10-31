@@ -1,217 +1,201 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatbot - Portal Supermercado</title>
-    <link rel="stylesheet" href="css/dashboard.css">
-    <link rel="stylesheet" href="css/chatbot.css">
-    <link rel="icon" type="image/png" href="logo.png">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot - Portal Supermercado</title>
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="stylesheet" href="css/chatbot.css">
+    <link rel="icon" type="image/png" href="logo.png">
 </head>
 <body>
-    <div class="dashboard-container">
-        <header class="header">
-            <div class="logo">PORTAL SUPERMERCADO</div>
-            <div class="search-bar">
-                <input type="text" placeholder="Buscar produtos, relatórios, chamados...">
-            </div>
-            <div class="user-profile">
-                <span class="icon">🔔</span> <span id="userNameDisplay" class="icon">👤</span> 
-            </div>
-        </header>
-        
-        <aside class="sidebar">
-            <nav>
-                <ul>
-                    <li><a href="Dashboard.html" title="Início"><span class="icon">🏠</span><span class="text">Início</span></a></li>
-                    <li><a href="Imprimir.html" title="Impressão de Preços"><span class="icon">🖨️</span><span class="text">Imprimir</span></a></li>
-                    <li class="ticket-item"><a href="Chamado.html" title="Abrir Chamado"><span class="icon">➕</span><span class="text">Chamado</span></a></li>
-                    <li class="active"><a href="Chatbot.html" title="Chatbot"><span class="icon">🤖</span><span class="text">Chatbot</span></a></li>
-                    <li><a href="Funcionarios.html" title="funcionario"><span class="icon">💼</span><span class="text">Funcionários</span></a></li>
-                    <li style="margin-top: 30px;"><a href="#" title="Configurações"><span class="icon">⚙️</span><span class="text">Ajustes</span></a></li>
-                </ul>
-            </nav>
-        </aside>
-        
-        <main class="main-content">
-            <h1>Chatbot - Assistente Virtual</h1>
-            <div class="chat-widget">
-                <div class="chat-history" id="chatHistory">
-                    <div class="chat-message message-bot">
-                        <span class="avatar">🤖</span>
-                        <div class="message-bubble">
-                            <p>Olá! Eu sou o assistente virtual do Portal Supermercado. Como posso ajudar você hoje?</p>
-                            <span class="timestamp">9:00 AM</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="suggestion-area" id="suggestionArea">
-                    <button class="suggestion-btn" data-message="Status de um ticket">Status de um ticket</button>
-                    <button class="suggestion-btn" data-message="Imprimir etiquetas">Imprimir etiquetas</button>
-                    <button class="suggestion-btn" data-message="Abrir um chamado">Abrir um chamado</button>
-                </div>
-                <div class="typing-indicator" id="typingIndicator">
-                    <span class="avatar">🤖</span>
-                    <div class="message-bubble">
-                        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-                    </div>
-                </div>
-                <div class="chat-input-area">
-                    <input type="text" id="chatInput" placeholder="Digite sua mensagem...">
-                    <button id="sendButton" class="send-btn" title="Enviar">
-                        <span class="icon">➤</span>
-                    </button>
-                </div>
-            </div>
-        </main>
-    </div>
-
+    <div class="dashboard-container">
+        <header class="header">
+            <div class="logo">PORTAL SUPERMERCADO</div>
+            <div class="search-bar">
+                <input type="text" placeholder="Buscar produtos, relatórios, chamados...">
+            </div>
+            <div class="user-profile">
+                <span class="icon">🔔</span> <span id="userNameDisplay" class="icon">👤</span> 
+            </div>
+        </header>
+        
+        <aside class="sidebar">
+            <nav>
+                <ul>
+                    <li><a href="Dashboard.html" title="Início"><span class="icon">🏠</span><span class="text">Início</span></a></li>
+                    <li><a href="Imprimir.html" title="Impressão de Preços"><span class="icon">🖨️</span><span class="text">Imprimir</span></a></li>
+                    <li class="ticket-item"><a href="Chamado.html" title="Abrir Chamado"><span class="icon">➕</span><span class="text">Chamado</span></a></li>
+                    <li class="active"><a href="Chatbot.html" title="Chatbot"><span class="icon">🤖</span><span class="text">Chatbot</span></a></li>
+                    <li><a href="Funcionarios.html" title="funcionario"><span class="icon">💼</span><span class="text">Funcionários</span></a></li>
+                    <li style="margin-top: 30px;"><a href="#" title="Configurações"><span class="icon">⚙️</span><span class="text">Ajustes</span></a></li>
+                </ul>
+            </nav>
+        </aside>
+        
+        <main class="main-content">
+            <h1>Chatbot - Assistente Virtual</h1>
+            <div class="chat-widget">
+                <div class="chat-history" id="chatHistory">
+                    <div class="chat-message message-bot">
+                        <span class="avatar">🤖</span>
+                        <div class="message-bubble">
+                            <p>Olá! Eu sou o assistente virtual do Portal Supermercado. Como posso ajudar você hoje?</p>
+                            <span class="timestamp">9:00 AM</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="suggestion-area" id="suggestionArea">
+                    <button class="suggestion-btn" data-message="Status de um ticket">Status de um ticket</button>
+                    <button class="suggestion-btn" data-message="Imprimir etiquetas">Imprimir etiquetas</button>
+                    <button class="suggestion-btn" data-message="Abrir um chamado">Abrir um chamado</button>
+                </div>
+                <div class="typing-indicator" id="typingIndicator">
+                    <span class="avatar">🤖</span>
+                    <div class="message-bubble">
+                        <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                    </div>
+                </div>
+                <div class="chat-input-area">
+                    <input type="text" id="chatInput" placeholder="Digite sua mensagem...">
+                    <button id="sendButton" class="send-btn" title="Enviar">
+                        <span class="icon">➤</span>
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
 
 <script type="module">
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', () => {
 
+        // --- AUTENTICAÇÃO E NOME DE USUÁRIO ---
+        let userDataString = localStorage.getItem("userData");
+        if (!userDataString) {
+            window.location.href = "Login.html"; 
+            return;
+        }
+        try {
+            const userData = JSON.parse(userDataString); 
+            const userNameDisplay = document.getElementById('userNameDisplay'); 
+            if (userNameDisplay && userData?.data?.nomeFuncionario) {
+                userNameDisplay.textContent = `👤 ${userData.data.nomeFuncionario.split(' ')[0]}`;
+            }
+        } catch (error) {
+            console.error("Erro ao exibir nome do usuário:", error);
+            window.location.href = "Login.html";
+        }
 
-        // --- AUTENTICAÇÃO E NOME DE USUÁRIO ---
-        let userDataString = localStorage.getItem("userData");
-        if (!userDataString) {
-            window.location.href = "Login.html"; 
-            return;
-        }
-        try {
-            const userData = JSON.parse(userDataString); 
-            const userNameDisplay = document.getElementById('userNameDisplay'); 
-            if (userNameDisplay && userData?.data?.nomeFuncionario) {
-                userNameDisplay.textContent = `👤 ${userData.data.nomeFuncionario.split(' ')[0]}`;
-            }
-        } catch (error) {
-            console.error("Erro ao exibir nome do usuário:", error);
-            window.location.href = "Login.html";
-        }
+        // --- LÓGICA DO CHATBOT ---
+        const chatHistory = document.getElementById('chatHistory');
+        const chatInput = document.getElementById('chatInput');
+        const sendButton = document.getElementById('sendButton');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const suggestionArea = document.getElementById('suggestionArea');
 
+        if (!chatHistory || !chatInput || !sendButton || !typingIndicator || !suggestionArea) {
+            console.error("ERRO: Elementos do chat não encontrados. Verifique os IDs.");
+            return;
+        }
 
-        // --- LÓGICA DO CHATBOT ---
-        const chatHistory = document.getElementById('chatHistory');
-        const chatInput = document.getElementById('chatInput');
-        const sendButton = document.getElementById('sendButton');
-        const typingIndicator = document.getElementById('typingIndicator');
-        const suggestionArea = document.getElementById('suggestionArea');
+        // Guarda o ID da "conversa" (Thread)
+        let currentThreadId = null;
 
+        function showTyping() {
+            typingIndicator.style.display = 'flex';
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+        function hideTyping() {
+            typingIndicator.style.display = 'none';
+        }
 
-        if (!chatHistory || !chatInput || !sendButton || !typingIndicator || !suggestionArea) {
-            console.error("ERRO: Elementos do chat não encontrados. Verifique os IDs.");
-            return;
-        }
+        function addMessage(message, sender) {
+            const messageWrapper = document.createElement('div');
+            messageWrapper.classList.add('chat-message');
+            const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            
+            if (sender === 'bot') {
+                messageWrapper.classList.add('message-bot');
+                messageWrapper.innerHTML = `
+                    <span class="avatar">🤖</span>
+                    <div class="message-bubble">
+                        <p>${message}</p>
+                        <span class="timestamp">${timestamp}</span>
+                    </div>
+                `;
+            } else { // 'user'
+                messageWrapper.classList.add('message-user');
+                messageWrapper.innerHTML = `
+                    <span class="avatar">👤</span>
+                    <div class="message-bubble">
+                        <p>${message}</p>
+                        <span class="timestamp">${timestamp}</span>
+                    </div>
+                `;
+            }
+            chatHistory.appendChild(messageWrapper);
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
 
+        // Função principal (MODIFICADA)
+        async function handleSendMessage(message) {
+            const userMessage = message.trim();
+            if (userMessage === '') return;
 
-        // Guarda o ID da "conversa" (Thread)
-        let currentThreadId = null;
+            suggestionArea.style.display = 'none';
+            addMessage(userMessage, 'user');
+            if (chatInput) chatInput.value = ''; 
+            showTyping();
 
+            try {
+                // Envia os dados no formato (message + threadId)
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        message: userMessage,      // A MENSAGEM ATUAL
+                        threadId: currentThreadId  // O ID da Thread (null na 1ª vez)
+                    })
+                });
 
-        function showTyping() {
-            typingIndicator.style.display = 'flex';
-            chatHistory.scrollTop = chatHistory.scrollHeight;
-        }
-        function hideTyping() {
-            typingIndicator.style.display = 'none';
-        }
+                if (!response.ok) {
+                    throw new Error(`Erro na API: ${response.status} ${response.statusText}`);
+                }
 
+                const data = await response.json();
+                const botReply = data.reply;
+                
+                // Salva o ID da Thread para lembrar da conversa
+                currentThreadId = data.threadId; 
 
-        function addMessage(message, sender) {
-            const messageWrapper = document.createElement('div');
-            messageWrapper.classList.add('chat-message');
-            const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-            
-            if (sender === 'bot') {
-                messageWrapper.classList.add('message-bot');
-                messageWrapper.innerHTML = `
-                    <span class="avatar">🤖</span>
-                    <div class="message-bubble">
-                        <p>${message}</p>
-                        <span class="timestamp">${timestamp}</span>
-                    </div>
-                `;
-            } else { // 'user'
-                messageWrapper.classList.add('message-user');
-                messageWrapper.innerHTML = `
-                    <span class="avatar">👤</span>
-                    <div class="message-bubble">
-                        <p>${message}</p>
-                        <span class="timestamp">${timestamp}</span>
-                    </div>
-                `;
-            }
-            chatHistory.appendChild(messageWrapper);
-            chatHistory.scrollTop = chatHistory.scrollHeight;
-        }
+                hideTyping();
+                addMessage(botReply, 'bot');
 
+            } catch (error) {
+                console.error('Erro ao contatar o bot:', error);
+                hideTyping();
+                addMessage('Desculpe, não foi possível conectar ao assistente.', 'bot');
+            }
+        }
 
-        // Função principal (MODIFICADA)
-        async function handleSendMessage(message) {
-            const userMessage = message.trim();
-            if (userMessage === '') return;
-
-
-            suggestionArea.style.display = 'none';
-            addMessage(userMessage, 'user');
-            if (chatInput) chatInput.value = ''; 
-            showTyping();
-
-
-            try {
-                // Envia os dados no formato (message + threadId)
-                const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        message: userMessage,      // A MENSAGEM ATUAL
-                        threadId: currentThreadId  // O ID da Thread (null na 1ª vez)
-                    })
-                });
-
-
-                if (!response.ok) {
-                    throw new Error(`Erro na API: ${response.status} ${response.statusText}`);
-                }
-
-
-                const data = await response.json();
-                const botReply = data.reply;
-                
-                // Salva o ID da Thread para lembrar da conversa
-                currentThreadId = data.threadId; 
-
-
-                hideTyping();
-                addMessage(botReply, 'bot');
-
-
-            } catch (error) {
-                console.error('Erro ao contatar o bot:', error);
-                hideTyping();
-                addMessage('Desculpe, não foi possível conectar ao assistente.', 'bot');
-            }
-        }
-
-
-        // --- Event Listeners ---
-        sendButton.addEventListener('click', () => {
-            handleSendMessage(chatInput.value);
-        });
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                handleSendMessage(chatInput.value);
-            }
-        });
-        suggestionArea.addEventListener('click', (e) => {
-            if (e.target.classList.contains('suggestion-btn')) {
-                const message = e.target.dataset.message;
-                handleSendMessage(message);
-            }
-        });
-        hideTyping();
-    });
+        // --- Event Listeners ---
+        sendButton.addEventListener('click', () => {
+            handleSendMessage(chatInput.value);
+        });
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleSendMessage(chatInput.value);
+            }
+        });
+        suggestionArea.addEventListener('click', (e) => {
+            if (e.target.classList.contains('suggestion-btn')) {
+                const message = e.target.dataset.message;
+                handleSendMessage(message);
+            }
+        });
+        hideTyping();
+    });
 </script>
-
 
 </body>
 </html>
