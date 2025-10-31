@@ -7,6 +7,10 @@ const MEU_ASSISTENTE_ID = process.env.OPENAI_ASSISTENTE_ID || "asst_XypLIE41vk9V
  * Função auxiliar para esperar o assistente terminar de "pensar".
  */
 async function esperarRunCompletar(threadId, runId) {
+    if (!threadId) {
+        throw new Error("threadId está undefined em esperarRunCompletar");
+    }
+
     let run = await openai.beta.threads.runs.retrieve(threadId, runId);
 
     while (run.status === 'queued' || run.status === 'in_progress') {
@@ -30,11 +34,15 @@ export const handleChat = async (req, res) => {
     }
 
     try {
-        // Assegura que currentThreadId seja sempre string
+        // Garante que currentThreadId seja sempre string válida
         let currentThreadId = threadId;
         if (!currentThreadId) {
             const createdThread = await openai.beta.threads.create();
             currentThreadId = createdThread.id; // Pega só o ID, que é string
+        }
+
+        if (!currentThreadId) {
+            throw new Error("Falha ao definir currentThreadId");
         }
 
         // Adiciona a nova mensagem do usuário na Thread
