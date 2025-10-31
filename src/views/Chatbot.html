@@ -26,47 +26,12 @@
         <aside class="sidebar">
             <nav>
                 <ul>
-                    <li>
-                        <a href="Dashboard.html" title="Início">
-                            <span class="icon">🏠</span>
-                            <span class="text">Início</span>
-                        </a>
-                    </li>
-                    
-                    <li>
-                        <a href="Imprimir.html" title="Impressão de Preços">
-                            <span class="icon">🖨️</span>
-                            <span class="text">Imprimir</span>
-                        </a>
-                    </li>
-
-                    <li class="ticket-item">
-                        <a href="Chamado.html" title="Abrir Chamado">
-                            <span class="icon">➕</span>
-                            <span class="text">Chamado</span>
-                        </a>
-                    </li>
-
-                    <li class="active">
-                        <a href="Chatbot.html" title="Chatbot">
-                            <span class="icon">🤖</span>
-                            <span class="text">Chatbot</span>
-                        </a>
-                    </li>
-
-                    <li>
-                        <a href="Funcionarios.html" title="funcionario">
-                            <span class="icon">💼</span>
-                            <span class="text">Funcionários</span>
-                        </a>
-                    </li>
-
-                    <li style="margin-top: 30px;">
-                        <a href="#" title="Configurações">
-                            <span class="icon">⚙️</span>
-                            <span class="text">Ajustes</span>
-                        </a>
-                    </li>
+                    <li><a href="Dashboard.html" title="Início"><span class="icon">🏠</span><span class="text">Início</span></a></li>
+                    <li><a href="Imprimir.html" title="Impressão de Preços"><span class="icon">🖨️</span><span class="text">Imprimir</span></a></li>
+                    <li class="ticket-item"><a href="Chamado.html" title="Abrir Chamado"><span class="icon">➕</span><span class="text">Chamado</span></a></li>
+                    <li class="active"><a href="Chatbot.html" title="Chatbot"><span class="icon">🤖</span><span class="text">Chatbot</span></a></li>
+                    <li><a href="Funcionarios.html" title="funcionario"><span class="icon">💼</span><span class="text">Funcionários</span></a></li>
+                    <li style="margin-top: 30px;"><a href="#" title="Configurações"><span class="icon">⚙️</span><span class="text">Ajustes</span></a></li>
                 </ul>
             </nav>
         </aside>
@@ -86,7 +51,7 @@
                         </div>
                     </div>
                     
-                    </div>
+                </div>
                 
                 <div class="suggestion-area" id="suggestionArea">
                     <button class="suggestion-btn" data-message="Status de um ticket">Status de um ticket</button>
@@ -114,7 +79,6 @@
     </div>
 
 <script type="module">
-    // Espera o conteúdo da página carregar
     document.addEventListener('DOMContentLoaded', () => {
 
         // =======================================================
@@ -122,29 +86,23 @@
         // =======================================================
         let userDataString = localStorage.getItem("userData");
         if (!userDataString) {
-            // Se não estiver logado, volta para o login.
             window.location.href = "Login.html"; 
-            return; // Para a execução do script
+            return;
         }
 
         try {
-            // Converte a string do localStorage em um objeto
             const userData = JSON.parse(userDataString); 
-            // Procura o elemento <span> no HTML
             const userNameDisplay = document.getElementById('userNameDisplay'); 
 
-            // Verifica se o elemento existe e se temos o nome nos dados
             if (userNameDisplay && userData?.data?.nomeFuncionario) {
-                // Atualiza o texto com o ícone e o primeiro nome
                 userNameDisplay.textContent = `👤 ${userData.data.nomeFuncionario.split(' ')[0]}`;
             }
         } catch (error) {
             console.error("Erro ao exibir nome do usuário:", error);
-            // Se o JSON for inválido, também redireciona
             window.location.href = "Login.html";
         }
         // =======================================================
-        // --- FIM DA LÓGICA DE AUTENTICAÇÃO ---
+        // --- FIM DA AUTENTICAÇÃO ---
         // =======================================================
 
 
@@ -155,33 +113,26 @@
         const typingIndicator = document.getElementById('typingIndicator');
         const suggestionArea = document.getElementById('suggestionArea');
 
-        // Validação para garantir que tudo foi encontrado
+        // Validação
         if (!chatHistory || !chatInput || !sendButton || !typingIndicator || !suggestionArea) {
             console.error("ERRO: Não foi possível encontrar um ou mais elementos do chat no HTML. Verifique os IDs.");
             return;
         }
 
-        // 2. Histórico da conversa (para enviar à OpenAI)
-        let conversationHistory = [
-            { role: 'system', content: 'Você é um assistente prestativo do Portal Supermercado. Responda de forma breve e direta sobre chamados, impressão de etiquetas e status de funcionários.' }
-        ];
+        // --- MUDANÇA AQUI ---
+        // Guarda o ID da "conversa" (Thread) que o assistente está usando
+        let currentThreadId = null;
 
-        // 3. Adicionar a mensagem inicial (que já está no HTML) ao histórico
-        const initialBotMessage = chatHistory.querySelector('.message-bot p');
-        if (initialBotMessage) {
-            conversationHistory.push({ role: 'assistant', content: initialBotMessage.textContent });
-        }
-
-        // 4. Funções de ajuda
+        // 4. Funções de ajuda (showTyping, hideTyping) - SEM MUDANÇAS
         function showTyping() {
-            typingIndicator.style.display = 'flex'; // 'flex' pois é assim no seu HTML
+            typingIndicator.style.display = 'flex';
             chatHistory.scrollTop = chatHistory.scrollHeight;
         }
         function hideTyping() {
             typingIndicator.style.display = 'none';
         }
 
-        // 5. Função para ADICIONAR uma nova mensagem na tela (replicando sua estrutura HTML)
+        // 5. Função para ADICIONAR uma nova mensagem na tela - SEM MUDANÇAS
         function addMessage(message, sender) {
             const messageWrapper = document.createElement('div');
             messageWrapper.classList.add('chat-message');
@@ -198,7 +149,7 @@
                     </div>
                 `;
             } else { // 'user'
-                messageWrapper.classList.add('message-user'); // Adiciona classe para alinhar à direita
+                messageWrapper.classList.add('message-user');
                 messageWrapper.innerHTML = `
                     <span class="avatar">👤</span>
                     <div class="message-bubble">
@@ -209,69 +160,66 @@
             }
 
             chatHistory.appendChild(messageWrapper);
-            chatHistory.scrollTop = chatHistory.scrollHeight; // Rola para o fim
+            chatHistory.scrollTop = chatHistory.scrollHeight;
         }
 
-        // 6. Função principal para ENVIAR a mensagem
+        // 6. Função principal para ENVIAR a mensagem (MODIFICADA)
         async function handleSendMessage(message) {
             const userMessage = message.trim();
             if (userMessage === '') return;
 
-            // Esconde sugestões e mostra a mensagem do usuário
             suggestionArea.style.display = 'none';
             addMessage(userMessage, 'user');
-            conversationHistory.push({ role: 'user', content: userMessage });
             
-            if (chatInput) chatInput.value = ''; // Limpa o input se a mensagem veio de lá
+            if (chatInput) chatInput.value = ''; 
 
-            // Mostra "digitando..."
             showTyping();
 
             try {
-                // Envia o histórico para o SEU backend (a rota /api/chat)
-                // Usamos "" como URL base para funcionar no Railway
+                // Envia os dados no NOVO formato (message + threadId)
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ history: conversationHistory })
+                    body: JSON.stringify({ 
+                        message: userMessage,      // Envia a MENSAGEM ATUAL
+                        threadId: currentThreadId  // Envia o ID da Thread (null na 1ª vez)
+                    })
                 });
 
                 if (!response.ok) {
-                    // Se a resposta não for OK (ex: 404, 500), joga um erro
                     throw new Error(`Erro na API: ${response.status} ${response.statusText}`);
                 }
 
                 const data = await response.json();
                 const botReply = data.reply;
+                
+                // --- IMPORTANTE ---
+                // Salva o ID da Thread que o backend retornou
+                // para que o assistente lembre da conversa na próxima vez.
+                currentThreadId = data.threadId; 
 
-                // Esconde "digitando..." e mostra a resposta do bot
                 hideTyping();
                 addMessage(botReply, 'bot');
-                conversationHistory.push({ role: 'assistant', content: botReply });
 
             } catch (error) {
                 console.error('Erro ao contatar o bot:', error);
                 hideTyping();
-                // Mensagem de erro mais clara para o usuário
-                addMessage('Desculpe, não foi possível conectar ao assistente. Verifique os logs do servidor (Erro 500 ou 404).', 'bot');
+                addMessage('Desculpe, não foi possível conectar ao assistente.', 'bot');
             }
         }
 
-        // 7. Ligar os botões (Event Listeners)
+        // 7. Ligar os botões (Event Listeners) - SEM MUDANÇAS
         
-        // Botão de Enviar
         sendButton.addEventListener('click', () => {
             handleSendMessage(chatInput.value);
         });
 
-        // Tecla Enter no input
         chatInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 handleSendMessage(chatInput.value);
             }
         });
 
-        // Botões de Sugestão
         suggestionArea.addEventListener('click', (e) => {
             if (e.target.classList.contains('suggestion-btn')) {
                 const message = e.target.dataset.message;
@@ -279,7 +227,6 @@
             }
         });
 
-        // Esconder o "digitando..." no início
         hideTyping();
     });
 </script>
