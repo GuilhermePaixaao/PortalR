@@ -66,168 +66,154 @@
         </main>
     </div>
 
-<script type="module">
-    document.addEventListener('DOMContentLoaded', () => {
+    <script type="module">
+      document.addEventListener('DOMContentLoaded', () => {
+        // --- AUTENTICAÇÃO E NOME DE USUÁRIO ---
+        let userDataString = localStorage.getItem('userData');
+        if (!userDataString) {
+          window.location.href = 'Login.html';
+          return;
+        }
 
-        // --- AUTENTICAÇÃO E NOME DE USUÁRIO ---
-        let userDataString = localStorage.getItem("userData");
-        if (!userDataString) {
-            window.location.href = "Login.html"; 
-            return;
-        }
-        try {
-            const userData = JSON.parse(userDataString); 
-            const userNameDisplay = document.getElementById('userNameDisplay'); 
-            if (userNameDisplay && userData?.data?.nomeFuncionario) {
-                userNameDisplay.textContent = `👤 ${userData.data.nomeFuncionario.split(' ')[0]}`;
-            }
-        } catch (error) {
-            console.error("Erro ao exibir nome do usuário:", error);
-            window.location.href = "Login.html";
-        }
+        try {
+          const userData = JSON.parse(userDataString);
+          const userNameDisplay = document.getElementById('userNameDisplay');
+          if (userNameDisplay && userData?.data?.nomeFuncionario) {
+            userNameDisplay.textContent = `👤 ${userData.data.nomeFuncionario.split(' ')[0]}`;
+          }
+        } catch (error) {
+          console.error('Erro ao exibir nome do usuário:', error);
+          window.location.href = 'Login.html';
+        }
 
-        // --- LÓGICA DO CHATBOT ---
-        const chatHistory = document.getElementById('chatHistory');
-        const chatInput = document.getElementById('chatInput');
-        const sendButton = document.getElementById('sendButton');
-        const typingIndicator = document.getElementById('typingIndicator');
-        const suggestionArea = document.getElementById('suggestionArea');
+        // --- LÓGICA DO CHATBOT ---
+        const chatHistory = document.getElementById('chatHistory');
+        const chatInput = document.getElementById('chatInput');
+        const sendButton = document.getElementById('sendButton');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const suggestionArea = document.getElementById('suggestionArea');
 
-        if (!chatHistory || !chatInput || !sendButton || !typingIndicator || !suggestionArea) {
-            console.error("ERRO: Elementos do chat não encontrados. Verifique os IDs.");
-            return;
-        }
+        if (!chatHistory || !chatInput || !sendButton || !typingIndicator || !suggestionArea) {
+          console.error('ERRO: Elementos do chat não encontrados. Verifique os IDs.');
+          return;
+        }
 
-        // Guarda o ID da "conversa" (Thread)
-        let currentThreadId = null;
+        // Guarda o ID da "conversa" (Thread)
+        let currentThreadId = null;
 
-        // --- FUNÇÃO PARA CARREGAR O ESTADO DO CHAT --- // <-- NOVO
-        function loadChatState() {
-            const savedThreadId = sessionStorage.getItem('chatThreadId');
-            if (savedThreadId) {
-                currentThreadId = savedThreadId;
-            }
+        // --- FUNÇÃO PARA CARREGAR O ESTADO DO CHAT ---
+        function loadChatState() {
+          const savedThreadId = sessionStorage.getItem('chatThreadId');
+          if (savedThreadId) currentThreadId = savedThreadId;
 
-            const savedHistoryHTML = sessionStorage.getItem('chatHistoryHTML');
-            if (savedHistoryHTML) {
-                chatHistory.innerHTML = savedHistoryHTML;
-                suggestionArea.style.display = 'none'; // Esconde sugestões se já houver histórico
-            } else {
-                // Se não houver histórico, adiciona a mensagem inicial
-                // (O 'false' evita que essa msg inicial seja salva no storage antes da hora)
-                addMessage('Olá! Eu sou o assistente virtual do Portal Supermercado. Como posso ajudar você hoje?', 'bot', false); 
-            }
+          const savedHistoryHTML = sessionStorage.getItem('chatHistoryHTML');
+          if (savedHistoryHTML) {
+            chatHistory.innerHTML = savedHistoryHTML;
+            suggestionArea.style.display = 'none'; // Esconde sugestões se já houver histórico
+          } else {
+            // Se não houver histórico, adiciona a mensagem inicial
+            // (O 'false' evita que essa msg inicial seja salva no storage antes da hora)
+            addMessage('Olá! Eu sou o assistente virtual do Portal Supermercado. Como posso ajudar você hoje?', 'bot', false);
+          }
 
-            chatHistory.scrollTop = chatHistory.scrollHeight;
-        }
+          chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
 
-        function showTyping() {
-            typingIndicator.style.display = 'flex';
-            chatHistory.scrollTop = chatHistory.scrollHeight;
-        }
-        function hideTyping() {
-            typingIndicator.style.display = 'none';
-        }
+        function showTyping() {
+          typingIndicator.style.display = 'flex';
+          chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
 
-        // <-- MODIFICADO: Adicionado 'saveHistory = true'
-        function addMessage(message, sender, saveHistory = true) { 
-            const messageWrapper = document.createElement('div');
-            messageWrapper.classList.add('chat-message');
-            const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-            
-            if (sender === 'bot') {
-                messageWrapper.classList.add('message-bot');
-                messageWrapper.innerHTML = `
-                    <span class="avatar">🤖</span>
-                    <div class="message-bubble">
-                        <p>${message}</p>
-                        <span class="timestamp">${timestamp}</span>
-                    </div>
-                `;
-            } else { // 'user'
-                messageWrapper.classList.add('message-user');
-                messageWrapper.innerHTML = `
-                    <span class="avatar">👤</span>
-                    <div class="message-bubble">
-                        <p>${message}</p>
-                        <span class="timestamp">${timestamp}</span>
-                    </div>
-                `;
-            }
-            chatHistory.appendChild(messageWrapper);
-            chatHistory.scrollTop = chatHistory.scrollHeight;
+        function hideTyping() {
+          typingIndicator.style.display = 'none';
+        }
 
-            // --- FUNÇÃO PARA SALVAR HISTÓRICO --- // <-- NOVO
-            if (saveHistory) {
-                sessionStorage.setItem('chatHistoryHTML', chatHistory.innerHTML);
-            }
-        }
+        // Adicionado 'saveHistory = true'
+        function addMessage(message, sender, saveHistory = true) {
+          const messageWrapper = document.createElement('div');
+          messageWrapper.classList.add('chat-message');
+          const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-        // Função principal
-        async function handleSendMessage(message) {
-            const userMessage = message.trim();
-            if (userMessage === '') return;
+          if (sender === 'bot') {
+            messageWrapper.classList.add('message-bot');
+            messageWrapper.innerHTML = `
+              <span class="avatar">🤖</span>
+              <div class="message-bubble">
+                <p>${message}</p>
+                <span class="timestamp">${timestamp}</span>
+              </div>
+            `;
+          } else {
+            messageWrapper.classList.add('message-user');
+            messageWrapper.innerHTML = `
+              <span class="avatar">👤</span>
+              <div class="message-bubble">
+                <p>${message}</p>
+                <span class="timestamp">${timestamp}</span>
+              </div>
+            `;
+          }
 
-            suggestionArea.style.display = 'none';
-            addMessage(userMessage, 'user'); // Salva automaticamente
-            if (chatInput) chatInput.value = ''; 
-            showTyping();
+          chatHistory.appendChild(messageWrapper);
+          chatHistory.scrollTop = chatHistory.scrollHeight;
 
-            try {
-                // Envia os dados no formato (message + threadId)
-                const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        message: userMessage,      // A MENSAGEM ATUAL
-                        threadId: currentThreadId  // O ID da Thread (null na 1ª vez)
-                    })
-                });
+          // --- FUNÇÃO PARA SALVAR HISTÓRICO ---
+          if (saveHistory) sessionStorage.setItem('chatHistoryHTML', chatHistory.innerHTML);
+        }
 
-                if (!response.ok) {
-                    throw new Error(`Erro na API: ${response.status} ${response.statusText}`);
-                }
+        // Função principal
+        async function handleSendMessage(message) {
+          const userMessage = message.trim();
+          if (userMessage === '') return;
 
-                const data = await response.json();
-                const botReply = data.reply;
-                
-                // Salva o ID da Thread para lembrar da conversa
-                currentThreadId = data.threadId; 
+          suggestionArea.style.display = 'none';
+          addMessage(userMessage, 'user'); // Salva automaticamente
+          if (chatInput) chatInput.value = '';
+          showTyping();
 
-                // --- FUNÇÃO PARA SALVAR THREAD ID --- // <-- NOVO
-                sessionStorage.setItem('chatThreadId', currentThreadId);
+          try {
+            // Envia os dados no formato (message + threadId)
+            const response = await fetch('/api/chat', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                message: userMessage, // A MENSAGEM ATUAL
+                threadId: currentThreadId // O ID da Thread (null na 1ª vez)
+              })
+            });
 
-                hideTyping();
-                addMessage(botReply, 'bot'); // Salva automaticamente
+            if (!response.ok) throw new Error(`Erro na API: ${response.status} ${response.statusText}`);
 
-            } catch (error) {
-                console.error('Erro ao contatar o bot:', error);
-                hideTyping();
-                addMessage('Desculpe, não foi possível conectar ao assistente.', 'bot');
-            }
-        }
+            const data = await response.json();
+            const botReply = data.reply;
 
-        // --- Event Listeners ---
-        sendButton.addEventListener('click', () => {
-            handleSendMessage(chatInput.value);
-        });
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                handleSendMessage(chatInput.value);
-a         }
-        });
-        suggestionArea.addEventListener('click', (e) => {
-            if (e.target.classList.contains('suggestion-btn')) {
-                const message = e.target.dataset.message;
-                handleSendMessage(message);
-            }
-        });
+            // Salva o ID da Thread para lembrar da conversa
+            currentThreadId = data.threadId;
+            sessionStorage.setItem('chatThreadId', currentThreadId);
 
-        // --- INICIALIZAÇÃO DO CHAT --- // <-- MODIFICADO
-        hideTyping();
+            hideTyping();
+            addMessage(botReply, 'bot'); // Salva automaticamente
+          } catch (error) {
+            console.error('Erro ao contatar o bot:', error);
+            hideTyping();
+            addMessage('Desculpe, não foi possível conectar ao assistente.', 'bot');
+          }
+        }
+
+        // --- Event Listeners ---
+        sendButton.addEventListener('click', () => handleSendMessage(chatInput.value));
+        chatInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') handleSendMessage(chatInput.value);
+        });
+        suggestionArea.addEventListener('click', (e) => {
+          if (e.target.classList.contains('suggestion-btn')) {
+            const message = e.target.dataset.message;
+            handleSendMessage(message);
+          }
+        });
+
+        // --- INICIALIZAÇÃO DO CHAT ---
+        hideTyping();
         loadChatState(); // Carrega o histórico e o threadId salvos
-    });
-</script>
-
-</body>
-</html>
+      });
+    </script>
