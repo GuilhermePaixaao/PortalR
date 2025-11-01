@@ -19,7 +19,8 @@
             </div>
             
             <div class="user-profile">
-                <span class="icon">🔔</span> <span id="userNameDisplay" class="icon">👤</span> 
+                <span class="icon">🔔</span>
+                <span id="userNameDisplay" class="icon">👤</span> 
             </div>
         </header>
         
@@ -40,7 +41,7 @@
                         </a>
                     </li>
 
-                    <li class="ticket-item">
+                    <li class="ticket-item" id="menu-link-chamado">
                         <a href="Chamado.html" title="Abrir Chamado (Airus)">
                             <span class="icon">➕</span>
                             <span class="text">Chamado</span>
@@ -55,7 +56,7 @@
                     </li>
 
                     <li>
-                        <a href="Funcionarios.html" title="funcionario">
+                        <a href="Funcionarios.html" title="Funcionários">
                             <span class="icon">💼</span>
                             <span class="text">Funcionários</span>
                         </a>
@@ -117,40 +118,63 @@
         
     </div>
 
-<script type="module">
-    document.addEventListener('DOMContentLoaded', () => {
-        
-        // 1. Tenta pegar os dados do usuário do localStorage
-        const userDataString = localStorage.getItem("userData");
-
-        // 2. Se não houver dados, redireciona para o Login
-        if (!userDataString) {
-            window.location.href = "Login.html";
-            return; // Para a execução do script
-        }
-
-        // 3. Se houver dados, tenta processá-los
-        try {
-            const userData = JSON.parse(userDataString); 
+    <script type="module">
+        document.addEventListener('DOMContentLoaded', () => {
             
-            // 4. Encontra o elemento <span> no header
-            const userNameDisplay = document.getElementById('userNameDisplay'); 
+            // 1. Tenta pegar os dados do usuário do localStorage
+            const userDataString = localStorage.getItem("userData");
 
-            // 5. Verifica se o elemento foi encontrado E se o nome existe nos dados
-            if (userNameDisplay && userData?.data?.nomeFuncionario) {
-                
-                // 6. Atualiza o texto do <span> com o primeiro nome
-                userNameDisplay.textContent = `👤 ${userData.data.nomeFuncionario.split(' ')[0]}`;
+            // 2. Se não houver dados, redireciona para o Login
+            if (!userDataString) {
+                window.location.href = "Login.html";
+                return; // Para a execução do script
             }
 
-        } catch (error) {
-            // Se os dados estiverem corrompidos (JSON inválido)
-            console.error("Erro ao processar dados do usuário:", error);
-            localStorage.removeItem("userData"); // Limpa os dados ruins
-            window.location.href = "Login.html";
-        }
-    });
-</script>
+            // 3. Se houver dados, tenta processá-los
+            try {
+                const userData = JSON.parse(userDataString); 
+                
+                // 4. Encontra o elemento <span> no header
+                const userNameDisplay = document.getElementById('userNameDisplay'); 
+
+                // 5. Verifica se o elemento foi encontrado E se o nome existe nos dados
+                if (userNameDisplay && userData?.data?.nomeFuncionario) {
+                    
+                    // 6. Atualiza o texto do <span> com o primeiro nome
+                    userNameDisplay.textContent = `👤 ${userData.data.nomeFuncionario.split(' ')[0]}`;
+                }
+
+                // ==========================================================
+                // ===== INÍCIO DO SCRIPT DO MENU DINÂMICO =====
+                // (Colado aqui dentro do 'try' para acessar 'userData')
+                // ==========================================================
+                const userPerfil = userData?.data?.perfil; 
+                const linkChamado = document.getElementById("menu-link-chamado"); // <-- Pega o ID do Passo 1
+
+                if (linkChamado && (userPerfil === 'AGENTE' || userPerfil === 'ADMIN')) {
+                    // O usuário é um Agente ou Admin
+                    const a = linkChamado.querySelector('a');
+                    
+                    a.href = "GerenciarChamados.html"; // Manda para a página certa
+                    a.title = "Gerenciar Chamados";
+                    a.querySelector('.icon').textContent = "✔️"; // Muda o ícone
+                    a.querySelector('.text').textContent = "Gerenciar Chamados"; // Muda o texto
+                    
+                    // Esta é a página 'Dashboard', então o link "Chamado" NUNCA está ativo
+                    linkChamado.classList.remove('active');
+                }
+                // ==========================================================
+                // ===== FIM DO SCRIPT DO MENU DINÂMICO =====
+                // ==========================================================
+
+            } catch (error) {
+                // Se os dados estiverem corrompidos (JSON inválido)
+                console.error("Erro ao processar dados do usuário:", error);
+                localStorage.removeItem("userData"); // Limpa os dados ruins
+                window.location.href = "Login.html";
+            }
+        });
+    </script>
 
 </body>
 </html>
