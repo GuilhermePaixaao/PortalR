@@ -19,52 +19,15 @@
       background-color: #f8f9fa;
     }
 
-    .alert {
-      padding: 1rem;
-      margin-top: 1rem;
-      border-radius: 4px;
-    }
+    .alert { padding: 1rem; margin-top: 1rem; border-radius: 4px; }
+    .alert-success { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+    .alert-danger { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
+    .alert-warning { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
 
-    .alert-success {
-      background-color: #d1e7dd;
-      color: #0f5132;
-      border: 1px solid #badbcc;
-    }
-
-    .alert-danger {
-      background-color: #f8d7da;
-      color: #842029;
-      border: 1px solid #f5c2c7;
-    }
-
-    .alert-warning {
-      background-color: #fff3cd;
-      color: #664d03;
-      border: 1px solid #ffecb5;
-    }
-
-    .ticket-list {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .ticket-row {
-      display: flex;
-      border-bottom: 1px solid #eee;
-      padding: 1rem 0.5rem;
-      align-items: center;
-    }
-
-    .ticket-row.header {
-      background-color: #f8f9fa;
-      font-weight: bold;
-      border-bottom: 2px solid #dee2e6;
-    }
-
-    .ticket-cell {
-      padding: 0 0.5rem;
-    }
-
+    .ticket-list { display: flex; flex-direction: column; }
+    .ticket-row { display: flex; border-bottom: 1px solid #eee; padding: 1rem 0.5rem; align-items: center; }
+    .ticket-row.header { background-color: #f8f9fa; font-weight: bold; border-bottom: 2px solid #dee2e6; }
+    .ticket-cell { padding: 0 0.5rem; }
     .ticket-id { flex: 0 0 80px; text-align: center; }
     .ticket-priority { flex: 0 0 100px; text-align: center; }
     .ticket-subject { flex: 1 1 auto; min-width: 200px; }
@@ -74,8 +37,7 @@
     .ticket-created { flex: 0 0 100px; text-align: center; }
     .ticket-actions { flex: 0 0 60px; text-align: center; cursor: pointer; }
 
-    .priority-badge,
-    .status-badge {
+    .priority-badge, .status-badge {
       padding: 0.2em 0.6em;
       border-radius: 0.25rem;
       font-size: 0.85em;
@@ -90,11 +52,7 @@
     .status-badge.concluído { background-color: #d1e7dd; color: #0f5132; }
     .status-badge.em-andamento { background-color: #cfe2ff; color: #084298; }
 
-    #loadingIndicator {
-      padding: 2rem;
-      text-align: center;
-      color: #6c757d;
-    }
+    #loadingIndicator { padding: 2rem; text-align: center; color: #6c757d; }
 
     .btn-action {
       background: none;
@@ -104,9 +62,7 @@
       margin-left: 8px;
     }
 
-    .btn-concluir {
-      color: green;
-    }
+    .btn-concluir { color: green; }
   </style>
 </head>
 
@@ -149,6 +105,7 @@
               <label for="filtroAssunto" class="form-label">Filtrar por Assunto</label>
               <input type="text" id="filtroAssunto" class="form-control" placeholder="Digite o assunto...">
             </div>
+
             <div class="col-md-2">
               <label for="filtroPrioridade" class="form-label">Prioridade</label>
               <select id="filtroPrioridade" class="form-select">
@@ -158,6 +115,7 @@
                 <option value="Baixa">Baixa</option>
               </select>
             </div>
+
             <div class="col-md-2">
               <label for="filtroStatus" class="form-label">Status</label>
               <select id="filtroStatus" class="form-select">
@@ -167,12 +125,14 @@
                 <option value="Concluído">Concluído</option>
               </select>
             </div>
+
             <div class="col-md-3">
               <label for="filtroCategoria" class="form-label">Categoria</label>
               <select id="filtroCategoria" class="form-select">
                 <option value="">Todas</option>
               </select>
             </div>
+
             <div class="col-md-2 d-flex align-items-end">
               <button id="btnFiltrar" class="btn btn-primary w-100">Filtrar</button>
             </div>
@@ -189,6 +149,7 @@
               <div class="ticket-cell ticket-created">Criado em</div>
               <div class="ticket-cell ticket-actions">Ação</div>
             </div>
+
             <div id="loadingIndicator"><p>Carregando chamados...</p></div>
           </div>
         </div>
@@ -196,8 +157,194 @@
     </main>
   </div>
 
+  <!-- ========== SCRIPT PRINCIPAL ========== -->
   <script type="module">
-    // TODO: Código JavaScript mantido (omitido aqui por espaço, pois já está correto no seu original)
+    const API_URL = ""; // Caminho relativo para a API
+    let userData, userId, userPerfil, userCategoriaAtendimento;
+
+    try {
+      const userDataString = localStorage.getItem("userData");
+      if (!userDataString) throw new Error("Usuário não logado.");
+
+      userData = JSON.parse(userDataString);
+      userId = userData?.data?.id;
+      userPerfil = userData?.data?.perfil;
+      userCategoriaAtendimento = userData?.data?.categoria_id_atendimento;
+
+      if (!userId || !userPerfil) throw new Error("ID ou Perfil do usuário não encontrado.");
+
+      if (userPerfil === 'REQUISITANTE') {
+        alert("Acesso negado. Esta página é para gerenciamento. Redirecionando...");
+        window.location.href = "Chamado.html";
+        throw new Error("Acesso negado.");
+      }
+
+      const userNameDisplay = document.getElementById('userNameDisplay');
+      if (userNameDisplay && userData?.data?.nomeFuncionario) {
+        userNameDisplay.textContent = `👤 ${userData.data.nomeFuncionario.split(' ')[0]} (${userPerfil})`;
+      }
+
+      const linkChamado = document.getElementById("menu-link-chamado");
+      if (linkChamado) {
+        const a = linkChamado.querySelector('a');
+        a.href = "GerenciarChamados.html";
+        a.title = "Gerenciar Chamados";
+        a.querySelector('.icon').textContent = "✔️";
+        a.querySelector('.text').textContent = "Gerenciar Chamados";
+
+        const paginaAtual = window.location.pathname.split('/').pop();
+        if (paginaAtual === 'GerenciarChamados.html') linkChamado.classList.add('active');
+      }
+
+    } catch (error) {
+      if (error.message !== "Acesso negado.") {
+        alert(error.message + " Redirecionando para login.");
+        window.location.href = "Login.html";
+      }
+    }
+
+    const ticketList = document.getElementById("ticketList");
+    const loadingIndicator = document.getElementById("loadingIndicator");
+    const divRespostaGeral = document.getElementById("divRespostaGeral");
+    const filtroAssunto = document.getElementById("filtroAssunto");
+    const filtroPrioridade = document.getElementById("filtroPrioridade");
+    const filtroStatus = document.getElementById("filtroStatus");
+    const filtroCategoria = document.getElementById("filtroCategoria");
+    const btnFiltrar = document.getElementById("btnFiltrar");
+
+    function exibirMensagem(el, msg, sucesso = true) {
+      el.textContent = msg;
+      el.className = sucesso ? 'alert alert-success' : 'alert alert-danger';
+    }
+
+    function limparMensagem(el) { el.textContent = ''; el.className = ''; }
+
+    function escapeHtml(t) {
+      if (!t) return '';
+      return t.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
+    }
+
+    function formatarData(d) {
+      if (!d) return 'N/A';
+      try { return new Date(d).toLocaleDateString('pt-BR'); } catch { return 'Data inválida'; }
+    }
+
+    async function carregarCategorias() {
+      if (userPerfil === 'AGENTE') {
+        filtroCategoria.parentElement.style.display = 'none';
+        return;
+      }
+      try {
+        const r = await fetch(`${API_URL}/categorias`);
+        if (!r.ok) throw new Error("Erro ao carregar categorias.");
+        const categorias = await r.json();
+        filtroCategoria.innerHTML = '<option value="">Todas</option>';
+        categorias.forEach(cat => {
+          const opt = document.createElement("option");
+          opt.value = cat.id;
+          opt.textContent = cat.nome;
+          filtroCategoria.appendChild(opt);
+        });
+      } catch {
+        filtroCategoria.parentElement.innerHTML = '<p class="text-danger">Falha ao carregar categorias.</p>';
+      }
+    }
+
+    function renderizarChamados(chamados) {
+      loadingIndicator.style.display = 'none';
+      ticketList.querySelectorAll('.data-row').forEach(r => r.remove());
+
+      if (!chamados?.length) {
+        ticketList.insertAdjacentHTML('beforeend', `
+          <div class="ticket-row data-row">
+            <div class="ticket-cell" style="grid-column: 1 / -1; text-align:center; padding:1rem;">
+              Nenhum chamado encontrado.
+            </div>
+          </div>`);
+        return;
+      }
+
+      chamados.forEach(ch => {
+        const prioridadeClass = (ch.prioridade || 'Média').toLowerCase();
+        const statusClass = (ch.status || 'Aberto').toLowerCase().replace(/\s+/g, '-');
+        ticketList.insertAdjacentHTML('beforeend', `
+          <div class="ticket-row data-row" data-ticket-id="${ch.id}">
+            <div class="ticket-cell ticket-id">#${ch.id}</div>
+            <div class="ticket-cell ticket-priority"><span class="priority-badge ${prioridadeClass}">${escapeHtml(ch.prioridade)}</span></div>
+            <div class="ticket-cell ticket-subject">${escapeHtml(ch.assunto)}</div>
+            <div class="ticket-cell ticket-category">${escapeHtml(ch.Categorias?.nome || 'N/A')}</div>
+            <div class="ticket-cell ticket-status"><span class="status-badge ${statusClass}">${escapeHtml(ch.status)}</span></div>
+            <div class="ticket-cell ticket-operator">${escapeHtml(ch.Funcionario?.nomeFuncionario || 'Desconhecido')}</div>
+            <div class="ticket-cell ticket-created">${formatarData(ch.created_at)}</div>
+            <div class="ticket-cell ticket-actions">
+              <span class="view-icon" title="Visualizar">👁️</span>
+              ${ch.status !== 'Concluído'
+                ? `<button class="btn-action btn-concluir" data-id="${ch.id}" title="Marcar como Concluído">✔️</button>` : ''}
+            </div>
+          </div>`);
+      });
+    }
+
+    async function listarChamados() {
+      limparMensagem(divRespostaGeral);
+      ticketList.querySelectorAll('.data-row').forEach(r => r.remove());
+      loadingIndicator.style.display = 'block';
+
+      const p = new URLSearchParams();
+      if (filtroAssunto.value.trim()) p.append('assunto', filtroAssunto.value.trim());
+      if (filtroPrioridade.value) p.append('prioridade', filtroPrioridade.value);
+      if (filtroStatus.value) p.append('status', filtroStatus.value);
+
+      if (userPerfil === 'ADMIN' && filtroCategoria.value)
+        p.append('categoria_id', filtroCategoria.value);
+      else if (userPerfil === 'AGENTE')
+        p.append('categoria_id', userCategoriaAtendimento);
+
+      try {
+        const r = await fetch(`${API_URL}/chamados?${p.toString()}`);
+        if (!r.ok) throw new Error("Erro ao buscar chamados.");
+        renderizarChamados(await r.json());
+      } catch (e) {
+        exibirMensagem(divRespostaGeral, e.message, false);
+        loadingIndicator.innerHTML = '<p style="color:red;">Falha ao carregar.</p>';
+      }
+    }
+
+    async function atualizarStatusChamado(id, status) {
+      try {
+        const r = await fetch(`${API_URL}/chamados/${id}/status`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status })
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.message);
+        exibirMensagem(divRespostaGeral, "Chamado atualizado com sucesso!", true);
+        listarChamados();
+      } catch (e) {
+        exibirMensagem(divRespostaGeral, `Erro: ${e.message}`, false);
+      }
+    }
+
+    btnFiltrar.addEventListener('click', listarChamados);
+
+    ticketList.addEventListener('click', e => {
+      const t = e.target;
+      if (t.classList.contains('view-icon')) {
+        alert(`Visualizando Chamado #${t.closest('.ticket-row').dataset.ticketId}`);
+      }
+      if (t.classList.contains('btn-concluir')) {
+        const id = t.dataset.id;
+        if (confirm(`Deseja realmente marcar o chamado #${id} como "Concluído"?`)) {
+          atualizarStatusChamado(id, 'Concluído');
+        }
+      }
+    });
+
+    if (userPerfil === 'AGENTE' || userPerfil === 'ADMIN') {
+      await carregarCategorias();
+      await listarChamados();
+    }
   </script>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
