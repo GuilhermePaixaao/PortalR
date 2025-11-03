@@ -287,20 +287,25 @@
             const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
             return text.replace(/[&<>"']/g, m => map[m]);
         }
-       function formatarData(isoString) { 
-        if (!isoString) return 'N/A';
+       function formatarData(isoString) {
+            if (!isoString) return 'N/A';
             try {
-                const data = new Date(isoString);
-                // Ajustado para dia/mes/ano apenas
-                return data.toLocaleDateString('pt-BR', { 
-                    day: '2-digit', 
-                    month: '2-digit', 
-                    year: 'numeric' 
+                const dt = new Date(isoString);
+                // Formata a data (ex: 03/11/2025)
+                const data = dt.toLocaleDateString('pt-BR');
+                // Formata a hora (ex: 16:30)
+                const hora = dt.toLocaleTimeString('pt-BR', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
                 });
+                
+                // Retorna combinado
+                return `${data} ${hora}`;
             } catch (e) {
                 return 'Data inválida';
             }
         }
+
 
 
         // --- Carregar Categorias ---
