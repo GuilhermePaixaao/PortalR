@@ -5,12 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chamados - Portal Supermercado</title>
 
-    <script>
-        // --- INÍCIO DO PROTETOR DE PÁGINA (ANTI-FLICKER) ---
-        // Esta variável agora é global para esta página
-        
-        // --- FIM DO PROTETOR DE PÁGINA ---
-    </script>
     <link rel="icon" type="image/png" href="/logo.png">
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -269,7 +263,7 @@
             </div>
             
             <div class="header-actions">
-                <span id="userNameDisplay">Carregando...</span>
+                <span id="userNameDisplay"></span>
                 <button id="logoutButton" class="btn-logout">Sair</button>
             </div>
         </header>
@@ -280,18 +274,18 @@
                 <hr>
                 
                 <div class="row">
-                     <div class="col-md-6">
-                        <div class="grupo-form">
-                            <label for="nomeRequisitante">Seu Nome <span aria-hidden="true" style="color:red;">*</span></label>
-                            <input type="text" id="nomeRequisitante" name="nomeRequisitante" required>
+                         <div class="col-md-6">
+                            <div class="grupo-form">
+                                <label for="nomeRequisitante">Seu Nome <span aria-hidden="true" style="color:red;">*</span></label>
+                                <input type="text" id="nomeRequisitante" name="nomeRequisitante" required>
+                            </div>
                         </div>
-                    </div>
-                     <div class="col-md-6">
-                        <div class="grupo-form">
-                            <label for="emailRequisitante">Seu Email <span aria-hidden="true" style="color:red;">*</span></label>
-                            <input type="email" id="emailRequisitante" name="emailRequisitante" required>
+                         <div class="col-md-6">
+                            <div class="grupo-form">
+                                <label for="emailRequisitante">Seu Email <span aria-hidden="true" style="color:red;">*</span></label>
+                                <input type="email" id="emailRequisitante" name="emailRequisitante" required>
+                            </div>
                         </div>
-                    </div>
                 </div>
                  <div class="grupo-form">
                     <label for="telefoneRequisitante">Seu Telefone (Opcional)</label>
@@ -345,6 +339,7 @@
                 </div>
             </form>
         </dialog>
+        
         <dialog id="modalDetalhes" aria-labelledby="modalDetalhesTitle">
             <h2 id="modalDetalhesTitle">Detalhes do Chamado</h2>
             <hr>
@@ -403,9 +398,9 @@
                 <button type="button" id="fecharModalDetalhes">Fechar</button>
             </div>
         </dialog>
+        
         <main class="main-content">
-            <h1>Meus Chamados</h1>
-            <hr>
+            <h1>Meus Chamados (TESTE)</h1> <hr>
 
             <div id="divRespostaGeral" class="mb-3"></div>
 
@@ -469,32 +464,15 @@
     </div>
 
     <script type="module">
+        // *** CORREÇÃO APLICADA ***
+        // Usar "" (vazio) faz o script usar o caminho relativo.
         const API_URL = "";
 
-        // --- FUNÇÃO DE LOGOUT ---
-        function fazerLogout() {
-            localStorage.removeItem("userData");
-            window.location.replace("Login.html");
-        }
-
-        // --- AUTENTICAÇÃO ---
-        // O script do <head> já validou. Apenas lemos os dados.
-        let userData;
-        let userId;
-        try {
-            // Usamos a variável 'userDataString' global definida no <head>
-            userData = JSON.parse(userDataString);
-            userId = userData.data.id; // Agora temos o ID real do usuário
-            
-            // Configura o cabeçalho
-            const userNameDisplay = document.getElementById('userNameDisplay');
-            if (userNameDisplay && userData?.data?.nomeFuncionario) {
-                userNameDisplay.textContent = `Olá, ${userData.data.nomeFuncionario.split(' ')[0]}`;
-            }
-        } catch (error) {
-            console.error("Erro ao configurar página:", error);
-            fazerLogout();
-        }
+        // --- Autenticação (MODO DE TESTE) ---
+        // Conforme solicitado ("esse nao é pra jogar para o login"),
+        // estamos usando um ID fixo para testes.
+        let userData = null;
+        let userId = 1; // <-- ID Fixo para teste.
 
         // --- Referências ---
         const modal = document.getElementById("modalTicket");
@@ -506,7 +484,7 @@
         const selectCategoriaModal = document.getElementById("categoria");
         const modalResposta = document.getElementById("modalResposta");
         const divRespostaGeral = document.getElementById("divRespostaGeral");
-        const btnLogout = document.getElementById("logoutButton");
+        const btnLogout = document.getElementById("logoutButton"); // Botão existe, mas não terá função de logout real
 
         // Referências do Novo Modal de Detalhes
         const modalDetalhes = document.getElementById("modalDetalhes");
@@ -586,7 +564,6 @@
                 row.className = 'ticket-row data-row';
                 row.setAttribute('data-ticket-id', chamado.id);
 
-                // Adiciona 'planejado' à normalização
                 const prioridadeClass = (chamado.prioridade || 'Média').toLowerCase().replace('é', 'e');
                 const statusClass = (chamado.status || 'Aberto').toLowerCase().replace(/\s+/g, '-');
 
@@ -607,21 +584,19 @@
                     </div>
                 `;
 
-                // --- NOVO EVENTO DE VISUALIZAR ---
                 row.querySelector('.view-icon').addEventListener('click', (e) => {
                     e.stopPropagation();
                     
-                    // Popula o modal de detalhes
                     document.getElementById('detalheId').textContent = `#${chamado.id}`;
                     document.getElementById('detalheStatus').textContent = chamado.status;
                     document.getElementById('detalhePrioridade').textContent = chamado.prioridade;
                     document.getElementById('detalheAssunto').textContent = chamado.assunto;
-                    document.getElementById('detalheDescricao').textContent = chamado.descricao; // Campo principal
+                    document.getElementById('detalheDescricao').textContent = chamado.descricao;
                     document.getElementById('detalheRequisitante').textContent = chamado.Funcionario?.nomeFuncionario || 'Desconhecido';
                     document.getElementById('detalheCategoria').textContent = chamado.Categorias?.nome || 'N/A';
                     document.getElementById('detalheData').textContent = formatarData(chamado.created_at);
 
-                    modalDetalhes.showModal(); // Abre o novo modal
+                    modalDetalhes.showModal();
                 });
                 ticketList.appendChild(row);
             });
@@ -643,7 +618,8 @@
             if (filtroStatus.value) {
                 params.append('status', filtroStatus.value);
             }
-            // USA O ID REAL DO USUÁRIO LOGADO
+            
+            // USA O ID DE TESTE
             params.append('requisitante_id', userId); 
 
             const url = `${API_URL}/chamados?${params.toString()}`;
@@ -695,37 +671,29 @@
 
             // 3. Montar o FormData
             const formData = new FormData();
-
-            // 3a. Criar o objeto JSON 'chamado' com os dados de texto
             const dadosChamado = {
                 chamado: {
-                    // Novos campos
                     nome_requisitante: nomeRequisitante,
                     email_requisitante: emailRequisitante,
                     telefone_requisitante: telefoneRequisitante,
-                    // Campos antigos
                     assunto: assunto,
                     descricao: descricao,
                     prioridade: prioridade,
-                    requisitante_id: userId,
+                    requisitante_id: userId, // ID de teste
                     categoria_id: categoriaId ? parseInt(categoriaId) : null
                 }
             };
             
-            // 3b. Adicionar o JSON como uma string no FormData
-            // (O backend precisará dar JSON.parse() neste campo)
             formData.append('chamado', JSON.stringify(dadosChamado.chamado));
 
-            // 3c. Adicionar os arquivos
             for (let i = 0; i < files.length; i++) {
-                formData.append('anexos', files[i]); // A chave 'anexos' deve ser a esperada pelo seu backend
+                formData.append('anexos', files[i]);
             }
 
             // 4. Enviar a requisição fetch
             try {
                 const response = await fetch(`${API_URL}/chamados`, {
                     method: 'POST',
-                    // NÃO definir 'Content-Type', o navegador faz isso
                     body: formData 
                 });
                 
@@ -737,22 +705,20 @@
                 exibirMensagem(divRespostaGeral, "Chamado criado com sucesso!", true);
                 modal.close();
                 ticketForm.reset();
-                listarChamados(); // Atualiza a lista principal
+                listarChamados();
             } catch (error) {
                 exibirMensagem(modalResposta, error.message, false);
             }
         }
 
-        // --- Lógica do Modal "Novo Chamado" (ATUALIZADO) ---
+        // --- Lógica do Modal "Novo Chamado" ---
         btnAbrir.addEventListener('click', () => {
             limparMensagem(modalResposta);
             
-            // Pré-preenche os campos com dados do usuário logado
-            if (userData?.data) {
-                document.getElementById('nomeRequisitante').value = userData.data.nomeFuncionario || '';
-                document.getElementById('emailRequisitante').value = userData.data.email || ''; 
-                // Assumindo que 'email' exista no seu userData.data
-            }
+            // Em modo de teste, podemos deixar os campos em branco
+            // ou preencher com dados de teste
+            document.getElementById('nomeRequisitante').value = 'Usuário Teste';
+            document.getElementById('emailRequisitante').value = 'teste@email.com'; 
 
             if (typeof modal.showModal === 'function') modal.showModal();
             else modal.setAttribute('open', '');
@@ -777,12 +743,19 @@
         // --- Event Listeners ---
         ticketForm.addEventListener('submit', criarChamado);
         btnFiltrar.addEventListener('click', listarChamados);
-        btnLogout.addEventListener('click', fazerLogout); // <-- NOVO
+        
+        // O botão de logout em modo de teste pode simplesmente recarregar a página
+        btnLogout.addEventListener('click', () => {
+             if(confirm("Esta é uma página de teste. Deseja recarregar?")) {
+                 window.location.reload();
+             }
+        });
 
         // --- Inicialização ---
         async function init() {
+            document.getElementById('userNameDisplay').textContent = "Modo de Teste"; // Indica que é um teste
             await carregarCategorias();
-            await listarChamados(); // Lista chamados do usuário logado
+            await listarChamados(); 
         }
         init();
     </script>
