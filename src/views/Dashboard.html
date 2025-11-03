@@ -4,6 +4,38 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portal Supermercado</title>
+
+    <script>
+        // --- INÍCIO DO PROTETOR DE PÁGINA (ANTI-FLICKER) ---
+        const userDataString = localStorage.getItem("userData");
+        
+        if (!userDataString) {
+            // 1. Se NÃO houver dados, redireciona IMEDIATAMENTE
+            // Usamos .replace() para que o "voltar" do navegador não caia aqui
+            window.location.replace("Login.html"); 
+            
+            // Lança um erro para parar qualquer outra execução
+            throw new Error("Usuário não autenticado.");
+        }
+
+        try {
+            // 2. Tenta decodificar os dados
+            const userData = JSON.parse(userDataString);
+            
+            // 3. Se os dados forem inválidos (corrompidos)
+            if (!userData?.data?.id) {
+                throw new Error("Dados de usuário inválidos.");
+            }
+            
+        } catch (error) {
+            // 4. Se falhar (dados corrompidos ou inválidos)
+            console.error("Sessão inválida:", error.message);
+            localStorage.removeItem("userData"); // Limpa os dados ruins
+            window.location.replace("Login.html"); // Manda para o login
+            throw new Error("Sessão inválida.");
+        }
+        // --- FIM DO PROTETOR DE PÁGINA ---
+    </script>
     <link rel="icon" type="image/png" href="/logo.png">
     <link rel="stylesheet" href="css/dashboard.css">
     
@@ -189,33 +221,20 @@
         document.addEventListener('DOMContentLoaded', () => {
             
             // --- FUNÇÃO DE LOGOUT ---
-            // Definida primeiro para que possa ser usada
             function fazerLogout() {
                 localStorage.removeItem("userData"); 
                 window.location.href = "Login.html"; 
             }
 
-            // --- INÍCIO DO PROTETOR DE PÁGINA ---
+            // O script do <head> JÁ VERIFICOU o login.
+            // Agora, apenas lemos os dados para USAR na página.
             const userDataString = localStorage.getItem("userData");
-            let userData; // Variável para guardar os dados para o resto do script
-
-            if (!userDataString) {
-                // 1. Se NÃO houver dados, redireciona para o Login
-                window.location.href = "Login.html";
-                // Lança um erro para parar a execução de qualquer script abaixo
-                throw new Error("Usuário não autenticado. Redirecionando para login.");
-            }
-
+            
+            // Não precisamos de 'if (!userDataString)' aqui,
+            // porque o script do <head> já teria parado a página.
+            // Mas o try/catch ainda é bom por segurança.
             try {
-                // 2. Se houver dados, tenta decodificá-los
-                userData = JSON.parse(userDataString);
-                
-                // 3. Validação: Verifica se os dados são válidos
-                if (!userData?.data?.id) {
-                    throw new Error("Dados de usuário inválidos.");
-                }
-
-                // 4. Lógica da página (executa apenas se o login for válido)
+                const userData = JSON.parse(userDataString); 
                 
                 // Atualiza o nome do usuário no header
                 const userNameDisplay = document.getElementById('userNameDisplay'); 
@@ -237,17 +256,12 @@
                 }
 
             } catch (error) {
-                // 5. Se os dados estiverem corrompidos ou inválidos
-                console.error("Erro ao processar dados do usuário:", error.message);
-                localStorage.removeItem("userData"); // Limpa os dados ruins
-                window.location.href = "Login.html"; // Manda para o login
-                throw new Error("Sessão inválida. Redirecionando para login.");
+                // Caso algo muito estranho aconteça
+                console.error("Erro ao configurar página:", error.message);
+                fazerLogout(); // Desloga por segurança
             }
-            // --- FIM DO PROTETOR DE PÁGINA ---
-
             
             // --- EVENT LISTENER DE LOGOUT ---
-            // Esta parte só é alcançada se o 'try' for bem-sucedido
             const btnLogout = document.getElementById("logoutButton");
             if (btnLogout) {
                 btnLogout.addEventListener('click', fazerLogout);
