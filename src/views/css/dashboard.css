@@ -138,9 +138,12 @@
         /* --- Conteúdo Principal --- */
         .main-content {
             grid-area: main;
+            grid-column: 1 / -1; /* <--- ADICIONE ESTA LINHA */
             overflow-y: auto;
-            padding: 24px;
+            padding: 2rem;
+            background-color: #f8f9fa;
         }
+
 
         .main-content h1 {
             font-size: 2rem;
