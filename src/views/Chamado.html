@@ -287,16 +287,21 @@
             const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
             return text.replace(/[&<>"']/g, m => map[m]);
         }
-         function formatarData(isoString) { /* ... (igual ao anterior) ... */ 
-             if (!isoString) return 'N/A';
-             try {
-                 const data = new Date(isoString);
-                 // Ajustado para dia/mes/ano apenas
-                 return data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-             } catch (e) {
-                  return 'Data inválida';
-             }
-         }
+       function formatarData(isoString) { 
+        if (!isoString) return 'N/A';
+            try {
+                const data = new Date(isoString);
+                // Ajustado para dia/mes/ano apenas
+                return data.toLocaleDateString('pt-BR', { 
+                    day: '2-digit', 
+                    month: '2-digit', 
+                    year: 'numeric' 
+                });
+            } catch (e) {
+                return 'Data inválida';
+            }
+        }
+
 
         // --- Carregar Categorias ---
         async function carregarCategorias() {
