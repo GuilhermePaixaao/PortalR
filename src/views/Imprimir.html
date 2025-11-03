@@ -3,67 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerenciar Chamados - Portal</title>
+    <title>Impressão de Preços</title>
 
+    <script>
+        // --- INÍCIO DO PROTETOR DE PÁGINA (ANTI-FLICKER) ---
+        const userDataString = localStorage.getItem("userData");
+        
+        if (!userDataString) {
+            window.location.replace("Login.html"); 
+            throw new Error("Usuário não autenticado.");
+        }
+        try {
+            const userData = JSON.parse(userDataString);
+            if (!userData?.data?.id) {
+                throw new Error("Dados de usuário inválidos.");
+            }
+        } catch (error) {
+            console.error("Sessão inválida:", error.message);
+            localStorage.removeItem("userData"); 
+            window.location.replace("Login.html"); 
+            throw new Error("Sessão inválida.");
+        }
+        // --- FIM DO PROTETOR DE PÁGINA ---
+    </script>
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="icon" type="image/png" href="/logo.png">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="css/chamado.css">
-    <link rel="stylesheet" href="css/ticket.css">
+    <link rel="stylesheet" href="css/imprimir.css">
 
     <style>
-        .main-content {
-            grid-area: main;
-            overflow-y: auto;
-            padding: 2rem;
-            background-color: #f8f9fa;
-        }
-
-        .alert { padding: 1rem; margin-top: 1rem; border-radius: 4px; }
-        .alert-success { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
-        .alert-danger { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
-        .alert-warning { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
-
-        .ticket-list { display: flex; flex-direction: column; }
-        .ticket-row { display: flex; border-bottom: 1px solid #eee; padding: 1rem 0.5rem; align-items: center; }
-        .ticket-row.header { background-color: #f8f9fa; font-weight: bold; border-bottom: 2px solid #dee2e6; }
-        .ticket-cell { padding: 0 0.5rem; }
-        .ticket-id { flex: 0 0 80px; text-align: center; }
-        .ticket-priority { flex: 0 0 100px; text-align: center; }
-        .ticket-subject { flex: 1 1 auto; min-width: 200px; }
-        .ticket-category { flex: 0 0 150px; }
-        .ticket-status { flex: 0 0 80px; text-align: center; }
-        .ticket-operator { flex: 0 0 120px; }
-        .ticket-created { flex: 0 0 100px; text-align: center; }
-        .ticket-actions { flex: 0 0 60px; text-align: center; cursor: pointer; }
-
-        .priority-badge, .status-badge {
-            padding: 0.2em 0.6em;
-            border-radius: 0.25rem;
-            font-size: 0.85em;
-            font-weight: 600;
-        }
-
-        .priority-badge.alta { background-color: #f8d7da; color: #842029; }
-        .priority-badge.média { background-color: #fff3cd; color: #664d03; }
-        .priority-badge.baixa { background-color: #cfe2ff; color: #084298; }
-
-        .status-badge.aberto { background-color: #ffc107; color: #000; }
-        .status-badge.concluído { background-color: #d1e7dd; color: #0f5132; }
-        .status-badge.em-andamento { background-color: #cfe2ff; color: #084298; }
-
-        #loadingIndicator { padding: 2rem; text-align: center; color: #6c757d; }
-
-        .btn-action {
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 1.1rem;
-            margin-left: 8px;
-        }
-        .btn-concluir { color: green; }
-
-        /* --- ESTILOS ADICIONADOS PARA HEADER E LOGOUT --- */
         .header {
             display: flex;
             align-items: center;
@@ -128,307 +95,177 @@
         .btn-logout:hover {
             background-color: #bb2d3b;
         }
-        /* --- FIM DOS ESTILOS ADICIONADOS --- */
     </style>
-</head>
-
+</head> 
 <body>
+
     <div class="dashboard-container">
+        
         <header class="header">
-            <div class="logo">PORTAL SUPERMERCADO</div>
+            <div class="logo">PORTAL SUPERMERCADO ROSALINA</div> 
             <div class="search-bar">
                 <input type="text" placeholder="Buscar produtos, relatórios, chamados...">
             </div>
             
-            <div class="header-actions">
+             <div class="header-actions">
                 <span id="userNameDisplay"></span>
                 <button id="logoutButton" class="btn-logout">Sair</button>
             </div>
-            </header>
-
+        </header>
+        
         <aside class="sidebar">
             <nav>
                 <ul>
-                    <li><a href="Dashboard.html" title="Início"><span class="icon">🏠</span><span class="text">Início</span></a></li>
-                    <li><a href="Imprimir.html" title="Impressão de Preços"><span class="icon">🖨️</span><span class="text">Imprimir</span></a></li>
-                    <li id="menu-link-chamado"><a href="Chamado.html" title="Abrir Chamado"><span class="icon">➕</span><span class="text">Chamado</span></a></li>
-                    <li><a href="Chatbot.html" title="Chatbot"><span class="icon">🤖</span><span class="text">Chatbot</span></a></li>
-                    <li><a href="Funcionarios.html" title="Funcionários"><span class="icon">💼</span><span class="text">Funcionários</span></a></li>
-                    <li style="margin-top: 30px;"><a href="#" title="Configurações"><span class="icon">⚙️</span><span class="text">Ajustes</span></a></li>
+                    <li>
+                        <a href="Dashboard.html" title="Início">
+                            <span class="icon">🏠</span>
+                            <span class="text">Início</span>
+                        </a>
+                    </li>
+                    
+                    <li class="active"> <a href="Imprimir.html" title="Impressão de Preços">
+                            <span class="icon">🖨️</span>
+                            <span class="text">Imprimir</span>
+                        </a>
+                    </li>
+
+                    <li class="ticket-item">
+                        <a href="Chamado.html" title="Abrir Chamado (Airus)">
+                            <span class="icon">➕</span>
+                            <span class="text">Chamado</span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="Chatbot.html" title="Chatbot">
+                            <span class="icon">🤖</span>
+                            <span class="text">Chatbot</span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a href="Funcionarios.html" title="funcionario">
+                            <span class="icon">💼</span>
+                            <span class="text">Funcionários</span>
+                        </a>
+                    </li>
+
+                    <li style="margin-top: 30px;">
+                        <a href="#" title="Configurações">
+                            <span class="icon">⚙️</span>
+                            <span class="text">Ajustes</span>
+                        </a>
+                    </li>
                 </ul>
             </nav>
         </aside>
-
+        
         <main class="main-content">
-            <h1>Gerenciar Chamados</h1>
-            <hr>
+            <h1>Impressão de Etiquetas de Preço</h1>
+            
+            <div class="widget">
+                <h3>Buscar Produto</h3>
+                <div class="search-container">
+                    <input type="text" id="searchInput" placeholder="Digite o nome ou código de barras do produto...">
+                    <button id="searchButton" class="btn-primary">Buscar</button>
+                </div>
+            </div>
 
-            <div id="divRespostaGeral" class="mb-3"></div>
-
-            <div class="widget card shadow-sm">
-                <div class="card-body">
-                    <div class="filters mb-3 row g-2">
-                        <div class="col-md-3">
-                            <label for="filtroAssunto" class="form-label">Filtrar por Assunto</label>
-                            <input type="text" id="filtroAssunto" class="form-control" placeholder="Digite o assunto...">
-                        </div>
-
-                        <div class="col-md-2">
-                            <label for="filtroPrioridade" class="form-label">Prioridade</label>
-                            <select id="filtroPrioridade" class="form-select">
-                                <option value="">Todas</option>
-                                <option value="Alta">Alta</option>
-                                <option value="Média">Média</option>
-                                <option value="Baixa">Baixa</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-2">
-                            <label for="filtroStatus" class="form-label">Status</label>
-                            <select id="filtroStatus" class="form-select">
-                                <option value="">Todos</option>
-                                <option value="Aberto">Aberto</option>
-                                <option value="Em Andamento">Em Andamento</option>
-                                <option value="Concluído">Concluído</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-3">
-                            <label for="filtroCategoria" class="form-label">Categoria</label>
-                            <select id="filtroCategoria" class="form-select">
-                                <option value="">Todas</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button id="btnFiltrar" class="btn btn-primary w-100">Filtrar</button>
-                        </div>
-                    </div>
-
-                    <div id="ticketList" class="ticket-list">
-                        <div class="ticket-row header">
-                            <div class="ticket-cell ticket-id">Ticket</div>
-                            <div class="ticket-cell ticket-priority">Prioridade</div>
-                            <div class="ticket-cell ticket-subject">Assunto</div>
-                            <div class="ticket-cell ticket-category">Categoria</div>
-                            <div class="ticket-cell ticket-status">Status</div>
-                            <div class="ticket-cell ticket-operator">Requisitante</div>
-                            <div class="ticket-cell ticket-created">Criado em</div>
-                            <div class="ticket-cell ticket-actions">Ação</div>
-                        </div>
-
-                        <div id="loadingIndicator"><p>Carregando chamados...</p></div>
-                    </div>
+            <div class="widget">
+                <h3>Resultados da Busca</h3>
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="selectAll"></th>
+                            <th>Produto</th>
+                            <th>Código EAN</th>
+                            <th>Preço (R$)</th>
+                            <th>Tipo de Etiqueta</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                        <tr>
+                            <td><input type="checkbox" class="select-item"></td>
+                            <td>Arroz Agulhinha Tipo 1 (5kg)</td>
+                            <td>7890000123456</td>
+                            <td class="price">24,90</td>
+                            <td>Gôndola (P)</td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" class="select-item"></td>
+                            <td>Refrigerante Cola 2L</td>
+                            <td>7890000654321</td>
+                            <td class="price">8,99</td>
+                            <td>Gôndola (P)</td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" class="select-item"></td>
+                            <td>Picanha Bovina (kg)</td>
+                            <td>7890000789012</td>
+                            <td class="price">79,90</td>
+                            <td>Açougue (M)</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="print-actions">
+                    <button id="printButton" class="btn-print">🖨️ Imprimir Selecionados</button>
                 </div>
             </div>
         </main>
+        
     </div>
 
-    <script type="module">
-        const API_URL = ""; // Caminho relativo para a API
-        let userData, userId, userPerfil, userCategoriaAtendimento;
+    <div id="print-preview">
+        <div class="price-tag">
+            <div class="tag-header">PORTAL SUPERMERCADO</div>
+            <div class="tag-body">
+                <div class="tag-desc">Arroz Agulhinha Tipo 1 (5kg)</div>
+                <div class="tag-price">
+                    <span class="tag-currency">R$</span>
+                    <span class="tag-value">24</span>
+                    <span class="tag-cents">,90</span>
+                </div>
+                <div class="tag-barcode">
+                    (Simulação de Cód. Barras)
+                    <div class="barcode-lines">||| || ||| || ||||</div>
+                    7890000123456
+                </div>
+            </div>
+        </div>
+    </div>
 
-        // --- FUNÇÃO DE LOGOUT ADICIONADA ---
+<script type="module">
+    document.addEventListener('DOMContentLoaded', () => {
+        
+        // --- FUNÇÃO DE LOGOUT ---
         function fazerLogout() {
             localStorage.removeItem("userData"); 
             window.location.href = "Login.html"; 
         }
 
+        // --- NOME DE USUÁRIO ---
+        // O script do <head> já validou. Apenas lemos os dados.
+        const userDataString = localStorage.getItem("userData");
         try {
-            const userDataString = localStorage.getItem("userData");
-            if (!userDataString) throw new Error("Usuário não logado.");
+            const userData = JSON.parse(userDataString); 
+            const userNameDisplay = document.getElementById('userNameDisplay'); 
 
-            userData = JSON.parse(userDataString);
-            userId = userData?.data?.id;
-            userPerfil = userData?.data?.perfil;
-            userCategoriaAtendimento = userData?.data?.categoria_id_atendimento;
-
-            if (!userId || !userPerfil) throw new Error("ID ou Perfil do usuário não encontrado.");
-
-            if (userPerfil === 'REQUISITANTE') {
-                alert("Acesso negado. Esta página é para gerenciamento. Redirecionando...");
-                window.location.href = "Chamado.html";
-                throw new Error("Acesso negado.");
-            }
-
-            const userNameDisplay = document.getElementById('userNameDisplay');
             if (userNameDisplay && userData?.data?.nomeFuncionario) {
-                // ATUALIZADO
                 userNameDisplay.textContent = `Olá, ${userData.data.nomeFuncionario.split(' ')[0]}`;
             }
 
-            const linkChamado = document.getElementById("menu-link-chamado");
-            if (linkChamado) {
-                const a = linkChamado.querySelector('a');
-                a.href = "GerenciarChamados.html";
-                a.title = "Gerenciar Chamados";
-                a.querySelector('.icon').textContent = "✔️";
-                a.querySelector('.text').textContent = " Gerenciar Chamados";
-
-                const paginaAtual = window.location.pathname.split('/').pop();
-                if (paginaAtual === 'GerenciarChamados.html') linkChamado.classList.add('active');
-            }
-
         } catch (error) {
-            if (error.message !== "Acesso negado.") {
-                alert(error.message + " Redirecionando para login.");
-                window.location.href = "Login.html";
-            }
+            console.error("Erro ao processar dados do usuário:", error);
+            fazerLogout();
         }
-
-        const ticketList = document.getElementById("ticketList");
-        const loadingIndicator = document.getElementById("loadingIndicator");
-        const divRespostaGeral = document.getElementById("divRespostaGeral");
-        const filtroAssunto = document.getElementById("filtroAssunto");
-        const filtroPrioridade = document.getElementById("filtroPrioridade");
-        const filtroStatus = document.getElementById("filtroStatus");
-        const filtroCategoria = document.getElementById("filtroCategoria");
-        const btnFiltrar = document.getElementById("btnFiltrar");
-        const btnLogout = document.getElementById("logoutButton"); // <-- ADICIONADO
-
-        function exibirMensagem(el, msg, sucesso = true) {
-            el.textContent = msg;
-            el.className = sucesso ? 'alert alert-success' : 'alert alert-danger';
+        
+        // --- EVENT LISTENER DE LOGOUT ---
+        const btnLogout = document.getElementById("logoutButton");
+        if (btnLogout) {
+            btnLogout.addEventListener('click', fazerLogout);
         }
+    });
+</script>
 
-        function limparMensagem(el) { el.textContent = ''; el.className = ''; }
-
-        function escapeHtml(t) {
-            if (!t) return '';
-            return t.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
-        }
-
-        function formatarData(d) {
-            if (!d) return 'N/A';
-            try {
-                const dt = new Date(d);
-                const data = dt.toLocaleDateString('pt-BR');
-                const hora = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                return `${data} ${hora}`; // Ex: 31/10/2025 14:35
-            } catch {
-                return 'Data inválida';
-            }
-        }
-
-        async function carregarCategorias() {
-            if (userPerfil === 'AGENTE') {
-                filtroCategoria.parentElement.style.display = 'none';
-                return;
-            }
-            try {
-                const r = await fetch(`${API_URL}/categorias`);
-                if (!r.ok) throw new Error("Erro ao carregar categorias.");
-                const categorias = await r.json();
-                filtroCategoria.innerHTML = '<option value="">Todas</option>';
-                categorias.forEach(cat => {
-                    const opt = document.createElement("option");
-                    opt.value = cat.id;
-                    opt.textContent = cat.nome;
-                    filtroCategoria.appendChild(opt);
-                });
-            } catch {
-                filtroCategoria.parentElement.innerHTML = '<p class="text-danger">Falha ao carregar categorias.</p>';
-            }
-        }
-
-        function renderizarChamados(chamados) {
-            loadingIndicator.style.display = 'none';
-            ticketList.querySelectorAll('.data-row').forEach(r => r.remove());
-
-            if (!chamados?.length) {
-                ticketList.insertAdjacentHTML('beforeend', `
-                <div class="ticket-row data-row">
-                    <div class="ticket-cell" style="grid-column: 1 / -1; text-align:center; padding:1rem;">
-                    Nenhum chamado encontrado.
-                    </div>
-                </div>`);
-                return;
-            }
-
-            chamados.forEach(ch => {
-                const prioridadeClass = (ch.prioridade || 'Média').toLowerCase();
-                const statusClass = (ch.status || 'Aberto').toLowerCase().replace(/\s+/g, '-');
-                ticketList.insertAdjacentHTML('beforeend', `
-                <div class="ticket-row data-row" data-ticket-id="${ch.id}">
-                    <div class="ticket-cell ticket-id">#${ch.id}</div>
-                    <div class="ticket-cell ticket-priority"><span class="priority-badge ${prioridadeClass}">${escapeHtml(ch.prioridade)}</span></div>
-                    <div class="ticket-cell ticket-subject">${escapeHtml(ch.assunto)}</div>
-                    <div class="ticket-cell ticket-category">${escapeHtml(ch.Categorias?.nome || 'N/A')}</div>
-                    <div class="ticket-cell ticket-status"><span class="status-badge ${statusClass}">${escapeHtml(ch.status)}</span></div>
-                    <div class="ticket-cell ticket-operator">${escapeHtml(ch.Funcionario?.nomeFuncionario || 'Desconhecido')}</div>
-                    <div class="ticket-cell ticket-created">${formatarData(ch.created_at)}</div>
-                    <div class="ticket-cell ticket-actions">
-                    <span class="view-icon" title="Visualizar">👁️</span>
-                    ${ch.status !== 'Concluído'
-                        ? `<button class="btn-action btn-concluir" data-id="${ch.id}" title="Marcar como Concluído">✔️</button>` : ''}
-                    </div>
-                </div>`);
-            });
-        }
-
-        async function listarChamados() {
-            limparMensagem(divRespostaGeral);
-            ticketList.querySelectorAll('.data-row').forEach(r => r.remove());
-            loadingIndicator.style.display = 'block';
-
-            const p = new URLSearchParams();
-            if (filtroAssunto.value.trim()) p.append('assunto', filtroAssunto.value.trim());
-            if (filtroPrioridade.value) p.append('prioridade', filtroPrioridade.value);
-            if (filtroStatus.value) p.append('status', filtroStatus.value);
-
-            if (userPerfil === 'ADMIN' && filtroCategoria.value)
-                p.append('categoria_id', filtroCategoria.value);
-            else if (userPerfil === 'AGENTE')
-                p.append('categoria_id', userCategoriaAtendimento);
-
-            try {
-                const r = await fetch(`${API_URL}/chamados?${p.toString()}`);
-                if (!r.ok) throw new Error("Erro ao buscar chamados.");
-                renderizarChamados(await r.json());
-            } catch (e) {
-                exibirMensagem(divRespostaGeral, e.message, false);
-                loadingIndicator.innerHTML = '<p style="color:red;">Falha ao carregar.</p>';
-            }
-        }
-
-        async function atualizarStatusChamado(id, status) {
-            try {
-                const r = await fetch(`${API_URL}/chamados/${id}/status`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status })
-                });
-                const data = await r.json();
-                if (!r.ok) throw new Error(data.message);
-                exibirMensagem(divRespostaGeral, "Chamado atualizado com sucesso!", true);
-                listarChamados();
-            } catch (e) {
-                exibirMensagem(divRespostaGeral, `Erro: ${e.message}`, false);
-            }
-        }
-
-        btnFiltrar.addEventListener('click', listarChamados);
-        btnLogout.addEventListener('click', fazerLogout); // <-- ADICIONADO
-
-        ticketList.addEventListener('click', e => {
-            const t = e.target;
-            if (t.classList.contains('view-icon')) {
-                alert(`Visualizando Chamado #${t.closest('.ticket-row').dataset.ticketId}`);
-            }
-            if (t.classList.contains('btn-concluir')) {
-                const id = t.dataset.id;
-                if (confirm(`Deseja realmente marcar o chamado #${id} como "Concluído"?`)) {
-                    atualizarStatusChamado(id, 'Concluído');
-                }
-            }
-        });
-
-        if (userPerfil === 'AGENTE' || userPerfil === 'ADMIN') {
-            await carregarCategorias();
-            await listarChamados();
-        }
-    </script>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

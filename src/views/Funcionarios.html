@@ -5,6 +5,28 @@
         <title>Funcionários - Portal Supermercado</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
 
+        <script>
+            // --- INÍCIO DO PROTETOR DE PÁGINA (ANTI-FLICKER) ---
+            // Esta variável agora é global para esta página
+            const userDataString = localStorage.getItem("userData");
+            
+            if (!userDataString) {
+                window.location.replace("Login.html"); 
+                throw new Error("Usuário não autenticado.");
+            }
+            try {
+                const userData = JSON.parse(userDataString);
+                if (!userData?.data?.id) {
+                    throw new Error("Dados de usuário inválidos.");
+                }
+            } catch (error) {
+                console.error("Sessão inválida:", error.message);
+                localStorage.removeItem("userData"); 
+                window.location.replace("Login.html"); 
+                throw new Error("Sessão inválida.");
+            }
+            // --- FIM DO PROTETOR DE PÁGINA ---
+        </script>
         <link href="css/dashboard.css" rel="stylesheet" />
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
         <link rel="icon" type="image/png" href="/logo.png">
@@ -89,7 +111,7 @@
                     <span id="userNameDisplay"></span>
                     <button id="logoutButton" class="btn-logout">Sair</button>
                 </div>
-                </header>
+            </header>
 
             <aside class="sidebar">
                 <nav>
@@ -229,38 +251,31 @@
         </div>
 
         <script type="module">
-            // *** CORREÇÃO APLICADA ***
-            // URL Base da API (vazio para usar caminho relativo)
             const API_URL = "";
 
-            // --- FUNÇÃO DE LOGOUT ADICIONADA ---
+            // --- FUNÇÃO DE LOGOUT ---
             function fazerLogout() {
                 localStorage.removeItem("userData"); 
                 window.location.href = "Login.html"; 
             }
 
-            // --- AUTENTICAÇÃO SIMPLES ---
-            let userDataString = localStorage.getItem("userData"); // Renomeado para 'userDataString'
-            if (!userDataString) {
-                window.location.href = "Login.html";
-            }
-
             // --- LÓGICA INSERIDA PARA O NOME DO USUÁRIO ---
+            // O script do <head> já validou. Apenas lemos os dados.
+            // A linha "let userDataString = ..." FOI REMOVIDA DAQUI.
             try {
+                // Usamos a variável 'userDataString' global definida no <head>
                 const userData = JSON.parse(userDataString);
                 const userNameDisplay = document.getElementById('userNameDisplay');
                 if (userNameDisplay && userData?.data?.nomeFuncionario) {
-                    // ATUALIZADO
                     userNameDisplay.textContent = `Olá, ${userData.data.nomeFuncionario.split(' ')[0]}`;
                 }
             } catch (error) {
                 console.error("Erro ao tentar exibir o nome do usuário:", error);
-                localStorage.removeItem("userData"); // Limpa dados corrompidos
-                window.location.href = "Login.html";
+                fazerLogout();
             }
 
-            let API_DATA_FUNCIONARIOS; // Guarda os dados dos funcionários
-            let LISTA_CARGOS; // Guarda os dados dos cargos
+            let API_DATA_FUNCIONARIOS; 
+            let LISTA_CARGOS; 
 
             // Referências aos elementos HTML
             const txtId = document.getElementById("txtId");
@@ -273,9 +288,8 @@
             const divBotoes = document.getElementById("divBotoes");
             const divResposta = document.getElementById("divResposta");
             const divTabela = document.getElementById("divTabela");
-            const btnLogout = document.getElementById("logoutButton"); // <-- ADICIONADO
+            const btnLogout = document.getElementById("logoutButton");
 
-            // Função auxiliar para criar botões
             function createButton(text, id, className) {
                 const btn = document.createElement("button");
                 btn.textContent = text;
@@ -284,7 +298,6 @@
                 return btn;
             }
 
-            // Limpar formulário
             function limparFormulario(message = "") {
                 if (message) {
                     divResposta.textContent = message;
@@ -301,13 +314,12 @@
                 cboCargos.value = "-1";
             }
 
-            // Exibir erro
             function exibirErro(mensagem) {
                 divResposta.textContent = mensagem;
                 divResposta.className = 'alert alert-danger mt-3';
             }
 
-            // BOTÕES CRUD (adicionados via JS)
+            // BOTÕES CRUD
             const btnCriar = createButton("Criar", "btnCriar", "btn-success");
             btnCriar.onclick = async () => {
                 if (txtNomeFuncionario.value.trim() === "" || txtUsuario.value.trim() === "" || txtEmail.value.trim() === "" || txtSenha.value.trim() === "" || cboCargos.value === "-1") {
@@ -411,7 +423,6 @@
             };
             divBotoes.appendChild(btnExcluir);
 
-            // Funções de suporte
             async function listAll() {
                 try {
                     const response = await fetch(`${API_URL}/usuarios`);
@@ -528,7 +539,7 @@
 
             if (txtFiltroNome) txtFiltroNome.addEventListener("input", filterData);
             if (cboCargosFiltro) cboCargosFiltro.addEventListener("change", filterData);
-            if (btnLogout) btnLogout.addEventListener('click', fazerLogout); // <-- ADICIONADO
+            if (btnLogout) btnLogout.addEventListener('click', fazerLogout);
 
             async function init() {
                 await preencherSelectCargos();
