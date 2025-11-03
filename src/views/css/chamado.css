@@ -1,5 +1,7 @@
 /* --- Estilos para a página de Chamados --- */
-
+.search-bar {
+    display: none;
+}
 /* --- Filtros --- */
 .filters {
     display: flex;
