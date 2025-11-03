@@ -8,23 +8,7 @@
     <script>
         // --- INÍCIO DO PROTETOR DE PÁGINA (ANTI-FLICKER) ---
         // Esta variável agora é global para esta página
-        const userDataString = localStorage.getItem("userData");
         
-        if (!userDataString) {
-            window.location.replace("Login.html"); 
-            throw new Error("Usuário não autenticado.");
-        }
-        try {
-            const userData = JSON.parse(userDataString);
-            if (!userData?.data?.id) {
-                throw new Error("Dados de usuário inválidos.");
-            }
-        } catch (error) {
-            console.error("Sessão inválida:", error.message);
-            localStorage.removeItem("userData"); 
-            window.location.replace("Login.html"); 
-            throw new Error("Sessão inválida.");
-        }
         // --- FIM DO PROTETOR DE PÁGINA ---
     </script>
     <link rel="icon" type="image/png" href="/logo.png">
