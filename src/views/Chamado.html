@@ -443,23 +443,13 @@
         // Usar "" (vazio) faz o script usar o caminho relativo.
         const API_URL = "";
 
-        // --- Autenticação ---
-        let userData;
-        let userId;
-        try {
-            const userDataString = localStorage.getItem("userData");
-            if (!userDataString) throw new Error("Usuário não logado.");
-            userData = JSON.parse(userDataString);
-            userId = userData?.data?.id;
-            if (!userId) throw new Error("ID do usuário não encontrado.");
-            const userNameDisplay = document.getElementById('userNameDisplay');
-            if (userNameDisplay && userData?.data?.nomeFuncionario) {
-                userNameDisplay.textContent = `👤 ${userData.data.nomeFuncionario.split(' ')[0]}`;
-            }
-        } catch (error) {
-            alert(error.message + " Redirecionando para login.");
-            window.location.href = "Login.html";
-        }
+        // --- Autenticação (REMOVIDA PARA TESTE) ---
+        // ATENÇÃO: O login foi removido. Estamos usando um ID fixo para testes.
+        let userData = null;
+        let userId = 1; // <-- ID Fixo para teste. Mude se necessário.
+
+        // O 'try...catch' e o redirecionamento para Login.html foram removidos.
+
 
         // --- Referências ---
         const modal = document.getElementById("modalTicket");
