@@ -2,12 +2,18 @@ import pool from '../config/database.js';
 
 // Cria um novo chamado
 export const create = async (chamado) => {
+  // Removido 'createdAt'. O banco de dados vai cuidar disso.
   const { assunto, descricao, prioridade, status, requisitanteIdNum, categoriaIdNum } = chamado;
+
+  // Omitimos a coluna 'created_at' do INSERT.
+  // O MySQL usará o valor DEFAULT (CURRENT_TIMESTAMP) automaticamente.
   const sql = `
     INSERT INTO Chamados (assunto, descricao, prioridade, status, requisitante_id, categoria_id)
     VALUES (?, ?, ?, ?, ?, ?)
   `;
+  
   const values = [assunto, descricao, prioridade, status, requisitanteIdNum, categoriaIdNum];
+  
   const [result] = await pool.query(sql, values);
   return result.insertId; // Retorna o ID do novo chamado
 };
