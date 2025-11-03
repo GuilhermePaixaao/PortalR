@@ -89,7 +89,7 @@
                 <span id="userNameDisplay"></span>
                 <button id="logoutButton" class="btn-logout">Sair</button>
             </div>
-            </header>
+        </header>
         
         <aside class="sidebar">
             <nav>
@@ -188,66 +188,66 @@
     <script type="module">
         document.addEventListener('DOMContentLoaded', () => {
             
-            // 1. Tenta pegar os dados do usuário do localStorage
-            const userDataString = localStorage.getItem("userData");
-            
-            // --- FUNÇÃO DE LOGOUT ADICIONADA ---
+            // --- FUNÇÃO DE LOGOUT ---
+            // Definida primeiro para que possa ser usada
             function fazerLogout() {
                 localStorage.removeItem("userData"); 
                 window.location.href = "Login.html"; 
             }
 
-            // 2. Se não houver dados, redireciona para o Login
+            // --- INÍCIO DO PROTETOR DE PÁGINA ---
+            const userDataString = localStorage.getItem("userData");
+            let userData; // Variável para guardar os dados para o resto do script
+
             if (!userDataString) {
+                // 1. Se NÃO houver dados, redireciona para o Login
                 window.location.href = "Login.html";
-                return; // Para a execução do script
+                // Lança um erro para parar a execução de qualquer script abaixo
+                throw new Error("Usuário não autenticado. Redirecionando para login.");
             }
 
-            // 3. Se houver dados, tenta processá-los
             try {
-                const userData = JSON.parse(userDataString); 
+                // 2. Se houver dados, tenta decodificá-los
+                userData = JSON.parse(userDataString);
                 
-                // 4. Encontra o elemento <span> no header
-                const userNameDisplay = document.getElementById('userNameDisplay'); 
+                // 3. Validação: Verifica se os dados são válidos
+                if (!userData?.data?.id) {
+                    throw new Error("Dados de usuário inválidos.");
+                }
 
-                // 5. Verifica se o elemento foi encontrado E se o nome existe nos dados
+                // 4. Lógica da página (executa apenas se o login for válido)
+                
+                // Atualiza o nome do usuário no header
+                const userNameDisplay = document.getElementById('userNameDisplay'); 
                 if (userNameDisplay && userData?.data?.nomeFuncionario) {
-                    
-                    // 6. Atualiza o texto do <span> com o primeiro nome (ATUALIZADO)
                     userNameDisplay.textContent = `Olá, ${userData.data.nomeFuncionario.split(' ')[0]}`;
                 }
 
-                // ==========================================================
-                // ===== INÍCIO DO SCRIPT DO MENU DINÂMICO =====
-                // (Colado aqui dentro do 'try' para acessar 'userData')
-                // ==========================================================
+                // Atualiza o menu dinâmico
                 const userPerfil = userData?.data?.perfil; 
-                const linkChamado = document.getElementById("menu-link-chamado"); // <-- Pega o ID do Passo 1
+                const linkChamado = document.getElementById("menu-link-chamado"); 
 
                 if (linkChamado && (userPerfil === 'AGENTE' || userPerfil === 'ADMIN')) {
-                    // O usuário é um Agente ou Admin
                     const a = linkChamado.querySelector('a');
-                    
-                    a.href = "GerenciarChamados.html"; // Manda para a página certa
+                    a.href = "GerenciarChamados.html"; 
                     a.title = "Gerenciar Chamados";
-                    a.querySelector('.icon').textContent = "✔️"; // Muda o ícone
-                    a.querySelector('.text').textContent = "Gerenciar Chamados"; // Muda o texto
-                    
-                    // Esta é a página 'Dashboard', então o link "Chamado" NUNCA está ativo
+                    a.querySelector('.icon').textContent = "✔️"; 
+                    a.querySelector('.text').textContent = "Gerenciar Chamados";
                     linkChamado.classList.remove('active');
                 }
-                // ==========================================================
-                // ===== FIM DO SCRIPT DO MENU DINÂMICO =====
-                // ==========================================================
 
             } catch (error) {
-                // Se os dados estiverem corrompidos (JSON inválido)
-                console.error("Erro ao processar dados do usuário:", error);
+                // 5. Se os dados estiverem corrompidos ou inválidos
+                console.error("Erro ao processar dados do usuário:", error.message);
                 localStorage.removeItem("userData"); // Limpa os dados ruins
-                window.location.href = "Login.html";
+                window.location.href = "Login.html"; // Manda para o login
+                throw new Error("Sessão inválida. Redirecionando para login.");
             }
+            // --- FIM DO PROTETOR DE PÁGINA ---
+
             
-            // --- EVENT LISTENER DE LOGOUT ADICIONADO ---
+            // --- EVENT LISTENER DE LOGOUT ---
+            // Esta parte só é alcançada se o 'try' for bem-sucedido
             const btnLogout = document.getElementById("logoutButton");
             if (btnLogout) {
                 btnLogout.addEventListener('click', fazerLogout);
