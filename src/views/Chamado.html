@@ -6,9 +6,7 @@
     <title>Chamados - Portal Supermercado</title>
 
     <link rel="icon" type="image/png" href="/logo.png">
-
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
     <link rel="stylesheet" href="css/chamado.css">
     <link rel="stylesheet" href="css/ticket.css">
     <style>
@@ -176,7 +174,7 @@
         .priority-badge.alta, .priority-badge.high { background-color: #f8d7da; color: #842029; }
         .priority-badge.média, .priority-badge.medium, .priority-badge.media { background-color: #fff3cd; color: #664d03; }
         .priority-badge.baixa, .priority-badge.low { background-color: #cfe2ff; color: #084298; }
-        .priority-badge.planejado { background-color: #e2d1e7; color: #510f32; } /* NOVO BADGE */
+        .priority-badge.planejado { background-color: #e2d1e7; color: #510f32; } 
 
         .status-badge.aberto, .status-badge.open { background-color: #ffc107; color: #000; }
         .status-badge.concluído, .status-badge.completed { background-color: #d1e7dd; color: #0f5132; }
@@ -188,7 +186,7 @@
         .header {
             display: flex;
             align-items: center;
-            justify-content: space-between; /* MODIFICADO */
+            justify-content: space-between; 
             padding: 0.75rem 2rem;
             background-color: #ffffff;
             border-bottom: 1px solid #dee2e6;
@@ -208,7 +206,7 @@
         }
         .search-bar {
             margin-left: 2rem;
-            margin-right: 2rem; /* ADICIONADO */
+            margin-right: 2rem; 
             width: 100%;
             max-width: 450px;
         }
@@ -400,7 +398,8 @@
         </dialog>
         
         <main class="main-content">
-            <h1>Meus Chamados (TESTE)</h1> <hr>
+            <h1>Meus Chamados</h1> 
+            <hr>
 
             <div id="divRespostaGeral" class="mb-3"></div>
 
@@ -464,15 +463,13 @@
     </div>
 
     <script type="module">
-        // *** CORREÇÃO APLICADA ***
-        // Usar "" (vazio) faz o script usar o caminho relativo.
         const API_URL = "";
 
-        // --- Autenticação (MODO DE TESTE) ---
-        // Conforme solicitado ("esse nao é pra jogar para o login"),
-        // estamos usando um ID fixo para testes.
+        // --- Autenticação (MODO STANDALONE/DEV) ---
+        // Conforme solicitado ("deixe sem nada"),
+        // usamos um ID fixo para a página funcionar.
         let userData = null;
-        let userId = 1; // <-- ID Fixo para teste.
+        let userId = 1; // <-- ID Fixo para desenvolvimento
 
         // --- Referências ---
         const modal = document.getElementById("modalTicket");
@@ -484,7 +481,7 @@
         const selectCategoriaModal = document.getElementById("categoria");
         const modalResposta = document.getElementById("modalResposta");
         const divRespostaGeral = document.getElementById("divRespostaGeral");
-        const btnLogout = document.getElementById("logoutButton"); // Botão existe, mas não terá função de logout real
+        const btnLogout = document.getElementById("logoutButton"); 
 
         // Referências do Novo Modal de Detalhes
         const modalDetalhes = document.getElementById("modalDetalhes");
@@ -619,8 +616,7 @@
                 params.append('status', filtroStatus.value);
             }
             
-            // USA O ID DE TESTE
-            params.append('requisitante_id', userId); 
+            params.append('requisitante_id', userId); // USA O ID FIXO
 
             const url = `${API_URL}/chamados?${params.toString()}`;
 
@@ -679,7 +675,7 @@
                     assunto: assunto,
                     descricao: descricao,
                     prioridade: prioridade,
-                    requisitante_id: userId, // ID de teste
+                    requisitante_id: userId, // ID Fixo
                     categoria_id: categoriaId ? parseInt(categoriaId) : null
                 }
             };
@@ -715,8 +711,7 @@
         btnAbrir.addEventListener('click', () => {
             limparMensagem(modalResposta);
             
-            // Em modo de teste, podemos deixar os campos em branco
-            // ou preencher com dados de teste
+            // Preenche com dados de teste
             document.getElementById('nomeRequisitante').value = 'Usuário Teste';
             document.getElementById('emailRequisitante').value = 'teste@email.com'; 
 
@@ -744,16 +739,14 @@
         ticketForm.addEventListener('submit', criarChamado);
         btnFiltrar.addEventListener('click', listarChamados);
         
-        // O botão de logout em modo de teste pode simplesmente recarregar a página
+        // Botão de sair não faz nada
         btnLogout.addEventListener('click', () => {
-             if(confirm("Esta é uma página de teste. Deseja recarregar?")) {
-                 window.location.reload();
-             }
+             alert("Página em modo de desenvolvimento. Logout desabilitado.");
         });
 
         // --- Inicialização ---
         async function init() {
-            document.getElementById('userNameDisplay').textContent = "Modo de Teste"; // Indica que é um teste
+            // Linha do "Modo de Teste" removida
             await carregarCategorias();
             await listarChamados(); 
         }
