@@ -7,6 +7,73 @@
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="stylesheet" href="css/chatbot.css">
     <link rel="icon" type="image/png" href="logo.png">
+    
+    <style>
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between; /* Alinha itens */
+            padding: 0.75rem 2rem;
+            background-color: #ffffff;
+            border-bottom: 1px solid #dee2e6;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 1030;
+        }
+        .logo {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #0d6efd;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 0;
+            white-space: nowrap;
+        }
+        .search-bar {
+            margin-left: 2rem;
+            margin-right: 2rem;
+            width: 100%;
+            max-width: 450px;
+        }
+        .search-bar input {
+            width: 100%;
+            padding: 0.6rem 1rem;
+            border: 1px solid #ced4da;
+            border-radius: 20px;
+            font-size: 0.95rem;
+        }
+        .search-bar input:focus {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13,110,253,.25);
+            outline: none;
+        }
+        
+        /* Estilos para Logout */
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem; 
+        }
+        #userNameDisplay {
+            font-weight: 500;
+            color: #495057;
+            white-space: nowrap; 
+        }
+        .btn-logout {
+            background-color: #dc3545; 
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .btn-logout:hover {
+            background-color: #bb2d3b;
+        }
+    </style>
 </head>
 <body>
     <div class="dashboard-container">
@@ -15,10 +82,12 @@
             <div class="search-bar">
                 <input type="text" placeholder="Buscar produtos, relatórios, chamados...">
             </div>
-            <div class="user-profile">
-                <span class="icon">🔔</span> <span id="userNameDisplay" class="icon">👤</span> 
+            
+            <div class="header-actions">
+                <span id="userNameDisplay"></span>
+                <button id="logoutButton" class="btn-logout">Sair</button>
             </div>
-        </header>
+            </header>
         
         <aside class="sidebar">
             <nav>
@@ -60,153 +129,165 @@
     </div>
 
     <script type="module">
-      document.addEventListener('DOMContentLoaded', () => {
-        // --- AUTENTICAÇÃO E NOME DE USUÁRIO ---
-        let userDataString = localStorage.getItem('userData');
-        if (!userDataString) {
-          window.location.href = 'Login.html';
-          return;
-        }
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- AUTENTICAÇÃO E NOME DE USUÁRIO ---
+            let userDataString = localStorage.getItem('userData');
+            if (!userDataString) {
+                window.location.href = 'Login.html';
+                return;
+            }
 
-        try {
-          const userData = JSON.parse(userDataString);
-          const userNameDisplay = document.getElementById('userNameDisplay');
-          if (userNameDisplay && userData?.data?.nomeFuncionario) {
-            userNameDisplay.textContent = `👤 ${userData.data.nomeFuncionario.split(' ')[0]}`;
-          }
-        } catch (error) {
-          console.error('Erro ao exibir nome do usuário:', error);
-          window.location.href = 'Login.html';
-        }
+            try {
+                const userData = JSON.parse(userDataString);
+                const userNameDisplay = document.getElementById('userNameDisplay');
+                if (userNameDisplay && userData?.data?.nomeFuncionario) {
+                    // ATUALIZADO
+                    userNameDisplay.textContent = `Olá, ${userData.data.nomeFuncionario.split(' ')[0]}`;
+                }
+            } catch (error) {
+                console.error('Erro ao exibir nome do usuário:', error);
+                localStorage.removeItem("userData"); // Limpa dados corrompidos
+                window.location.href = 'Login.html';
+            }
 
-        // --- LÓGICA DO CHATBOT ---
-        const chatHistory = document.getElementById('chatHistory');
-        const chatInput = document.getElementById('chatInput');
-        const sendButton = document.getElementById('sendButton');
-        const typingIndicator = document.getElementById('typingIndicator');
-        const suggestionArea = document.getElementById('suggestionArea');
+            // --- LÓGICA DO CHATBOT ---
+            const chatHistory = document.getElementById('chatHistory');
+            const chatInput = document.getElementById('chatInput');
+            const sendButton = document.getElementById('sendButton');
+            const typingIndicator = document.getElementById('typingIndicator');
+            const suggestionArea = document.getElementById('suggestionArea');
+            const btnLogout = document.getElementById("logoutButton"); // <-- ADICIONADO
 
-        if (!chatHistory || !chatInput || !sendButton || !typingIndicator || !suggestionArea) {
-          console.error('ERRO: Elementos do chat não encontrados. Verifique os IDs.');
-          return;
-        }
+            if (!chatHistory || !chatInput || !sendButton || !typingIndicator || !suggestionArea) {
+                console.error('ERRO: Elementos do chat não encontrados. Verifique os IDs.');
+                return;
+            }
 
-        // Guarda o ID da "conversa" (Thread)
-        let currentThreadId = null;
+            // Guarda o ID da "conversa" (Thread)
+            let currentThreadId = null;
+            
+            // --- FUNÇÃO DE LOGOUT ADICIONADA ---
+            function fazerLogout() {
+                localStorage.removeItem("userData"); 
+                window.location.href = "Login.html"; 
+            }
 
-        // --- FUNÇÃO PARA CARREGAR O ESTADO DO CHAT ---
-        function loadChatState() {
-          const savedThreadId = sessionStorage.getItem('chatThreadId');
-          if (savedThreadId) currentThreadId = savedThreadId;
+            // --- FUNÇÃO PARA CARREGAR O ESTADO DO CHAT ---
+            function loadChatState() {
+                const savedThreadId = sessionStorage.getItem('chatThreadId');
+                if (savedThreadId) currentThreadId = savedThreadId;
 
-          const savedHistoryHTML = sessionStorage.getItem('chatHistoryHTML');
-          if (savedHistoryHTML) {
-            chatHistory.innerHTML = savedHistoryHTML;
-            suggestionArea.style.display = 'none'; // Esconde sugestões se já houver histórico
-          } else {
-            // Se não houver histórico, adiciona a mensagem inicial
-            // (O 'false' evita que essa msg inicial seja salva no storage antes da hora)
-            addMessage('Olá! Eu sou o assistente virtual do Portal Supermercado. Como posso ajudar você hoje?', 'bot', false);
-          }
+                const savedHistoryHTML = sessionStorage.getItem('chatHistoryHTML');
+                if (savedHistoryHTML) {
+                    chatHistory.innerHTML = savedHistoryHTML;
+                    suggestionArea.style.display = 'none'; // Esconde sugestões se já houver histórico
+                } else {
+                    // Se não houver histórico, adiciona a mensagem inicial
+                    // (O 'false' evita que essa msg inicial seja salva no storage antes da hora)
+                    addMessage('Olá! Eu sou o assistente virtual do Portal Supermercado. Como posso ajudar você hoje?', 'bot', false);
+                }
 
-          chatHistory.scrollTop = chatHistory.scrollHeight;
-        }
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+            }
 
-        function showTyping() {
-          typingIndicator.style.display = 'flex';
-          chatHistory.scrollTop = chatHistory.scrollHeight;
-        }
+            function showTyping() {
+                typingIndicator.style.display = 'flex';
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+            }
 
-        function hideTyping() {
-          typingIndicator.style.display = 'none';
-        }
+            function hideTyping() {
+                typingIndicator.style.display = 'none';
+            }
 
-        // Adicionado 'saveHistory = true'
-        function addMessage(message, sender, saveHistory = true) {
-          const messageWrapper = document.createElement('div');
-          messageWrapper.classList.add('chat-message');
-          const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            // Adicionado 'saveHistory = true'
+            function addMessage(message, sender, saveHistory = true) {
+                const messageWrapper = document.createElement('div');
+                messageWrapper.classList.add('chat-message');
+                const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-          if (sender === 'bot') {
-            messageWrapper.classList.add('message-bot');
-            messageWrapper.innerHTML = `
-              <span class="avatar">🤖</span>
-              <div class="message-bubble">
-                <p>${message}</p>
-                <span class="timestamp">${timestamp}</span>
-              </div>
-            `;
-          } else {
-            messageWrapper.classList.add('message-user');
-            messageWrapper.innerHTML = `
-              <span class="avatar">👤</span>
-              <div class="message-bubble">
-                <p>${message}</p>
-                <span class="timestamp">${timestamp}</span>
-              </div>
-            `;
-          }
+                if (sender === 'bot') {
+                    messageWrapper.classList.add('message-bot');
+                    messageWrapper.innerHTML = `
+                        <span class="avatar">🤖</span>
+                        <div class="message-bubble">
+                            <p>${message}</p>
+                            <span class="timestamp">${timestamp}</span>
+                        </div>
+                    `;
+                } else {
+                    messageWrapper.classList.add('message-user');
+                    messageWrapper.innerHTML = `
+                        <span class="avatar">👤</span>
+                        <div class="message-bubble">
+                            <p>${message}</p>
+                            <span class="timestamp">${timestamp}</span>
+                        </div>
+                    `;
+                }
 
-          chatHistory.appendChild(messageWrapper);
-          chatHistory.scrollTop = chatHistory.scrollHeight;
+                chatHistory.appendChild(messageWrapper);
+                chatHistory.scrollTop = chatHistory.scrollHeight;
 
-          // --- FUNÇÃO PARA SALVAR HISTÓRICO ---
-          if (saveHistory) sessionStorage.setItem('chatHistoryHTML', chatHistory.innerHTML);
-        }
+                // --- FUNÇÃO PARA SALVAR HISTÓRICO ---
+                if (saveHistory) sessionStorage.setItem('chatHistoryHTML', chatHistory.innerHTML);
+            }
 
-        // Função principal
-        async function handleSendMessage(message) {
-          const userMessage = message.trim();
-          if (userMessage === '') return;
+            // Função principal
+            async function handleSendMessage(message) {
+                const userMessage = message.trim();
+                if (userMessage === '') return;
 
-          suggestionArea.style.display = 'none';
-          addMessage(userMessage, 'user'); // Salva automaticamente
-          if (chatInput) chatInput.value = '';
-          showTyping();
+                suggestionArea.style.display = 'none';
+                addMessage(userMessage, 'user'); // Salva automaticamente
+                if (chatInput) chatInput.value = '';
+                showTyping();
 
-          try {
-            // Envia os dados no formato (message + threadId)
-            const response = await fetch('/api/chat', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                message: userMessage, // A MENSAGEM ATUAL
-                threadId: currentThreadId // O ID da Thread (null na 1ª vez)
-              })
+                try {
+                    // Envia os dados no formato (message + threadId)
+                    const response = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            message: userMessage, // A MENSAGEM ATUAL
+                            threadId: currentThreadId // O ID da Thread (null na 1ª vez)
+                        })
+                    });
+
+                    if (!response.ok) throw new Error(`Erro na API: ${response.status} ${response.statusText}`);
+
+                    const data = await response.json();
+                    const botReply = data.reply;
+
+                    // Salva o ID da Thread para lembrar da conversa
+                    currentThreadId = data.threadId;
+                    sessionStorage.setItem('chatThreadId', currentThreadId);
+
+                    hideTyping();
+                    addMessage(botReply, 'bot'); // Salva automaticamente
+                } catch (error) {
+                    console.error('Erro ao contatar o bot:', error);
+                    hideTyping();
+                    addMessage('Desculpe, não foi possível conectar ao assistente.', 'bot');
+                }
+            }
+
+            // --- Event Listeners ---
+            sendButton.addEventListener('click', () => handleSendMessage(chatInput.value));
+            chatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') handleSendMessage(chatInput.value);
             });
+            suggestionArea.addEventListener('click', (e) => {
+                if (e.target.classList.contains('suggestion-btn')) {
+                    const message = e.target.dataset.message;
+                    handleSendMessage(message);
+                }
+            });
+            btnLogout.addEventListener('click', fazerLogout); // <-- ADICIONADO
 
-            if (!response.ok) throw new Error(`Erro na API: ${response.status} ${response.statusText}`);
-
-            const data = await response.json();
-            const botReply = data.reply;
-
-            // Salva o ID da Thread para lembrar da conversa
-            currentThreadId = data.threadId;
-            sessionStorage.setItem('chatThreadId', currentThreadId);
-
+            // --- INICIALIZAÇÃO DO CHAT ---
             hideTyping();
-            addMessage(botReply, 'bot'); // Salva automaticamente
-          } catch (error) {
-            console.error('Erro ao contatar o bot:', error);
-            hideTyping();
-            addMessage('Desculpe, não foi possível conectar ao assistente.', 'bot');
-          }
-        }
-
-        // --- Event Listeners ---
-        sendButton.addEventListener('click', () => handleSendMessage(chatInput.value));
-        chatInput.addEventListener('keypress', (e) => {
-          if (e.key === 'Enter') handleSendMessage(chatInput.value);
+            loadChatState(); // Carrega o histórico e o threadId salvos
         });
-        suggestionArea.addEventListener('click', (e) => {
-          if (e.target.classList.contains('suggestion-btn')) {
-            const message = e.target.dataset.message;
-            handleSendMessage(message);
-          }
-        });
-
-        // --- INICIALIZAÇÃO DO CHAT ---
-        hideTyping();
-        loadChatState(); // Carrega o histórico e o threadId salvos
-      });
     </script>
+</body>
+</html>

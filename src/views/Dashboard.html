@@ -6,6 +6,73 @@
     <title>Portal Supermercado</title>
     <link rel="icon" type="image/png" href="/logo.png">
     <link rel="stylesheet" href="css/dashboard.css">
+    
+    <style>
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between; /* Alinha itens */
+            padding: 0.75rem 2rem;
+            background-color: #ffffff;
+            border-bottom: 1px solid #dee2e6;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 1030;
+        }
+        .logo {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #0d6efd;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 0;
+            white-space: nowrap;
+        }
+        .search-bar {
+            margin-left: 2rem;
+            margin-right: 2rem;
+            width: 100%;
+            max-width: 450px;
+        }
+        .search-bar input {
+            width: 100%;
+            padding: 0.6rem 1rem;
+            border: 1px solid #ced4da;
+            border-radius: 20px;
+            font-size: 0.95rem;
+        }
+        .search-bar input:focus {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13,110,253,.25);
+            outline: none;
+        }
+        
+        /* Estilos para Logout */
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem; 
+        }
+        #userNameDisplay {
+            font-weight: 500;
+            color: #495057;
+            white-space: nowrap; 
+        }
+        .btn-logout {
+            background-color: #dc3545; 
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .btn-logout:hover {
+            background-color: #bb2d3b;
+        }
+    </style>
 </head>
 <body>
 
@@ -18,11 +85,11 @@
                 <input type="text" placeholder="Buscar produtos, relatórios, chamados...">
             </div>
             
-            <div class="user-profile">
-                <span class="icon">🔔</span>
-                <span id="userNameDisplay" class="icon">👤</span> 
+            <div class="header-actions">
+                <span id="userNameDisplay"></span>
+                <button id="logoutButton" class="btn-logout">Sair</button>
             </div>
-        </header>
+            </header>
         
         <aside class="sidebar">
             <nav>
@@ -123,6 +190,12 @@
             
             // 1. Tenta pegar os dados do usuário do localStorage
             const userDataString = localStorage.getItem("userData");
+            
+            // --- FUNÇÃO DE LOGOUT ADICIONADA ---
+            function fazerLogout() {
+                localStorage.removeItem("userData"); 
+                window.location.href = "Login.html"; 
+            }
 
             // 2. Se não houver dados, redireciona para o Login
             if (!userDataString) {
@@ -140,8 +213,8 @@
                 // 5. Verifica se o elemento foi encontrado E se o nome existe nos dados
                 if (userNameDisplay && userData?.data?.nomeFuncionario) {
                     
-                    // 6. Atualiza o texto do <span> com o primeiro nome
-                    userNameDisplay.textContent = `👤 ${userData.data.nomeFuncionario.split(' ')[0]}`;
+                    // 6. Atualiza o texto do <span> com o primeiro nome (ATUALIZADO)
+                    userNameDisplay.textContent = `Olá, ${userData.data.nomeFuncionario.split(' ')[0]}`;
                 }
 
                 // ==========================================================
@@ -172,6 +245,12 @@
                 console.error("Erro ao processar dados do usuário:", error);
                 localStorage.removeItem("userData"); // Limpa os dados ruins
                 window.location.href = "Login.html";
+            }
+            
+            // --- EVENT LISTENER DE LOGOUT ADICIONADO ---
+            const btnLogout = document.getElementById("logoutButton");
+            if (btnLogout) {
+                btnLogout.addEventListener('click', fazerLogout);
             }
         });
     </script>
