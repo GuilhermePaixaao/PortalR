@@ -23,7 +23,6 @@
             // VERIFICAÇÃO DE PERFIL (ESPECÍFICA DESTA PÁGINA)
             const userPerfil = userData?.data?.perfil;
             if (userPerfil === 'REQUISITANTE') {
-                // Usamos alert() aqui porque o script de logar ainda não carregou
                 alert("Acesso negado. Esta página é para gerenciamento. Redirecionando...");
                 window.location.replace("Chamado.html"); // Redireciona para a pág. de abrir chamado
                 throw new Error("Acesso negado.");
@@ -46,75 +45,6 @@
     <link rel="stylesheet" href="css/ticket.css">
 
     <style>
-        /* --- ESTILOS DO MODAL DE DETALHES --- */
-        dialog:not([open]) { display: none; }
-        dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
-        dialog {
-            border: none;
-            border-radius: 8px;
-            padding: 1.5rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-            max-width: 600px;
-            width: calc(100% - 2rem);
-        }
-        .grupo-form { margin-bottom: 1rem; }
-        .grupo-form label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-        }
-        .grupo-form select {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #ced4da;
-            border-radius: 4px;
-            font-size: 1rem;
-        }
-        .form-actions {
-            margin-top: 1.5rem;
-            display: flex;
-            justify-content: flex-end;
-            gap: 0.5rem;
-        }
-        .form-actions button {
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        #fecharModalDetalhes {
-            background-color: #6c757d;
-            color: white;
-        }
-        #modalDetalhes .detalhe-grupo { margin-bottom: 1rem; }
-        #modalDetalhes .detalhe-label {
-            font-weight: 600;
-            color: #495057;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            margin-bottom: 0.25rem;
-            display: block;
-        }
-        #modalDetalhes .detalhe-valor {
-            font-size: 1rem;
-            padding: 0.5rem;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-            word-wrap: break-word;
-        }
-        #modalDetalhes .detalhe-descricao {
-            font-size: 1rem;
-            padding: 0.5rem;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-            white-space: pre-wrap;
-            min-height: 100px;
-            max-height: 250px;
-            overflow-y: auto;
-        }
-        /* --- FIM ESTILOS MODAL --- */
-
-
         .main-content {
             grid-area: main;
             overflow-y: auto;
@@ -146,14 +76,13 @@
             font-size: 0.85em;
             font-weight: 600;
         }
-        /* (NOVO) Classes de prioridade atualizadas para corresponder ao HTML anterior */
-        .priority-badge.alta, .priority-badge.high { background-color: #f8d7da; color: #842029; }
-        .priority-badge.média, .priority-badge.medium, .priority-badge.media { background-color: #fff3cd; color: #664d03; }
-        .priority-badge.baixa, .priority-badge.low { background-color: #cfe2ff; color: #084298; }
-        .priority-badge.planejado { background-color: #e2d1e7; color: #510f32; } 
 
-        .status-badge.aberto, .status-badge.open { background-color: #ffc107; color: #000; }
-        .status-badge.concluído, .status-badge.completed { background-color: #d1e7dd; color: #0f5132; }
+        .priority-badge.alta { background-color: #f8d7da; color: #842029; }
+        .priority-badge.média { background-color: #fff3cd; color: #664d03; }
+        .priority-badge.baixa { background-color: #cfe2ff; color: #084298; }
+
+        .status-badge.aberto { background-color: #ffc107; color: #000; }
+        .status-badge.concluído { background-color: #d1e7dd; color: #0f5132; }
         .status-badge.em-andamento { background-color: #cfe2ff; color: #084298; }
 
         #loadingIndicator { padding: 2rem; text-align: center; color: #6c757d; }
@@ -288,83 +217,6 @@
             </nav>
         </aside>
 
-        <!-- (NOVO) HTML DO MODAL DE DETALHES INSERIDO AQUI -->
-        <dialog id="modalDetalhes" aria-labelledby="modalDetalhesTitle">
-            <h2 id="modalDetalhesTitle">Detalhes do Chamado</h2>
-            <hr>
-            
-            <div id="modalDetalhesConteudo">
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="detalhe-grupo">
-                            <span class="detalhe-label">Ticket ID</span>
-                            <span id="detalheId" class="detalhe-valor">#...</span>
-                        </div>
-                    </div>
-                    <!-- (NOVO) Select para STATUS -->
-                    <div class="col-md-4">
-                        <div class="detalhe-grupo">
-                            <label for="detalheStatusSelect" class="detalhe-label">Status</label>
-                            <select id="detalheStatusSelect" class="grupo-form form-select" style="padding: 0.5rem; font-size: 1rem; background-color: #f8f9fa;">
-                                <option value="Aberto">Aberto</option>
-                                <option value="Em Andamento">Em Andamento</option>
-                                <option value="Concluído">Concluído</option>
-                            </select>
-                        </div>
-                    </div>
-                    <!-- (NOVO) Select para PRIORIDADE -->
-                    <div class="col-md-4">
-                        <div class="detalhe-grupo">
-                            <label for="detalhePrioridadeSelect" class="detalhe-label">Prioridade</label>
-                            <select id="detalhePrioridadeSelect" class="grupo-form form-select" style="padding: 0.5rem; font-size: 1rem; background-color: #f8f9fa;">
-                                <option value="Baixa">Baixa</option>
-                                <option value="Média">Média</option>
-                                <option value="Alta">Alta</option>
-                                <option value="Planejado">Planejado</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="detalhe-grupo">
-                    <span class="detalhe-label">Assunto</span>
-                    <div id="detalheAssunto" class="detalhe-valor">...</div>
-                </div>
-
-                <div class="detalhe-grupo">
-                    <span class="detalhe-label">Descrição</span>
-                    <div id="detalheDescricao" class="detalhe-descricao">Carregando...</div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="detalhe-grupo">
-                            <span class="detalhe-label">Requisitante</span>
-                            <span id="detalheRequisitante" class="detalhe-valor">...</span>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detalhe-grupo">
-                            <span class="detalhe-label">Categoria</span>
-                            <span id="detalheCategoria" class="detalhe-valor">...</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="detalhe-grupo">
-                    <span class="detalhe-label">Criado em</span>
-                    <span id="detalheData" class="detalhe-valor">...</span>
-                </div>
-            </div>
-
-            <!-- Div para feedback de atualização -->
-            <div id="modalDetalhesResposta" class="mt-3"></div>
-            
-            <div class="form-actions">
-                <button type="button" id="fecharModalDetalhes">Fechar</button>
-            </div>
-        </dialog>
-        <!-- FIM DO MODAL -->
-
         <main class="main-content">
             <h1>Gerenciar Chamados</h1>
             <hr>
@@ -386,7 +238,6 @@
                                 <option value="Alta">Alta</option>
                                 <option value="Média">Média</option>
                                 <option value="Baixa">Baixa</option>
-                                <option value="Planejado">Planejado</option> <!-- (NOVO) Adicionado Planejado aqui -->
                             </select>
                         </div>
 
@@ -433,7 +284,6 @@
 
     <script type="module">
         const API_URL = ""; 
-        let currentTicketId = null; // (NOVO) Guarda o ID do ticket aberto no modal
 
         // --- FUNÇÃO DE LOGOUT ---
         function fazerLogout() {
@@ -487,21 +337,6 @@
         const btnFiltrar = document.getElementById("btnFiltrar");
         const btnLogout = document.getElementById("logoutButton");
 
-        // --- (NOVAS) REFERÊNCIAS DO MODAL ---
-        const modalDetalhes = document.getElementById("modalDetalhes");
-        const btnFecharModalDetalhes = document.getElementById("fecharModalDetalhes");
-        const modalDetalhesResposta = document.getElementById("modalDetalhesResposta");
-        const detalheId = document.getElementById("detalheId");
-        const detalheStatusSelect = document.getElementById("detalheStatusSelect");
-        const detalhePrioridadeSelect = document.getElementById("detalhePrioridadeSelect");
-        const detalheAssunto = document.getElementById("detalheAssunto");
-        const detalheDescricao = document.getElementById("detalheDescricao");
-        const detalheRequisitante = document.getElementById("detalheRequisitante");
-        const detalheCategoria = document.getElementById("detalheCategoria");
-        const detalheData = document.getElementById("detalheData");
-        // --- FIM NOVAS REFERÊNCIAS ---
-
-
         function exibirMensagem(el, msg, sucesso = true) {
             el.textContent = msg;
             el.className = sucesso ? 'alert alert-success' : 'alert alert-danger';
@@ -517,13 +352,9 @@
         function formatarData(d) {
             if (!d) return 'N/A';
             try {
-                // (NOVO) Ajuste de Fuso Horário
                 const dt = new Date(d);
-                const offset = dt.getTimezoneOffset() * 60000;
-                const dtLocal = new Date(dt.getTime() + offset);
-
-                const data = dtLocal.toLocaleDateString('pt-BR');
-                const hora = dtLocal.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                const data = dt.toLocaleDateString('pt-BR');
+                const hora = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                 return `${data} ${hora}`;
             } catch {
                 return 'Data inválida';
@@ -566,10 +397,8 @@
             }
 
             chamados.forEach(ch => {
-                // (NOVO) Classes de prioridade corrigidas para media/média
-                const prioridadeClass = (ch.prioridade || 'Média').toLowerCase().replace('é', 'e');
+                const prioridadeClass = (ch.prioridade || 'Média').toLowerCase();
                 const statusClass = (ch.status || 'Aberto').toLowerCase().replace(/\s+/g, '-');
-                
                 ticketList.insertAdjacentHTML('beforeend', `
                 <div class="ticket-row data-row" data-ticket-id="${ch.id}">
                     <div class="ticket-cell ticket-id">#${ch.id}</div>
@@ -613,7 +442,6 @@
             }
         }
 
-        // Esta é a sua função original, não foi alterada
         async function atualizarStatusChamado(id, status) {
             try {
                 const r = await fetch(`${API_URL}/chamados/${id}/status`, {
@@ -630,128 +458,22 @@
             }
         }
 
-        // --- (NOVAS) FUNÇÕES DO MODAL ---
-
-        // (NOVA) Busca dados frescos do chamado e abre o modal
-        async function abrirModalDetalhes(chamadoId) {
-            limparMensagem(modalDetalhesResposta);
-            modalDetalhes.showModal();
-            currentTicketId = null; // Reseta
-
-            // Estado de carregamento
-            detalheId.textContent = `#${chamadoId}`;
-            detalheStatusSelect.value = 'Aberto';
-            detalhePrioridadeSelect.value = 'Média';
-            detalheAssunto.textContent = 'Carregando...';
-            detalheDescricao.textContent = 'Carregando...';
-            detalheRequisitante.textContent = 'Carregando...';
-            detalheCategoria.textContent = 'Carregando...';
-            detalheData.textContent = 'Carregando...';
-
-            try {
-                // Assumindo que a rota GET /chamados/:id existe no seu backend
-                const response = await fetch(`${API_URL}/chamados/${chamadoId}`);
-                if (!response.ok) throw new Error(`Erro ao buscar dados do chamado #${chamadoId}`);
-                
-                const chamado = await response.json(); // Espera o objeto formatado
-
-                // Preenche o modal
-                detalheStatusSelect.value = chamado.status;
-                detalhePrioridadeSelect.value = chamado.prioridade;
-                detalheAssunto.textContent = chamado.assunto;
-                detalheDescricao.textContent = chamado.descricao;
-                detalheRequisitante.textContent = chamado.Funcionario?.nomeFuncionario || 'N/A';
-                detalheCategoria.textContent = chamado.Categorias?.nome || 'N/A';
-                detalheData.textContent = formatarData(chamado.created_at);
-                
-                currentTicketId = chamadoId; // Armazena o ID
-            } catch (error) {
-                exibirMensagem(modalDetalhesResposta, error.message, false);
-            }
-        }
-
-        // (NOVA) Lógica de atualizar prioridade
-        async function handlePrioridadeChange() {
-            const novaPrioridade = detalhePrioridadeSelect.value;
-            if (!currentTicketId) return;
-
-            limparMensagem(modalDetalhesResposta);
-            try {
-                // Assumindo que a rota PATCH /chamados/:id/prioridade existe
-                const response = await fetch(`${API_URL}/chamados/${currentTicketId}/prioridade`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prioridade: novaPrioridade })
-                });
-                const respostaAPI = await response.json();
-                if (!response.ok) throw new Error(respostaAPI.message || "Erro ao atualizar.");
-
-                exibirMensagem(modalDetalhesResposta, "Prioridade atualizada!", true);
-                listarChamados(); // Atualiza a lista principal
-            } catch (error) {
-                exibirMensagem(modalDetalhesResposta, error.message, false);
-            }
-        }
-
-        // (NOVA) Lógica de atualizar status (reutiliza sua função)
-        async function handleStatusChange() {
-            const novoStatus = detalheStatusSelect.value;
-            if (!currentTicketId) return;
-            
-            // Reutiliza a sua função original, mas com feedback no modal
-            limparMensagem(modalDetalhesResposta);
-            try {
-                const r = await fetch(`${API_URL}/chamados/${currentTicketId}/status`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: novoStatus })
-                });
-                const data = await r.json();
-                if (!r.ok) throw new Error(data.message);
-                
-                exibirMensagem(modalDetalhesResposta, "Status atualizado!", true);
-                listarChamados(); // Atualiza a lista principal
-            } catch (e) {
-                exibirMensagem(modalDetalhesResposta, `Erro: ${e.message}`, false);
-            }
-        }
-        // --- FIM DAS NOVAS FUNÇÕES ---
-
-
-        // --- EVENT LISTENERS ---
         btnFiltrar.addEventListener('click', listarChamados);
         btnLogout.addEventListener('click', fazerLogout);
 
         ticketList.addEventListener('click', e => {
             const t = e.target;
-            
-            // (MODIFICADO) Evento de Visualizar
             if (t.classList.contains('view-icon')) {
-                const id = t.closest('.ticket-row').dataset.ticketId;
-                abrirModalDetalhes(id); // Chama a nova função
+                alert(`Visualizando Chamado #${t.closest('.ticket-row').dataset.ticketId}`);
             }
-            
-            // (INTOCADO) Evento de Concluir
             if (t.classList.contains('btn-concluir')) {
                 const id = t.dataset.id;
-                // Usamos o 'confirm' nativo, pois é um ambiente de admin
                 if (confirm(`Deseja realmente marcar o chamado #${id} como "Concluído"?`)) {
                     atualizarStatusChamado(id, 'Concluído');
                 }
             }
         });
 
-        // (NOVOS) Event Listeners do Modal
-        btnFecharModalDetalhes.addEventListener('click', () => {
-            modalDetalhes.close();
-            limparMensagem(modalDetalhesResposta);
-            currentTicketId = null;
-        });
-        detalhePrioridadeSelect.addEventListener('change', handlePrioridadeChange);
-        detalheStatusSelect.addEventListener('change', handleStatusChange);
-
-
-        // --- INICIALIZAÇÃO ---
         // O script do <head> já garantiu que o perfil é AGENTE ou ADMIN
         carregarCategorias();
         listarChamados();
