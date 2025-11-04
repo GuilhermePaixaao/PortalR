@@ -33,7 +33,7 @@
     <link rel="stylesheet" href="css/imprimir.css">
 
     <style>
-        /* Estilos do Header */
+        /* HEADER */
         .header {
             display: flex;
             align-items: center;
@@ -53,13 +53,11 @@
             color: #0d6efd;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin: 0;
             white-space: nowrap;
         }
 
         .search-bar {
-            margin-left: 2rem;
-            margin-right: 2rem;
+            margin: 0 2rem;
             width: 100%;
             max-width: 450px;
         }
@@ -78,7 +76,6 @@
             outline: none;
         }
 
-        /* Logout */
         .header-actions {
             display: flex;
             align-items: center;
@@ -99,46 +96,44 @@
             border-radius: 6px;
             font-weight: 500;
             cursor: pointer;
-            transition: background-color 0.2s ease;
+            transition: 0.2s;
         }
 
         .btn-logout:hover {
             background-color: #bb2d3b;
         }
 
-        /* Ajustes da Sidebar */
+        /* SIDEBAR FIX: Ícone alinhado + quebra de linha */
         .sidebar nav ul li a {
             display: flex;
             align-items: center;
             padding: 10px 15px;
             width: 100%;
-            text-decoration: none;
         }
 
         .sidebar .icon {
             margin-right: 10px;
             min-width: 20px;
             text-align: center;
+            flex-shrink: 0;
+            align-self: center;
         }
 
         .sidebar .text {
             flex-grow: 1;
-            white-space: nowrap;
+            white-space: normal;
+            line-height: 1.2;
         }
     </style>
 </head>
 
 <body>
-
     <div class="dashboard-container">
-
         <header class="header">
             <div class="logo">PORTAL SUPERMERCADO ROSALINA</div>
-
             <div class="search-bar">
                 <input type="text" placeholder="Buscar produtos, relatórios, chamados...">
             </div>
-
             <div class="header-actions">
                 <span id="userNameDisplay"></span>
                 <button id="logoutButton" class="btn-logout">Sair</button>
@@ -149,42 +144,42 @@
             <nav>
                 <ul>
                     <li>
-                        <a href="Dashboard.html" title="Início">
+                        <a href="Dashboard.html">
                             <span class="icon">🏠</span>
                             <span class="text">Início</span>
                         </a>
                     </li>
 
                     <li class="active">
-                        <a href="Imprimir.html" title="Impressão de Preços">
+                        <a href="Imprimir.html">
                             <span class="icon">🖨️</span>
                             <span class="text">Imprimir</span>
                         </a>
                     </li>
 
-                    <li class="ticket-item" id="menu-link-chamado">
-                        <a href="Chamado.html" title="Abrir Chamado (Airus)">
+                    <li id="menu-link-chamado">
+                        <a href="Chamado.html">
                             <span class="icon">➕</span>
                             <span class="text">Chamado</span>
                         </a>
                     </li>
 
                     <li>
-                        <a href="Chatbot.html" title="Chatbot">
+                        <a href="Chatbot.html">
                             <span class="icon">🤖</span>
                             <span class="text">Chatbot</span>
                         </a>
                     </li>
 
                     <li>
-                        <a href="Funcionarios.html" title="funcionario">
+                        <a href="Funcionarios.html">
                             <span class="icon">💼</span>
                             <span class="text">Funcionários</span>
                         </a>
                     </li>
 
                     <li style="margin-top: 30px;">
-                        <a href="#" title="Configurações">
+                        <a href="#">
                             <span class="icon">⚙️</span>
                             <span class="text">Ajustes</span>
                         </a>
@@ -194,20 +189,18 @@
         </aside>
 
         <main class="main-content">
-
             <h1>Impressão de Etiquetas de Preço</h1>
 
             <div class="widget">
                 <h3>Buscar Produto</h3>
                 <div class="search-container">
-                    <input type="text" id="searchInput" placeholder="Digite o nome ou código de barras do produto...">
+                    <input type="text" id="searchInput" placeholder="Digite o nome ou EAN...">
                     <button id="searchButton" class="btn-primary">Buscar</button>
                 </div>
             </div>
 
             <div class="widget">
                 <h3>Resultados da Busca</h3>
-
                 <table class="results-table">
                     <thead>
                         <tr>
@@ -218,7 +211,6 @@
                             <th>Tipo de Etiqueta</th>
                         </tr>
                     </thead>
-
                     <tbody id="resultsBody">
                         <tr>
                             <td><input type="checkbox" class="select-item"></td>
@@ -227,20 +219,6 @@
                             <td class="price">24,90</td>
                             <td>Gôndola (P)</td>
                         </tr>
-                        <tr>
-                            <td><input type="checkbox" class="select-item"></td>
-                            <td>Refrigerante Cola 2L</td>
-                            <td>7890000654321</td>
-                            <td class="price">8,99</td>
-                            <td>Gôndola (P)</td>
-                        </tr>
-                        <tr>
-                            <td><input type="checkbox" class="select-item"></td>
-                            <td>Picanha Bovina (kg)</td>
-                            <td>7890000789012</td>
-                            <td class="price">79,90</td>
-                            <td>Açougue (M)</td>
-                        </tr>
                     </tbody>
                 </table>
 
@@ -248,28 +226,7 @@
                     <button id="printButton" class="btn-print">🖨️ Imprimir Selecionados</button>
                 </div>
             </div>
-
         </main>
-
-    </div>
-
-    <div id="print-preview">
-        <div class="price-tag">
-            <div class="tag-header">PORTAL SUPERMERCADO</div>
-            <div class="tag-body">
-                <div class="tag-desc">Arroz Agulhinha Tipo 1 (5kg)</div>
-                <div class="tag-price">
-                    <span class="tag-currency">R$</span>
-                    <span class="tag-value">24</span>
-                    <span class="tag-cents">,90</span>
-                </div>
-                <div class="tag-barcode">
-                    (Simulação de Cód. Barras)
-                    <div class="barcode-lines">||| || ||| || ||||</div>
-                    7890000123456
-                </div>
-            </div>
-        </div>
     </div>
 
     <script type="module">
@@ -280,36 +237,26 @@
                 window.location.href = "Login.html";
             }
 
-            const userDataString = localStorage.getItem("userData");
+            const userData = JSON.parse(localStorage.getItem("userData"));
+            const userNameDisplay = document.getElementById('userNameDisplay');
 
-            try {
-                const userData = JSON.parse(userDataString);
-                const userNameDisplay = document.getElementById('userNameDisplay');
-
-                if (userNameDisplay && userData?.data?.nomeFuncionario) {
-                    userNameDisplay.textContent = `Olá, ${userData.data.nomeFuncionario.split(' ')[0]}`;
-                }
-
-                const userPerfil = userData?.data?.perfil;
-                const linkChamadoLi = document.getElementById("menu-link-chamado");
-
-                if (linkChamadoLi && (userPerfil === 'AGENTE' || userPerfil === 'ADMIN')) {
-                    const a = linkChamadoLi.querySelector('a');
-                    a.href = "GerenciarChamados.html";
-                    a.title = "Gerenciar Chamados";
-                    a.querySelector('.icon').textContent = "✔️";
-                    a.querySelector('.text').textContent = "Gerenciar Chamados";
-                }
-
-            } catch (error) {
-                console.error("Erro ao processar dados do usuário:", error);
-                fazerLogout();
+            if (userNameDisplay && userData?.data?.nomeFuncionario) {
+                userNameDisplay.textContent =
+                    `Olá, ${userData.data.nomeFuncionario.split(' ')[0]}`;
             }
 
-            const btnLogout = document.getElementById("logoutButton");
-            if (btnLogout) {
-                btnLogout.addEventListener('click', fazerLogout);
+            const userPerfil = userData?.data?.perfil;
+            const linkChamadoLi = document.getElementById("menu-link-chamado");
+
+            if (linkChamadoLi && (userPerfil === 'AGENTE' || userPerfil === 'ADMIN')) {
+                const a = linkChamadoLi.querySelector('a');
+                a.href = "GerenciarChamados.html";
+                a.title = "Gerenciar Chamados";
+                a.querySelector('.icon').textContent = "✔️";
+                a.querySelector('.text').innerHTML = "Gerenciar<br>Chamados";
             }
+
+            document.getElementById("logoutButton").addEventListener('click', fazerLogout);
         });
     </script>
 
