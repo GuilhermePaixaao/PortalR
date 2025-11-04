@@ -95,6 +95,32 @@
         .btn-logout:hover {
             background-color: #bb2d3b;
         }
+        
+        /* AJUSTES DA SIDEBAR PARA ALINHAMENTO E SUPORTE A QUEBRA DE LINHA */
+        .sidebar nav ul li a {
+            display: flex;
+            align-items: center; 
+            text-decoration: none;
+            padding: 10px 15px; 
+            width: 100%;
+            height: auto; 
+        }
+
+        .sidebar .icon {
+            margin-right: 10px; 
+            min-width: 20px; 
+            text-align: center;
+            flex-shrink: 0; 
+            align-self: center; 
+        }
+
+        .sidebar .text {
+            flex-grow: 1; 
+            white-space: normal; 
+            line-height: 1.2; 
+        }
+        /* --- FIM DOS ESTILOS DE AJUSTE --- */
+
     </style>
 </head>
 <body>
@@ -116,7 +142,7 @@
                 <ul>
                     <li><a href="Dashboard.html" title="Início"><span class="icon">🏠</span><span class="text">Início</span></a></li>
                     <li><a href="Imprimir.html" title="Impressão de Preços"><span class="icon">🖨️</span><span class="text">Imprimir</span></a></li>
-                    <li class="ticket-item"><a href="GerenciarChamados.html" title="Abrir Chamado"><span class="icon">➕</span><span class="text">Chamado</span></a></li>
+                    <li class="ticket-item" id="menu-link-chamado"><a href="Chamado.html" title="Abrir Chamado"><span class="icon">➕</span><span class="text">Chamado</span></a></li> 
                     <li class="active"><a href="Chatbot.html" title="Chatbot"><span class="icon">🤖</span><span class="text">Chatbot</span></a></li>
                     <li><a href="Funcionarios.html" title="funcionario"><span class="icon">💼</span><span class="text">Funcionários</span></a></li>
                     <li style="margin-top: 30px;"><a href="#" title="Configurações"><span class="icon">⚙️</span><span class="text">Ajustes</span></a></li>
@@ -159,8 +185,7 @@
                 window.location.href = "Login.html"; 
             }
 
-            // --- AUTENTICAÇÃO E NOME DE USUÁRIO ---
-            // O script do <head> já validou. Apenas lemos os dados.
+            // --- AUTENTICAÇÃO, NOME DE USUÁRIO E AJUSTE DE MENU ---
             const userDataString = localStorage.getItem('userData');
             
             try {
@@ -169,6 +194,23 @@
                 if (userNameDisplay && userData?.data?.nomeFuncionario) {
                     userNameDisplay.textContent = `Olá, ${userData.data.nomeFuncionario.split(' ')[0]}`;
                 }
+
+                // LÓGICA DE AJUSTE DINÂMICO DO MENU
+                const userPerfil = userData?.data?.perfil; 
+                const linkChamadoLi = document.getElementById("menu-link-chamado"); 
+                
+                if (linkChamadoLi && (userPerfil === 'AGENTE' || userPerfil === 'ADMIN')) {
+                    const a = linkChamadoLi.querySelector('a');
+                    const textSpan = a.querySelector('.text');
+
+                    a.href = "GerenciarChamados.html"; 
+                    a.title = "Gerenciar Chamados";
+                    a.querySelector('.icon').textContent = "✔️"; 
+                    
+                    // Aplica o novo formato de duas linhas para o texto
+                    textSpan.innerHTML = "Gerenciar<br>Chamados";
+                }
+
             } catch (error) {
                 console.error('Erro ao exibir nome do usuário:', error);
                 fazerLogout(); // Se falhar, desloga por segurança
