@@ -97,4 +97,4 @@ export const updateStatus = async (id, status) => {
     const sql = "UPDATE Chamados SET status = ? WHERE id = ?";
     const [result] = await pool.query(sql, [status, id]);
     return result;
-};
+};  

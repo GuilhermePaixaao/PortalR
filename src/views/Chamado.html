@@ -274,20 +274,20 @@
                 <hr>
                 
                 <div class="row">
-                         <div class="col-md-6">
-                            <div class="grupo-form">
-                                <label for="nomeRequisitante">Seu Nome <span aria-hidden="true" style="color:red;">*</span></label>
-                                <input type="text" id="nomeRequisitante" name="nomeRequisitante" required>
-                            </div>
+                    <div class="col-md-6">
+                        <div class="grupo-form">
+                            <label for="nomeRequisitante">Seu Nome <span aria-hidden="true" style="color:red;">*</span></label>
+                            <input type="text" id="nomeRequisitante" name="nomeRequisitante" required>
                         </div>
-                         <div class="col-md-6">
-                            <div class="grupo-form">
-                                <label for="emailRequisitante">Seu Email <span aria-hidden="true" style="color:red;">*</span></label>
-                                <input type="email" id="emailRequisitante" name="emailRequisitante" required>
-                            </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="grupo-form">
+                            <label for="emailRequisitante">Seu Email <span aria-hidden="true" style="color:red;">*</span></label>
+                            <input type="email" id="emailRequisitante" name="emailRequisitante" required>
                         </div>
+                    </div>
                 </div>
-                 <div class="grupo-form">
+                <div class="grupo-form">
                     <label for="telefoneRequisitante">Seu Telefone (Opcional)</label>
                     <input type="tel" id="telefoneRequisitante" name="telefoneRequisitante" placeholder="(XX) XXXXX-XXXX">
                 </div>
@@ -389,7 +389,7 @@
                     </div>
                 </div>
             </div>
-             <div class="detalhe-grupo">
+            <div class="detalhe-grupo">
                 <span class="detalhe-label">Criado em</span>
                 <span id="detalheData" class="detalhe-valor">...</span>
             </div>
@@ -527,12 +527,12 @@
         }
         
         // =======================================================
-        //     +++ NOVA FUNÇÃO DE MÁSCARA DE TELEFONE +++
+        //     +++ NOVA FUNÇÃO DE MÁSCARA DE TELEFONE +++
         // =======================================================
         function aplicarMascaraTelefone(input) {
             let valor = input.value;
             valor = valor.replace(/\D/g, ""); // Remove tudo que não é dígito
-            valor = valor.substring(0, 11);   // Limita a 11 dígitos (Celular: XX XXXXX-XXXX)
+            valor = valor.substring(0, 11);   // Limita a 11 dígitos (Celular: XX XXXXX-XXXX)
 
             if (valor.length > 6) {
                 // Formato (XX) XXXXX-XXXX
@@ -693,9 +693,10 @@
             const formData = new FormData();
             const dadosChamado = {
                 chamado: {
-                    nome_requisitante: nomeRequisitante,
-                    email_requisitante: emailRequisitante,
-                    telefone_requisitante: telefoneRequisitante,
+                    // CORREÇÃO APLICADA AQUI: USANDO CHAVES _MANUAL
+                    nome_requisitante_manual: nomeRequisitante,
+                    email_requisitante_manual: emailRequisitante,
+                    telefone_requisitante_manual: telefoneRequisitante,
                     assunto: assunto,
                     descricao: descricao,
                     prioridade: prioridade,
