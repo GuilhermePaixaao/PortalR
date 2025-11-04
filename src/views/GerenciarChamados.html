@@ -107,6 +107,7 @@
             border: 1px solid #ced4da;
             background-color: #fff; /* Fundo branco para indicar edição */
             font-size: 1.1rem;
+            height: 42px; /* Altura fixa */
         }
 
         #modalDetalhes .detalhe-descricao {
@@ -536,10 +537,10 @@
                 // (NOVO) Adicionado ajuste de fuso horário para garantir que a data/hora local seja exibida
                 const dt = new Date(d);
                 const offset = dt.getTimezoneOffset() * 60000;
-                const dtLocal = new Date(dt.getTime() + offset);
+                const dtLocal = new Date(dt.getTime() + offset); // Ajusta para o fuso local do navegador
 
-                const data = dtLocal.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }); // Use um fuso de referência
-                const hora = dtLocal.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+                const data = dtLocal.toLocaleDateString('pt-BR');
+                const hora = dtLocal.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                 return `${data} ${hora}`;
             } catch {
                 return 'Data inválida';
@@ -662,11 +663,17 @@
             detalheRequisitante.textContent = 'Carregando...';
             detalheCategoria.textContent = 'Carregando...';
             detalheData.textContent = 'Carregando...';
+            // Reseta os selects para um valor padrão
+            detalheStatusSelect.value = "Aberto";
+            detalhePrioridadeSelect.value = "Média";
 
             try {
                 // Rota que criámos no controller (buscarChamadoPorId)
                 const response = await fetch(`${API_URL}/chamados/${chamadoId}`);
-                if (!response.ok) throw new Error(`Erro ao buscar dados do chamado #${chamadoId}`);
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.message || `Erro ao buscar dados do chamado #${chamadoId}`);
+                }
                 
                 const chamado = await response.json(); // Espera o objeto formatado
 

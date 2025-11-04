@@ -1,7 +1,7 @@
 import * as ChamadoModel from '../models/chamadoModel.js';
 
 // ====================================================
-// ======== CRIAR CHAMADO (O seu código, 100% mantido) ========
+// ======== CRIAR CHAMADO (CORRIGIDO P/ MULTER) ========
 // ====================================================
 export const criarChamado = async (req, res) => {
     try {
@@ -57,10 +57,12 @@ export const criarChamado = async (req, res) => {
             emailRequisitanteManual: email_requisitante_manual,
             telefoneRequisitanteManual: telefone_requisitante_manual
             // NOTA: Se precisar de salvar os ficheiros (const arquivos),
-            // a lógica seria adicionada aqui.
+            // a lógica para tratar 'arquivos' seria adicionada aqui.
         };
 
         const novoId = await ChamadoModel.create(dadosParaCriar);
+        
+        // Usamos findById para retornar o chamado completo (como o frontend espera)
         const novoChamado = await ChamadoModel.findById(novoId);
 
         res.status(201).json({ success: true, data: novoChamado });
@@ -79,7 +81,7 @@ export const criarChamado = async (req, res) => {
 };
 
 // ====================================================
-// ======== LISTAR CHAMADOS (O seu código original) ========
+// ======== LISTAR CHAMADOS ========
 // ====================================================
 export const listarChamados = async (req, res) => {
     try {
@@ -89,9 +91,8 @@ export const listarChamados = async (req, res) => {
         // Passa os filtros para o Model
         const chamados = await ChamadoModel.findAll(filtros);
 
-        // Formata a resposta
+        // Formata a resposta (O seu frontend espera esta formatação)
         const chamadosFormatados = chamados.map(chamado => {
-            // O Model já retornou os campos certos
             const Funcionario = {
                 nomeFuncionario: chamado.nomeRequisitante,
                 email: chamado.emailRequisitante,
@@ -117,7 +118,6 @@ export const listarChamados = async (req, res) => {
 
 // ====================================================
 // ======== (NOVO) BUSCAR CHAMADO POR ID ========
-// Esta função é necessária para o modal "Visualizar" (👁️)
 // ====================================================
 export const buscarChamadoPorId = async (req, res) => {
     try {
@@ -126,30 +126,27 @@ export const buscarChamadoPorId = async (req, res) => {
             return res.status(400).json({ success: false, message: 'ID de chamado inválido.' });
         }
 
-        // Usa a função findById que o seu 'criarChamado' já usa
-        const chamado = await ChamadoModel.findById(idNum); 
-
+        // O model (findById) deve fazer os JOINs (como fizemos no findById corrigido)
+        const chamado = await ChamadoModel.findById(idNum);
+        
         if (!chamado) {
             return res.status(404).json({ success: false, message: 'Chamado não encontrado.' });
         }
 
-        // Formata a resposta da *mesma forma* que 'listarChamados'
-        // para que o frontend (chamado.Funcionario.nomeFuncionario) funcione.
-        const Funcionario = { 
+        // Formata a resposta da mesma forma que o listarChamados
+        const Funcionario = {
             nomeFuncionario: chamado.nomeRequisitante,
             email: chamado.emailRequisitante,
             telefone: chamado.telefoneRequisitante
         };
         const Categorias = chamado.categoria_id ? { nome: chamado.nomeCategoria } : null;
-        
+
         delete chamado.nomeRequisitante;
         delete chamado.emailRequisitante;
         delete chamado.telefoneRequisitante;
         delete chamado.nomeCategoria;
-        
-        const chamadoFormatado = { ...chamado, Funcionario, Categorias };
 
-        res.status(200).json(chamadoFormatado); // Envia o chamado único formatado
+        res.status(200).json({ ...chamado, Funcionario, Categorias });
 
     } catch (error) {
         console.error('Erro ao buscar chamado por ID:', error);
@@ -157,8 +154,9 @@ export const buscarChamadoPorId = async (req, res) => {
     }
 };
 
+
 // ====================================================
-// ======== DELETAR CHAMADO (O seu código original) ========
+// ======== DELETAR CHAMADO ========
 // ====================================================
 export const deletarChamado = async (req, res) => {
     try {
@@ -180,7 +178,7 @@ export const deletarChamado = async (req, res) => {
 };
 
 // ====================================================
-// ======== ATUALIZAR STATUS (O seu código original) ========
+// ======== ATUALIZAR STATUS ========
 // ====================================================
 export const atualizarStatus = async (req, res) => {
     try {
@@ -206,19 +204,17 @@ export const atualizarStatus = async (req, res) => {
 
 // ====================================================
 // ======== (NOVO) ATUALIZAR PRIORIDADE ========
-// Esta função é necessária para o modal "Visualizar"
 // ====================================================
 export const atualizarPrioridade = async (req, res) => {
     try {
         const idNum = parseInt(req.params.id);
-        const { prioridade } = req.body; // Espera um body { "prioridade": "Alta" }
+        const { prioridade } = req.body;
 
         if (isNaN(idNum) || !prioridade) {
             return res.status(400).json({ success: false, message: 'ID e Prioridade são obrigatórios.' });
         }
-
-        // IMPORTANTE: Tem de criar esta função no seu 'chamadoModel.js'
-        // (Será igual à 'updateStatus', mas para o campo 'prioridade')
+        
+        // (Lembre-se: crie esta função no seu chamadoModel.js)
         const result = await ChamadoModel.updatePrioridade(idNum, prioridade);
 
         if (result.affectedRows === 0) {
