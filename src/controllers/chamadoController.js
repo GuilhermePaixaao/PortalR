@@ -1,25 +1,46 @@
 import * as ChamadoModel from '../models/chamadoModel.js';
 
 // ====================================================
-// ======== CRIAR CHAMADO ========
+// ======== CRIAR CHAMADO (CORRIGIDO) ========
 // ====================================================
 export const criarChamado = async (req, res) => {
     try {
-        const { chamado } = req.body;
-        
-        // NOVO: Coleta os dados manuais do requisitante do corpo da requisição
-        const { 
-            assunto, descricao, prioridade, requisitante_id, categoria_id, 
-            nome_requisitante_manual, email_requisitante_manual, telefone_requisitante_manual 
+        // --- INÍCIO DA CORREÇÃO ---
+        // 1. Logs para depuração (pode apagar depois)
+        console.log('Dados de texto (req.body):', req.body);
+        console.log('Ficheiros recebidos (req.files):', req.files);
+
+        // 2. Verifique se 'req.body.chamado' existe
+        if (!req.body.chamado) {
+            return res.status(400).json({
+                success: false,
+                message: "Dados do 'chamado' não encontrados. Verifique se está a enviar FormData."
+            });
+        }
+
+        // 3. A MUDANÇA PRINCIPAL:
+        // O 'req.body.chamado' vem como STRING do FormData.
+        // Precisamos de o "parsear" para o transformar num objeto.
+        const chamado = JSON.parse(req.body.chamado);
+
+        // 4. Os seus ficheiros estão agora em req.files
+        const arquivos = req.files;
+        // --- FIM DA CORREÇÃO ---
+
+        // O resto do seu código original funciona perfeitamente agora,
+        // porque a variável 'chamado' é um objeto válido.
+        const {
+            assunto, descricao, prioridade, requisitante_id, categoria_id,
+            nome_requisitante_manual, email_requisitante_manual, telefone_requisitante_manual
         } = chamado;
 
         // Validação estendida
-        if (!assunto || !descricao || !requisitante_id || 
+        if (!assunto || !descricao || !requisitante_id ||
             !nome_requisitante_manual || !email_requisitante_manual || !telefone_requisitante_manual) {
-            
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Assunto, Descrição, ID do Requisitante e todos os dados de Contato são obrigatórios.' 
+
+            return res.status(400).json({
+                success: false,
+                message: 'Assunto, Descrição, ID do Requisitante e todos os dados de Contato são obrigatórios.'
             });
         }
 
@@ -30,11 +51,13 @@ export const criarChamado = async (req, res) => {
             status: 'Aberto',
             requisitanteIdNum: parseInt(requisitante_id),
             categoriaIdNum: categoria_id ? parseInt(categoria_id) : null,
-            
-            // NOVO: Campos manuais para o Model
+
+            // Campos manuais para o Model
             nomeRequisitanteManual: nome_requisitante_manual,
             emailRequisitanteManual: email_requisitante_manual,
             telefoneRequisitanteManual: telefone_requisitante_manual
+            // NOTA: Se precisar de salvar os ficheiros (const arquivos),
+            // a lógica seria adicionada aqui.
         };
 
         const novoId = await ChamadoModel.create(dadosParaCriar);
@@ -42,6 +65,10 @@ export const criarChamado = async (req, res) => {
 
         res.status(201).json({ success: true, data: novoChamado });
     } catch (error) {
+        // Adicione esta verificação para o erro de JSON.parse
+        if (error instanceof SyntaxError) {
+            return res.status(400).json({ success: false, message: 'Erro ao processar dados: JSON do chamado mal formatado.' });
+        }
         if (error.code === 'ER_NO_REFERENCED_ROW_2') {
             const field = error.message.includes('fk_Chamados_Funcionario') ? 'Requisitante' : 'Categoria';
             return res.status(400).json({ success: false, message: `Erro: ${field} não encontrado.` });
@@ -65,19 +92,19 @@ export const listarChamados = async (req, res) => {
         // Formata a resposta
         const chamadosFormatados = chamados.map(chamado => {
             // O Model já retornou os campos certos
-            const Funcionario = { 
+            const Funcionario = {
                 nomeFuncionario: chamado.nomeRequisitante,
                 email: chamado.emailRequisitante,
                 telefone: chamado.telefoneRequisitante
             };
             const Categorias = chamado.categoria_id ? { nome: chamado.nomeCategoria } : null;
-            
+
             // Remove as propriedades redundantes do objeto raiz para a resposta JSON
             delete chamado.nomeRequisitante;
             delete chamado.emailRequisitante;
             delete chamado.telefoneRequisitante;
             delete chamado.nomeCategoria;
-            
+
             return { ...chamado, Funcionario, Categorias };
         });
 
@@ -134,3 +161,4 @@ export const atualizarStatus = async (req, res) => {
         res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
     }
 };
+
