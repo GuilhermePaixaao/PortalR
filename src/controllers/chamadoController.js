@@ -1,7 +1,7 @@
 import * as ChamadoModel from '../models/chamadoModel.js';
 
 // ====================================================
-// ======== CRIAR CHAMADO (CORRIGIDO) ========
+// ======== CRIAR CHAMADO (O seu código, 100% mantido) ========
 // ====================================================
 export const criarChamado = async (req, res) => {
     try {
@@ -79,7 +79,7 @@ export const criarChamado = async (req, res) => {
 };
 
 // ====================================================
-// ======== LISTAR CHAMADOS ========
+// ======== LISTAR CHAMADOS (O seu código original) ========
 // ====================================================
 export const listarChamados = async (req, res) => {
     try {
@@ -116,7 +116,49 @@ export const listarChamados = async (req, res) => {
 };
 
 // ====================================================
-// ======== DELETAR CHAMADO ========
+// ======== (NOVO) BUSCAR CHAMADO POR ID ========
+// Esta função é necessária para o modal "Visualizar" (👁️)
+// ====================================================
+export const buscarChamadoPorId = async (req, res) => {
+    try {
+        const idNum = parseInt(req.params.id);
+        if (isNaN(idNum)) {
+            return res.status(400).json({ success: false, message: 'ID de chamado inválido.' });
+        }
+
+        // Usa a função findById que o seu 'criarChamado' já usa
+        const chamado = await ChamadoModel.findById(idNum); 
+
+        if (!chamado) {
+            return res.status(404).json({ success: false, message: 'Chamado não encontrado.' });
+        }
+
+        // Formata a resposta da *mesma forma* que 'listarChamados'
+        // para que o frontend (chamado.Funcionario.nomeFuncionario) funcione.
+        const Funcionario = { 
+            nomeFuncionario: chamado.nomeRequisitante,
+            email: chamado.emailRequisitante,
+            telefone: chamado.telefoneRequisitante
+        };
+        const Categorias = chamado.categoria_id ? { nome: chamado.nomeCategoria } : null;
+        
+        delete chamado.nomeRequisitante;
+        delete chamado.emailRequisitante;
+        delete chamado.telefoneRequisitante;
+        delete chamado.nomeCategoria;
+        
+        const chamadoFormatado = { ...chamado, Funcionario, Categorias };
+
+        res.status(200).json(chamadoFormatado); // Envia o chamado único formatado
+
+    } catch (error) {
+        console.error('Erro ao buscar chamado por ID:', error);
+        res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
+    }
+};
+
+// ====================================================
+// ======== DELETAR CHAMADO (O seu código original) ========
 // ====================================================
 export const deletarChamado = async (req, res) => {
     try {
@@ -138,7 +180,7 @@ export const deletarChamado = async (req, res) => {
 };
 
 // ====================================================
-// ======== ATUALIZAR STATUS ========
+// ======== ATUALIZAR STATUS (O seu código original) ========
 // ====================================================
 export const atualizarStatus = async (req, res) => {
     try {
@@ -162,3 +204,30 @@ export const atualizarStatus = async (req, res) => {
     }
 };
 
+// ====================================================
+// ======== (NOVO) ATUALIZAR PRIORIDADE ========
+// Esta função é necessária para o modal "Visualizar"
+// ====================================================
+export const atualizarPrioridade = async (req, res) => {
+    try {
+        const idNum = parseInt(req.params.id);
+        const { prioridade } = req.body; // Espera um body { "prioridade": "Alta" }
+
+        if (isNaN(idNum) || !prioridade) {
+            return res.status(400).json({ success: false, message: 'ID e Prioridade são obrigatórios.' });
+        }
+
+        // IMPORTANTE: Tem de criar esta função no seu 'chamadoModel.js'
+        // (Será igual à 'updateStatus', mas para o campo 'prioridade')
+        const result = await ChamadoModel.updatePrioridade(idNum, prioridade);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'Erro: Chamado não encontrado.' });
+        }
+
+        res.status(200).json({ success: true, message: 'Prioridade atualizada com sucesso.' });
+    } catch (error) {
+        console.error('Erro ao atualizar prioridade:', error);
+        res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
+    }
+};

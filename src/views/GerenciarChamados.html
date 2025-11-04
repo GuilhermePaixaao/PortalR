@@ -23,7 +23,6 @@
             // VERIFICAÇÃO DE PERFIL (ESPECÍFICA DESTA PÁGINA)
             const userPerfil = userData?.data?.perfil;
             if (userPerfil === 'REQUISITANTE') {
-                // Usamos alert() aqui porque o script de logar ainda não carregou
                 alert("Acesso negado. Esta página é para gerenciamento. Redirecionando...");
                 window.location.replace("Chamado.html"); // Redireciona para a pág. de abrir chamado
                 throw new Error("Acesso negado.");
@@ -89,16 +88,27 @@
             margin-bottom: 0.25rem;
             display: block;
         }
-        #modalDetalhes .detalhe-valor {
+        /* (Modificado) .detalhe-valor agora é <select> ou <div> */
+        #modalDetalhes .detalhe-valor,
+        #modalDetalhes .detalhe-valor-select {
             font-size: 1.1rem; /* Valor maior */
             padding: 0.5rem;
             background-color: #f4f5f7; /* Cor de fundo suave */
             border-radius: 5px;
             word-wrap: break-word;
-            min-height: 38px; /* Altura mínima */
+            min-height: 42px; /* Altura mínima (para alinhar com selects) */
             display: flex;
             align-items: center;
         }
+        /* (Novo) Estilo para os selects editáveis */
+        #modalDetalhes .detalhe-valor-select {
+            padding: 0.375rem 0.5rem; /* Padding de select */
+            width: 100%;
+            border: 1px solid #ced4da;
+            background-color: #fff; /* Fundo branco para indicar edição */
+            font-size: 1.1rem;
+        }
+
         #modalDetalhes .detalhe-descricao {
             font-size: 1.1rem;
             padding: 0.5rem;
@@ -143,7 +153,7 @@
             font-weight: 600;
         }
 
-        /* (NOVO) Classes de prioridade atualizadas para corresponder ao HTML anterior */
+        /* (Modificado) Classes de badge atualizadas para media/planejado */
         .priority-badge.alta, .priority-badge.high { background-color: #f8d7da; color: #842029; }
         .priority-badge.média, .priority-badge.medium, .priority-badge.media { background-color: #fff3cd; color: #664d03; }
         .priority-badge.baixa, .priority-badge.low { background-color: #cfe2ff; color: #084298; }
@@ -286,12 +296,12 @@
             </nav>
         </aside>
 
-        <!-- (NOVO) HTML DO MODAL DE DETALHES INSERIDO AQUI (Baseado na Imagem) -->
+        <!-- (NOVO) HTML DO MODAL DE DETALHES INSERIDO AQUI -->
         <dialog id="modalDetalhes" aria-labelledby="modalDetalhesTitle">
             <h2 id="modalDetalhesTitle">Detalhes do Chamado</h2>
             
             <div id="modalDetalhesConteudo">
-                <!-- Layout em 3 colunas como na imagem -->
+                <!-- Layout em 3 colunas -->
                 <div class="row">
                     <div class="col-md-4">
                         <div class="detalhe-grupo">
@@ -302,18 +312,29 @@
                     <div class="col-md-4">
                         <div class="detalhe-grupo">
                             <span class="detalhe-label">Status</span>
-                            <div id="detalheStatus" class="detalhe-valor">...</div>
+                            <!-- (Modificado) Agora é um select para edição -->
+                            <select id="detalheStatusSelect" class="detalhe-valor-select form-select">
+                                <option value="Aberto">Aberto</option>
+                                <option value="Em Andamento">Em Andamento</option>
+                                <option value="Concluído">Concluído</option>
+                            </select>
                         </div>
                     </div>
                     <div class="col-md-4">
                         <div class="detalhe-grupo">
                             <span class="detalhe-label">Prioridade</span>
-                            <div id="detalhePrioridade" class="detalhe-valor">...</div>
+                            <!-- (Modificado) Agora é um select para edição -->
+                            <select id="detalhePrioridadeSelect" class="detalhe-valor-select form-select">
+                                <option value="Baixa">Baixa</option>
+                                <option value="Média">Média</option>
+                                <option value="Alta">Alta</option>
+                                <option value="Planejado">Planejado</option>
+                            </select>
                         </div>
                     </div>
                 </div>
 
-                <!-- Layout de 1 coluna como na imagem -->
+                <!-- Layout de 1 coluna -->
                 <div class="detalhe-grupo">
                     <span class="detalhe-label">Assunto</span>
                     <div id="detalheAssunto" class="detalhe-valor">...</div>
@@ -324,7 +345,7 @@
                     <div id="detalheDescricao" class="detalhe-descricao">Carregando...</div>
                 </div>
 
-                <!-- Layout em 2 colunas como na imagem -->
+                <!-- Layout em 2 colunas -->
                 <div class="row">
                     <div class="col-md-6">
                         <div class="detalhe-grupo">
@@ -340,7 +361,7 @@
                     </div>
                 </div>
                 
-                <!-- Layout de 1 coluna como na imagem -->
+                <!-- Layout de 1 coluna -->
                 <div class="detalhe-grupo">
                     <span class="detalhe-label">Criado em</span>
                     <div id="detalheData" class="detalhe-valor">...</div>
@@ -355,6 +376,7 @@
             </div>
         </dialog>
         <!-- FIM DO MODAL -->
+
 
         <main class="main-content">
             <h1>Gerenciar Chamados</h1>
@@ -377,7 +399,7 @@
                                 <option value="Alta">Alta</option>
                                 <option value="Média">Média</option>
                                 <option value="Baixa">Baixa</option>
-                                <option value="Planejado">Planejado</option> <!-- (NOVO) Adicionado Planejado aqui -->
+                                <option value="Planejado">Planejado</option> <!-- (Adicionado) Opção Planejado -->
                             </select>
                         </div>
 
@@ -467,7 +489,7 @@
             fazerLogout();
         }
 
-        // --- LÓGICA DA PÁGINA DE GERENCIAMENTO (Restante do script inalterado) ---
+        // --- LÓGICA DA PÁGINA DE GERENCIAMENTO (Referências do seu código original) ---
         const ticketList = document.getElementById("ticketList");
         const loadingIndicator = document.getElementById("loadingIndicator");
         const divRespostaGeral = document.getElementById("divRespostaGeral");
@@ -481,15 +503,18 @@
         // --- (NOVAS) REFERÊNCIAS DO MODAL ---
         const modalDetalhes = document.getElementById("modalDetalhes");
         const btnFecharModalDetalhes = document.getElementById("fecharModalDetalhes");
+        const modalDetalhesConteudo = document.getElementById("modalDetalhesConteudo");
         const modalDetalhesResposta = document.getElementById("modalDetalhesResposta");
+        // Campos de dados
         const detalheId = document.getElementById("detalheId");
-        const detalheStatus = document.getElementById("detalheStatus"); // (MUDADO) Agora é um <div>
-        const detalhePrioridade = document.getElementById("detalhePrioridade"); // (MUDADO) Agora é um <div>
         const detalheAssunto = document.getElementById("detalheAssunto");
         const detalheDescricao = document.getElementById("detalheDescricao");
         const detalheRequisitante = document.getElementById("detalheRequisitante");
         const detalheCategoria = document.getElementById("detalheCategoria");
         const detalheData = document.getElementById("detalheData");
+        // Campos editáveis
+        const detalheStatusSelect = document.getElementById("detalheStatusSelect");
+        const detalhePrioridadeSelect = document.getElementById("detalhePrioridadeSelect");
         // --- FIM NOVAS REFERÊNCIAS ---
 
 
@@ -508,12 +533,12 @@
         function formatarData(d) {
             if (!d) return 'N/A';
             try {
-                // (NOVO) Ajuste de Fuso Horário
+                // (NOVO) Adicionado ajuste de fuso horário para garantir que a data/hora local seja exibida
                 const dt = new Date(d);
                 const offset = dt.getTimezoneOffset() * 60000;
                 const dtLocal = new Date(dt.getTime() + offset);
 
-                const data = dtLocal.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+                const data = dtLocal.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }); // Use um fuso de referência
                 const hora = dtLocal.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
                 return `${data} ${hora}`;
             } catch {
@@ -557,7 +582,7 @@
             }
 
             chamados.forEach(ch => {
-                // (NOVO) Classes de prioridade corrigidas para media/média
+                // (Modificado) Corrigido para 'media' e 'planejado'
                 const prioridadeClass = (ch.prioridade || 'Média').toLowerCase().replace('é', 'e');
                 const statusClass = (ch.status || 'Aberto').toLowerCase().replace(/\s+/g, '-');
                 
@@ -604,7 +629,7 @@
             }
         }
 
-        // Esta é a sua função original, não foi alterada
+        // Esta é a sua função original, para o botão ✔️ (Mantida)
         async function atualizarStatusChamado(id, status) {
             try {
                 const r = await fetch(`${API_URL}/chamados/${id}/status`, {
@@ -615,7 +640,7 @@
                 const data = await r.json();
                 if (!r.ok) throw new Error(data.message);
                 exibirMensagem(divRespostaGeral, "Chamado atualizado com sucesso!", true);
-                listarChamados();
+                listarChamados(); // Atualiza a lista principal
             } catch (e) {
                 exibirMensagem(divRespostaGeral, `Erro: ${e.message}`, false);
             }
@@ -630,9 +655,8 @@
             currentTicketId = null; // Reseta
 
             // Estado de carregamento
+            modalDetalhesConteudo.style.opacity = '0.5';
             detalheId.textContent = `#${chamadoId}`;
-            detalheStatus.textContent = '...';
-            detalhePrioridade.textContent = '...';
             detalheAssunto.textContent = 'Carregando...';
             detalheDescricao.textContent = 'Carregando...';
             detalheRequisitante.textContent = 'Carregando...';
@@ -640,31 +664,79 @@
             detalheData.textContent = 'Carregando...';
 
             try {
-                // Assumindo que a rota GET /chamados/:id existe no seu backend
+                // Rota que criámos no controller (buscarChamadoPorId)
                 const response = await fetch(`${API_URL}/chamados/${chamadoId}`);
                 if (!response.ok) throw new Error(`Erro ao buscar dados do chamado #${chamadoId}`);
                 
                 const chamado = await response.json(); // Espera o objeto formatado
 
                 // Preenche o modal
-                detalheStatus.textContent = chamado.status;
-                detalhePrioridade.textContent = chamado.prioridade;
                 detalheAssunto.textContent = chamado.assunto;
                 detalheDescricao.textContent = chamado.descricao;
                 detalheRequisitante.textContent = chamado.Funcionario?.nomeFuncionario || 'N/A';
                 detalheCategoria.textContent = chamado.Categorias?.nome || 'N/A';
                 detalheData.textContent = formatarData(chamado.created_at);
                 
+                // Define os valores dos selects
+                detalheStatusSelect.value = chamado.status;
+                detalhePrioridadeSelect.value = chamado.prioridade;
+                
                 currentTicketId = chamadoId; // Armazena o ID
+                modalDetalhesConteudo.style.opacity = '1';
+
             } catch (error) {
                 exibirMensagem(modalDetalhesResposta, error.message, false);
+                modalDetalhesConteudo.style.opacity = '1';
             }
         }
         
-        // --- (REMOVIDAS) Funções handlePrioridadeChange e handleStatusChange ---
-        // O modal agora é apenas para visualização, como na imagem.
+        // (NOVA) Lida com a mudança no <select> de Prioridade
+        async function handlePrioridadeChange() {
+            if (!currentTicketId) return;
+            const novaPrioridade = detalhePrioridadeSelect.value;
+            limparMensagem(modalDetalhesResposta);
 
-        // --- EVENT LISTENERS ---
+            try {
+                // Rota que criámos no controller (atualizarPrioridade)
+                const r = await fetch(`${API_URL}/chamados/${currentTicketId}/prioridade`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prioridade: novaPrioridade })
+                });
+                const data = await r.json();
+                if (!r.ok) throw new Error(data.message);
+                
+                exibirMensagem(modalDetalhesResposta, "Prioridade atualizada!", true);
+                listarChamados(); // Atualiza a lista principal
+            } catch (e) {
+                exibirMensagem(modalDetalhesResposta, `Erro: ${e.message}`, false);
+            }
+        }
+        
+        // (NOVA) Lida com a mudança no <select> de Status
+        async function handleStatusChange() {
+            if (!currentTicketId) return;
+            const novoStatus = detalheStatusSelect.value;
+            limparMensagem(modalDetalhesResposta);
+
+            try {
+                // Rota que JÁ EXISTIA (atualizarStatus)
+                const r = await fetch(`${API_URL}/chamados/${currentTicketId}/status`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: novoStatus })
+                });
+                const data = await r.json();
+                if (!r.ok) throw new Error(data.message);
+                
+                exibirMensagem(modalDetalhesResposta, "Status atualizado!", true);
+                listarChamados(); // Atualiza a lista principal
+            } catch (e) {
+                exibirMensagem(modalDetalhesResposta, `Erro: ${e.message}`, false);
+            }
+        }
+        
+        // --- EVENT LISTENERS (Seus + Novos) ---
         btnFiltrar.addEventListener('click', listarChamados);
         btnLogout.addEventListener('click', fazerLogout);
 
@@ -677,10 +749,9 @@
                 abrirModalDetalhes(id); // Chama a nova função
             }
             
-            // (INTOCADO) Evento de Concluir
+            // (INTOCADO) Evento de Concluir (Como pediu)
             if (t.classList.contains('btn-concluir')) {
                 const id = t.dataset.id;
-                // Usamos o 'confirm' nativo, pois é um ambiente de admin
                 if (confirm(`Deseja realmente marcar o chamado #${id} como "Concluído"?`)) {
                     atualizarStatusChamado(id, 'Concluído');
                 }
@@ -694,7 +765,8 @@
             currentTicketId = null;
         });
         
-        // (REMOVIDOS) Listeners para 'change' nos selects, pois eles não existem mais.
+        detalhePrioridadeSelect.addEventListener('change', handlePrioridadeChange);
+        detalheStatusSelect.addEventListener('change', handleStatusChange);
 
 
         // --- INICIALIZAÇÃO ---

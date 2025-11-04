@@ -1,103 +1,132 @@
-import pool from '../config/database.js';
+import db from '../db/db.js'; // Verifique se este é o caminho correto para sua conexão db
 
-// Cria um novo chamado
-export const create = async (chamado) => {
-    // Adicionadas as novas variáveis
-    const { assunto, descricao, prioridade, status, requisitanteIdNum, categoriaIdNum, 
-            nomeRequisitanteManual, emailRequisitanteManual, telefoneRequisitanteManual } = chamado; 
+// ====================================================
+// ======== CRIAR CHAMADO ========
+// ====================================================
+export const create = async (dados) => {
+    const {
+        assunto, descricao, prioridade, status, requisitanteIdNum, categoriaIdNum,
+        nomeRequisitanteManual, emailRequisitanteManual, telefoneRequisitanteManual
+    } = dados;
 
-    // O SQL precisa incluir as novas colunas e valores
-    const sql = `
-        INSERT INTO Chamados (assunto, descricao, prioridade, status, requisitante_id, categoria_id, 
-                              nome_requisitante_manual, email_requisitante_manual, telefone_requisitante_manual)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-    
-    const values = [
-        assunto, 
-        descricao, 
-        prioridade, 
-        status, 
-        requisitanteIdNum, 
-        categoriaIdNum,
-        // Novos valores
-        nomeRequisitanteManual, 
-        emailRequisitanteManual, 
-        telefoneRequisitanteManual
-    ];
-    
-    const [result] = await pool.query(sql, values);
+    const [result] = await db.query(
+        `INSERT INTO Chamados (
+            assunto, descricao, prioridade, status, requisitante_id, categoria_id,
+            nome_requisitante_manual, email_requisitante_manual, telefone_requisitante_manual
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+            assunto, descricao, prioridade, status, requisitanteIdNum, categoriaIdNum,
+            nomeRequisitanteManual, emailRequisitanteManual, telefoneRequisitanteManual
+        ]
+    );
     return result.insertId;
 };
 
-// Busca um chamado pelo ID
+// ====================================================
+// ======== BUSCAR CHAMADO POR ID ========
+// ====================================================
 export const findById = async (id) => {
-    const [rows] = await pool.query('SELECT * FROM Chamados WHERE id = ?', [id]);
+    // Esta query junta Chamados com Funcionarios (Requisitante) e Categorias
+    // É a mesma lógica da sua função findAll, mas para um ID específico
+    const [rows] = await db.query(
+        `SELECT 
+            ch.*, 
+            f.nomeFuncionario AS nomeRequisitante,
+            f.email AS emailRequisitante,
+            f.telefone AS telefoneRequisitante,
+            cat.nome AS nomeCategoria
+         FROM Chamados ch
+         LEFT JOIN Funcionarios f ON ch.requisitante_id = f.id
+         LEFT JOIN Categorias cat ON ch.categoria_id = cat.id
+         WHERE ch.id = ?`,
+        [id]
+    );
     return rows[0];
 };
 
-// Busca todos os chamados com filtros opcionais
-export const findAll = async (filtros = {}) => {
+// ====================================================
+// ======== LISTAR TODOS OS CHAMADOS (com filtros) ========
+// ====================================================
+export const findAll = async (filtros) => {
     let sql = `
         SELECT 
-            ch.*, 
-            -- O nome ainda usa COALESCE, assumindo que Funcionario tem 'nomeFuncionario'
+            ch.id, ch.assunto, ch.descricao, ch.prioridade, ch.status, ch.created_at,
+            ch.categoria_id, ch.requisitante_id,
             COALESCE(ch.nome_requisitante_manual, f.nomeFuncionario) AS nomeRequisitante,
-            
-            -- CORREÇÃO: Busca email e telefone APENAS dos campos manuais da tabela Chamados (ch)
-            ch.email_requisitante_manual AS emailRequisitante,
-            ch.telefone_requisitante_manual AS telefoneRequisitante,
-            
-            ca.nome AS nomeCategoria
+            COALESCE(ch.email_requisitante_manual, f.email) AS emailRequisitante,
+            COALESCE(ch.telefone_requisitante_manual, f.telefone) AS telefoneRequisitante,
+            cat.nome AS nomeCategoria
         FROM Chamados ch
-        -- Usamos LEFT JOIN para que funcione mesmo se requisitante_id for NULL ou inválido
-        LEFT JOIN Funcionario f ON ch.requisitante_id = f.id
-        LEFT JOIN Categorias ca ON ch.categoria_id = ca.id
+        LEFT JOIN Funcionarios f ON ch.requisitante_id = f.id
+        LEFT JOIN Categorias cat ON ch.categoria_id = cat.id
     `;
 
-    const values = [];
-    const whereConditions = [];
+    const whereParams = [];
+    const whereClauses = [];
 
-    if (filtros.requisitante_id) {
-        whereConditions.push("ch.requisitante_id = ?");
-        values.push(parseInt(filtros.requisitante_id));
-    }
-    if (filtros.categoria_id) {
-        whereConditions.push("ch.categoria_id = ?");
-        values.push(parseInt(filtros.categoria_id));
-    }
-    if (filtros.status) {
-        whereConditions.push("ch.status = ?");
-        values.push(filtros.status);
+    if (filtros.assunto) {
+        whereClauses.push('ch.assunto LIKE ?');
+        whereParams.push(`%${filtros.assunto}%`);
     }
     if (filtros.prioridade) {
-        whereConditions.push("ch.prioridade = ?");
-        values.push(filtros.prioridade);
+        whereClauses.push('ch.prioridade = ?');
+        whereParams.push(filtros.prioridade);
     }
-    if (filtros.assunto) {
-        whereConditions.push("ch.assunto LIKE ?");
-        values.push(`%${filtros.assunto}%`);
+    if (filtros.status) {
+        whereClauses.push('ch.status = ?');
+        whereParams.push(filtros.status);
+    }
+    if (filtros.categoria_id) {
+        whereClauses.push('ch.categoria_id = ?');
+        whereParams.push(filtros.categoria_id);
+    }
+    // Filtro para a página "Meus Chamados" (requisitante)
+    if (filtros.requisitante_id) {
+        whereClauses.push('ch.requisitante_id = ?');
+        whereParams.push(filtros.requisitante_id);
     }
 
-    if (whereConditions.length > 0) {
-        sql += " WHERE " + whereConditions.join(" AND ");
+    if (whereClauses.length > 0) {
+        sql += ' WHERE ' + whereClauses.join(' AND ');
     }
 
-    sql += " ORDER BY ch.created_at DESC";
+    // Ordena pelos mais recentes primeiro
+    sql += ' ORDER BY ch.created_at DESC';
 
-    const [chamados] = await pool.query(sql, values);
-    return chamados;
+    const [rows] = await db.query(sql, whereParams);
+    return rows;
 };
 
-// Deleta um chamado
+// ====================================================
+// ======== DELETAR CHAMADO ========
+// ====================================================
 export const deleteById = async (id) => {
-    const [result] = await pool.query('DELETE FROM Chamados WHERE id = ?', [id]);
+    const [result] = await db.query(
+        'DELETE FROM Chamados WHERE id = ?',
+        [id]
+    );
     return result;
 };
 
-// Atualiza o status de um chamado
+// ====================================================
+// ======== ATUALIZAR STATUS ========
+// ====================================================
 export const updateStatus = async (id, status) => {
-    const sql = "UPDATE Chamados SET status = ? WHERE id = ?";
-    const [result] = await pool.query(sql, [status, id]);
+    const [result] = await db.query(
+        'UPDATE Chamados SET status = ? WHERE id = ?',
+        [status, id]
+    );
+    return result;
+};
+
+// ====================================================
+// ======== (NOVO) ATUALIZAR PRIORIDADE ========
+// Esta é a função que faltava para o seu controller
+// ====================================================
+export const updatePrioridade = async (id, prioridade) => {
+    const [result] = await db.query(
+        'UPDATE Chamados SET prioridade = ? WHERE id = ?',
+        [prioridade, id]
+    );
     return result;
 };
