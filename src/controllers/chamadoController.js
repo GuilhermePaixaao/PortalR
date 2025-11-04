@@ -27,8 +27,7 @@ export const criarChamado = async (req, res) => {
         const arquivos = req.files;
         // --- FIM DA CORREÇÃO ---
 
-        // O resto do seu código original funciona perfeitamente agora,
-        // porque a variável 'chamado' é um objeto válido.
+        // O resto do seu código original
         const {
             assunto, descricao, prioridade, requisitante_id, categoria_id,
             nome_requisitante_manual, email_requisitante_manual, telefone_requisitante_manual
@@ -51,8 +50,6 @@ export const criarChamado = async (req, res) => {
             status: 'Aberto',
             requisitanteIdNum: parseInt(requisitante_id),
             categoriaIdNum: categoria_id ? parseInt(categoria_id) : null,
-
-            // Campos manuais para o Model
             nomeRequisitanteManual: nome_requisitante_manual,
             emailRequisitanteManual: email_requisitante_manual,
             telefoneRequisitanteManual: telefone_requisitante_manual
@@ -62,12 +59,11 @@ export const criarChamado = async (req, res) => {
 
         const novoId = await ChamadoModel.create(dadosParaCriar);
         
-        // Usamos findById para retornar o chamado completo (como o frontend espera)
+        // Usamos findById (com JOINs) para retornar o chamado completo
         const novoChamado = await ChamadoModel.findById(novoId);
 
         res.status(201).json({ success: true, data: novoChamado });
     } catch (error) {
-        // Adicione esta verificação para o erro de JSON.parse
         if (error instanceof SyntaxError) {
             return res.status(400).json({ success: false, message: 'Erro ao processar dados: JSON do chamado mal formatado.' });
         }
@@ -85,10 +81,7 @@ export const criarChamado = async (req, res) => {
 // ====================================================
 export const listarChamados = async (req, res) => {
     try {
-        // Captura os query params (filtros)
         const filtros = req.query;
-
-        // Passa os filtros para o Model
         const chamados = await ChamadoModel.findAll(filtros);
 
         // Formata a resposta (O seu frontend espera esta formatação)
@@ -100,7 +93,6 @@ export const listarChamados = async (req, res) => {
             };
             const Categorias = chamado.categoria_id ? { nome: chamado.nomeCategoria } : null;
 
-            // Remove as propriedades redundantes do objeto raiz para a resposta JSON
             delete chamado.nomeRequisitante;
             delete chamado.emailRequisitante;
             delete chamado.telefoneRequisitante;
@@ -119,6 +111,7 @@ export const listarChamados = async (req, res) => {
 // ====================================================
 // ======== (NOVO) BUSCAR CHAMADO POR ID ========
 // ====================================================
+// Esta função é chamada pelo modal 👁️
 export const buscarChamadoPorId = async (req, res) => {
     try {
         const idNum = parseInt(req.params.id);
@@ -126,7 +119,7 @@ export const buscarChamadoPorId = async (req, res) => {
             return res.status(400).json({ success: false, message: 'ID de chamado inválido.' });
         }
 
-        // O model (findById) deve fazer os JOINs (como fizemos no findById corrigido)
+        // Usa o findById (que corrigimos no Model)
         const chamado = await ChamadoModel.findById(idNum);
         
         if (!chamado) {
@@ -205,6 +198,7 @@ export const atualizarStatus = async (req, res) => {
 // ====================================================
 // ======== (NOVO) ATUALIZAR PRIORIDADE ========
 // ====================================================
+// Esta função é chamada pelo <select> de prioridade do modal
 export const atualizarPrioridade = async (req, res) => {
     try {
         const idNum = parseInt(req.params.id);
