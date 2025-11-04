@@ -104,6 +104,31 @@
         .btn-logout:hover {
             background-color: #bb2d3b;
         }
+        
+        /* AJUSTES DA SIDEBAR PARA ALINHAMENTO E SUPORTE A QUEBRA DE LINHA */
+        .sidebar nav ul li a {
+            display: flex;
+            align-items: center; 
+            text-decoration: none;
+            padding: 10px 15px; 
+            width: 100%;
+            height: auto; 
+        }
+
+        .sidebar .icon {
+            margin-right: 10px; 
+            min-width: 20px; 
+            text-align: center;
+            flex-shrink: 0; 
+            align-self: center; 
+        }
+
+        .sidebar .text {
+            flex-grow: 1; 
+            white-space: normal; 
+            line-height: 1.2; 
+        }
+        /* --- FIM DOS ESTILOS DE AJUSTE --- */
     </style>
 </head>
 <body>
@@ -242,17 +267,21 @@
                     userNameDisplay.textContent = `Olá, ${userData.data.nomeFuncionario.split(' ')[0]}`;
                 }
 
-                // Atualiza o menu dinâmico
+                // Atualiza o menu dinâmico (com quebra de linha)
                 const userPerfil = userData?.data?.perfil; 
-                const linkChamado = document.getElementById("menu-link-chamado"); 
+                const linkChamadoLi = document.getElementById("menu-link-chamado"); 
 
-                if (linkChamado && (userPerfil === 'AGENTE' || userPerfil === 'ADMIN')) {
-                    const a = linkChamado.querySelector('a');
+                if (linkChamadoLi && (userPerfil === 'AGENTE' || userPerfil === 'ADMIN')) {
+                    const a = linkChamadoLi.querySelector('a');
+                    const textSpan = a.querySelector('.text');
+
                     a.href = "GerenciarChamados.html"; 
                     a.title = "Gerenciar Chamados";
                     a.querySelector('.icon').textContent = "✔️"; 
-                    a.querySelector('.text').textContent = "Gerenciar Chamados";
-                    linkChamado.classList.remove('active');
+                    
+                    // Aplica o novo formato de duas linhas para o texto
+                    textSpan.innerHTML = "Gerenciar<br>Chamados";
+                    linkChamadoLi.classList.remove('active');
                 }
 
             } catch (error) {
