@@ -6,38 +6,36 @@
     <title>Gerenciar Chamados - Portal</title>
 
     <script>
-        // --- INÍCIO DO PROTETOR DE PÁGINA (ANTI-FLICKER) ---
-        // Esta variável agora é global para esta página
         const userDataString = localStorage.getItem("userData");
-        
+
         if (!userDataString) {
-            window.location.replace("Login.html"); 
+            window.location.replace("Login.html");
             throw new Error("Usuário não autenticado.");
         }
+
         try {
             const userData = JSON.parse(userDataString);
             if (!userData?.data?.id) {
                 throw new Error("Dados de usuário inválidos.");
             }
-            
-            // VERIFICAÇÃO DE PERFIL (ESPECÍFICA DESTA PÁGINA)
+
             const userPerfil = userData?.data?.perfil;
             if (userPerfil === 'REQUISITANTE') {
                 alert("Acesso negado. Esta página é para gerenciamento. Redirecionando...");
-                window.location.replace("Chamado.html"); // Redireciona para a pág. de abrir chamado
+                window.location.replace("Chamado.html");
                 throw new Error("Acesso negado.");
             }
 
         } catch (error) {
             console.error("Sessão inválida:", error.message);
             if (error.message !== "Acesso negado.") {
-                localStorage.removeItem("userData"); 
-                window.location.replace("Login.html"); 
+                localStorage.removeItem("userData");
+                window.location.replace("Login.html");
                 throw new Error("Sessão inválida.");
             }
         }
-        // --- FIM DO PROTETOR DE PÁGINA ---
     </script>
+
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="icon" type="image/png" href="/logo.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -94,13 +92,13 @@
             font-size: 1.1rem;
             margin-left: 8px;
         }
+
         .btn-concluir { color: green; }
 
-        /* --- ESTILOS ADICIONADOS PARA HEADER E LOGOUT --- */
         .header {
             display: flex;
             align-items: center;
-            justify-content: space-between; /* Alinha itens */
+            justify-content: space-between;
             padding: 0.75rem 2rem;
             background-color: #ffffff;
             border-bottom: 1px solid #dee2e6;
@@ -109,21 +107,16 @@
             top: 0;
             z-index: 1030;
         }
+
         .logo {
             font-size: 1.4rem;
             font-weight: 700;
             color: #0d6efd;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin: 0;
-            white-space: nowrap;
         }
-        .search-bar {
-            margin-left: 2rem;
-            margin-right: 2rem;
-            width: 100%;
-            max-width: 450px;
-        }
+
+        .search-bar { margin-left: 2rem; margin-right: 2rem; width: 100%; max-width: 450px; }
+
         .search-bar input {
             width: 100%;
             padding: 0.6rem 1rem;
@@ -131,37 +124,38 @@
             border-radius: 20px;
             font-size: 0.95rem;
         }
+
         .search-bar input:focus {
             border-color: #86b7fe;
             box-shadow: 0 0 0 0.25rem rgba(13,110,253,.25);
             outline: none;
         }
-        
-        /* Estilos para Logout */
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 1rem; 
-        }
-        #userNameDisplay {
-            font-weight: 500;
-            color: #495057;
-            white-space: nowrap; 
-        }
+
+        .header-actions { display: flex; align-items: center; gap: 1rem; }
+        #userNameDisplay { font-weight: 500; color: #495057; }
+
         .btn-logout {
-            background-color: #dc3545; 
+            background-color: #dc3545;
             color: white;
             border: none;
             padding: 0.5rem 1rem;
             border-radius: 6px;
             font-weight: 500;
             cursor: pointer;
-            transition: background-color 0.2s ease;
         }
-        .btn-logout:hover {
-            background-color: #bb2d3b;
+
+        .btn-logout:hover { background-color: #bb2d3b; }
+
+        .sidebar nav ul li a {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            padding: 10px 15px;
+            width: 100%;
         }
-        /* --- FIM DOS ESTILOS ADICIONADOS --- */
+
+        .sidebar .icon { margin-right: 10px; min-width: 20px; text-align: center; }
+        .sidebar .text { flex-grow: 1; white-space: normal; }
     </style>
 </head>
 
@@ -172,7 +166,6 @@
             <div class="search-bar">
                 <input type="text" placeholder="Buscar produtos, relatórios, chamados...">
             </div>
-            
             <div class="header-actions">
                 <span id="userNameDisplay"></span>
                 <button id="logoutButton" class="btn-logout">Sair</button>
@@ -182,281 +175,19 @@
         <aside class="sidebar">
             <nav>
                 <ul>
-                    <li><a href="Dashboard.html" title="Início"><span class="icon">🏠</span><span class="text">Início</span></a></li>
-                    <li><a href="Imprimir.html" title="Impressão de Preços"><span class="icon">🖨️</span><span class="text">Imprimir</span></a></li>
-                    <li id="menu-link-chamado"><a href="Chamado.html" title="Abrir Chamado"><span class="icon">➕</span><span class="text">Chamado</span></a></li>
-                    <li><a href="Chatbot.html" title="Chatbot"><span class="icon">🤖</span><span class="text">Chatbot</span></a></li>
-                    <li><a href="Funcionarios.html" title="Funcionários"><span class="icon">💼</span><span class="text">Funcionários</span></a></li>
-                    <li style="margin-top: 30px;"><a href="#" title="Configurações"><span class="icon">⚙️</span><span class="text">Ajustes</span></a></li>
+                    <li><a href="Dashboard.html"><span class="icon">🏠</span><span class="text">Início</span></a></li>
+                    <li><a href="Imprimir.html"><span class="icon">🖨️</span><span class="text">Imprimir</span></a></li>
+                    <li id="menu-link-chamado" class="active"><a href="GerenciarChamados.html"><span class="icon">✔️</span><span class="text">Gerenciar<br>Chamados</span></a></li>
+                    <li><a href="Chatbot.html"><span class="icon">🤖</span><span class="text">Chatbot</span></a></li>
+                    <li><a href="Funcionarios.html"><span class="icon">💼</span><span class="text">Funcionários</span></a></li>
                 </ul>
             </nav>
         </aside>
 
         <main class="main-content">
-            <h1>Gerenciar Chamados</h1>
+            <h1>Gerenciar Chamados</h1> 
             <hr>
-
-            <div id="divRespostaGeral" class="mb-3"></div>
-
-            <div class="widget card shadow-sm">
-                <div class="card-body">
-                    <div class="filters mb-3 row g-2">
-                        <div class="col-md-3">
-                            <label for="filtroAssunto" class="form-label">Filtrar por Assunto</label>
-                            <input type="text" id="filtroAssunto" class="form-control" placeholder="Digite o assunto...">
-                        </div>
-
-                        <div class="col-md-2">
-                            <label for="filtroPrioridade" class="form-label">Prioridade</label>
-                            <select id="filtroPrioridade" class="form-select">
-                                <option value="">Todas</option>
-                                <option value="Alta">Alta</option>
-                                <option value="Média">Média</option>
-                                <option value="Baixa">Baixa</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-2">
-                            <label for="filtroStatus" class="form-label">Status</label>
-                            <select id="filtroStatus" class="form-select">
-                                <option value="">Todos</option>
-                                <option value="Aberto">Aberto</option>
-                                <option value="Em Andamento">Em Andamento</option>
-                                <option value="Concluído">Concluído</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-3">
-                            <label for="filtroCategoria" class="form-label">Categoria</label>
-                            <select id="filtroCategoria" class="form-select">
-                                <option value="">Todas</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button id="btnFiltrar" class="btn btn-primary w-100">Filtrar</button>
-                        </div>
-                    </div>
-
-                    <div id="ticketList" class="ticket-list">
-                        <div class="ticket-row header">
-                            <div class="ticket-cell ticket-id">Ticket</div>
-                            <div class="ticket-cell ticket-priority">Prioridade</div>
-                            <div class="ticket-cell ticket-subject">Assunto</div>
-                            <div class="ticket-cell ticket-category">Categoria</div>
-                            <div class="ticket-cell ticket-status">Status</div>
-                            <div class="ticket-cell ticket-operator">Requisitante</div>
-                            <div class="ticket-cell ticket-created">Criado em</div>
-                            <div class="ticket-cell ticket-actions">Ação</div>
-                        </div>
-
-                        <div id="loadingIndicator"><p>Carregando chamados...</p></div>
-                    </div>
-                </div>
-            </div>
         </main>
     </div>
-
-    <script type="module">
-        const API_URL = ""; 
-
-        // --- FUNÇÃO DE LOGOUT ---
-        function fazerLogout() {
-            localStorage.removeItem("userData"); 
-            window.location.href = "Login.html"; 
-        }
-
-        // O script do <head> já validou o login e o perfil.
-        // Apenas lemos os dados para usar na página.
-        // A linha "const userDataString = ..." FOI REMOVIDA DAQUI.
-        let userData, userId, userPerfil, userCategoriaAtendimento;
-
-        try {
-            // Usamos a variável 'userDataString' global definida no <head>
-            userData = JSON.parse(userDataString); 
-            userId = userData?.data?.id;
-            userPerfil = userData?.data?.perfil;
-            userCategoriaAtendimento = userData?.data?.categoria_id_atendimento;
-
-            // --- CONFIGURAÇÃO DA PÁGINA (NOME E MENU) ---
-            const userNameDisplay = document.getElementById('userNameDisplay');
-            if (userNameDisplay && userData?.data?.nomeFuncionario) {
-                userNameDisplay.textContent = `Olá, ${userData.data.nomeFuncionario.split(' ')[0]}`;
-            }
-
-            const linkChamado = document.getElementById("menu-link-chamado");
-            if (linkChamado) {
-                const a = linkChamado.querySelector('a');
-                a.href = "GerenciarChamados.html";
-                a.title = "  Gerenciar Chamados";
-                a.querySelector('.icon').textContent = "✔️";
-                a.querySelector('.text').textContent = " Gerenciar Chamados";
-
-                const paginaAtual = window.location.pathname.split('/').pop();
-                if (paginaAtual === 'GerenciarChamados.html') {
-                    linkChamado.classList.add('active');
-                }
-            }
-
-        } catch (error) {
-            console.error("Erro ao configurar a página:", error);
-            fazerLogout();
-        }
-
-        // --- LÓGICA DA PÁGINA DE GERENCIAMENTO ---
-        const ticketList = document.getElementById("ticketList");
-        const loadingIndicator = document.getElementById("loadingIndicator");
-        const divRespostaGeral = document.getElementById("divRespostaGeral");
-        const filtroAssunto = document.getElementById("filtroAssunto");
-        const filtroPrioridade = document.getElementById("filtroPrioridade");
-        const filtroStatus = document.getElementById("filtroStatus");
-        const filtroCategoria = document.getElementById("filtroCategoria");
-        const btnFiltrar = document.getElementById("btnFiltrar");
-        const btnLogout = document.getElementById("logoutButton");
-
-        function exibirMensagem(el, msg, sucesso = true) {
-            el.textContent = msg;
-            el.className = sucesso ? 'alert alert-success' : 'alert alert-danger';
-        }
-
-        function limparMensagem(el) { el.textContent = ''; el.className = ''; }
-
-        function escapeHtml(t) {
-            if (!t) return '';
-            return t.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
-        }
-
-        function formatarData(d) {
-            if (!d) return 'N/A';
-            try {
-                const dt = new Date(d);
-                const data = dt.toLocaleDateString('pt-BR');
-                const hora = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                return `${data} ${hora}`;
-            } catch {
-                return 'Data inválida';
-            }
-        }
-
-        async function carregarCategorias() {
-            if (userPerfil === 'AGENTE') {
-                filtroCategoria.parentElement.style.display = 'none';
-                return;
-            }
-            try {
-                const r = await fetch(`${API_URL}/categorias`);
-                if (!r.ok) throw new Error("Erro ao carregar categorias.");
-                const categorias = await r.json();
-                filtroCategoria.innerHTML = '<option value="">Todas</option>';
-                categorias.forEach(cat => {
-                    const opt = document.createElement("option");
-                    opt.value = cat.id;
-                    opt.textContent = cat.nome;
-                    filtroCategoria.appendChild(opt);
-                });
-            } catch {
-                filtroCategoria.parentElement.innerHTML = '<p class="text-danger">Falha ao carregar categorias.</p>';
-            }
-        }
-
-        function renderizarChamados(chamados) {
-            loadingIndicator.style.display = 'none';
-            ticketList.querySelectorAll('.data-row').forEach(r => r.remove());
-
-            if (!chamados?.length) {
-                ticketList.insertAdjacentHTML('beforeend', `
-                <div class="ticket-row data-row">
-                    <div class="ticket-cell" style="grid-column: 1 / -1; text-align:center; padding:1rem;">
-                    Nenhum chamado encontrado.
-                    </div>
-                </div>`);
-                return;
-            }
-
-            chamados.forEach(ch => {
-                const prioridadeClass = (ch.prioridade || 'Média').toLowerCase();
-                const statusClass = (ch.status || 'Aberto').toLowerCase().replace(/\s+/g, '-');
-                ticketList.insertAdjacentHTML('beforeend', `
-                <div class="ticket-row data-row" data-ticket-id="${ch.id}">
-                    <div class="ticket-cell ticket-id">#${ch.id}</div>
-                    <div class="ticket-cell ticket-priority"><span class="priority-badge ${prioridadeClass}">${escapeHtml(ch.prioridade)}</span></div>
-                    <div class="ticket-cell ticket-subject">${escapeHtml(ch.assunto)}</div>
-                    <div class="ticket-cell ticket-category">${escapeHtml(ch.Categorias?.nome || 'N/A')}</div>
-                    <div class="ticket-cell ticket-status"><span class="status-badge ${statusClass}">${escapeHtml(ch.status)}</span></div>
-                    <div class="ticket-cell ticket-operator">${escapeHtml(ch.Funcionario?.nomeFuncionario || 'Desconhecido')}</div>
-                    <div class="ticket-cell ticket-created">${formatarData(ch.created_at)}</div>
-                    <div class="ticket-cell ticket-actions">
-                    <span class="view-icon" title="Visualizar">👁️</span>
-                    ${ch.status !== 'Concluído'
-                        ? `<button class="btn-action btn-concluir" data-id="${ch.id}" title="Marcar como Concluído">✔️</button>` : ''}
-                    </div>
-                </div>`);
-            });
-        }
-
-        async function listarChamados() {
-            limparMensagem(divRespostaGeral);
-            ticketList.querySelectorAll('.data-row').forEach(r => r.remove());
-            loadingIndicator.style.display = 'block';
-
-            const p = new URLSearchParams();
-            if (filtroAssunto.value.trim()) p.append('assunto', filtroAssunto.value.trim());
-            if (filtroPrioridade.value) p.append('prioridade', filtroPrioridade.value);
-            if (filtroStatus.value) p.append('status', filtroStatus.value);
-
-            if (userPerfil === 'ADMIN' && filtroCategoria.value)
-                p.append('categoria_id', filtroCategoria.value);
-            else if (userPerfil === 'AGENTE')
-                p.append('categoria_id', userCategoriaAtendimento);
-
-            try {
-                const r = await fetch(`${API_URL}/chamados?${p.toString()}`);
-                if (!r.ok) throw new Error("Erro ao buscar chamados.");
-                renderizarChamados(await r.json());
-            } catch (e) {
-                exibirMensagem(divRespostaGeral, e.message, false);
-                loadingIndicator.innerHTML = '<p style="color:red;">Falha ao carregar.</p>';
-            }
-        }
-
-        async function atualizarStatusChamado(id, status) {
-            try {
-                const r = await fetch(`${API_URL}/chamados/${id}/status`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status })
-                });
-                const data = await r.json();
-                if (!r.ok) throw new Error(data.message);
-                exibirMensagem(divRespostaGeral, "Chamado atualizado com sucesso!", true);
-                listarChamados();
-            } catch (e) {
-                exibirMensagem(divRespostaGeral, `Erro: ${e.message}`, false);
-            }
-        }
-
-        btnFiltrar.addEventListener('click', listarChamados);
-        btnLogout.addEventListener('click', fazerLogout);
-
-        ticketList.addEventListener('click', e => {
-            const t = e.target;
-            if (t.classList.contains('view-icon')) {
-                alert(`Visualizando Chamado #${t.closest('.ticket-row').dataset.ticketId}`);
-            }
-            if (t.classList.contains('btn-concluir')) {
-                const id = t.dataset.id;
-                if (confirm(`Deseja realmente marcar o chamado #${id} como "Concluído"?`)) {
-                    atualizarStatusChamado(id, 'Concluído');
-                }
-            }
-        });
-
-        // O script do <head> já garantiu que o perfil é AGENTE ou ADMIN
-        await carregarCategorias();
-        await listarChamados();
-
-    </script>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
