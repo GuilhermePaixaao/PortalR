@@ -22,6 +22,11 @@ const app = express();
 app.use(cors()); // Permite requisições de outros domínios
 app.use(express.json()); // Permite que o Express entenda JSON
 
+// --- ADICIONE ESTA LINHA ---
+// Permite que o Express entenda dados de formulários (application/x-www-form-urlencoded)
+app.use(express.urlencoded({ extended: true }));
+
+
 // 1. Redirecionamento da raiz
 app.get('/', (req, res) => {
   res.redirect('/Login.html');
@@ -49,4 +54,4 @@ app.listen(PORT, () => {
   console.log(`API disponível em: http://localhost:${PORT}`);
   console.log(`Página de Login: http://localhost:${PORT}/Login.html`);
 });
-                                                
+
