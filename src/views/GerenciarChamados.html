@@ -23,6 +23,7 @@
             // VERIFICAÇÃO DE PERFIL (ESPECÍFICA DESTA PÁGINA)
             const userPerfil = userData?.data?.perfil;
             if (userPerfil === 'REQUISITANTE') {
+                // Usamos alert() aqui porque o script de logar ainda não carregou
                 alert("Acesso negado. Esta página é para gerenciamento. Redirecionando...");
                 window.location.replace("Chamado.html"); // Redireciona para a pág. de abrir chamado
                 throw new Error("Acesso negado.");
@@ -45,6 +46,71 @@
     <link rel="stylesheet" href="css/ticket.css">
 
     <style>
+        /* --- (NOVO) ESTILOS DO MODAL DE DETALHES (Baseado na Imagem) --- */
+        dialog:not([open]) { display: none; }
+        dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
+        dialog {
+            border: none;
+            border-radius: 8px;
+            padding: 1.5rem 2rem; /* Mais padding lateral */
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            max-width: 600px;
+            width: calc(100% - 2rem);
+        }
+        .form-actions {
+            margin-top: 1.5rem;
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+        .form-actions button {
+            padding: 0.6rem 1.2rem; /* Botão um pouco menor */
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        #fecharModalDetalhes {
+            background-color: #6c757d;
+            color: white;
+        }
+        #modalDetalhes h2 {
+            font-size: 1.75rem; /* Título maior */
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+        #modalDetalhes .detalhe-grupo { 
+            margin-bottom: 1.25rem; /* Mais espaçamento */
+        }
+        #modalDetalhes .detalhe-label {
+            font-weight: 600;
+            color: #495057;
+            font-size: 0.85rem; /* Label um pouco menor */
+            text-transform: uppercase;
+            margin-bottom: 0.25rem;
+            display: block;
+        }
+        #modalDetalhes .detalhe-valor {
+            font-size: 1.1rem; /* Valor maior */
+            padding: 0.5rem;
+            background-color: #f4f5f7; /* Cor de fundo suave */
+            border-radius: 5px;
+            word-wrap: break-word;
+            min-height: 38px; /* Altura mínima */
+            display: flex;
+            align-items: center;
+        }
+        #modalDetalhes .detalhe-descricao {
+            font-size: 1.1rem;
+            padding: 0.5rem;
+            background-color: #f4f5f7;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            min-height: 100px;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        /* --- FIM ESTILOS MODAL --- */
+
         .main-content {
             grid-area: main;
             overflow-y: auto;
@@ -77,13 +143,16 @@
             font-weight: 600;
         }
 
-        .priority-badge.alta { background-color: #f8d7da; color: #842029; }
-        .priority-badge.média { background-color: #fff3cd; color: #664d03; }
-        .priority-badge.baixa { background-color: #cfe2ff; color: #084298; }
+        /* (NOVO) Classes de prioridade atualizadas para corresponder ao HTML anterior */
+        .priority-badge.alta, .priority-badge.high { background-color: #f8d7da; color: #842029; }
+        .priority-badge.média, .priority-badge.medium, .priority-badge.media { background-color: #fff3cd; color: #664d03; }
+        .priority-badge.baixa, .priority-badge.low { background-color: #cfe2ff; color: #084298; }
+        .priority-badge.planejado { background-color: #e2d1e7; color: #510f32; } 
 
-        .status-badge.aberto { background-color: #ffc107; color: #000; }
-        .status-badge.concluído { background-color: #d1e7dd; color: #0f5132; }
+        .status-badge.aberto, .status-badge.open { background-color: #ffc107; color: #000; }
+        .status-badge.concluído, .status-badge.completed { background-color: #d1e7dd; color: #0f5132; }
         .status-badge.em-andamento { background-color: #cfe2ff; color: #084298; }
+
 
         #loadingIndicator { padding: 2rem; text-align: center; color: #6c757d; }
 
@@ -217,6 +286,76 @@
             </nav>
         </aside>
 
+        <!-- (NOVO) HTML DO MODAL DE DETALHES INSERIDO AQUI (Baseado na Imagem) -->
+        <dialog id="modalDetalhes" aria-labelledby="modalDetalhesTitle">
+            <h2 id="modalDetalhesTitle">Detalhes do Chamado</h2>
+            
+            <div id="modalDetalhesConteudo">
+                <!-- Layout em 3 colunas como na imagem -->
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="detalhe-grupo">
+                            <span class="detalhe-label">Ticket ID</span>
+                            <div id="detalheId" class="detalhe-valor">#...</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="detalhe-grupo">
+                            <span class="detalhe-label">Status</span>
+                            <div id="detalheStatus" class="detalhe-valor">...</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="detalhe-grupo">
+                            <span class="detalhe-label">Prioridade</span>
+                            <div id="detalhePrioridade" class="detalhe-valor">...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Layout de 1 coluna como na imagem -->
+                <div class="detalhe-grupo">
+                    <span class="detalhe-label">Assunto</span>
+                    <div id="detalheAssunto" class="detalhe-valor">...</div>
+                </div>
+
+                <div class="detalhe-grupo">
+                    <span class="detalhe-label">Descrição</span>
+                    <div id="detalheDescricao" class="detalhe-descricao">Carregando...</div>
+                </div>
+
+                <!-- Layout em 2 colunas como na imagem -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="detalhe-grupo">
+                            <span class="detalhe-label">Requisitante</span>
+                            <div id="detalheRequisitante" class="detalhe-valor">...</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detalhe-grupo">
+                            <span class="detalhe-label">Categoria</span>
+                            <div id="detalheCategoria" class="detalhe-valor">...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Layout de 1 coluna como na imagem -->
+                <div class="detalhe-grupo">
+                    <span class="detalhe-label">Criado em</span>
+                    <div id="detalheData" class="detalhe-valor">...</div>
+                </div>
+            </div>
+
+            <!-- Div para feedback de atualização -->
+            <div id="modalDetalhesResposta" class="mt-3"></div>
+            
+            <div class="form-actions">
+                <button type="button" id="fecharModalDetalhes">Fechar</button>
+            </div>
+        </dialog>
+        <!-- FIM DO MODAL -->
+
         <main class="main-content">
             <h1>Gerenciar Chamados</h1>
             <hr>
@@ -238,6 +377,7 @@
                                 <option value="Alta">Alta</option>
                                 <option value="Média">Média</option>
                                 <option value="Baixa">Baixa</option>
+                                <option value="Planejado">Planejado</option> <!-- (NOVO) Adicionado Planejado aqui -->
                             </select>
                         </div>
 
@@ -284,6 +424,7 @@
 
     <script type="module">
         const API_URL = ""; 
+        let currentTicketId = null; // (NOVO) Guarda o ID do ticket aberto no modal
 
         // --- FUNÇÃO DE LOGOUT ---
         function fazerLogout() {
@@ -337,6 +478,21 @@
         const btnFiltrar = document.getElementById("btnFiltrar");
         const btnLogout = document.getElementById("logoutButton");
 
+        // --- (NOVAS) REFERÊNCIAS DO MODAL ---
+        const modalDetalhes = document.getElementById("modalDetalhes");
+        const btnFecharModalDetalhes = document.getElementById("fecharModalDetalhes");
+        const modalDetalhesResposta = document.getElementById("modalDetalhesResposta");
+        const detalheId = document.getElementById("detalheId");
+        const detalheStatus = document.getElementById("detalheStatus"); // (MUDADO) Agora é um <div>
+        const detalhePrioridade = document.getElementById("detalhePrioridade"); // (MUDADO) Agora é um <div>
+        const detalheAssunto = document.getElementById("detalheAssunto");
+        const detalheDescricao = document.getElementById("detalheDescricao");
+        const detalheRequisitante = document.getElementById("detalheRequisitante");
+        const detalheCategoria = document.getElementById("detalheCategoria");
+        const detalheData = document.getElementById("detalheData");
+        // --- FIM NOVAS REFERÊNCIAS ---
+
+
         function exibirMensagem(el, msg, sucesso = true) {
             el.textContent = msg;
             el.className = sucesso ? 'alert alert-success' : 'alert alert-danger';
@@ -352,9 +508,13 @@
         function formatarData(d) {
             if (!d) return 'N/A';
             try {
+                // (NOVO) Ajuste de Fuso Horário
                 const dt = new Date(d);
-                const data = dt.toLocaleDateString('pt-BR');
-                const hora = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                const offset = dt.getTimezoneOffset() * 60000;
+                const dtLocal = new Date(dt.getTime() + offset);
+
+                const data = dtLocal.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+                const hora = dtLocal.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
                 return `${data} ${hora}`;
             } catch {
                 return 'Data inválida';
@@ -397,8 +557,10 @@
             }
 
             chamados.forEach(ch => {
-                const prioridadeClass = (ch.prioridade || 'Média').toLowerCase();
+                // (NOVO) Classes de prioridade corrigidas para media/média
+                const prioridadeClass = (ch.prioridade || 'Média').toLowerCase().replace('é', 'e');
                 const statusClass = (ch.status || 'Aberto').toLowerCase().replace(/\s+/g, '-');
+                
                 ticketList.insertAdjacentHTML('beforeend', `
                 <div class="ticket-row data-row" data-ticket-id="${ch.id}">
                     <div class="ticket-cell ticket-id">#${ch.id}</div>
@@ -442,6 +604,7 @@
             }
         }
 
+        // Esta é a sua função original, não foi alterada
         async function atualizarStatusChamado(id, status) {
             try {
                 const r = await fetch(`${API_URL}/chamados/${id}/status`, {
@@ -458,22 +621,83 @@
             }
         }
 
+        // --- (NOVAS) FUNÇÕES DO MODAL ---
+
+        // (NOVA) Busca dados frescos do chamado e abre o modal
+        async function abrirModalDetalhes(chamadoId) {
+            limparMensagem(modalDetalhesResposta);
+            modalDetalhes.showModal();
+            currentTicketId = null; // Reseta
+
+            // Estado de carregamento
+            detalheId.textContent = `#${chamadoId}`;
+            detalheStatus.textContent = '...';
+            detalhePrioridade.textContent = '...';
+            detalheAssunto.textContent = 'Carregando...';
+            detalheDescricao.textContent = 'Carregando...';
+            detalheRequisitante.textContent = 'Carregando...';
+            detalheCategoria.textContent = 'Carregando...';
+            detalheData.textContent = 'Carregando...';
+
+            try {
+                // Assumindo que a rota GET /chamados/:id existe no seu backend
+                const response = await fetch(`${API_URL}/chamados/${chamadoId}`);
+                if (!response.ok) throw new Error(`Erro ao buscar dados do chamado #${chamadoId}`);
+                
+                const chamado = await response.json(); // Espera o objeto formatado
+
+                // Preenche o modal
+                detalheStatus.textContent = chamado.status;
+                detalhePrioridade.textContent = chamado.prioridade;
+                detalheAssunto.textContent = chamado.assunto;
+                detalheDescricao.textContent = chamado.descricao;
+                detalheRequisitante.textContent = chamado.Funcionario?.nomeFuncionario || 'N/A';
+                detalheCategoria.textContent = chamado.Categorias?.nome || 'N/A';
+                detalheData.textContent = formatarData(chamado.created_at);
+                
+                currentTicketId = chamadoId; // Armazena o ID
+            } catch (error) {
+                exibirMensagem(modalDetalhesResposta, error.message, false);
+            }
+        }
+        
+        // --- (REMOVIDAS) Funções handlePrioridadeChange e handleStatusChange ---
+        // O modal agora é apenas para visualização, como na imagem.
+
+        // --- EVENT LISTENERS ---
         btnFiltrar.addEventListener('click', listarChamados);
         btnLogout.addEventListener('click', fazerLogout);
 
         ticketList.addEventListener('click', e => {
             const t = e.target;
+            
+            // (MODIFICADO) Evento de Visualizar
             if (t.classList.contains('view-icon')) {
-                alert(`Visualizando Chamado #${t.closest('.ticket-row').dataset.ticketId}`);
+                const id = t.closest('.ticket-row').dataset.ticketId;
+                abrirModalDetalhes(id); // Chama a nova função
             }
+            
+            // (INTOCADO) Evento de Concluir
             if (t.classList.contains('btn-concluir')) {
                 const id = t.dataset.id;
+                // Usamos o 'confirm' nativo, pois é um ambiente de admin
                 if (confirm(`Deseja realmente marcar o chamado #${id} como "Concluído"?`)) {
                     atualizarStatusChamado(id, 'Concluído');
                 }
             }
         });
 
+        // (NOVOS) Event Listeners do Modal
+        btnFecharModalDetalhes.addEventListener('click', () => {
+            modalDetalhes.close();
+            limparMensagem(modalDetalhesResposta);
+            currentTicketId = null;
+        });
+        
+        // (REMOVIDOS) Listeners para 'change' nos selects, pois eles não existem mais.
+
+
+        // --- INICIALIZAÇÃO ---
         // O script do <head> já garantiu que o perfil é AGENTE ou ADMIN
         carregarCategorias();
         listarChamados();
