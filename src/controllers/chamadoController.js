@@ -3,17 +3,27 @@ import * as ChamadoModel from '../models/chamadoModel.js';
 // ====================================================
 // ======== CRIAR CHAMADO ========
 // ====================================================
+// Arquivo: chamadoController.js (apenas a função criarChamado)
+
+import * as ChamadoModel from '../models/chamadoModel.js';
+
+// ====================================================
+// ======== CRIAR CHAMADO ========
+// ====================================================
 export const criarChamado = async (req, res) => {
     try {
-        const { chamado } = req.body;
+        // --- CORREÇÃO AQUI ---
+        // 'req.body.chamado' agora é o STRING que o FormData enviou.
+        // Nós o transformamos de volta em um objeto JavaScript.
+        const chamado = JSON.parse(req.body.chamado);
         
-        // NOVO: Coleta os dados manuais do requisitante do corpo da requisição
+        // O restante do seu código agora funciona, pois 'chamado' é um objeto
         const { 
             assunto, descricao, prioridade, requisitante_id, categoria_id, 
             nome_requisitante_manual, email_requisitante_manual, telefone_requisitante_manual 
         } = chamado;
 
-        // Validação estendida
+        // Validação (seu código original)
         if (!assunto || !descricao || !requisitante_id || 
             !nome_requisitante_manual || !email_requisitante_manual || !telefone_requisitante_manual) {
             
@@ -31,11 +41,14 @@ export const criarChamado = async (req, res) => {
             requisitanteIdNum: parseInt(requisitante_id),
             categoriaIdNum: categoria_id ? parseInt(categoria_id) : null,
             
-            // NOVO: Campos manuais para o Model
             nomeRequisitanteManual: nome_requisitante_manual,
             emailRequisitanteManual: email_requisitante_manual,
             telefoneRequisitanteManual: telefone_requisitante_manual
         };
+        
+        // NOTA: Os arquivos agora estão em req.files.anexos
+        // console.log('Arquivos recebidos:', req.files.anexos);
+        // (Você precisará adicionar a lógica para salvar esses arquivos no futuro)
 
         const novoId = await ChamadoModel.create(dadosParaCriar);
         const novoChamado = await ChamadoModel.findById(novoId);
@@ -50,6 +63,8 @@ export const criarChamado = async (req, res) => {
         res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
     }
 };
+
+// ... (O restante do seu controller 'listarChamados', 'deletarChamado', etc. permanece igual)s
 
 // ====================================================
 // ======== LISTAR CHAMADOS ========
