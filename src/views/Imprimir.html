@@ -1,282 +1,309 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Impressão de Preços</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Impressão de Preços</title>
 
-    <script>
-        // --- INÍCIO DO PROTETOR DE PÁGINA (ANTI-FLICKER) ---
-        const userDataString = localStorage.getItem("userData");
+    <script>
+        // --- INÍCIO DO PROTETOR DE PÁGINA (ANTI-FLICKER) ---
+        const userDataString = localStorage.getItem("userData");
+        
+        if (!userDataString) {
+            window.location.replace("Login.html"); 
+            throw new Error("Usuário não autenticado.");
+        }
+        try {
+            const userData = JSON.parse(userDataString);
+            if (!userData?.data?.id) {
+                throw new Error("Dados de usuário inválidos.");
+            }
+        } catch (error) {
+            console.error("Sessão inválida:", error.message);
+            localStorage.removeItem("userData"); 
+            window.location.replace("Login.html"); 
+            throw new Error("Sessão inválida.");
+        }
+        // --- FIM DO PROTETOR DE PÁGINA ---
+    </script>
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="icon" type="image/png" href="/logo.png">
+    <link rel="stylesheet" href="css/imprimir.css">
 
-        if (!userDataString) {
-            window.location.replace("Login.html");
-            throw new Error("Usuário não autenticado.");
-        }
+    <style>
+        /* Estilos do Header (Inalterados) */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between; 
+            padding: 0.75rem 2rem;
+            background-color: #ffffff;
+            border-bottom: 1px solid #dee2e6;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 1030;
+        }
+        .logo {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #0d6efd;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 0;
+            white-space: nowrap;
+        }
+        .search-bar {
+            margin-left: 2rem;
+            margin-right: 2rem;
+            width: 100%;
+            max-width: 450px;
+        }
+        .search-bar input {
+            width: 100%;
+            padding: 0.6rem 1rem;
+            border: 1px solid #ced4da;
+            border-radius: 20px;
+            font-size: 0.95rem;
+        }
+        .search-bar input:focus {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13,110,253,.25);
+            outline: none;
+        }
+        
+        /* Estilos para Logout (Inalterados) */
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem; 
+        }
+        #userNameDisplay {
+            font-weight: 500;
+            color: #495057;
+            white-space: nowrap; 
+        }
+        .btn-logout {
+            background-color: #dc3545; 
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .btn-logout:hover {
+            background-color: #bb2d3b;
+        }
 
-        try {
-            const userData = JSON.parse(userDataString);
-            if (!userData?.data?.id) {
-                throw new Error("Dados de usuário inválidos.");
-            }
-        } catch (error) {
-            console.error("Sessão inválida:", error.message);
-            localStorage.removeItem("userData");
-            window.location.replace("Login.html");
-            throw new Error("Sessão inválida.");
-        }
-        // --- FIM DO PROTETOR DE PÁGINA ---
-    </script>
-
-    <link rel="stylesheet" href="css/dashboard.css">
-    <link rel="icon" type="image/png" href="/logo.png">
-    <link rel="stylesheet" href="css/imprimir.css">
-
-    <style>
-        .header {
+        /* AJUSTES DA SIDEBAR PARA ALINHAMENTO DO TEXTO LONGO */
+        /* Estas regras devem estar em 'dashboard.css', mas incluídas aqui para garantir */
+        
+        /* 1. Garante que os links da sidebar usem Flexbox */
+        .sidebar nav ul li a {
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0.75rem 2rem;
-            background-color: #ffffff;
-            border-bottom: 1px solid #dee2e6;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            position: sticky;
-            top: 0;
-            z-index: 1030;
+            align-items: center; /* Alinha o ícone e o texto verticalmente */
+            text-decoration: none;
+            padding: 10px 15px; /* Padding ajustado */
+            width: 100%;
         }
-        .logo {
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: #0d6efd;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin: 0;
+
+        /* 2. Garante o espaçamento e largura fixa para o ícone */
+        .sidebar .icon {
+            margin-right: 10px; /* Espaço entre o ícone e o texto */
+            min-width: 20px; /* Garante que o ícone '✔️' não desloque o texto */
+            text-align: center;
+        }
+
+        /* 3. Permite que o texto preencha o restante e evita quebras */
+        .sidebar .text {
+            flex-grow: 1; 
             white-space: nowrap;
         }
-        .search-bar {
-            margin-left: 2rem;
-            margin-right: 2rem;
-            width: 100%;
-            max-width: 450px;
-        }
-        .search-bar input {
-            width: 100%;
-            padding: 0.6rem 1rem;
-            border: 1px solid #ced4da;
-            border-radius: 20px;
-            font-size: 0.95rem;
-        }
-        .search-bar input:focus {
-            border-color: #86b7fe;
-            box-shadow: 0 0 0 0.25rem rgba(13,110,253,.25);
-            outline: none;
-        }
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-        #userNameDisplay {
-            font-weight: 500;
-            color: #495057;
-            white-space: nowrap;
-        }
-        .btn-logout {
-            background-color: #dc3545;
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-        }
-        .btn-logout:hover {
-            background-color: #bb2d3b;
-        }
-    </style>
-</head>
-
+    </style>
+</head> 
 <body>
 
-    <div class="dashboard-container">
-        
-        <header class="header">
-            <div class="logo">PORTAL SUPERMERCADO ROSALINA</div>
+    <div class="dashboard-container">
+        
+        <header class="header">
+            <div class="logo">PORTAL SUPERMERCADO ROSALINA</div> 
+            <div class="search-bar">
+                <input type="text" placeholder="Buscar produtos, relatórios, chamados...">
+            </div>
+            
+             <div class="header-actions">
+                <span id="userNameDisplay"></span>
+                <button id="logoutButton" class="btn-logout">Sair</button>
+            </div>
+        </header>
+        
+        <aside class="sidebar">
+            <nav>
+                <ul>
+                    <li>
+                        <a href="Dashboard.html" title="Início">
+                            <span class="icon">🏠</span>
+                            <span class="text">Início</span>
+                        </a>
+                    </li>
+                    
+                    <li class="active"> <a href="Imprimir.html" title="Impressão de Preços">
+                            <span class="icon">🖨️</span>
+                            <span class="text">Imprimir</span>
+                        </a>
+                    </li>
 
-            <div class="search-bar">
-                <input type="text" placeholder="Buscar produtos, relatórios, chamados...">
-            </div>
+                    <li class="ticket-item" id="menu-link-chamado"> 
+                        <a href="Chamado.html" title="Abrir Chamado (Airus)"> 
+                            <span class="icon">➕</span>
+                            <span class="text">Chamado</span>
+                        </a>
+                    </li>
 
-            <div class="header-actions">
-                <span id="userNameDisplay"></span>
-                <button id="logoutButton" class="btn-logout">Sair</button>
-            </div>
-        </header>
+                    <li>
+                        <a href="Chatbot.html" title="Chatbot">
+                            <span class="icon">🤖</span>
+                            <span class="text">Chatbot</span>
+                        </a>
+                    </li>
 
-        <aside class="sidebar">
-            <nav>
-                <ul>
-                    <li>
-                        <a href="Dashboard.html" title="Início">
-                            <span class="icon">🏠</span>
-                            <span class="text">Início</span>
-                        </a>
-                    </li>
+                    <li>
+                        <a href="Funcionarios.html" title="funcionario">
+                            <span class="icon">💼</span>
+                            <span class="text">Funcionários</span>
+                        </a>
+                    </li>
 
-                    <li class="active">
-                        <a href="Imprimir.html" title="Impressão de Preços">
-                            <span class="icon">🖨️</span>
-                            <span class="text">Imprimir</span>
-                        </a>
-                    </li>
+                    <li style="margin-top: 30px;">
+                        <a href="#" title="Configurações">
+                            <span class="icon">⚙️</span>
+                            <span class="text">Ajustes</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+        
+        <main class="main-content">
+            <h1>Impressão de Etiquetas de Preço</h1>
+            
+            <div class="widget">
+                <h3>Buscar Produto</h3>
+                <div class="search-container">
+                    <input type="text" id="searchInput" placeholder="Digite o nome ou código de barras do produto...">
+                    <button id="searchButton" class="btn-primary">Buscar</button>
+                </div>
+            </div>
 
-                    <li class="ticket-item" id="menu-link-chamado">
-                        <a href="Chamado.html" title="Abrir Chamado (Airus)">
-                            <span class="icon">➕</span>
-                            <span class="text">Chamado</span>
-                        </a>
-                    </li>
+            <div class="widget">
+                <h3>Resultados da Busca</h3>
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="selectAll"></th>
+                            <th>Produto</th>
+                            <th>Código EAN</th>
+                            <th>Preço (R$)</th>
+                            <th>Tipo de Etiqueta</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                        <tr>
+                            <td><input type="checkbox" class="select-item"></td>
+                            <td>Arroz Agulhinha Tipo 1 (5kg)</td>
+                            <td>7890000123456</td>
+                            <td class="price">24,90</td>
+                            <td>Gôndola (P)</td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" class="select-item"></td>
+                            <td>Refrigerante Cola 2L</td>
+                            <td>7890000654321</td>
+                            <td class="price">8,99</td>
+                            <td>Gôndola (P)</td>
+                        </tr>
+                        <tr>
+                            <td><input type="checkbox" class="select-item"></td>
+                            <td>Picanha Bovina (kg)</td>
+                            <td>7890000789012</td>
+                            <td class="price">79,90</td>
+                            <td>Açougue (M)</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="print-actions">
+                    <button id="printButton" class="btn-print">🖨️ Imprimir Selecionados</button>
+                </div>
+            </div>
+        </main>
+        
+    </div>
 
-                    <li>
-                        <a href="Chatbot.html" title="Chatbot">
-                            <span class="icon">🤖</span>
-                            <span class="text">Chatbot</span>
-                        </a>
-                    </li>
+    <div id="print-preview">
+        <div class="price-tag">
+            <div class="tag-header">PORTAL SUPERMERCADO</div>
+            <div class="tag-body">
+                <div class="tag-desc">Arroz Agulhinha Tipo 1 (5kg)</div>
+                <div class="tag-price">
+                    <span class="tag-currency">R$</span>
+                    <span class="tag-value">24</span>
+                    <span class="tag-cents">,90</span>
+                </div>
+                <div class="tag-barcode">
+                    (Simulação de Cód. Barras)
+                    <div class="barcode-lines">||| || ||| || ||||</div>
+                    7890000123456
+                </div>
+            </div>
+        </div>
+    </div>
 
-                    <li>
-                        <a href="Funcionarios.html" title="funcionario">
-                            <span class="icon">💼</span>
-                            <span class="text">Funcionários</span>
-                        </a>
-                    </li>
+<script type="module">
+    document.addEventListener('DOMContentLoaded', () => {
+        
+        // --- FUNÇÃO DE LOGOUT ---
+        function fazerLogout() {
+            localStorage.removeItem("userData"); 
+            window.location.href = "Login.html"; 
+        }
 
-                    <li style="margin-top: 30px;">
-                        <a href="#" title="Configurações">
-                            <span class="icon">⚙️</span>
-                            <span class="text">Ajustes</span>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-        </aside>
+        // --- NOME DE USUÁRIO E AJUSTE DE MENU ---
+        const userDataString = localStorage.getItem("userData");
+        try {
+            const userData = JSON.parse(userDataString); 
+            const userNameDisplay = document.getElementById('userNameDisplay'); 
 
-        <main class="main-content">
-            <h1>Impressão de Etiquetas de Preço</h1>
+            if (userNameDisplay && userData?.data?.nomeFuncionario) {
+                userNameDisplay.textContent = `Olá, ${userData.data.nomeFuncionario.split(' ')[0]}`;
+            }
 
-            <div class="widget">
-                <h3>Buscar Produto</h3>
-                <div class="search-container">
-                    <input type="text" id="searchInput" placeholder="Digite o nome ou código de barras do produto...">
-                    <button id="searchButton" class="btn-primary">Buscar</button>
-                </div>
-            </div>
+            // LÓGICA DE AJUSTE DINÂMICO DO MENU
+            const userPerfil = userData?.data?.perfil; 
+            const linkChamadoLi = document.getElementById("menu-link-chamado"); 
+            
+            if (linkChamadoLi && (userPerfil === 'AGENTE' || userPerfil === 'ADMIN')) {
+                const a = linkChamadoLi.querySelector('a');
+                a.href = "GerenciarChamados.html"; 
+                a.title = "Gerenciar Chamados";
+                a.querySelector('.icon').textContent = "✔️"; 
+                a.querySelector('.text').textContent = "Gerenciar Chamados";
+            }
+            // FIM DA LÓGICA DE AJUSTE
 
-            <div class="widget">
-                <h3>Resultados da Busca</h3>
-                <table class="results-table">
-                    <thead>
-                        <tr>
-                            <th><input type="checkbox" id="selectAll"></th>
-                            <th>Produto</th>
-                            <th>Código EAN</th>
-                            <th>Preço (R$)</th>
-                            <th>Tipo de Etiqueta</th>
-                        </tr>
-                    </thead>
-                    <tbody id="resultsBody">
-                        <tr>
-                            <td><input type="checkbox" class="select-item"></td>
-                            <td>Arroz Agulhinha Tipo 1 (5kg)</td>
-                            <td>7890000123456</td>
-                            <td class="price">24,90</td>
-                            <td>Gôndola (P)</td>
-                        </tr>
-                        <tr>
-                            <td><input type="checkbox" class="select-item"></td>
-                            <td>Refrigerante Cola 2L</td>
-                            <td>7890000654321</td>
-                            <td class="price">8,99</td>
-                            <td>Gôndola (P)</td>
-                        </tr>
-                        <tr>
-                            <td><input type="checkbox" class="select-item"></td>
-                            <td>Picanha Bovina (kg)</td>
-                            <td>7890000789012</td>
-                            <td class="price">79,90</td>
-                            <td>Açougue (M)</td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <div class="print-actions">
-                    <button id="printButton" class="btn-print">🖨️ Imprimir Selecionados</button>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <div id="print-preview">
-        <div class="price-tag">
-            <div class="tag-header">PORTAL SUPERMERCADO</div>
-            <div class="tag-body">
-                <div class="tag-desc">Arroz Agulhinha Tipo 1 (5kg)</div>
-                <div class="tag-price">
-                    <span class="tag-currency">R$</span>
-                    <span class="tag-value">24</span>
-                    <span class="tag-cents">,90</span>
-                </div>
-                <div class="tag-barcode">
-                    (Simulação de Cód. Barras)
-                    <div class="barcode-lines">||| || ||| || ||||</div>
-                    7890000123456
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script type="module">
-        document.addEventListener('DOMContentLoaded', () => {
-
-            function fazerLogout() {
-                localStorage.removeItem("userData");
-                window.location.href = "Login.html";
-            }
-
-            const userDataString = localStorage.getItem("userData");
-
-            try {
-                const userData = JSON.parse(userDataString);
-                const userNameDisplay = document.getElementById('userNameDisplay');
-
-                if (userNameDisplay && userData?.data?.nomeFuncionario) {
-                    userNameDisplay.textContent = `Olá, ${userData.data.nomeFuncionario.split(' ')[0]}`;
-                }
-
-                const userPerfil = userData?.data?.perfil;
-                const linkChamadoLi = document.getElementById("menu-link-chamado");
-
-                if (linkChamadoLi && (userPerfil === 'AGENTE' || userPerfil === 'ADMIN')) {
-                    const a = linkChamadoLi.querySelector('a');
-                    a.href = "GerenciarChamados.html";
-                    a.title = "Gerenciar Chamados";
-                    a.querySelector('.icon').textContent = "✔️";
-                    a.querySelector('.text').textContent = "Gerenciar Chamados";
-                }
-
-            } catch (error) {
-                console.error("Erro ao processar dados do usuário:", error);
-                fazerLogout();
-            }
-
-            const btnLogout = document.getElementById("logoutButton");
-            if (btnLogout) {
-                btnLogout.addEventListener('click', fazerLogout);
-            }
-        });
-    </script>
+        } catch (error) {
+            console.error("Erro ao processar dados do usuário:", error);
+            fazerLogout();
+        }
+        
+        // --- EVENT LISTENER DE LOGOUT ---
+        const btnLogout = document.getElementById("logoutButton");
+        if (btnLogout) {
+            btnLogout.addEventListener('click', fazerLogout);
+        }
+    });
+</script>
 
 </body>
 </html>
