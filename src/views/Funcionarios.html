@@ -96,6 +96,32 @@
             .btn-logout:hover {
                 background-color: #bb2d3b;
             }
+
+            /* AJUSTES DA SIDEBAR PARA ALINHAMENTO E SUPORTE A QUEBRA DE LINHA */
+            .sidebar nav ul li a {
+                display: flex;
+                align-items: center; 
+                text-decoration: none;
+                padding: 10px 15px; 
+                width: 100%;
+                height: auto; 
+            }
+
+            .sidebar .icon {
+                margin-right: 10px; 
+                min-width: 20px; 
+                text-align: center;
+                flex-shrink: 0; 
+                align-self: center; 
+            }
+
+            .sidebar .text {
+                flex-grow: 1; 
+                white-space: normal; 
+                line-height: 1.2; 
+            }
+            /* --- FIM DOS ESTILOS DE AJUSTE --- */
+
         </style>
     </head>
 
@@ -128,11 +154,11 @@
                                 <span class="text">Imprimir</span>
                             </a>
                         </li>
-                        <li class="ticket-item">
-                        <a href="GerenciarChamados.html" title="Abrir Chamado (Airus)">
-                            <span class="icon">➕</span>
-                            <span class="text"> Gerenciar Chamados</span>
-                        </a>
+                        <li class="ticket-item" id="menu-link-chamado">
+                            <a href="Chamado.html" title="Abrir Chamado (Airus)">
+                                <span class="icon">➕</span>
+                                <span class="text">Chamado</span>
+                            </a>
                         </li>
                         <li>
                             <a href="Chatbot.html" title="Chatbot">
@@ -259,9 +285,8 @@
                 window.location.href = "Login.html"; 
             }
 
-            // --- LÓGICA INSERIDA PARA O NOME DO USUÁRIO ---
+            // --- LÓGICA INSERIDA PARA O NOME DO USUÁRIO E AJUSTE DE MENU ---
             // O script do <head> já validou. Apenas lemos os dados.
-            // A linha "let userDataString = ..." FOI REMOVIDA DAQUI.
             try {
                 // Usamos a variável 'userDataString' global definida no <head>
                 const userData = JSON.parse(userDataString);
@@ -269,10 +294,28 @@
                 if (userNameDisplay && userData?.data?.nomeFuncionario) {
                     userNameDisplay.textContent = `Olá, ${userData.data.nomeFuncionario.split(' ')[0]}`;
                 }
+
+                // LÓGICA DE AJUSTE DINÂMICO DO MENU
+                const userPerfil = userData?.data?.perfil; 
+                const linkChamadoLi = document.getElementById("menu-link-chamado"); 
+                
+                if (linkChamadoLi && (userPerfil === 'AGENTE' || userPerfil === 'ADMIN')) {
+                    const a = linkChamadoLi.querySelector('a');
+                    const textSpan = a.querySelector('.text');
+
+                    a.href = "GerenciarChamados.html"; 
+                    a.title = "Gerenciar Chamados";
+                    a.querySelector('.icon').textContent = "✔️"; 
+                    
+                    // Aplica o novo formato de duas linhas para o texto
+                    textSpan.innerHTML = "Gerenciar<br>Chamados";
+                }
             } catch (error) {
                 console.error("Erro ao tentar exibir o nome do usuário:", error);
-                fazerLogout();
+                // Não é necessário deslogar se a falha for apenas na exibição do nome/menu
             }
+            // --- FIM DA LÓGICA INSERIDA ---
+
 
             let API_DATA_FUNCIONARIOS; 
             let LISTA_CARGOS; 
