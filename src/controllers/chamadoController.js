@@ -13,15 +13,10 @@ export const criarChamado = async (req, res) => {
             nome_requisitante_manual, email_requisitante_manual, telefone_requisitante_manual 
         } = chamado;
 
-        // Validação estendida: Assumimos que, se o sistema não garante o perfil, 
-        // os dados de contato são obrigatórios, exceto se requisitante_id for usado.
-        // Vou manter a validação mais estrita para garantir a qualidade dos dados.
+        // Validação estendida
         if (!assunto || !descricao || !requisitante_id || 
             !nome_requisitante_manual || !email_requisitante_manual || !telefone_requisitante_manual) {
-             
-            // Se o requisitanteId for fornecido, a validação de nome/email/tel pode ser flexível, 
-            // mas se você precisa que sejam digitados, a validação é necessária.
-            // Para manter a exigência do usuário:
+            
             return res.status(400).json({ 
                 success: false, 
                 message: 'Assunto, Descrição, ID do Requisitante e todos os dados de Contato são obrigatórios.' 
@@ -69,7 +64,7 @@ export const listarChamados = async (req, res) => {
 
         // Formata a resposta
         const chamadosFormatados = chamados.map(chamado => {
-            // O Model já retornou os campos certos (COALESCE)
+            // O Model já retornou os campos certos
             const Funcionario = { 
                 nomeFuncionario: chamado.nomeRequisitante,
                 email: chamado.emailRequisitante,

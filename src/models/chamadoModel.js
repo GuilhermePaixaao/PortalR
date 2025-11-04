@@ -41,13 +41,16 @@ export const findAll = async (filtros = {}) => {
     let sql = `
         SELECT 
             ch.*, 
-            -- Se nome_requisitante_manual estiver preenchido, usa ele, senão, busca em Funcionario
+            -- O nome ainda usa COALESCE, assumindo que Funcionario tem 'nomeFuncionario'
             COALESCE(ch.nome_requisitante_manual, f.nomeFuncionario) AS nomeRequisitante,
-            COALESCE(ch.email_requisitante_manual, f.email) AS emailRequisitante,
-            COALESCE(ch.telefone_requisitante_manual, f.telefone) AS telefoneRequisitante,
+            
+            -- CORREÇÃO: Busca email e telefone APENAS dos campos manuais da tabela Chamados (ch)
+            ch.email_requisitante_manual AS emailRequisitante,
+            ch.telefone_requisitante_manual AS telefoneRequisitante,
+            
             ca.nome AS nomeCategoria
         FROM Chamados ch
-        -- Usamos LEFT JOIN para que funcione mesmo se requisitante_id for NULL
+        -- Usamos LEFT JOIN para que funcione mesmo se requisitante_id for NULL ou inválido
         LEFT JOIN Funcionario f ON ch.requisitante_id = f.id
         LEFT JOIN Categorias ca ON ch.categoria_id = ca.id
     `;
@@ -97,4 +100,4 @@ export const updateStatus = async (id, status) => {
     const sql = "UPDATE Chamados SET status = ? WHERE id = ?";
     const [result] = await pool.query(sql, [status, id]);
     return result;
-};  
+};
