@@ -8,11 +8,12 @@
     <script>
         // --- INÍCIO DO PROTETOR DE PÁGINA (ANTI-FLICKER) ---
         const userDataString = localStorage.getItem("userData");
-        
+
         if (!userDataString) {
-            window.location.replace("Login.html"); 
+            window.location.replace("Login.html");
             throw new Error("Usuário não autenticado.");
         }
+
         try {
             const userData = JSON.parse(userDataString);
             if (!userData?.data?.id) {
@@ -20,12 +21,13 @@
             }
         } catch (error) {
             console.error("Sessão inválida:", error.message);
-            localStorage.removeItem("userData"); 
-            window.location.replace("Login.html"); 
+            localStorage.removeItem("userData");
+            window.location.replace("Login.html");
             throw new Error("Sessão inválida.");
         }
         // --- FIM DO PROTETOR DE PÁGINA ---
     </script>
+
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="icon" type="image/png" href="/logo.png">
     <link rel="stylesheet" href="css/imprimir.css">
@@ -34,7 +36,7 @@
         .header {
             display: flex;
             align-items: center;
-            justify-content: space-between; /* Alinha itens */
+            justify-content: space-between;
             padding: 0.75rem 2rem;
             background-color: #ffffff;
             border-bottom: 1px solid #dee2e6;
@@ -70,20 +72,18 @@
             box-shadow: 0 0 0 0.25rem rgba(13,110,253,.25);
             outline: none;
         }
-        
-        /* Estilos para Logout */
         .header-actions {
             display: flex;
             align-items: center;
-            gap: 1rem; 
+            gap: 1rem;
         }
         #userNameDisplay {
             font-weight: 500;
             color: #495057;
-            white-space: nowrap; 
+            white-space: nowrap;
         }
         .btn-logout {
-            background-color: #dc3545; 
+            background-color: #dc3545;
             color: white;
             border: none;
             padding: 0.5rem 1rem;
@@ -96,23 +96,25 @@
             background-color: #bb2d3b;
         }
     </style>
-</head> 
+</head>
+
 <body>
 
     <div class="dashboard-container">
         
         <header class="header">
-            <div class="logo">PORTAL SUPERMERCADO ROSALINA</div> 
+            <div class="logo">PORTAL SUPERMERCADO ROSALINA</div>
+
             <div class="search-bar">
                 <input type="text" placeholder="Buscar produtos, relatórios, chamados...">
             </div>
-            
-             <div class="header-actions">
+
+            <div class="header-actions">
                 <span id="userNameDisplay"></span>
                 <button id="logoutButton" class="btn-logout">Sair</button>
             </div>
         </header>
-        
+
         <aside class="sidebar">
             <nav>
                 <ul>
@@ -122,15 +124,16 @@
                             <span class="text">Início</span>
                         </a>
                     </li>
-                    
-                    <li class="active"> <a href="Imprimir.html" title="Impressão de Preços">
+
+                    <li class="active">
+                        <a href="Imprimir.html" title="Impressão de Preços">
                             <span class="icon">🖨️</span>
                             <span class="text">Imprimir</span>
                         </a>
                     </li>
 
-                    <li class="ticket-item">
-                        <a href="GerenciarChamados.html" title="Abrir Chamado (Airus)">
+                    <li class="ticket-item" id="menu-link-chamado">
+                        <a href="Chamado.html" title="Abrir Chamado (Airus)">
                             <span class="icon">➕</span>
                             <span class="text">Chamado</span>
                         </a>
@@ -159,10 +162,10 @@
                 </ul>
             </nav>
         </aside>
-        
+
         <main class="main-content">
             <h1>Impressão de Etiquetas de Preço</h1>
-            
+
             <div class="widget">
                 <h3>Buscar Produto</h3>
                 <div class="search-container">
@@ -207,12 +210,12 @@
                         </tr>
                     </tbody>
                 </table>
+
                 <div class="print-actions">
                     <button id="printButton" class="btn-print">🖨️ Imprimir Selecionados</button>
                 </div>
             </div>
         </main>
-        
     </div>
 
     <div id="print-preview">
@@ -234,38 +237,46 @@
         </div>
     </div>
 
-<script type="module">
-    document.addEventListener('DOMContentLoaded', () => {
-        
-        // --- FUNÇÃO DE LOGOUT ---
-        function fazerLogout() {
-            localStorage.removeItem("userData"); 
-            window.location.href = "Login.html"; 
-        }
+    <script type="module">
+        document.addEventListener('DOMContentLoaded', () => {
 
-        // --- NOME DE USUÁRIO ---
-        // O script do <head> já validou. Apenas lemos os dados.
-        const userDataString = localStorage.getItem("userData");
-        try {
-            const userData = JSON.parse(userDataString); 
-            const userNameDisplay = document.getElementById('userNameDisplay'); 
-
-            if (userNameDisplay && userData?.data?.nomeFuncionario) {
-                userNameDisplay.textContent = `Olá, ${userData.data.nomeFuncionario.split(' ')[0]}`;
+            function fazerLogout() {
+                localStorage.removeItem("userData");
+                window.location.href = "Login.html";
             }
 
-        } catch (error) {
-            console.error("Erro ao processar dados do usuário:", error);
-            fazerLogout();
-        }
-        
-        // --- EVENT LISTENER DE LOGOUT ---
-        const btnLogout = document.getElementById("logoutButton");
-        if (btnLogout) {
-            btnLogout.addEventListener('click', fazerLogout);
-        }
-    });
-</script>
+            const userDataString = localStorage.getItem("userData");
+
+            try {
+                const userData = JSON.parse(userDataString);
+                const userNameDisplay = document.getElementById('userNameDisplay');
+
+                if (userNameDisplay && userData?.data?.nomeFuncionario) {
+                    userNameDisplay.textContent = `Olá, ${userData.data.nomeFuncionario.split(' ')[0]}`;
+                }
+
+                const userPerfil = userData?.data?.perfil;
+                const linkChamadoLi = document.getElementById("menu-link-chamado");
+
+                if (linkChamadoLi && (userPerfil === 'AGENTE' || userPerfil === 'ADMIN')) {
+                    const a = linkChamadoLi.querySelector('a');
+                    a.href = "GerenciarChamados.html";
+                    a.title = "Gerenciar Chamados";
+                    a.querySelector('.icon').textContent = "✔️";
+                    a.querySelector('.text').textContent = "Gerenciar Chamados";
+                }
+
+            } catch (error) {
+                console.error("Erro ao processar dados do usuário:", error);
+                fazerLogout();
+            }
+
+            const btnLogout = document.getElementById("logoutButton");
+            if (btnLogout) {
+                btnLogout.addEventListener('click', fazerLogout);
+            }
+        });
+    </script>
 
 </body>
 </html>
