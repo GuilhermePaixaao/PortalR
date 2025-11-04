@@ -1,57 +1,47 @@
-// =======================================================
-// IMPORTAÇÕES E CONFIGURAÇÃO
-// =======================================================
-import 'dotenv/config'; // Garante que o .env seja lido primeiro
-import express from 'express';
-import cors from 'cors';
-import path from 'path'; // Módulo nativo do Node para lidar com caminhos
-import { fileURLToPath } from 'url'; // Módulo nativo do Node
+import { Router } from 'express';
+import multer from 'multer'; // Importa o multer para upload de ficheiros
+import * as ChamadoController from '../controllers/chamadoController.js';
 
-// Importa o "Roteador Chefe" que vai unificar todas as suas rotas
-import mainRouter from './src/routers/index.js';
+// Configuração do Multer
+// 'memoryStorage' armazena os ficheiros temporariamente na RAM
+const upload = multer({ storage: multer.memoryStorage() });
 
-// Configuração para __dirname funcionar com ES Modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const router = Router();
 
-const app = express();
+// ====================================================
+// ROTAS DA API DE CHAMADOS
+// ====================================================
 
-// =======================================================
-// CONFIGURAÇÕES DO APP (MIDDLEWARE)
-// =======================================================
-app.use(cors()); // Permite requisições de outros domínios
-app.use(express.json()); // Permite que o Express entenda JSON
+// POST /chamados (CRIAR)
+// Usa o 'upload.array('anexos')' para processar o FormData
+// 'anexos' deve ser o 'name' do seu <input type="file">
+router.post(
+    '/chamados', 
+    upload.array('anexos'), // Middleware do Multer
+    ChamadoController.criarChamado
+);
 
-// --- ADICIONE ESTA LINHA ---
-// Permite que o Express entenda dados de formulários (application/x-www-form-urlencoded)
-app.use(express.urlencoded({ extended: true }));
+// GET /chamados (LISTAR com filtros)
+router.get('/chamados', ChamadoController.listarChamados);
 
+// --- (NOVAS ROTAS PARA O MODAL 👁️) ---
 
-// 1. Redirecionamento da raiz
-app.get('/', (req, res) => {
-  res.redirect('/Login.html');
-});
+// GET /chamados/:id (BUSCAR UM)
+// Usado para abrir o modal de detalhes
+router.get('/chamados/:id', ChamadoController.buscarChamadoPorId);
 
-// 2. Servir os arquivos estáticos (HTML, CSS, JS)
-// Sua linha original, servindo a pasta 'views'
-app.use(express.static(path.join(__dirname, 'src', 'views')));
-// --- LINHA ADICIONADA ---
-// Servindo a nova pasta 'public' para o widget de chat
-app.use(express.static(path.join(__dirname, 'public')));
+// PATCH /chamados/:id/prioridade (ATUALIZAR PRIORIDADE)
+// Usado pelo <select> de prioridade no modal
+router.patch('/chamados/:id/prioridade', ChamadoController.atualizarPrioridade);
 
+// --- (ROTAS EXISTENTES) ---
 
-// 3. Usar TODAS as suas rotas da API
-// O mainRouter vai gerenciar /login, /usuarios, /cargos, etc.
-app.use(mainRouter);
+// DELETE /chamados/:id (DELETAR)
+router.delete('/chamados/:id', ChamadoController.deletarChamado);
 
+// PATCH /chamados/:id/status (ATUALIZAR STATUS)
+// Usado pelo botão ✔️ E pelo <select> de status no modal
+router.patch('/chamados/:id/status', ChamadoController.atualizarStatus);
 
-// =======================================================
-// INICIAR O SERVIDOR
-// =======================================================
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Servidor rodando liso na porta ${PORT}`);
-  console.log(`API disponível em: http://localhost:${PORT}`);
-  console.log(`Página de Login: http://localhost:${PORT}/Login.html`);
-});
+export default router;
 
