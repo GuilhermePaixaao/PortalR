@@ -1,302 +1,69 @@
 <!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portal Supermercado</title>
+<h3>Nível de Estoque (Categorias)</h3>
+<div class="placeholder-chart">(Gráfico de Barras: Estoque)</div>
+</div>
+<div class="widget">
+<h3>Promoções Ativas</h3>
+<div class="placeholder-image">(Imagem da promoção da semana)</div>
+</div>
+<div class="widget">
+<h3>Status das Filiais</h3>
+<div class="placeholder-chart">(Gráfico Radial: Filiais Online)</div>
+</div>
+<div class="widget stat-card">
+<div class="stat-info">
+<h3>Pedidos Online (Hoje)</h3>
+<span class="stat-value">142</span>
+</div>
+<div class="icon">🛒</div>
+</div>
+<div class="widget stat-card">
+<div class="stat-info">
+<h3>Visitantes na Loja (Agora)</h3>
+<span class="stat-value">87</span>
+</div>
+<div class="icon">👀</div>
+</div>
+</div>
+</main>
+</div>
 
-    <script>
-        // --- INÍCIO DO PROTETOR DE PÁGINA (ANTI-FLICKER) ---
-        const userDataString = localStorage.getItem("userData");
-        
-        if (!userDataString) {
-            // 1. Se NÃO houver dados, redireciona IMEDIATAMENTE
-            // Usamos .replace() para que o "voltar" do navegador não caia aqui
-            window.location.replace("Login.html"); 
-            
-            // Lança um erro para parar qualquer outra execução
-            throw new Error("Usuário não autenticado.");
-        }
 
-        try {
-            // 2. Tenta decodificar os dados
-            const userData = JSON.parse(userDataString);
-            
-            // 3. Se os dados forem inválidos (corrompidos)
-            if (!userData?.data?.id) {
-                throw new Error("Dados de usuário inválidos.");
-            }
-            
-        } catch (error) {
-            // 4. Se falhar (dados corrompidos ou inválidos)
-            console.error("Sessão inválida:", error.message);
-            localStorage.removeItem("userData"); // Limpa os dados ruins
-            window.location.replace("Login.html"); // Manda para o login
-            throw new Error("Sessão inválida.");
-        }
-        // --- FIM DO PROTETOR DE PÁGINA ---
-    </script>
-    <link rel="icon" type="image/png" href="/logo.png">
-    <link rel="stylesheet" href="css/dashboard.css">
-    
-    <style>
-        .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between; /* Alinha itens */
-            padding: 0.75rem 2rem;
-            background-color: #ffffff;
-            border-bottom: 1px solid #dee2e6;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            position: sticky;
-            top: 0;
-            z-index: 1030;
-        }
-        .logo {
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: #0d6efd;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin: 0;
-            white-space: nowrap;
-        }
-        .search-bar {
-            margin-left: 2rem;
-            margin-right: 2rem;
-            width: 100%;
-            max-width: 450px;
-        }
-        .search-bar input {
-            width: 100%;
-            padding: 0.6rem 1rem;
-            border: 1px solid #ced4da;
-            border-radius: 20px;
-            font-size: 0.95rem;
-        }
-        .search-bar input:focus {
-            border-color: #86b7fe;
-            box-shadow: 0 0 0 0.25rem rgba(13,110,253,.25);
-            outline: none;
-        }
-        
-        /* Estilos para Logout */
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 1rem; 
-        }
-        #userNameDisplay {
-            font-weight: 500;
-            color: #495057;
-            white-space: nowrap; 
-        }
-        .btn-logout {
-            background-color: #dc3545; 
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-        }
-        .btn-logout:hover {
-            background-color: #bb2d3b;
-        }
-        
-        /* AJUSTES DA SIDEBAR PARA ALINHAMENTO E SUPORTE A QUEBRA DE LINHA */
-        .sidebar nav ul li a {
-            display: flex;
-            align-items: center; 
-            text-decoration: none;
-            padding: 10px 15px; 
-            width: 100%;
-            height: auto; 
-        }
+<script type="module">
+document.addEventListener('DOMContentLoaded', () => {
+function fazerLogout() {
+localStorage.removeItem("userData");
+window.location.href = "Login.html";
+}
 
-        .sidebar .icon {
-            margin-right: 10px; 
-            min-width: 20px; 
-            text-align: center;
-            flex-shrink: 0; 
-            align-self: center; 
-        }
 
-        .sidebar .text {
-            flex-grow: 1; 
-            white-space: normal; 
-            line-height: 1.2; 
-        }
-        /* --- FIM DOS ESTILOS DE AJUSTE --- */
-    </style>
-</head>
-<body>
+try {
+const userData = JSON.parse(localStorage.getItem("userData"));
+const userNameDisplay = document.getElementById('userNameDisplay');
 
-    <div class="dashboard-container">
-        
-        <header class="header">
-            <div class="logo">PORTAL SUPERMERCADO</div>
-            
-            <div class="search-bar">
-                <input type="text" placeholder="Buscar produtos, relatórios, chamados...">
-            </div>
-            
-            <div class="header-actions">
-                <span id="userNameDisplay"></span>
-                <button id="logoutButton" class="btn-logout">Sair</button>
-            </div>
-        </header>
-        
-        <aside class="sidebar">
-            <nav>
-                <ul>
-                    <li class="active">
-                        <a href="Dashboard.html" title="Início">
-                            <span class="icon">🏠</span>
-                            <span class="text">Início</span>
-                        </a>
-                    </li>
-                    
-                    <li>
-                        <a href="Imprimir.html" title="Impressão de Preços">
-                            <span class="icon">🖨️</span>
-                            <span class="text">Imprimir</span>
-                        </a>
-                    </li>
 
-                    <li class="ticket-item" id="menu-link-chamado">
-                        <a href="Chamado.html" title="Abrir Chamado (Airus)">
-                            <span class="icon">➕</span>
-                            <span class="text">Chamado</span>
-                        </a>
-                    </li>
+if (userNameDisplay && userData?.data?.nomeFuncionario) {
+userNameDisplay.textContent = `Olá, ${userData.data.nomeFuncionario.split(' ')[0]}`;
+}
 
-                    <li>
-                        <a href="Chatbot.html" title="Chatbot">
-                            <span class="icon">🤖</span>
-                            <span class="text">Chatbot</span>
-                        </a>
-                    </li>
 
-                    <li>
-                        <a href="Funcionarios.html" title="Funcionários">
-                            <span class="icon">💼</span>
-                            <span class="text">Funcionários</span>
-                        </a>
-                    </li>
+const userPerfil = userData?.data?.perfil;
+const linkChamadoLi = document.getElementById("menu-link-chamado");
+if (linkChamadoLi && (userPerfil === 'AGENTE' || userPerfil === 'ADMIN')) {
+const a = linkChamadoLi.querySelector('a');
+a.href = "GerenciarChamados.html";
+a.title = "Gerenciar Chamados";
+a.querySelector('.icon').textContent = "✔️";
+a.querySelector('.text').innerHTML = "Gerenciar<br>Chamados";
+}
+} catch (error) {
+console.error("Erro ao configurar página:", error.message);
+fazerLogout();
+}
 
-                    <li style="margin-top: 30px;">
-                        <a href="#" title="Configurações">
-                            <span class="icon">⚙️</span>
-                            <span class="text">Ajustes</span>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-        </aside>
-        
-        <main class="main-content">
-            <h1>Dashboard</h1>
-            
-            <div class="widget-grid">
-                
-                <div class="widget large">
-                    <h3>Vendas Diárias</h3>
-                    <div class="placeholder-chart">(Gráfico de Linha: Vendas R$)</div>
-                </div>
 
-                <div class="widget large">
-                    <h3>Nível de Estoque (Categorias)</h3>
-                    <div class="placeholder-chart">(Gráfico de Barras: Estoque)</div>
-                </div>
-
-                <div class="widget">
-                    <h3>Promoções Ativas</h3>
-                    <div class="placeholder-image">(Imagem da promoção da semana)</div>
-                </div>
-
-                <div class="widget">
-                    <h3>Status das Filiais</h3>
-                    <div class="placeholder-chart">(Gráfico Radial: Filiais Online)</div>
-                </div>
-                
-                <div class="widget stat-card">
-                    <div class="stat-info">
-                        <h3>Pedidos Online (Hoje)</h3>
-                        <span class="stat-value">142</span>
-                    </div>
-                    <div class="icon">🛒</div>
-                </div>
-
-                <div class="widget stat-card">
-                    <div class="stat-info">
-                        <h3>Visitantes na Loja (Agora)</h3>
-                        <span class="stat-value">87</span>
-                    </div>
-                    <div class="icon">👀</div>
-                </div>
-
-            </div>
-        </main>
-        
-    </div>
-
-    <script type="module">
-        document.addEventListener('DOMContentLoaded', () => {
-            
-            // --- FUNÇÃO DE LOGOUT ---
-            function fazerLogout() {
-                localStorage.removeItem("userData"); 
-                window.location.href = "Login.html"; 
-            }
-
-            // O script do <head> JÁ VERIFICOU o login.
-            // Agora, apenas lemos os dados para USAR na página.
-            const userDataString = localStorage.getItem("userData");
-            
-            // Não precisamos de 'if (!userDataString)' aqui,
-            // porque o script do <head> já teria parado a página.
-            // Mas o try/catch ainda é bom por segurança.
-            try {
-                const userData = JSON.parse(userDataString); 
-                
-                // Atualiza o nome do usuário no header
-                const userNameDisplay = document.getElementById('userNameDisplay'); 
-                if (userNameDisplay && userData?.data?.nomeFuncionario) {
-                    userNameDisplay.textContent = `Olá, ${userData.data.nomeFuncionario.split(' ')[0]}`;
-                }
-
-                // Atualiza o menu dinâmico (com quebra de linha)
-                const userPerfil = userData?.data?.perfil; 
-                const linkChamadoLi = document.getElementById("menu-link-chamado"); 
-
-                if (linkChamadoLi && (userPerfil === 'AGENTE' || userPerfil === 'ADMIN')) {
-                    const a = linkChamadoLi.querySelector('a');
-                    const textSpan = a.querySelector('.text');
-
-                    a.href = "GerenciarChamados.html"; 
-                    a.title = "Gerenciar Chamados";
-                    a.querySelector('.icon').textContent = "✔️"; 
-                    
-                    // Aplica o novo formato de duas linhas para o texto
-                    textSpan.innerHTML = "Gerenciar<br>Chamados";
-                    linkChamadoLi.classList.remove('active');
-                }
-
-            } catch (error) {
-                // Caso algo muito estranho aconteça
-                console.error("Erro ao configurar página:", error.message);
-                fazerLogout(); // Desloga por segurança
-            }
-            
-            // --- EVENT LISTENER DE LOGOUT ---
-            const btnLogout = document.getElementById("logoutButton");
-            if (btnLogout) {
-                btnLogout.addEventListener('click', fazerLogout);
-            }
-        });
-    </script>
-
+document.getElementById("logoutButton").addEventListener('click', fazerLogout);
+});
+</script>
 </body>
 </html>
