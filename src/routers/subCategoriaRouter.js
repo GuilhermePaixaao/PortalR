@@ -1,7 +1,8 @@
-// /routers/subCategoriaRouter.js
 import { Router } from 'express';
-// Lembre-se de usar o 'C' maiúsculo para bater com o nome do arquivo
-import * as SubcategoriaController from '../controllers/subcategoriaController.js';
+
+// CORREÇÃO AQUI:
+// O nome do arquivo do controller é 'subCategoriaController.js' (com 'C' maiúsculo)
+import * as SubcategoriaController from '../controllers/subCategoriaController.js';
 
 const router = Router();
 
