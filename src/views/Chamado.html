@@ -6,6 +6,7 @@
     <title>Chamados - Portal Supermercado</title>
 
     <script>
+        // (Script de proteção anti-flicker, se houver, iria aqui)
     </script>
     
     <link rel="icon" type="image/png" href="/logo.png">
@@ -13,146 +14,37 @@
     <link rel="stylesheet" href="css/chamado.css">
     <link rel="stylesheet" href="css/ticket.css">
     <style>
-        /* Estilos do Modal (Dialog) */
-        dialog:not([open]) {
-            display: none;
-        }
-
-        dialog::backdrop {
-            background: rgba(0, 0, 0, 0.6);
-        }
-
-        dialog {
-            border: none;
-            border-radius: 8px;
-            padding: 1.5rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-            max-width: 600px;
-            width: calc(100% - 2rem);
-        }
-
-        .grupo-form {
-            margin-bottom: 1rem;
-        }
-
-        .grupo-form label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-        }
-
+        /* (Todos os seus estilos CSS permanecem os mesmos) */
+        dialog:not([open]) { display: none; }
+        dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
+        dialog { border: none; border-radius: 8px; padding: 1.5rem; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); max-width: 600px; width: calc(100% - 2rem); }
+        .grupo-form { margin-bottom: 1rem; }
+        .grupo-form label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
         .grupo-form input[type="text"],
         .grupo-form input[type="tel"],
         .grupo-form input[type="email"],
         .grupo-form textarea,
         .grupo-form select,
-        .grupo-form input[type="file"] {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #ced4da;
-            border-radius: 4px;
-            font-size: 1rem;
-        }
-
-        .form-actions {
-            margin-top: 1.5rem;
-            display: flex;
-            justify-content: flex-end;
-            gap: 0.5rem;
-        }
-
-        .form-actions button {
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        #fecharModal, #fecharModalDetalhes {
-            background-color: #6c757d;
-            color: white;
-        }
-
-        #criarTicket {
-            background-color: #198754;
-            color: white;
-        }
+        .grupo-form input[type="file"] { width: 100%; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 4px; font-size: 1rem; }
+        .form-actions { margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 0.5rem; }
+        .form-actions button { padding: 0.75rem 1.5rem; border: none; border-radius: 4px; cursor: pointer; }
+        #fecharModal, #fecharModalDetalhes { background-color: #6c757d; color: white; }
+        #criarTicket { background-color: #198754; color: white; }
         
-        /* --- ESTILOS DO NOVO MODAL DE DETALHES --- */
-        #modalDetalhes .detalhe-grupo {
-            margin-bottom: 1rem;
-        }
-        #modalDetalhes .detalhe-label {
-            font-weight: 600;
-            color: #495057;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            margin-bottom: 0.25rem;
-            display: block;
-        }
-        #modalDetalhes .detalhe-valor {
-            font-size: 1rem;
-            padding: 0.5rem;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-            word-wrap: break-word;
-        }
-        #modalDetalhes .detalhe-descricao {
-            font-size: 1rem;
-            padding: 0.5rem;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-            white-space: pre-wrap; /* Preserva quebras de linha da descrição */
-            min-height: 100px;
-            max-height: 250px;
-            overflow-y: auto;
-        }
-        /* --- FIM ESTILOS MODAL DETALHES --- */
-
-
-        /* Ajuste Main Content */
-        .main-content {
-            grid-area: main;
-            overflow-y: auto;
-            padding: 2rem;
-            background-color: #f8f9fa;
-        }
-
-        .page-actions {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            z-index: 1050;
-        }
-
-        .btn-new-ticket {
-            background-color: #0d6efd;
-            color: white;
-            padding: 1rem 1.5rem;
-            border: none;
-            border-radius: 50px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-            transition: background-color 0.2s ease;
-        }
-
-        .btn-new-ticket:hover {
-            background-color: #0b5ed7;
-        }
-
-        /* Alertas */
-        .alert {
-            padding: 1rem;
-            margin-top: 1rem;
-            border-radius: 4px;
-        }
+        #modalDetalhes .detalhe-grupo { margin-bottom: 1rem; }
+        #modalDetalhes .detalhe-label { font-weight: 600; color: #495057; font-size: 0.9rem; text-transform: uppercase; margin-bottom: 0.25rem; display: block; }
+        #modalDetalhes .detalhe-valor { font-size: 1rem; padding: 0.5rem; background-color: #f8f9fa; border-radius: 4px; word-wrap: break-word; }
+        #modalDetalhes .detalhe-descricao { font-size: 1rem; padding: 0.5rem; background-color: #f8f9fa; border-radius: 4px; white-space: pre-wrap; min-height: 100px; max-height: 250px; overflow-y: auto; }
+        
+        .main-content { grid-area: main; overflow-y: auto; padding: 2rem; background-color: #f8f9fa; }
+        .page-actions { position: fixed; bottom: 2rem; right: 2rem; z-index: 1050; }
+        .btn-new-ticket { background-color: #0d6efd; color: white; padding: 1rem 1.5rem; border: none; border-radius: 50px; font-size: 1.1rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); transition: background-color 0.2s ease; }
+        .btn-new-ticket:hover { background-color: #0b5ed7; }
+        .alert { padding: 1rem; margin-top: 1rem; border-radius: 4px; }
         .alert-success { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
         .alert-danger { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
         .alert-warning { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
 
-        /* Lista de Tickets */
         .ticket-list { display: flex; flex-direction: column; }
         .ticket-row { display: flex; border-bottom: 1px solid #eee; padding: 1rem 0.5rem; align-items: center; }
         .ticket-row.header { background-color: #f8f9fa; font-weight: bold; border-bottom: 2px solid #dee2e6; }
@@ -166,91 +58,28 @@
         .ticket-created { flex: 0 0 100px; text-align: center; }
         .ticket-actions { flex: 0 0 60px; text-align: center; cursor: pointer; }
 
-        /* Badges */
         .priority-badge,
-        .status-badge {
-            padding: 0.2em 0.6em;
-            border-radius: 0.25rem;
-            font-size: 0.85em;
-            font-weight: 600;
-        }
+        .status-badge { padding: 0.2em 0.6em; border-radius: 0.25rem; font-size: 0.85em; font-weight: 600; }
         .priority-badge.alta, .priority-badge.high { background-color: #f8d7da; color: #842029; }
         .priority-badge.média, .priority-badge.medium, .priority-badge.media { background-color: #fff3cd; color: #664d03; }
         .priority-badge.baixa, .priority-badge.low { background-color: #cfe2ff; color: #084298; }
         .priority-badge.planejado { background-color: #e2d1e7; color: #510f32; } 
-
         .status-badge.aberto, .status-badge.open { background-color: #ffc107; color: #000; }
         .status-badge.concluído, .status-badge.completed { background-color: #d1e7dd; color: #0f5132; }
         .status-badge.em-andamento { background-color: #cfe2ff; color: #084298; }
 
         #loadingIndicator { padding: 2rem; text-align: center; color: #6c757d; }
-
-        /* --- ESTILOS DO HEADER ATUALIZADOS --- */
-        .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between; 
-            padding: 0.75rem 2rem;
-            background-color: #ffffff;
-            border-bottom: 1px solid #dee2e6;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-            position: sticky;
-            top: 0;
-            z-index: 1030;
-        }
-        .logo {
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: #0d6efd;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin: 0;
-            white-space: nowrap;
-        }
-        .search-bar {
-            margin-left: 2rem;
-            margin-right: 2rem; 
-            width: 100%;
-            max-width: 450px;
-        }
-        .search-bar input {
-            width: 100%;
-            padding: 0.6rem 1rem;
-            border: 1px solid #ced4da;
-            border-radius: 20px;
-            font-size: 0.95rem;
-        }
-        .search-bar input:focus {
-            border-color: #86b7fe;
-            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, .25);
-            outline: none;
-        }
         
-        /* Estilos para Logout */
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 1rem; 
-        }
-        #userNameDisplay {
-            font-weight: 500;
-            color: #495057;
-            white-space: nowrap; 
-        }
-        .btn-logout {
-            background-color: #dc3545; 
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-        }
-        .btn-logout:hover {
-            background-color: #bb2d3b;
-        }
-        /* --- FIM ESTILOS HEADER --- */
+        .header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 2rem; background-color: #ffffff; border-bottom: 1px solid #dee2e6; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); position: sticky; top: 0; z-index: 1030; }
+        .logo { font-size: 1.4rem; font-weight: 700; color: #0d6efd; text-transform: uppercase; letter-spacing: 0.5px; margin: 0; white-space: nowrap; }
+        .search-bar { margin-left: 2rem; margin-right: 2rem; width: 100%; max-width: 450px; }
+        .search-bar input { width: 100%; padding: 0.6rem 1rem; border: 1px solid #ced4da; border-radius: 20px; font-size: 0.95rem; }
+        .search-bar input:focus { border-color: #86b7fe; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, .25); outline: none; }
+        
+        .header-actions { display: flex; align-items: center; gap: 1rem; }
+        #userNameDisplay { font-weight: 500; color: #495057; white-space: nowrap; }
+        .btn-logout { background-color: #dc3545; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500; cursor: pointer; transition: background-color 0.2s ease; }
+        .btn-logout:hover { background-color: #bb2d3b; }
     </style>
 </head>
 <body>
@@ -262,8 +91,7 @@
             <div class="search-bar">
                 <input type="text" placeholder="Buscar produtos, relatórios, chamados...">
             </div>
-            
-            
+            <!-- (Ações de Header, como botão de Sair, iriam aqui se houvesse) -->
         </header>
 
         <dialog id="modalTicket" aria-labelledby="modalTitle">
@@ -323,6 +151,25 @@
                     </div>
                 </div>
 
+                <!-- 
+                ==================================================================
+                                    NOVO CAMPO DE SUBCATEGORIA
+                ==================================================================
+                -->
+                <div class="row">
+                    <div class="col-md-12">
+                        <!-- Este grupo começa escondido e aparece quando uma Categoria é selecionada -->
+                        <div class="grupo-form" id="grupoSubcategoria" style="display: none;">
+                            <label for="subcategoria">Subcategoria</label>
+                            <select id="subcategoria" name="subcategoria" class="form-select">
+                                <!-- Preenchido dinamicamente pelo JS -->
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <!-- ================================================================== -->
+
+
                 <div class="grupo-form">
                     <label for="anexo">Anexar Arquivos (Opcional)</label>
                     <input type="file" id="anexo" name="anexos" multiple>
@@ -339,101 +186,36 @@
         </dialog>
         
         <dialog id="modalDetalhes" aria-labelledby="modalDetalhesTitle">
+            <!-- (O HTML do Modal de Detalhes permanece o mesmo) -->
             <h2 id="modalDetalhesTitle">Detalhes do Chamado</h2>
             <hr>
-            
             <div class="row">
-                <div class="col-md-4">
-                    <div class="detalhe-grupo">
-                        <span class="detalhe-label">Ticket ID</span>
-                        <span id="detalheId" class="detalhe-valor">#...</span>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="detalhe-grupo">
-                        <span class="detalhe-label">Status</span>
-                        <span id="detalheStatus" class="detalhe-valor">...</span>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="detalhe-grupo">
-                        <span class="detalhe-label">Prioridade</span>
-                        <span id="detalhePrioridade" class="detalhe-valor">...</span>
-                    </div>
-                </div>
+                <div class="col-md-4"><div class="detalhe-grupo"><span class="detalhe-label">Ticket ID</span><span id="detalheId" class="detalhe-valor">#...</span></div></div>
+                <div class="col-md-4"><div class="detalhe-grupo"><span class="detalhe-label">Status</span><span id="detalheStatus" class="detalhe-valor">...</span></div></div>
+                <div class="col-md-4"><div class="detalhe-grupo"><span class="detalhe-label">Prioridade</span><span id="detalhePrioridade" class="detalhe-valor">...</span></div></div>
             </div>
-
-            <div class="detalhe-grupo">
-                <span class="detalhe-label">Assunto</span>
-                <div id="detalheAssunto" class="detalhe-valor"></div>
-            </div>
-
-            <div class="detalhe-grupo">
-                <span class="detalhe-label">Descrição</span>
-                <div id="detalheDescricao" class="detalhe-descricao"></div>
-            </div>
-
+            <div class="detalhe-grupo"><span class="detalhe-label">Assunto</span><div id="detalheAssunto" class="detalhe-valor"></div></div>
+            <div class="detalhe-grupo"><span class="detalhe-label">Descrição</span><div id="detalheDescricao" class="detalhe-descricao"></div></div>
             <div class="row">
-                <div class="col-md-6">
-                    <div class="detalhe-grupo">
-                        <span class="detalhe-label">Requisitante</span>
-                        <span id="detalheRequisitante" class="detalhe-valor">...</span>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="detalhe-grupo">
-                        <span class="detalhe-label">Categoria</span>
-                        <span id="detalheCategoria" class="detalhe-valor">...</span>
-                    </div>
-                </div>
+                <div class="col-md-6"><div class="detalhe-grupo"><span class="detalhe-label">Requisitante</span><span id="detalheRequisitante" class="detalhe-valor">...</span></div></div>
+                <div class="col-md-6"><div class="detalhe-grupo"><span class="detalhe-label">Categoria</span><span id="detalheCategoria" class="detalhe-valor">...</span></div></div>
             </div>
-            <div class="detalhe-grupo">
-                <span class="detalhe-label">Criado em</span>
-                <span id="detalheData" class="detalhe-valor">...</span>
-            </div>
-            
-            <div class="form-actions">
-                <button type="button" id="fecharModalDetalhes">Fechar</button>
-            </div>
+            <div class="detalhe-grupo"><span class="detalhe-label">Criado em</span><span id="detalheData" class="detalhe-valor">...</span></div>
+            <div class="form-actions"><button type="button" id="fecharModalDetalhes">Fechar</button></div>
         </dialog>
         
         <main class="main-content">
             <h1>Meus Chamados</h1> 
             <hr>
-
             <div id="divRespostaGeral" class="mb-3"></div>
-
             <div class="widget card shadow-sm">
                 <div class="card-body">
                     <div class="filters mb-3 row g-2">
-                        <div class="col-md-4">
-                            <label for="filtroAssunto" class="form-label">Filtrar por Assunto</label>
-                            <input type="text" id="filtroAssunto" class="form-control" placeholder="Digite o assunto...">
-                        </div>
-                        <div class="col-md-3">
-                            <label for="filtroPrioridade" class="form-label">Prioridade</label>
-                            <select id="filtroPrioridade" class="form-select">
-                                <option value="">Todas</option>
-                                <option value="Alta">Alta</option>
-                                <option value="Média">Média</option>
-                                <option value="Baixa">Baixa</option>
-                                <option value="Planejado">Planejado</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="filtroStatus" class="form-label">Status</label>
-                            <select id="filtroStatus" class="form-select">
-                                <option value="">Todos</option>
-                                <option value="Aberto">Aberto</option>
-                                <option value="Em Andamento">Em Andamento</option>
-                                <option value="Concluído">Concluído</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button id="btnFiltrar" class="btn btn-primary w-100">Filtrar</button>
-                        </div>
+                        <div class="col-md-4"><label for="filtroAssunto" class="form-label">Filtrar por Assunto</label><input type="text" id="filtroAssunto" class="form-control" placeholder="Digite o assunto..."></div>
+                        <div class="col-md-3"><label for="filtroPrioridade" class="form-label">Prioridade</label><select id="filtroPrioridade" class="form-select"><option value="">Todas</option><option value="Alta">Alta</option><option value="Média">Média</option><option value="Baixa">Baixa</option><option value="Planejado">Planejado</option></select></div>
+                        <div class="col-md-3"><label for="filtroStatus" class="form-label">Status</label><select id="filtroStatus" class="form-select"><option value="">Todos</option><option value="Aberto">Aberto</option><option value="Em Andamento">Em Andamento</option><option value="Concluído">Concluído</option></select></div>
+                        <div class="col-md-2 d-flex align-items-end"><button id="btnFiltrar" class="btn btn-primary w-100">Filtrar</button></div>
                     </div>
-
                     <div id="ticketList" class="ticket-list">
                         <div class="ticket-row header">
                             <div class="ticket-cell ticket-id">Ticket</div>
@@ -445,11 +227,8 @@
                             <div class="ticket-cell ticket-created">Criado em</div>
                             <div class="ticket-cell ticket-actions">Ação</div>
                         </div>
-                        <div id="loadingIndicator">
-                            <p>Carregando chamados...</p>
-                        </div>
+                        <div id="loadingIndicator"><p>Carregando chamados...</p></div>
                     </div>
-
                 </div>
             </div>
         </main>
@@ -469,6 +248,9 @@
         let userData = null;
         let userId = 111; // <-- ID Fixo para desenvolvimento
 
+        // --- Variáveis Globais de Dados ---
+        let listaSubcategorias = []; // NOVA VARIÁVEL GLOBAL
+
         // --- Referências ---
         const modal = document.getElementById("modalTicket");
         const btnAbrir = document.getElementById("newTicketButton");
@@ -480,92 +262,88 @@
         const modalResposta = document.getElementById("modalResposta");
         const divRespostaGeral = document.getElementById("divRespostaGeral");
         const btnLogout = document.getElementById("logoutButton"); 
-
         const modalDetalhes = document.getElementById("modalDetalhes");
         const btnFecharModalDetalhes = document.getElementById("fecharModalDetalhes");
-
         const filtroAssunto = document.getElementById("filtroAssunto");
         const filtroPrioridade = document.getElementById("filtroPrioridade");
         const filtroStatus = document.getElementById("filtroStatus");
         const btnFiltrar = document.getElementById("btnFiltrar");
-        
-        // --- NOVA REFERÊNCIA PARA O CAMPO DE TELEFONE ---
         const inputTelefone = document.getElementById("telefoneRequisitante");
+
+        // --- NOVAS REFERÊNCIAS DE SUBCATEGORIA ---
+        const selectSubcategoriaModal = document.getElementById("subcategoria");
+        const grupoSubcategoria = document.getElementById("grupoSubcategoria");
 
         // --- Funções Auxiliares ---
         function exibirMensagem(elemento, mensagem, sucesso = true) {
             elemento.textContent = mensagem;
             elemento.className = sucesso ? 'alert alert-success' : 'alert alert-danger';
         }
-
         function limparMensagem(elemento) {
             elemento.textContent = '';
             elemento.className = '';
         }
-
         function escapeHtml(text) {
             if (!text) return '';
             const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
             return text.replace(/[&<>"']/g, m => map[m]);
         }
-
         function formatarData(isoString) {
             if (!isoString) return 'N/A';
             try {
                 const dt = new Date(isoString);
                 const data = dt.toLocaleDateString('pt-BR');
-                const hora = dt.toLocaleTimeString('pt-BR', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
+                const hora = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                 return `${data} ${hora}`;
             } catch (e) {
                 return 'Data inválida';
             }
         }
-        
-        // =======================================================
-        //     +++ NOVA FUNÇÃO DE MÁSCARA DE TELEFONE +++
-        // =======================================================
         function aplicarMascaraTelefone(input) {
-            let valor = input.value;
-            valor = valor.replace(/\D/g, ""); // Remove tudo que não é dígito
-            valor = valor.substring(0, 11);   // Limita a 11 dígitos (Celular: XX XXXXX-XXXX)
-
+            let valor = input.value.replace(/\D/g, "").substring(0, 11);
             if (valor.length > 6) {
-                // Formato (XX) XXXXX-XXXX
                 valor = valor.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, '($1) $2-$3');
             } else if (valor.length > 2) {
-                // Formato (XX) XXXXX
                 valor = valor.replace(/^(\d{2})(\d{0,5}).*/, '($1) $2');
             } else if (valor.length > 0) {
-                // Formato (XX
                 valor = valor.replace(/^(\d{0,2}).*/, '($1');
             }
-            input.value = valor; // Define o valor formatado de volta no input
+            input.value = valor;
         }
-        // =======================================================
 
-        // --- Carregar Categorias ---
-        async function carregarCategorias() {
+        // --- ATUALIZADO: Carregar Categorias e Subcategorias ---
+        async function carregarDadosIniciais() {
             try {
-                const response = await fetch(`${API_URL}/categorias`);
-                if (!response.ok) throw new Error("Erro ao carregar categorias.");
-                const categorias = await response.json();
+                // 1. Busca Categorias e Subcategorias em paralelo
+                const [catResponse, subCatResponse] = await Promise.all([
+                    fetch(`${API_URL}/categorias`),
+                    fetch(`${API_URL}/subcategorias`)
+                ]);
+
+                if (!catResponse.ok) throw new Error("Erro ao carregar categorias.");
+                if (!subCatResponse.ok) throw new Error("Erro ao carregar subcategorias.");
+
+                const categorias = await catResponse.json();
+                listaSubcategorias = await subCatResponse.json(); // Salva na variável global
+
+                // 2. Popula o dropdown de Categorias (como antes)
                 selectCategoriaModal.innerHTML = '<option value="">-- Selecionar --</option>';
                 categorias.forEach(cat => {
                     const option = document.createElement("option");
-                    // Assumindo que seu backend envia 'id' e 'nome'
                     option.value = cat.id; 
                     option.textContent = cat.nome;
                     selectCategoriaModal.appendChild(option);
                 });
+
             } catch (error) {
                 console.error(error);
+                // Mostra o erro no modal se ele estiver aberto, ou na página principal
+                exibirMensagem(modal.open ? modalResposta : divRespostaGeral, error.message, false);
             }
         }
 
         // --- Renderizar Lista de Chamados (ATUALIZADO) ---
+        // (Atualizado para mostrar subcategoria.nome se existir, senão categoria.nome)
         function renderizarChamados(chamados) {
             if (loadingIndicator) loadingIndicator.style.display = 'none';
             ticketList.querySelectorAll('.data-row').forEach(row => row.remove());
@@ -586,13 +364,36 @@
                 const prioridadeClass = (chamado.prioridade || 'Média').toLowerCase().replace('é', 'e');
                 const statusClass = (chamado.status || 'Aberto').toLowerCase().replace(/\s+/g, '-');
 
+                // Lógica para exibir a categoria mais específica
+                let nomeCategoria = 'N/A';
+                if (chamado.Subcategoria) { // Se a subcategoria existe (vem do include)
+                    nomeCategoria = chamado.Subcategoria.nome; 
+                } else if (chamado.Categoria) { // Senão, usa a categoria pai
+                    nomeCategoria = chamado.Categoria.nome;
+                }
+                
+                // No seu HTML original estava 'chamado.Categorias?.nome', vamos manter
+                // a lógica de exibição, mas o ideal seria o backend
+                // fazer o include da subcategoria também.
+                // Assumindo que o backend foi atualizado para:
+                // include: [ { model: Categoria }, { model: Subcategoria } ]
+                // O código abaixo funcionará.
+                
+                let nomeExibicao = 'N/A';
+                if (chamado.Subcategoria && chamado.Subcategoria.nome) {
+                    nomeExibicao = `${chamado.Categoria?.nome || '?'} > ${chamado.Subcategoria.nome}`;
+                } else if (chamado.Categoria && chamado.Categoria.nome) {
+                    nomeExibicao = chamado.Categoria.nome;
+                }
+
+
                 row.innerHTML = `
                     <div class="ticket-cell ticket-id">#${chamado.id}</div>
                     <div class="ticket-cell ticket-priority">
                         <span class="priority-badge ${prioridadeClass}">${escapeHtml(chamado.prioridade)}</span>
                     </div>
                     <div class="ticket-cell ticket-subject">${escapeHtml(chamado.assunto)}</div>
-                    <div class="ticket-cell ticket-category">${escapeHtml(chamado.Categorias?.nome || 'N/A')}</div>
+                    <div class="ticket-cell ticket-category">${escapeHtml(nomeExibicao)}</div>
                     <div class="ticket-cell ticket-status">
                         <span class="status-badge ${statusClass}">${escapeHtml(chamado.status)}</span>
                     </div>
@@ -612,7 +413,7 @@
                     document.getElementById('detalheAssunto').textContent = chamado.assunto;
                     document.getElementById('detalheDescricao').textContent = chamado.descricao;
                     document.getElementById('detalheRequisitante').textContent = chamado.Funcionario?.nomeFuncionario || 'Desconhecido';
-                    document.getElementById('detalheCategoria').textContent = chamado.Categorias?.nome || 'N/A';
+                    document.getElementById('detalheCategoria').textContent = nomeExibicao; // Usa o nome formatado
                     document.getElementById('detalheData').textContent = formatarData(chamado.created_at);
 
                     modalDetalhes.showModal();
@@ -621,7 +422,7 @@
             });
         }
 
-        // --- Listar Chamados (ATUALIZADO) ---
+        // --- Listar Chamados (Lógica de filtro permanece a mesma) ---
         async function listarChamados() {
             limparMensagem(divRespostaGeral);
             ticketList.querySelectorAll('.data-row').forEach(row => row.remove());
@@ -637,8 +438,7 @@
             if (filtroStatus.value) {
                 params.append('status', filtroStatus.value);
             }
-            
-            params.append('requisitante_id', userId); // USA O ID FIXO
+            params.append('requisitante_id', userId); 
 
             const url = `${API_URL}/chamados?${params.toString()}`;
 
@@ -653,7 +453,7 @@
             }
         }
 
-        // --- Criar Novo Chamado (TOTALMENTE REESCRITO PARA FORMDATA) ---
+        // --- ATUALIZADO: Criar Novo Chamado ---
         async function criarChamado(event) {
             event.preventDefault();
             limparMensagem(modalResposta);
@@ -666,13 +466,16 @@
             const descricao = ticketForm.descricao.value.trim();
             const prioridade = ticketForm.prioridade.value || 'Média';
             const categoriaId = ticketForm.categoria.value || null;
+            
+            // 1b. COLETAR O NOVO CAMPO DE SUBCATEGORIA
+            const subcategoriaId = ticketForm.subcategoria.value || null;
 
             if (!nomeRequisitante || !emailRequisitante || !assunto || !descricao) {
                 exibirMensagem(modalResposta, 'Nome, Email, Assunto e Descrição são obrigatórios.', false);
                 return;
             }
 
-            // 2. Coletar arquivos e validar tamanho
+            // 2. Coletar arquivos e validar tamanho (sem mudanças)
             const anexoInput = document.getElementById('anexo');
             const files = anexoInput.files;
             let totalSize = 0;
@@ -687,11 +490,10 @@
                 return;
             }
 
-            // 3. Montar o FormData
+            // 3. ATUALIZADO: Montar o FormData
             const formData = new FormData();
             const dadosChamado = {
                 chamado: {
-                    // Chaves corretas (com _manual)
                     nome_requisitante_manual: nomeRequisitante,
                     email_requisitante_manual: emailRequisitante,
                     telefone_requisitante_manual: telefoneRequisitante,
@@ -699,7 +501,8 @@
                     descricao: descricao,
                     prioridade: prioridade,
                     requisitante_id: userId, // ID Fixo
-                    categoria_id: categoriaId ? parseInt(categoriaId) : null
+                    categoria_id: categoriaId ? parseInt(categoriaId) : null,
+                    subcategoria_id: subcategoriaId ? parseInt(subcategoriaId) : null // ENVIAR O NOVO ID
                 }
             };
             
@@ -709,7 +512,7 @@
                 formData.append('anexos', files[i]);
             }
 
-            // 4. Enviar a requisição fetch
+            // 4. Enviar a requisição fetch (sem mudanças)
             try {
                 const response = await fetch(`${API_URL}/chamados`, {
                     method: 'POST',
@@ -723,18 +526,27 @@
 
                 exibirMensagem(divRespostaGeral, "Chamado criado com sucesso!", true);
                 modal.close();
-                ticketForm.reset();
+                // ticketForm.reset() é chamado no 'cancel' e 'close'
                 listarChamados();
             } catch (error) {
                 exibirMensagem(modalResposta, error.message, false);
             }
         }
-
-        // --- Lógica do Modal "Novo Chamado" ---
-        btnAbrir.addEventListener('click', () => {
+        
+        // --- ATUALIZADO: Lógica do Modal "Novo Chamado" ---
+        function resetarModalForm() {
+            ticketForm.reset();
             limparMensagem(modalResposta);
+            // Esconde e reseta o dropdown de subcategoria
+            grupoSubcategoria.style.display = 'none';
+            selectSubcategoriaModal.innerHTML = '';
+        }
+
+        btnAbrir.addEventListener('click', () => {
+            resetarModalForm();
             
-            document.getElementById('nomeRequisitante').value = '';
+            // Pré-preenche os dados (se houver)
+            document.getElementById('nomeRequisitante').value = ''; // Ajuste se precisar buscar dados do usuário logado
             document.getElementById('emailRequisitante').value = ''; 
 
             if (typeof modal.showModal === 'function') modal.showModal();
@@ -742,17 +554,10 @@
             document.getElementById('assunto').focus();
         });
         
-        btnFechar.addEventListener('click', () => { modal.close(); ticketForm.reset(); });
+        btnFechar.addEventListener('click', () => { modal.close(); });
+        modal.addEventListener('close', () => { resetarModalForm(); }); // Garante o reset ao fechar
         
-        modal.addEventListener('click', (e) => {
-            const rect = modal.getBoundingClientRect();
-            const isInDialog = (e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom);
-            if (!isInDialog) { modal.close(); ticketForm.reset(); }
-        });
-        
-        modal.addEventListener('cancel', () => { ticketForm.reset(); });
-        
-        // --- Lógica do Modal "Detalhes" (NOVO) ---
+        // --- Lógica do Modal "Detalhes" (sem mudanças) ---
         btnFecharModalDetalhes.addEventListener('click', () => {
             modalDetalhes.close();
         });
@@ -760,18 +565,53 @@
         // --- Event Listeners ---
         ticketForm.addEventListener('submit', criarChamado);
         btnFiltrar.addEventListener('click', listarChamados);
-        
-        // --- NOVO EVENT LISTENER PARA A MÁSCARA ---
         if(inputTelefone) {
             inputTelefone.addEventListener('input', () => aplicarMascaraTelefone(inputTelefone));
         }
 
-        
+        // ---
+        // ==================================================================
+        //                   LÓGICA DO DROPDOWN EM CASCATA
+        // ==================================================================
+        // ---
+        selectCategoriaModal.addEventListener('change', () => {
+            const categoriaId = parseInt(selectCategoriaModal.value, 10);
+            
+            // 1. Limpa o dropdown de subcategoria
+            selectSubcategoriaModal.innerHTML = '<option value="">-- Selecionar Subcategoria --</option>';
+
+            // 2. Se a categoria for inválida (ex: "-- Selecionar --"), esconde o dropdown
+            if (isNaN(categoriaId) || !categoriaId) {
+                grupoSubcategoria.style.display = 'none'; 
+                selectSubcategoriaModal.required = false;
+                return;
+            }
+
+            // 3. Filtra a lista global de subcategorias
+            const subcategoriasFilhas = listaSubcategorias.filter(sub => sub.id_categoria === categoriaId);
+
+            // 4. Se encontrou subcategorias, popula o dropdown e o exibe
+            if (subcategoriasFilhas.length > 0) {
+                subcategoriasFilhas.forEach(sub => {
+                    const option = document.createElement("option");
+                    option.value = sub.id;
+                    option.textContent = sub.nome;
+                    selectSubcategoriaModal.appendChild(option);
+                });
+                grupoSubcategoria.style.display = 'block'; // Mostra o dropdown
+                selectSubcategoriaModal.required = true; // Torna obrigatório
+            } else {
+                // 5. Se não encontrou, mantém o dropdown escondido
+                grupoSubcategoria.style.display = 'none';
+                selectSubcategoriaModal.required = false;
+            }
+        });
+
 
         // --- Inicialização ---
         async function init() {
-            // Linha do "Modo de Teste" removida
-            await carregarCategorias();
+            // Renomeei a função de carregamento
+            await carregarDadosIniciais(); 
             await listarChamados(); 
         }
         init();
