@@ -1,16 +1,19 @@
 import pool from '../config/database.js';
 
-// Cria um novo chamado
+// Cria um novo chamado (com subcategoria_id)
 export const create = async (chamado) => {
-    // Adicionadas as novas variáveis
-    const { assunto, descricao, prioridade, status, requisitanteIdNum, categoriaIdNum, 
-            nomeRequisitanteManual, emailRequisitanteManual, telefoneRequisitanteManual } = chamado; 
+    const { 
+        assunto, descricao, prioridade, status, requisitanteIdNum, categoriaIdNum, 
+        subcategoriaIdNum, // <-- CAMPO NOVO
+        nomeRequisitanteManual, emailRequisitanteManual, telefoneRequisitanteManual 
+    } = chamado; 
 
-    // O SQL precisa incluir as novas colunas e valores
     const sql = `
-        INSERT INTO Chamados (assunto, descricao, prioridade, status, requisitante_id, categoria_id, 
-                             nome_requisitante_manual, email_requisitante_manual, telefone_requisitante_manual)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO Chamados 
+            (assunto, descricao, prioridade, status, requisitante_id, categoria_id, 
+             subcategoria_id, -- <-- COLUNA NOVA
+             nome_requisitante_manual, email_requisitante_manual, telefone_requisitante_manual)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) -- <-- ATUALIZADO PARA 10 VALORES
     `;
     
     const values = [
@@ -20,7 +23,7 @@ export const create = async (chamado) => {
         status, 
         requisitanteIdNum, 
         categoriaIdNum,
-        // Novos valores
+        subcategoriaIdNum, // <-- VALOR NOVO
         nomeRequisitanteManual, 
         emailRequisitanteManual, 
         telefoneRequisitanteManual
@@ -31,11 +34,8 @@ export const create = async (chamado) => {
 };
 
 // ====================================================
-// ======== BUSCAR CHAMADO POR ID (CORRIGIDO) ========
+// ======== BUSCAR CHAMADO POR ID (ATUALIZADO) ========
 // ====================================================
-// Esta função foi modificada para fazer os JOINs, 
-// para que o modal de visualização 👁️ possa mostrar
-// o nome do requisitante e da categoria.
 export const findById = async (id) => {
     const sql = `
         SELECT 
@@ -43,33 +43,32 @@ export const findById = async (id) => {
             COALESCE(ch.nome_requisitante_manual, f.nomeFuncionario) AS nomeRequisitante,
             ch.email_requisitante_manual AS emailRequisitante,
             ch.telefone_requisitante_manual AS telefoneRequisitante,
-            ca.nome AS nomeCategoria
+            ca.nome AS nomeCategoria,
+            subcat.nome AS nomeSubcategoria -- <-- CAMPO NOVO
         FROM Chamados ch
         LEFT JOIN Funcionario f ON ch.requisitante_id = f.id
         LEFT JOIN Categorias ca ON ch.categoria_id = ca.id
+        LEFT JOIN Subcategorias subcat ON ch.subcategoria_id = subcat.id -- <-- JOIN NOVO
         WHERE ch.id = ?
     `;
     const [rows] = await pool.query(sql, [id]);
-    return rows[0]; // Retorna o primeiro (e único) resultado
+    return rows[0];
 };
 
-// Busca todos os chamados com filtros opcionais
+// Busca todos os chamados com filtros opcionais (ATUALIZADO)
 export const findAll = async (filtros = {}) => {
     let sql = `
         SELECT 
             ch.*, 
-            -- O nome ainda usa COALESCE, assumindo que Funcionario tem 'nomeFuncionario'
             COALESCE(ch.nome_requisitante_manual, f.nomeFuncionario) AS nomeRequisitante,
-            
-            -- CORREÇÃO: Busca email e telefone APENAS dos campos manuais da tabela Chamados (ch)
             ch.email_requisitante_manual AS emailRequisitante,
             ch.telefone_requisitante_manual AS telefoneRequisitante,
-            
-            ca.nome AS nomeCategoria
+            ca.nome AS nomeCategoria,
+            subcat.nome AS nomeSubcategoria -- <-- CAMPO NOVO
         FROM Chamados ch
-        -- Usamos LEFT JOIN para que funcione mesmo se requisitante_id for NULL ou inválido
         LEFT JOIN Funcionario f ON ch.requisitante_id = f.id
         LEFT JOIN Categorias ca ON ch.categoria_id = ca.id
+        LEFT JOIN Subcategorias subcat ON ch.subcategoria_id = subcat.id -- <-- JOIN NOVO
     `;
 
     const values = [];
@@ -82,6 +81,10 @@ export const findAll = async (filtros = {}) => {
     if (filtros.categoria_id) {
         whereConditions.push("ch.categoria_id = ?");
         values.push(parseInt(filtros.categoria_id));
+    }
+    if (filtros.subcategoria_id) { // <-- FILTRO NOVO
+        whereConditions.push("ch.subcategoria_id = ?");
+        values.push(parseInt(filtros.subcategoria_id));
     }
     if (filtros.status) {
         whereConditions.push("ch.status = ?");
@@ -119,10 +122,7 @@ export const updateStatus = async (id, status) => {
     return result;
 };
 
-// ====================================================
-// ======== (NOVO) ATUALIZAR PRIORIDADE ========
-// ====================================================
-// Esta função é chamada pelo controller 'atualizarPrioridade'
+// Atualiza prioridade
 export const updatePrioridade = async (id, prioridade) => {
     const sql = "UPDATE Chamados SET prioridade = ? WHERE id = ?";
     const [result] = await pool.query(sql, [prioridade, id]);

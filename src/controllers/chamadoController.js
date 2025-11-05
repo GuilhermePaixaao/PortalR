@@ -1,16 +1,10 @@
 import * as ChamadoModel from '../models/chamadoModel.js';
 
 // ====================================================
-// ======== CRIAR CHAMADO (CORRIGIDO P/ MULTER) ========
+// ======== CRIAR CHAMADO (ATUALIZADO) ========
 // ====================================================
 export const criarChamado = async (req, res) => {
     try {
-        // --- INÍCIO DA CORREÇÃO ---
-        // 1. Logs para depuração (pode apagar depois)
-        console.log('Dados de texto (req.body):', req.body);
-        console.log('Ficheiros recebidos (req.files):', req.files);
-
-        // 2. Verifique se 'req.body.chamado' existe
         if (!req.body.chamado) {
             return res.status(400).json({
                 success: false,
@@ -18,25 +12,18 @@ export const criarChamado = async (req, res) => {
             });
         }
 
-        // 3. A MUDANÇA PRINCIPAL:
         // O 'req.body.chamado' vem como STRING do FormData.
-        // Precisamos de o "parsear" para o transformar num objeto.
         const chamado = JSON.parse(req.body.chamado);
+        const arquivos = req.files; // Arquivos do Multer
 
-        // 4. Os seus ficheiros estão agora em req.files
-        const arquivos = req.files;
-        // --- FIM DA CORREÇÃO ---
-
-        // O resto do seu código original
         const {
             assunto, descricao, prioridade, requisitante_id, categoria_id,
+            subcategoria_id, // <-- CAMPO NOVO
             nome_requisitante_manual, email_requisitante_manual, telefone_requisitante_manual
         } = chamado;
 
-        // Validação estendida
         if (!assunto || !descricao || !requisitante_id ||
             !nome_requisitante_manual || !email_requisitante_manual || !telefone_requisitante_manual) {
-
             return res.status(400).json({
                 success: false,
                 message: 'Assunto, Descrição, ID do Requisitante e todos os dados de Contato são obrigatórios.'
@@ -50,19 +37,24 @@ export const criarChamado = async (req, res) => {
             status: 'Aberto',
             requisitanteIdNum: parseInt(requisitante_id),
             categoriaIdNum: categoria_id ? parseInt(categoria_id) : null,
+            subcategoriaIdNum: subcategoria_id ? parseInt(subcategoria_id) : null, // <-- VALOR NOVO
             nomeRequisitanteManual: nome_requisitante_manual,
             emailRequisitanteManual: email_requisitante_manual,
             telefoneRequisitanteManual: telefone_requisitante_manual
-            // NOTA: Se precisar de salvar os ficheiros (const arquivos),
-            // a lógica para tratar 'arquivos' seria adicionada aqui.
         };
 
         const novoId = await ChamadoModel.create(dadosParaCriar);
         
-        // Usamos findById (com JOINs) para retornar o chamado completo
+        // Lógica para salvar anexos (se houver)
+        if (arquivos && arquivos.length > 0) {
+            // ... (Sua lógica para salvar 'arquivos' associados ao 'novoId' iria aqui)
+            console.log(`Salvando ${arquivos.length} anexos para o chamado ${novoId}`);
+        }
+        
+        // Retorna o chamado completo que acabou de ser criado
         const novoChamado = await ChamadoModel.findById(novoId);
-
         res.status(201).json({ success: true, data: novoChamado });
+
     } catch (error) {
         if (error instanceof SyntaxError) {
             return res.status(400).json({ success: false, message: 'Erro ao processar dados: JSON do chamado mal formatado.' });
@@ -77,28 +69,35 @@ export const criarChamado = async (req, res) => {
 };
 
 // ====================================================
-// ======== LISTAR CHAMADOS ========
+// ======== LISTAR CHAMADOS (ATUALIZADO) ========
 // ====================================================
 export const listarChamados = async (req, res) => {
     try {
         const filtros = req.query;
         const chamados = await ChamadoModel.findAll(filtros);
 
-        // Formata a resposta (O seu frontend espera esta formatação)
+        // Formata a resposta para o frontend (com Subcategoria)
         const chamadosFormatados = chamados.map(chamado => {
             const Funcionario = {
                 nomeFuncionario: chamado.nomeRequisitante,
                 email: chamado.emailRequisitante,
                 telefone: chamado.telefoneRequisitante
             };
-            const Categorias = chamado.categoria_id ? { nome: chamado.nomeCategoria } : null;
-
+            // Note que o frontend usa 'Categorias' (plural) no código original
+            const Categorias = chamado.categoria_id ? { id: chamado.categoria_id, nome: chamado.nomeCategoria } : null;
+            
+            // --- ADICIONADO ---
+            // O frontend espera 'Subcategoria' (singular)
+            const Subcategoria = chamado.subcategoria_id ? { id: chamado.subcategoria_id, nome: chamado.nomeSubcategoria } : null;
+            
+            // Limpa os campos planos para não duplicar dados
             delete chamado.nomeRequisitante;
             delete chamado.emailRequisitante;
             delete chamado.telefoneRequisitante;
             delete chamado.nomeCategoria;
+            delete chamado.nomeSubcategoria; // <-- ADICIONADO
 
-            return { ...chamado, Funcionario, Categorias };
+            return { ...chamado, Funcionario, Categorias, Subcategoria }; // <-- ADICIONADO
         });
 
         res.status(200).json(chamadosFormatados);
@@ -109,9 +108,8 @@ export const listarChamados = async (req, res) => {
 };
 
 // ====================================================
-// ======== (NOVO) BUSCAR CHAMADO POR ID ========
+// ======== BUSCAR CHAMADO POR ID (ATUALIZADO) ========
 // ====================================================
-// Esta função é chamada pelo modal 👁️
 export const buscarChamadoPorId = async (req, res) => {
     try {
         const idNum = parseInt(req.params.id);
@@ -119,27 +117,30 @@ export const buscarChamadoPorId = async (req, res) => {
             return res.status(400).json({ success: false, message: 'ID de chamado inválido.' });
         }
 
-        // Usa o findById (que corrigimos no Model)
         const chamado = await ChamadoModel.findById(idNum);
         
         if (!chamado) {
             return res.status(404).json({ success: false, message: 'Chamado não encontrado.' });
         }
 
-        // Formata a resposta da mesma forma que o listarChamados
+        // Formata a resposta (com Subcategoria)
         const Funcionario = {
             nomeFuncionario: chamado.nomeRequisitante,
             email: chamado.emailRequisitante,
             telefone: chamado.telefoneRequisitante
         };
-        const Categorias = chamado.categoria_id ? { nome: chamado.nomeCategoria } : null;
+        const Categorias = chamado.categoria_id ? { id: chamado.categoria_id, nome: chamado.nomeCategoria } : null;
+        
+        // --- ADICIONADO ---
+        const Subcategoria = chamado.subcategoria_id ? { id: chamado.subcategoria_id, nome: chamado.nomeSubcategoria } : null;
 
         delete chamado.nomeRequisitante;
         delete chamado.emailRequisitante;
         delete chamado.telefoneRequisitante;
         delete chamado.nomeCategoria;
+        delete chamado.nomeSubcategoria; // <-- ADICIONADO
 
-        res.status(200).json({ ...chamado, Funcionario, Categorias });
+        res.status(200).json({ ...chamado, Funcionario, Categorias, Subcategoria }); // <-- ADICIONADO
 
     } catch (error) {
         console.error('Erro ao buscar chamado por ID:', error);
@@ -196,9 +197,8 @@ export const atualizarStatus = async (req, res) => {
 };
 
 // ====================================================
-// ======== (NOVO) ATUALIZAR PRIORIDADE ========
+// ======== ATUALIZAR PRIORIDADE ========
 // ====================================================
-// Esta função é chamada pelo <select> de prioridade do modal
 export const atualizarPrioridade = async (req, res) => {
     try {
         const idNum = parseInt(req.params.id);
@@ -208,7 +208,6 @@ export const atualizarPrioridade = async (req, res) => {
             return res.status(400).json({ success: false, message: 'ID e Prioridade são obrigatórios.' });
         }
         
-        // (Lembre-se: crie esta função no seu chamadoModel.js)
         const result = await ChamadoModel.updatePrioridade(idNum, prioridade);
 
         if (result.affectedRows === 0) {
