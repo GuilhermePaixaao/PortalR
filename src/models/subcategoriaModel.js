@@ -1,9 +1,8 @@
-// models/subcategoriaModel.js
+// /models/subcategoriaModel.js
 import pool from '../config/database.js';
 
-// (findAll e remove serão muito parecidos com os de Categoria)
+// Lista TODAS as subcategorias (com o nome da Categoria Pai)
 export const findAll = async () => {
-  // Bônus: Usar um JOIN para mostrar o nome da categoria pai
   const [rows] = await pool.query(`
     SELECT 
       sub.id, 
@@ -16,32 +15,28 @@ export const findAll = async () => {
   return rows;
 };
 
-// NOVO CREATE
+// Cria uma nova subcategoria
 export const create = async (subcategoria) => {    
-  // Agora recebe 'nome' E 'id_categoria'
   const { nome, id_categoria } = subcategoria; 
-  
   const [result] = await pool.query(
     'INSERT INTO Subcategorias (nome, id_categoria) VALUES (?, ?)',
-    [nome, id_categoria] // Adiciona o novo campo
+    [nome, id_categoria]
   );
+  // Retorna o objeto completo como o frontend espera
   return { id: result.insertId, nome, id_categoria };
 };
 
-// NOVO UPDATE
+// Atualiza uma subcategoria
 export const update = async (id, subcategoria) => {
   const { nome, id_categoria } = subcategoria;
-  
   const [result] = await pool.query(
     'UPDATE Subcategorias SET nome = ?, id_categoria = ? WHERE id = ?',
-    [nome, id_categoria, id] // Adiciona o novo campo
+    [nome, id_categoria, id]
   );
-  
   return result.affectedRows;
 };
 
-// (A função remove(id) será idêntica à de Categorias,
-// apenas mudando o nome da tabela para 'Subcategorias')
+// Remove uma subcategoria
 export const remove = async (id) => {
   const [result] = await pool.query(
     'DELETE FROM Subcategorias WHERE id = ?',

@@ -1,34 +1,76 @@
-// controllers/subcategoriaController.js
-import * as SubcategoriaModel from '../models/subcategoriaModel.js';
+// /controllers/subCategoriaController.js
+import * as SubcategoriaModel from '../models/subCategoriaModel.js';
+// GET /subcategorias
+export const listarSubcategorias = async (req, res) => {
+  try {
+    const subcategorias = await SubcategoriaModel.findAll();
+    res.status(200).json(subcategorias);
+  } catch (error) {
+    console.error("Erro ao buscar subcategorias:", error);
+    res.status(500).json({ message: 'Erro interno do servidor.' });
+  }
+};
 
-// (listarSubcategorias, atualizar e excluir serão muito parecidos)
-
-// NOVO CRIAR
+// POST /subcategorias
 export const criarSubcategoria = async (req, res) => {   
   try {
-    // O frontend enviará: { "subcategoria": { "nome": "...", "id_categoria": 1 } }
     const { subcategoria } = req.body; 
-
-    // Validação
     if (!subcategoria || !subcategoria.nome) {
-      return res.status(400).json({ message: 'O nome da subcategoria é obrigatório.' });
+      return res.status(400).json({ message: 'O nome é obrigatório.' });
     }
-    // Nova validação
     if (!subcategoria.id_categoria) {
-      return res.status(400).json({ message: 'A categoria (pai) é obrigatória.' });
+      return res.status(400).json({ message: 'A categoria pai é obrigatória.' });
     }
     
-    // Monta o objeto para o Model
     const novaSubcategoria = { 
       nome: subcategoria.nome,
-      id_categoria: subcategoria.id_categoria // Adiciona o novo campo
+      id_categoria: subcategoria.id_categoria
     };
     
     const subcategoriaSalva = await SubcategoriaModel.create(novaSubcategoria);
-    res.status(201).json({ message: 'Subcategoria criada com sucesso.', subcategoria: subcategoriaSalva });
+    res.status(201).json(subcategoriaSalva); // Retorna o objeto salvo
 
   } catch (error) {   
     console.error("Erro ao criar subcategoria:", error); 
+    res.status(500).json({ message: 'Erro interno do servidor.' });
+  }
+};
+
+// PUT /subcategorias/:id
+export const atualizarSubcategoria = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { subcategoria } = req.body;
+
+    if (!subcategoria || !subcategoria.nome || !subcategoria.id_categoria) {
+      return res.status(400).json({ message: 'Nome e Categoria Pai são obrigatórios.' });
+    }
+    
+    const dados = { nome: subcategoria.nome, id_categoria: subcategoria.id_categoria };
+    const affectedRows = await SubcategoriaModel.update(id, dados);
+
+    if (affectedRows === 0) {
+      return res.status(404).json({ message: 'Subcategoria não encontrada.' });
+    }
+    res.status(200).json({ message: 'Subcategoria atualizada com sucesso.' });
+  } catch (error) {
+    console.error("Erro ao atualizar subcategoria:", error); 
+    res.status(500).json({ message: 'Erro interno do servidor.' });
+  }
+};
+
+// DELETE /subcategorias/:id
+export const excluirSubcategoria = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const affectedRows = await SubcategoriaModel.remove(id);
+
+    if (affectedRows === 0) {
+      return res.status(404).json({ message: 'Subcategoria não encontrada.' });
+    }
+    res.status(200).json({ message: 'Subcategoria excluída com sucesso.' });
+  } catch (error) {
+    console.error("Erro ao excluir subcategoria:", error); 
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };

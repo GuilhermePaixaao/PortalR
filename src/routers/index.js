@@ -1,25 +1,30 @@
-// src/routers/index.js
-
 import { Router } from 'express';
-// Importa todos os seus roteadores
-import funcionarioRouter from './funcionarioRouter.js';
-import cargoRouter from './cargoRouter.js';
+
+// 1. Importe os routers que você já tem
 import categoriaRouter from './categoriaRouter.js';
-import chamadoRouter from './chamadoRouter.js';
-import chatRouter from './chatRouter.js'; // 1. Importado
+// (Presumindo que você tenha outros, ex: funcionarioRouter, etc.)
+// import funcionarioRouter from './funcionarioRouter.js'; 
+// import chamadoRouter from './chamadoRouter.js';
+// ... e outros que você usa ...
+
+
+// 2. ADICIONE A IMPORTAÇÃO DO NOVO ROUTER DE SUBCATEGORIA
+// (Use o nome de arquivo exato que você criou, ex: subCategoriaRouter.js)
+import subCategoriaRouter from './subCategoriaRouter.js';
+
 
 const router = Router();
 
-// Suas rotas existentes (PERFEITO)
-router.use(funcionarioRouter);
-router.use(cargoRouter);
+// 3. Use os routers que você já tem
 router.use(categoriaRouter);
-router.use(chamadoRouter);
+// router.use(funcionarioRouter);
+// router.use(chamadoRouter);
+// ...
 
-// === A LINHA MAIS IMPORTANTE ===
-// Garanta que esta linha existe e está correta.
-// Ela diz ao Express: "Qualquer requisição que chegar em /api/chat,
-// mande para o chatRouter."
-router.use('/api/chat', chatRouter); 
+
+// 4. ADICIONE O USO DO NOVO ROUTER
+// É aqui que você "ativa" o router de subcategorias
+router.use(subCategoriaRouter);
+
 
 export default router;
