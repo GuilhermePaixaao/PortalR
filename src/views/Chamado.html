@@ -527,7 +527,7 @@
                 // Agora lê os objetos Categorias e Subcategoria formatados pelo Controller
                 let nomeExibicao = 'N/A';
                 if (chamado.Subcategoria && chamado.Subcategoria.nome) {
-                    nomeExibicao = `${chamado.Categorias?.nome || '?'} > ${chamado.Subcategoria.nome}`;
+                    nomeExibicao = `${chamado.Categorias?.nome || '?'} / ${chamado.Subcategoria.nome}`;
                 } else if (chamado.Categorias && chamado.Categorias.nome) {
                     nomeExibicao = chamado.Categorias.nome;
                 }
