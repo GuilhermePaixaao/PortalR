@@ -167,7 +167,7 @@
   <script type="module">
     const API_URL = "";
 
-    // --- FUNÇÕES DE LOGOUT E NOME/MENU (Permanece igual) ---
+    // --- FUNÇÕES DE LOGOUT E NOME/MENU ---
     function fazerLogout() {
       localStorage.removeItem("userData");
       window.location.href = "Login.html";
@@ -194,9 +194,9 @@
 
     // --- VARIÁVEIS GLOBAIS ---
     let API_DATA_CATEGORIAS;
-    let idCategoriaPaiAtual = null; // Guarda o ID da Categoria Pai clicada
+    let idCategoriaPaiAtual = null; 
 
-    // --- REFERÊNCIAS DE ELEMENTOS (CATEGORIA) ---
+    // --- REFERÊNCIAS (CATEGORIA) ---
     const txtId = document.getElementById("txtId");
     const txtNomeCategoria = document.getElementById("txtNomeCategoria");
     const divBotoes = document.getElementById("divBotoes");
@@ -205,17 +205,16 @@
     const btnLogout = document.getElementById("logoutButton");
     const txtFiltroCategoria = document.getElementById("txtFiltroCategoria");
 
-    // --- ATUALIZADO: REFERÊNCIAS DE ELEMENTOS (MODAL) ---
+    // --- REFERÊNCIAS (MODAL) ---
     const modalSubcategoria = new bootstrap.Modal('#modalSubcategoria');
     const modalTitulo = document.getElementById('modalSubcategoriaLabel');
-
     const txtIdSub = document.getElementById('txtIdSub');
     const txtNomeSub = document.getElementById('txtNomeSub');
     const divBotoesModal = document.getElementById('divBotoesModal');
     const divRespostaModal = document.getElementById('divRespostaModal');
     const divTabelaModal = document.getElementById('divTabelaModal');
 
-    // --- FUNÇÕES DE HELPER (limpar, erro, etc.) ---
+    // --- FUNÇÕES HELPER ---
     function createButton(text, id, className) {
       const btn = document.createElement("button");
       btn.textContent = text;
@@ -324,7 +323,7 @@
       }
     }
 
-    // Tabela PRINCIPAL (Permanece a mesma, com o botão "Subcategorias")
+    // Tabela PRINCIPAL
     function renderTable(categorias) {
       divTabela.innerHTML = "";
       const table = document.createElement("table");
@@ -357,7 +356,6 @@
             divResposta.innerHTML = "";
           });
           tr.querySelector('.btn-ver-sub').addEventListener('click', () => {
-            // Esta é a função que abre o modal
             abrirModalSubcategorias(cat.id, cat.nome);
           });
           tbody.appendChild(tr);
@@ -391,18 +389,16 @@
 
     // 1. Função para abrir o modal
     async function abrirModalSubcategorias(id, nome) {
-      idCategoriaPaiAtual = id; // Salva o ID do pai
-      modalTitulo.textContent = `Subcategorias de: ${nome}`; // Define o título
-      
-      limparFormularioSub(); // Limpa o formulário do modal
-      await carregarSubcategoriasNoModal(id); // Puxa os dados e renderiza a tabela do modal
-      
-      modalSubcategoria.show(); // Abre o modal
+      idCategoriaPaiAtual = id; 
+      modalTitulo.textContent = `Subcategorias de: ${nome}`;
+      limparFormularioSub(); 
+      await carregarSubcategoriasNoModal(id); 
+      modalSubcategoria.show(); 
     }
 
     // 2. Função para buscar e RENDERIZAR A TABELA DENTRO do modal
     async function carregarSubcategoriasNoModal(idCategoriaPai) {
-      divTabelaModal.innerHTML = "<p>Carregando...</p>"; // Placeholder
+      divTabelaModal.innerHTML = "<p>Carregando...</p>";
       
       try {
         const response = await fetch(`${API_URL}/subcategorias`);
@@ -411,7 +407,7 @@
         const todasSubcategorias = await response.json();
         const subcategoriasFilhas = todasSubcategorias.filter(sub => sub.id_categoria === idCategoriaPai);
 
-        divTabelaModal.innerHTML = ""; // Limpa o "Carregando..."
+        divTabelaModal.innerHTML = "";
         
         const table = document.createElement("table");
         table.className = "table table-bordered table-striped table-hover table-sm";
@@ -430,7 +426,6 @@
         if (subcategoriasFilhas.length === 0) {
           tbody.innerHTML = '<tr><td colspan="3" class="text-center">Nenhuma subcategoria encontrada.</td></tr>';
         } else {
-          // Renderiza cada item da lista
           subcategoriasFilhas.forEach(sub => {
             const tr = document.createElement("tr");
             tr.innerHTML = `
@@ -439,12 +434,16 @@
               <td><button class="btn btn-sm btn-info btn-selecionar-sub">Selecionar</button></td>
             `;
             
+            // --- ESTA É A CORREÇÃO ---
             // Event listener para preencher o formulário DO MODAL
             tr.querySelector('.btn-selecionar-sub').addEventListener('click', () => {
               txtIdSub.value = sub.id;
               txtNomeSub.value = sub.nome;
-              limparFormularioSub(); // Limpa qualquer mensagem de erro
+              // Limpa apenas a mensagem de erro, não o formulário
+              divRespostaModal.innerHTML = ""; 
+              divRespostaModal.className = "";
             });
+            // --- FIM DA CORREÇÃO ---
             
             tbody.appendChild(tr);
           });
@@ -473,7 +472,7 @@
       const dadosCadastro = {
         subcategoria: {
           nome: nomeNovaSub,
-          id_categoria: idCategoriaPaiAtual // Usa o ID pai que salvamos
+          id_categoria: idCategoriaPaiAtual 
         }
       };
 
@@ -486,7 +485,6 @@
         const respostaAPI = await response.json();
         if (!response.ok) throw new Error(respostaAPI.message || "Erro");
 
-        // Sucesso! Limpa o formulário e recarrega a tabela do modal
         limparFormularioSub("Subcategoria criada com sucesso!");
         await carregarSubcategoriasNoModal(idCategoriaPaiAtual);
 
@@ -512,7 +510,7 @@
       const dadosAtualizar = {
         subcategoria: {
           nome: nomeSub,
-          id_categoria: idCategoriaPaiAtual // Garante que o pai está correto
+          id_categoria: idCategoriaPaiAtual
         }
       };
 
@@ -525,7 +523,6 @@
         const respostaAPI = await response.json();
         if (!response.ok) throw new Error(respostaAPI.message || "Erro");
 
-        // Sucesso! Limpa o formulário e recarrega a tabela
         limparFormularioSub("Subcategoria atualizada com sucesso!");
         await carregarSubcategoriasNoModal(idCategoriaPaiAtual);
 
@@ -548,7 +545,6 @@
           const respostaAPI = await response.json();
           if (!response.ok) throw new Error(respostaAPI.message || "Erro");
 
-          // Sucesso! Limpa o formulário e recarrega a tabela
           limparFormularioSub("Subcategoria excluída com sucesso!");
           await carregarSubcategoriasNoModal(idCategoriaPaiAtual);
 
