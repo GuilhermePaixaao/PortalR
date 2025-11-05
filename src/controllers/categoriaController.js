@@ -1,7 +1,6 @@
 import * as CategoriaModel from '../models/categoriaModel.js';
 
 // --- 1. Rota de Listar (GET) ---
-// (O seu código de listar já estava correto)
 export const listarCategorias = async (req, res) => {
   try {
     const categorias = await CategoriaModel.findAll();
@@ -14,7 +13,6 @@ export const listarCategorias = async (req, res) => {
 
 
 // --- 2. Rota de Criar (POST) ---
-// (Corrigido para ler o objeto aninhado "categoria")
 export const criarCategoria = async (req, res) => {   
   try {
     // 1. Pega o objeto 'categoria' de dentro do req.body
@@ -26,7 +24,6 @@ export const criarCategoria = async (req, res) => {
     }
     
     // 3. O 'id' NÃO é pego do req.body, só o 'nome'
-    // O nome 'novaCategoria' aqui é só para passar ao Model
     const novaCategoria = { 
       nome: categoria.nome 
     };
@@ -39,6 +36,64 @@ export const criarCategoria = async (req, res) => {
 
   } catch (error) {   
     console.error("Erro ao criar categoria:", error); 
+    res.status(500).json({ message: 'Erro interno do servidor.' });
+  }
+};
+
+// --- 3. Rota de Atualizar (PUT) ---
+// --- NOVO CÓDIGO ADICIONADO ---
+export const atualizarCategoria = async (req, res) => {
+  try {
+    // 1. Pega o ID da URL (parâmetros da rota)
+    const { id } = req.params;
+    
+    // 2. Pega os dados do corpo
+    const { categoria } = req.body;
+
+    // 3. Validação
+    if (!categoria || !categoria.nome) {
+      return res.status(400).json({ message: 'O nome da categoria é obrigatório.' });
+    }
+
+    const dadosCategoria = { nome: categoria.nome };
+    
+    // 4. Envia para o Model atualizar
+    const affectedRows = await CategoriaModel.update(id, dadosCategoria);
+
+    // 5. Verifica se o ID existia e foi atualizado
+    if (affectedRows === 0) {
+      return res.status(404).json({ message: 'Categoria não encontrada.' });
+    }
+
+    // 6. Retorna sucesso
+    res.status(200).json({ message: 'Categoria atualizada com sucesso.', categoria: { id: id, nome: categoria.nome } });
+
+  } catch (error) {
+    console.error("Erro ao atualizar categoria:", error); 
+    res.status(500).json({ message: 'Erro interno do servidor.' });
+  }
+};
+
+// --- 4. Rota de Excluir (DELETE) ---
+// --- NOVO CÓDIGO ADICIONADO ---
+export const excluirCategoria = async (req, res) => {
+  try {
+    // 1. Pega o ID da URL
+    const { id } = req.params;
+
+    // 2. Envia para o Model remover
+    const affectedRows = await CategoriaModel.remove(id);
+
+    // 3. Verifica se o ID existia e foi deletado
+    if (affectedRows === 0) {
+      return res.status(404).json({ message: 'Categoria não encontrada.' });
+    }
+
+    // 4. Retorna sucesso
+    res.status(200).json({ message: 'Categoria excluída com sucesso.' });
+
+  } catch (error) {
+    console.error("Erro ao excluir categoria:", error); 
     res.status(500).json({ message: 'Erro interno do servidor.' });
   }
 };
