@@ -1,4 +1,5 @@
 import * as ChamadoModel from '../models/chamadoModel.js';
+// (Importe seus outros models, como de Anexos, se necessário)
 
 // ====================================================
 // ======== CRIAR CHAMADO (ATUALIZADO) ========
@@ -30,6 +31,8 @@ export const criarChamado = async (req, res) => {
             });
         }
 
+        // Os nomes das chaves (ex: categoriaIdNum)
+        // devem ser os mesmos que o Model espera.
         const dadosParaCriar = {
             assunto: assunto,
             descricao: descricao,
@@ -53,7 +56,25 @@ export const criarChamado = async (req, res) => {
         
         // Retorna o chamado completo que acabou de ser criado
         const novoChamado = await ChamadoModel.findById(novoId);
-        res.status(201).json({ success: true, data: novoChamado });
+        
+        // Formata o novo chamado antes de enviar
+        const Funcionario = {
+            nomeFuncionario: novoChamado.nomeRequisitante,
+            email: novoChamado.emailRequisitante,
+            telefone: novoChamado.telefoneRequisitante
+        };
+        const Categorias = novoChamado.categoria_id ? { id: novoChamado.categoria_id, nome: novoChamado.nomeCategoria } : null;
+        const Subcategoria = novoChamado.subcategoria_id ? { id: novoChamado.subcategoria_id, nome: novoChamado.nomeSubcategoria } : null;
+
+        delete novoChamado.nomeRequisitante;
+        delete novoChamado.emailRequisitante;
+        delete novoChamado.telefoneRequisitante;
+        delete novoChamado.nomeCategoria;
+        delete novoChamado.nomeSubcategoria;
+
+        const chamadoFormatado = { ...novoChamado, Funcionario, Categorias, Subcategoria };
+
+        res.status(201).json({ success: true, data: chamadoFormatado }); // Envia o chamado formatado
 
     } catch (error) {
         if (error instanceof SyntaxError) {
@@ -83,21 +104,16 @@ export const listarChamados = async (req, res) => {
                 email: chamado.emailRequisitante,
                 telefone: chamado.telefoneRequisitante
             };
-            // Note que o frontend usa 'Categorias' (plural) no código original
             const Categorias = chamado.categoria_id ? { id: chamado.categoria_id, nome: chamado.nomeCategoria } : null;
-            
-            // --- ADICIONADO ---
-            // O frontend espera 'Subcategoria' (singular)
             const Subcategoria = chamado.subcategoria_id ? { id: chamado.subcategoria_id, nome: chamado.nomeSubcategoria } : null;
             
-            // Limpa os campos planos para não duplicar dados
             delete chamado.nomeRequisitante;
             delete chamado.emailRequisitante;
             delete chamado.telefoneRequisitante;
             delete chamado.nomeCategoria;
-            delete chamado.nomeSubcategoria; // <-- ADICIONADO
+            delete chamado.nomeSubcategoria; 
 
-            return { ...chamado, Funcionario, Categorias, Subcategoria }; // <-- ADICIONADO
+            return { ...chamado, Funcionario, Categorias, Subcategoria };
         });
 
         res.status(200).json(chamadosFormatados);
@@ -130,17 +146,15 @@ export const buscarChamadoPorId = async (req, res) => {
             telefone: chamado.telefoneRequisitante
         };
         const Categorias = chamado.categoria_id ? { id: chamado.categoria_id, nome: chamado.nomeCategoria } : null;
-        
-        // --- ADICIONADO ---
         const Subcategoria = chamado.subcategoria_id ? { id: chamado.subcategoria_id, nome: chamado.nomeSubcategoria } : null;
 
         delete chamado.nomeRequisitante;
         delete chamado.emailRequisitante;
         delete chamado.telefoneRequisitante;
         delete chamado.nomeCategoria;
-        delete chamado.nomeSubcategoria; // <-- ADICIONADO
+        delete chamado.nomeSubcategoria;
 
-        res.status(200).json({ ...chamado, Funcionario, Categorias, Subcategoria }); // <-- ADICIONADO
+        res.status(200).json({ ...chamado, Funcionario, Categorias, Subcategoria });
 
     } catch (error) {
         console.error('Erro ao buscar chamado por ID:', error);
