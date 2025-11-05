@@ -1,4 +1,3 @@
-// /models/subcategoriaModel.js
 import pool from '../config/database.js';
 
 // Lista TODAS as subcategorias (com o nome da Categoria Pai)
@@ -23,7 +22,8 @@ export const create = async (subcategoria) => {
     [nome, id_categoria]
   );
   // Retorna o objeto completo como o frontend espera
-  return { id: result.insertId, nome, id_categoria };
+  const novoId = result.insertId;
+  return { id: novoId, nome, id_categoria };
 };
 
 // Atualiza uma subcategoria

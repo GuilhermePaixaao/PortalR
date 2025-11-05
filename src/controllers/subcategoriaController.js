@@ -1,6 +1,7 @@
-// /controllers/subCategoriaController.js
-// Linha 1 (Corrigida)
-import * as SubcategoriaModel from '../models/subCategoriaModel.js';// GET /subcategorias
+// Importa o model 'subcategoriaModel.js' (minúsculo)
+import * as SubcategoriaModel from '../models/subcategoriaModel.js';
+
+// GET /subcategorias
 export const listarSubcategorias = async (req, res) => {
   try {
     const subcategorias = await SubcategoriaModel.findAll();
@@ -28,7 +29,8 @@ export const criarSubcategoria = async (req, res) => {
     };
     
     const subcategoriaSalva = await SubcategoriaModel.create(novaSubcategoria);
-    res.status(201).json(subcategoriaSalva); // Retorna o objeto salvo
+    // Retorna o objeto salvo com o ID
+    res.status(201).json(subcategoriaSalva); 
 
   } catch (error) {   
     console.error("Erro ao criar subcategoria:", error); 
@@ -52,7 +54,8 @@ export const atualizarSubcategoria = async (req, res) => {
     if (affectedRows === 0) {
       return res.status(404).json({ message: 'Subcategoria não encontrada.' });
     }
-    res.status(200).json({ message: 'Subcategoria atualizada com sucesso.' });
+    // Retorna o objeto atualizado
+    res.status(200).json({ message: 'Subcategoria atualizada com sucesso.', subcategoria: {id: parseInt(id), ...dados} });
   } catch (error) {
     console.error("Erro ao atualizar subcategoria:", error); 
     res.status(500).json({ message: 'Erro interno do servidor.' });
