@@ -1,6 +1,6 @@
 // /controllers/subCategoriaController.js
-import * as SubcategoriaModel from '../models/subCategoriaModel.js';
-// GET /subcategorias
+// Linha 1 (Corrigida)
+import * as SubcategoriaModel from '../models/subCategoriaModel.js';// GET /subcategorias
 export const listarSubcategorias = async (req, res) => {
   try {
     const subcategorias = await SubcategoriaModel.findAll();
