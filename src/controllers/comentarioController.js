@@ -33,3 +33,18 @@ export const addComentario = async (req, res) => {
         res.status(500).json({ message: "Erro interno no servidor.", error: error.message });
     }
 };
+export const listarComentariosPorChamado = async (req, res) => {
+    try {
+        // Pega o ID do chamado pela URL (ex: /chamados/564/comentarios)
+        const { id } = req.params;
+
+        const comentarios = await comentarioModel.findByChamadoId(id);
+
+        // Retorna a lista de comentários (pode ser uma lista vazia)
+        res.status(200).json(comentarios);
+
+    } catch (error) {
+        console.error("Erro ao listar comentários:", error);
+        res.status(500).json({ message: "Erro interno no servidor.", error: error.message });
+    }
+};
