@@ -175,7 +175,12 @@
         .ticket-row { display: flex; border-bottom: 1px solid #eee; padding: 1rem 0.5rem; align-items: center; }
         .ticket-row.header { background-color: #f8f9fa; font-weight: bold; border-bottom: 2px solid #dee2e6; }
         .ticket-cell { padding: 0 0.5rem; }
+        
+        /* --- (NOVO) ESTILOS PARA CHECKBOX --- */
+        .ticket-select { flex: 0 0 40px; text-align: center; }
         .ticket-id { flex: 0 0 80px; text-align: center; }
+        /* --- FIM CHECKBOX --- */
+        
         .ticket-priority { flex: 0 0 100px; text-align: center; }
         .ticket-subject { flex: 1 1 auto; min-width: 200px; }
         .ticket-category { flex: 0 0 150px; }
@@ -294,7 +299,7 @@
             line-height: 1.2; 
         }
         
-        /* --- (NOVO) ESTILOS DO BOTÃO DE TEMA --- */
+        /* --- ESTILOS DO BOTÃO DE TEMA --- */
         .btn-theme-toggle {
             background: none;
             border: 1px solid #ced4da;
@@ -311,7 +316,23 @@
         }
         /* --- FIM ESTILOS BOTÃO --- */
 
-        /* --- (NOVO) ESTILOS DO MODO ESCURO --- */
+        /* --- (NOVO) ESTILOS AÇÕES EM LOTE --- */
+        #bulkActionContainer {
+            background-color: #f1f3f5;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none; /* Começa escondido */
+            align-items: center;
+            gap: 1rem;
+        }
+        #bulkActionContainer label {
+            font-weight: 500;
+            margin-bottom: 0;
+        }
+        /* --- FIM AÇÕES EM LOTE --- */
+
+        /* --- ESTILOS DO MODO ESCURO --- */
         body.dark-mode {
             background-color: #121212;
             color: #e0e0e0;
@@ -339,9 +360,12 @@
             border-color: #383838;
             color: #f1f1f1;
         }
+        
         .dark-mode .ticket-row {
+            background-color: #2a2a2a; /* Fundo escuro para as linhas */
             border-bottom-color: #383838;
         }
+
         .dark-mode h1,
         .dark-mode label,
         .dark-mode .ticket-cell,
@@ -386,6 +410,11 @@
             color: #aaa;
         }
 
+        /* (NOVO) Ações em Lote no Modo Escuro */
+        .dark-mode #bulkActionContainer {
+            background-color: #212121;
+        }
+        
         /* Badges no Modo Escuro */
         .dark-mode .priority-badge.alta { background-color: #842029; color: #f8d7da; }
         .dark-mode .priority-badge.media { background-color: #664d03; color: #fff3cd; }
@@ -581,9 +610,35 @@
                             <button id="btnFiltrar" class="btn btn-primary w-100">Filtrar</button>
                         </div>
                     </div>
-
-                    <div id="ticketList" class="ticket-list">
-                        <div class="ticket-row header">
+                    
+                    <div id="bulkActionContainer" class="row g-2">
+                        <div class="col-auto">
+                            <label for="selectAcaoEmLote" class="form-label">Ações em lote:</label>
+                        </div>
+                        <div class="col-md-3">
+                            <select id="selectAcaoEmLote" class="form-select form-select-sm">
+                                <option value="">Selecione uma ação...</option>
+                                <optgroup label="Mudar Status">
+                                    <option value="status-Aberto">Marcar como Aberto</option>
+                                    <option value="status-Em Andamento">Marcar como Em Andamento</option>
+                                    <option value="status-Concluído">Marcar como Concluído</option>
+                                </optgroup>
+                                <optgroup label="Mudar Prioridade">
+                                    <option value="prioridade-Baixa">Mudar para Baixa</option>
+                                    <option value="prioridade-Média">Mudar para Média</option>
+                                    <option value="prioridade-Alta">Mudar para Alta</option>
+                                    <option value="prioridade-Planejado">Mudar para Planejado</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div class="col-auto">
+                            <button id="btnAplicarAcao" class="btn btn-success btn-sm">Aplicar</button>
+                        </div>
+                    </div>
+                    <div id="ticketList" class="ticket-list mt-3"> <div class="ticket-row header">
+                            <div class="ticket-cell ticket-select">
+                                <input class="form-check-input" type="checkbox" id="selectAllCheckbox" title="Selecionar Todos">
+                            </div>
                             <div class="ticket-cell ticket-id">Ticket</div>
                             <div class="ticket-cell ticket-priority">Prioridade</div>
                             <div class="ticket-cell ticket-subject">Assunto</div>
@@ -663,10 +718,16 @@
         const listaComentariosContainer = document.getElementById("listaComentariosContainer");
         const btnThemeToggle = document.getElementById("themeToggle");
         
-        // --- (RE-ADICIONADO) REFERÊNCIAS DO FORM DE COMENTÁRIOS ---
+        // --- REFERÊNCIAS DE COMENTÁRIOS ---
         const btnEnviarComentario = document.getElementById("enviarComentario");
         const textareaComentario = document.getElementById("novoComentario");
         const comentarioResposta = document.getElementById("comentarioResposta");
+
+        // --- (NOVO) REFERÊNCIAS DE AÇÕES EM LOTE ---
+        const selectAllCheckbox = document.getElementById("selectAllCheckbox");
+        const bulkActionContainer = document.getElementById("bulkActionContainer");
+        const selectAcaoEmLote = document.getElementById("selectAcaoEmLote");
+        const btnAplicarAcao = document.getElementById("btnAplicarAcao");
         // --- FIM REFERÊNCIAS ---
 
 
@@ -738,6 +799,9 @@
                 
                 ticketList.insertAdjacentHTML('beforeend', `
                 <div class="ticket-row data-row" data-ticket-id="${ch.id}">
+                    <div class="ticket-cell ticket-select">
+                        <input class="form-check-input ticket-checkbox" type="checkbox" value="${ch.id}">
+                    </div>
                     <div class="ticket-cell ticket-id">#${ch.id}</div>
                     <div class="ticket-cell ticket-priority"><span class="priority-badge ${prioridadeClass}">${escapeHtml(ch.prioridade)}</span></div>
                     <div class="ticket-cell ticket-subject">${escapeHtml(ch.assunto)}</div>
@@ -758,6 +822,10 @@
             limparMensagem(divRespostaGeral);
             ticketList.querySelectorAll('.data-row').forEach(r => r.remove());
             loadingIndicator.style.display = 'block';
+
+            // (NOVO) Desmarca o "Selecionar Todos" e esconde a barra de ações
+            selectAllCheckbox.checked = false;
+            bulkActionContainer.style.display = 'none';
 
             const p = new URLSearchParams();
             if (filtroAssunto.value.trim()) p.append('assunto', filtroAssunto.value.trim());
@@ -799,8 +867,6 @@
 
         async function abrirModalDetalhes(chamadoId) {
             limparMensagem(modalDetalhesResposta);
-            
-            // Limpa o histórico e o formulário
             listaComentariosContainer.innerHTML = '<span class="comment-empty-state">Carregando comentários...</span>';
             textareaComentario.value = '';
             limparMensagem(comentarioResposta);
@@ -808,7 +874,6 @@
             modalDetalhes.showModal();
             currentTicketId = null; 
 
-            // Estado de carregamento
             modalDetalhesConteudo.style.opacity = '0.5';
             detalheId.textContent = `#${chamadoId}`;
             detalheAssunto.textContent = 'Carregando...';
@@ -828,7 +893,6 @@
                 
                 const chamado = await response.json(); 
 
-                // Preenche o modal
                 detalheAssunto.textContent = chamado.assunto;
                 detalheDescricao.textContent = chamado.descricao;
                 detalheRequisitante.textContent = chamado.Funcionario?.nomeFuncionario || 'N/A';
@@ -943,11 +1007,11 @@
             }
         }
 
-        // --- (RE-ADICIONADO) Função para ENVIAR Comentário ---
+        // --- Função para ENVIAR Comentário ---
         async function enviarNovoComentario() {
             limparMensagem(comentarioResposta);
             
-            const ticketId = currentTicketId; // Pega o ID salvo
+            const ticketId = currentTicketId; 
             const texto = textareaComentario.value.trim();
 
             if (!texto) {
@@ -962,7 +1026,7 @@
             const body = {
                 texto: texto,
                 chamado_id: parseInt(ticketId),
-                user_id: userId // Pega o ID do usuário logado
+                user_id: userId 
             };
 
             try {
@@ -977,11 +1041,10 @@
                     throw new Error(erro.message || "Falha ao enviar comentário.");
                 }
 
-                textareaComentario.value = ''; // Limpa a caixa de texto
-                limparMensagem(comentarioResposta); // Limpa msg de sucesso/erro anterior
+                textareaComentario.value = ''; 
+                limparMensagem(comentarioResposta); 
                 
-                // (IMPORTANTE) Recarrega a lista de comentários
-                await carregarComentarios(ticketId); 
+                await carregarComentarios(ticketId); // Recarrega a lista
                 
             } catch (error) {
                  if (error instanceof SyntaxError) {
@@ -1013,15 +1076,126 @@
         }
         // --- FIM LÓGICA TEMA ---
 
+        // --- (NOVAS) FUNÇÕES DE AÇÃO EM LOTE ---
+
+        /**
+         * Marca ou desmarca todos os checkboxes da lista.
+         */
+        function toggleSelectAll() {
+            const checkboxes = document.querySelectorAll('.ticket-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = selectAllCheckbox.checked;
+            });
+            checkSelection(); // Atualiza a barra de ações
+        }
+
+        /**
+         * Verifica quantos checkboxes estão marcados e exibe/esconde a barra.
+         */
+        function checkSelection() {
+            const checkedBoxes = document.querySelectorAll('.ticket-checkbox:checked');
+            if (checkedBoxes.length > 0) {
+                bulkActionContainer.style.display = 'flex';
+            } else {
+                bulkActionContainer.style.display = 'none';
+            }
+
+            // Sincroniza o checkbox "Selecionar Todos"
+            const totalBoxes = document.querySelectorAll('.ticket-checkbox').length;
+            selectAllCheckbox.checked = (totalBoxes > 0 && checkedBoxes.length === totalBoxes);
+        }
+
+        /**
+         * Aplica a ação selecionada a todos os tickets marcados.
+         */
+        async function aplicarAcaoEmLote() {
+            limparMensagem(divRespostaGeral);
+            const acao = selectAcaoEmLote.value;
+            const checkedBoxes = document.querySelectorAll('.ticket-checkbox:checked');
+            
+            if (!acao) {
+                exibirMensagem(divRespostaGeral, "Por favor, selecione uma ação.", false);
+                return;
+            }
+            if (checkedBoxes.length === 0) {
+                exibirMensagem(divRespostaGeral, "Nenhum chamado selecionado.", false);
+                return;
+            }
+
+            if (!confirm(`Você tem certeza que deseja aplicar esta ação a ${checkedBoxes.length} chamado(s)?`)) {
+                return;
+            }
+
+            // Desabilita o botão para evitar cliques duplos
+            btnAplicarAcao.disabled = true;
+            btnAplicarAcao.textContent = "Aplicando...";
+
+            const [tipo, valor] = acao.split('-'); // ex: ["status", "Concluído"]
+            const rota = (tipo === 'status') ? 'status' : 'prioridade';
+            const bodyKey = (tipo === 'status')? 'status' : 'prioridade';
+
+            const promessas = [];
+
+            // Cria uma promessa de fetch para cada ID selecionado
+            checkedBoxes.forEach(checkbox => {
+                const id = checkbox.value;
+                const promessa = fetch(`${API_URL}/chamados/${id}/${rota}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ [bodyKey]: valor })
+                });
+                promessas.push(promessa);
+            });
+
+            // Espera todas as requisições terminarem
+            const resultados = await Promise.allSettled(promessas);
+
+            let sucessos = 0;
+            let falhas = 0;
+            resultados.forEach(res => {
+                if (res.status === 'fulfilled' && res.value.ok) {
+                    sucessos++;
+                } else {
+                    falhas++;
+                }
+            });
+
+            // Exibe o resultado
+            let msg = `${sucessos} chamado(s) atualizado(s) com sucesso.`;
+            if (falhas > 0) {
+                msg += ` ${falhas} falharam.`;
+                exibirMensagem(divRespostaGeral, msg, false);
+            } else {
+                exibirMensagem(divRespostaGeral, msg, true);
+            }
+
+            // Reabilita o botão e recarrega a lista
+            btnAplicarAcao.disabled = false;
+            btnAplicarAcao.textContent = "Aplicar";
+            selectAcaoEmLote.value = ""; // Reseta o select
+            await listarChamados(); // Recarrega a lista (que já desmarca tudo)
+        }
+
+        // --- FIM AÇÕES EM LOTE ---
 
         // --- EVENT LISTENERS ---
         btnFiltrar.addEventListener('click', listarChamados);
         btnLogout.addEventListener('click', fazerLogout);
         btnThemeToggle.addEventListener('click', toggleTheme);
+        
+        // (NOVOS) Event Listeners das Ações em Lote
+        selectAllCheckbox.addEventListener('click', toggleSelectAll);
+        btnAplicarAcao.addEventListener('click', aplicarAcaoEmLote);
 
         ticketList.addEventListener('click', e => {
             const t = e.target;
             
+            // (ATUALIZADO) Adiciona lógica para o checkbox individual
+            if (t.classList.contains('ticket-checkbox')) {
+                checkSelection();
+                return; // Não faz mais nada se foi um clique no checkbox
+            }
+
             if (t.classList.contains('view-icon')) {
                 const id = t.closest('.ticket-row').dataset.ticketId;
                 abrirModalDetalhes(id); 
@@ -1037,10 +1211,8 @@
 
         btnFecharModalDetalhes.addEventListener('click', () => {
             listaComentariosContainer.innerHTML = '';
-            // (RE-ADICIONADO) Limpa o form de comentário
             textareaComentario.value = '';
             limparMensagem(comentarioResposta);
-            
             modalDetalhes.removeAttribute('data-current-ticket-id'); 
             modalDetalhes.close();
         });
@@ -1048,7 +1220,7 @@
         detalhePrioridadeSelect.addEventListener('change', handlePrioridadeChange);
         detalheStatusSelect.addEventListener('change', handleStatusChange);
 
-        // --- (RE-ADICIONADO) Event Listener do botão de comentário ---
+        // (RE-ADICIONADO) Event Listener do botão de comentário
         btnEnviarComentario.addEventListener('click', enviarNovoComentario);
 
 
