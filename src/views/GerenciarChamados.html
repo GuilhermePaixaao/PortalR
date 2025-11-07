@@ -294,7 +294,7 @@
             line-height: 1.2; 
         }
         
-        /* --- (NOVO) ESTILOS DO BOTÃO DE TEMA --- */
+        /* --- ESTILOS DO BOTÃO DE TEMA --- */
         .btn-theme-toggle {
             background: none;
             border: 1px solid #ced4da;
@@ -311,7 +311,7 @@
         }
         /* --- FIM ESTILOS BOTÃO --- */
 
-        /* --- (NOVO) ESTILOS DO MODO ESCURO --- */
+        /* --- ESTILOS DO MODO ESCURO --- */
         body.dark-mode {
             background-color: #121212;
             color: #e0e0e0;
@@ -339,9 +339,14 @@
             border-color: #383838;
             color: #f1f1f1;
         }
+        
+        /* --- (CORREÇÃO) ESTA É A LINHA CORRIGIDA --- */
         .dark-mode .ticket-row {
+            background-color: #2a2a2a; /* Define o fundo escuro para as linhas de dados */
             border-bottom-color: #383838;
         }
+        /* --- FIM DA CORREÇÃO --- */
+
         .dark-mode h1,
         .dark-mode label,
         .dark-mode .ticket-cell,
@@ -517,18 +522,6 @@
                 Carregando comentários...
             </div>
             
-            <hr style="margin-top: 1.5rem; margin-bottom: 1.25rem;">
-            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;">Adicionar Comentário</h3>
-            <div id="formComentario">
-                <div class="grupo-form" style="margin-bottom: 0.5rem;">
-                    <textarea id="novoComentario" name="novoComentario" rows="3" class="form-control" placeholder="Digite seu comentário..." style="width: 100%; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 4px; font-size: 1rem;"></textarea>
-                </div>
-                <div id="comentarioResposta" class="mt-2"></div>
-                <div class="form-actions" style="margin-top: 0.5rem; padding-top: 0; justify-content: flex-end;">
-                     <button type="button" id="enviarComentario" style="padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; background-color: #198754; color: white;">Enviar Comentário</button>
-                </div>
-            </div>
-            
             <div id="modalDetalhesResposta" class="mt-3"></div>
             
             <div class="form-actions">
@@ -662,11 +655,6 @@
         const detalhePrioridadeSelect = document.getElementById("detalhePrioridadeSelect");
         const listaComentariosContainer = document.getElementById("listaComentariosContainer");
         const btnThemeToggle = document.getElementById("themeToggle");
-        
-        // --- (RE-ADICIONADO) REFERÊNCIAS DO FORM DE COMENTÁRIOS ---
-        const btnEnviarComentario = document.getElementById("enviarComentario");
-        const textareaComentario = document.getElementById("novoComentario");
-        const comentarioResposta = document.getElementById("comentarioResposta");
         // --- FIM REFERÊNCIAS ---
 
 
@@ -799,12 +787,7 @@
 
         async function abrirModalDetalhes(chamadoId) {
             limparMensagem(modalDetalhesResposta);
-            
-            // Limpa o histórico e o formulário
             listaComentariosContainer.innerHTML = '<span class="comment-empty-state">Carregando comentários...</span>';
-            textareaComentario.value = '';
-            limparMensagem(comentarioResposta);
-
             modalDetalhes.showModal();
             currentTicketId = null; 
 
@@ -942,55 +925,6 @@
                 }
             }
         }
-
-        // --- (RE-ADICIONADO) Função para ENVIAR Comentário ---
-        async function enviarNovoComentario() {
-            limparMensagem(comentarioResposta);
-            
-            const ticketId = currentTicketId; // Pega o ID salvo
-            const texto = textareaComentario.value.trim();
-
-            if (!texto) {
-                exibirMensagem(comentarioResposta, "Por favor, digite um comentário.", false);
-                return;
-            }
-            if (!ticketId) {
-                exibirMensagem(comentarioResposta, "Erro: ID do chamado não encontrado.", false);
-                return;
-            }
-
-            const body = {
-                texto: texto,
-                chamado_id: parseInt(ticketId),
-                user_id: userId // Pega o ID do usuário logado
-            };
-
-            try {
-                const response = await fetch(`${API_URL}/chamados/${ticketId}/comentarios`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
-                });
-
-                if (!response.ok) {
-                    const erro = await response.json();
-                    throw new Error(erro.message || "Falha ao enviar comentário.");
-                }
-
-                textareaComentario.value = ''; // Limpa a caixa de texto
-                limparMensagem(comentarioResposta); // Limpa msg de sucesso/erro anterior
-                
-                // (IMPORTANTE) Recarrega a lista de comentários
-                await carregarComentarios(ticketId); 
-                
-            } catch (error) {
-                 if (error instanceof SyntaxError) {
-                     exibirMensagem(comentarioResposta, "Erro de comunicação. A rota POST de comentários existe?", false);
-                } else {
-                     exibirMensagem(comentarioResposta, error.message, false);
-                }
-            }
-        }
         
         // --- LÓGICA DO TEMA ESCURO ---
         
@@ -1037,19 +971,12 @@
 
         btnFecharModalDetalhes.addEventListener('click', () => {
             listaComentariosContainer.innerHTML = '';
-            // (RE-ADICIONADO) Limpa o form de comentário
-            textareaComentario.value = '';
-            limparMensagem(comentarioResposta);
-            
             modalDetalhes.removeAttribute('data-current-ticket-id'); 
             modalDetalhes.close();
         });
         
         detalhePrioridadeSelect.addEventListener('change', handlePrioridadeChange);
         detalheStatusSelect.addEventListener('change', handleStatusChange);
-
-        // --- (RE-ADICIONADO) Event Listener do botão de comentário ---
-        btnEnviarComentario.addEventListener('click', enviarNovoComentario);
 
 
         // --- INICIALIZAÇÃO ---
