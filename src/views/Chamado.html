@@ -352,7 +352,7 @@
             </form>
         </dialog>
         
-       <dialog id="modalDetalhes" aria-labelledby="modalDetalhesTitle">
+        <dialog id="modalDetalhes" aria-labelledby="modalDetalhesTitle">
             <h2 id="modalDetalhesTitle" style="text-transform: uppercase;">Detalhes do Chamado</h2>
             <hr>
 
@@ -400,7 +400,9 @@
                 <div class="grupo-form" style="margin-bottom: 0.5rem;">
                     <textarea id="novoComentario" name="novoComentario" rows="3" class="form-control" placeholder="Digite seu comentário..." style="width: 100%; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 4px; font-size: 1rem;"></textarea>
                 </div>
-                
+
+                <div id="comentarioResposta" class="mt-2"></div>
+
                 <div class="form-actions" style="margin-top: 0.5rem; padding-top: 0; justify-content: flex-end;">
                      <button type="button" id="enviarComentario" style="padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; background-color: #198754; color: white;">Enviar Comentário</button>
                 </div>
@@ -408,7 +410,6 @@
 
             <div class="form-actions"><button type="button" id="fecharModalDetalhes">Fechar</button></div>
         </dialog>
-        ```
         <main class="main-content">
             <h1>Meus Chamados</h1> 
             <hr>
@@ -447,14 +448,14 @@
     </div>
 
     <script type="module">
-        const API_URL = "";
+        const API_URL = ""; // Defina a URL da sua API aqui (ex: "http://localhost:3000/api")
 
         // --- Autenticação (MODO STANDALONE/DEV) ---
         let userData = null;
         let userId = 1; // <-- ID Fixo para desenvolvimento
 
         // --- Variáveis Globais de Dados ---
-        let listaSubcategorias = []; // NOVA VARIÁVEL GLOBAL
+        let listaSubcategorias = []; 
 
         // --- Referências ---
         const modal = document.getElementById("modalTicket");
@@ -466,7 +467,6 @@
         const selectCategoriaModal = document.getElementById("categoria");
         const modalResposta = document.getElementById("modalResposta");
         const divRespostaGeral = document.getElementById("divRespostaGeral");
-        // const btnLogout = document.getElementById("logoutButton"); // Removido, pois não existe no HTML
         const modalDetalhes = document.getElementById("modalDetalhes");
         const btnFecharModalDetalhes = document.getElementById("fecharModalDetalhes");
         const filtroAssunto = document.getElementById("filtroAssunto");
@@ -475,9 +475,15 @@
         const btnFiltrar = document.getElementById("btnFiltrar");
         const inputTelefone = document.getElementById("telefoneRequisitante");
 
-        // --- NOVAS REFERÊNCIAS DE SUBCATEGORIA ---
+        // --- Referências de Subcategoria ---
         const selectSubcategoriaModal = document.getElementById("subcategoria");
         const grupoSubcategoria = document.getElementById("grupoSubcategoria");
+
+        // --- NOVO: Referências do Formulário de Comentários ---
+        const btnEnviarComentario = document.getElementById("enviarComentario");
+        const textareaComentario = document.getElementById("novoComentario");
+        const comentarioResposta = document.getElementById("comentarioResposta");
+        // --- FIM NOVO ---
 
         // --- Funções Auxiliares ---
         function exibirMensagem(elemento, mensagem, sucesso = true) {
@@ -516,10 +522,25 @@
             input.value = valor;
         }
 
-        // --- ATUALIZADO: Carregar Categorias e Subcategorias ---
+        // --- Carregar Categorias e Subcategorias ---
         async function carregarDadosIniciais() {
             try {
-                // 1. Busca Categorias e Subcategorias em paralelo
+                // Simulação de dados (substitua pelo fetch real)
+                const categorias = [
+                    { id: 1, nome: 'Financeiro' },
+                    { id: 2, nome: 'Logística' },
+                    { id: 3, nome: 'T.I.' }
+                ];
+                listaSubcategorias = [
+                    { id: 10, id_categoria: 1, nome: 'Contas a Pagar' },
+                    { id: 11, id_categoria: 1, nome: 'Contas a Receber' },
+                    { id: 12, id_categoria: 2, nome: 'Separação' },
+                    { id: 13, id_categoria: 2, nome: 'Entrega' },
+                    { id: 14, id_categoria: 3, nome: 'Problema no PC' },
+                    { id: 15, id_categoria: 3, nome: 'Impressora' }
+                ];
+
+                /* DESCOMENTE ISSO QUANDO TIVER API
                 const [catResponse, subCatResponse] = await Promise.all([
                     fetch(`${API_URL}/categorias`),
                     fetch(`${API_URL}/subcategorias`)
@@ -529,9 +550,9 @@
                 if (!subCatResponse.ok) throw new Error("Erro ao carregar subcategorias.");
 
                 const categorias = await catResponse.json();
-                listaSubcategorias = await subCatResponse.json(); // Salva na variável global
+                listaSubcategorias = await subCatResponse.json(); 
+                */
 
-                // 2. Popula o dropdown de Categorias (como antes)
                 selectCategoriaModal.innerHTML = '<option value="">-- Selecionar --</option>';
                 categorias.forEach(cat => {
                     const option = document.createElement("option");
@@ -542,12 +563,11 @@
 
             } catch (error) {
                 console.error(error);
-                // Mostra o erro no modal se ele estiver aberto, ou na página principal
                 exibirMensagem(modal.open ? modalResposta : divRespostaGeral, error.message, false);
             }
         }
 
-        // --- Renderizar Lista de Chamados (ATUALIZADO) ---
+        // --- Renderizar Lista de Chamados ---
         function renderizarChamados(chamados) {
             if (loadingIndicator) loadingIndicator.style.display = 'none';
             ticketList.querySelectorAll('.data-row').forEach(row => row.remove());
@@ -568,8 +588,6 @@
                 const prioridadeClass = (chamado.prioridade || 'Média').toLowerCase().replace('é', 'e');
                 const statusClass = (chamado.status || 'Aberto').toLowerCase().replace(/\s+/g, '-');
 
-                // Lógica para exibir a categoria mais específica
-                // Agora lê os objetos Categorias e Subcategoria formatados pelo Controller
                 let nomeExibicao = 'N/A';
                 if (chamado.Subcategoria && chamado.Subcategoria.nome) {
                     nomeExibicao = `${chamado.Categorias?.nome || '?'} / ${chamado.Subcategoria.nome}`;
@@ -594,68 +612,70 @@
                     </div>
                 `;
 
-                // --- AJUSTE JS: ADICIONADO ATUALIZAÇÃO DO TÍTULO ---
+                // --- ATUALIZADO: Evento de clique para abrir o modal ---
                 row.querySelector('.view-icon').addEventListener('click', (e) => {
                     e.stopPropagation();
                     
-                    // Atualiza o título do modal dinamicamente
-                    document.getElementById('modalDetalhesTitle').textContent = `#${chamado.id} - ${chamado.assunto || 'SEM ASSUNTO'}`;
+                    // --- ATUALIZADO: Armazena o ID do ticket no próprio modal ---
+                    modalDetalhes.setAttribute('data-current-ticket-id', chamado.id);
                     
-                    // Preenche o resto dos campos
+                    document.getElementById('modalDetalhesTitle').textContent = `#${chamado.id} - ${chamado.assunto || 'SEM ASSUNTO'}`;
                     document.getElementById('detalheId').textContent = `#${chamado.id}`;
                     document.getElementById('detalheStatus').textContent = chamado.status;
                     document.getElementById('detalhePrioridade').textContent = chamado.prioridade;
                     document.getElementById('detalheAssunto').textContent = chamado.assunto;
                     document.getElementById('detalheDescricao').textContent = chamado.descricao;
                     document.getElementById('detalheRequisitante').textContent = chamado.Funcionario?.nomeFuncionario || 'Desconhecido';
-                    document.getElementById('detalheCategoria').textContent = nomeExibicao; // Usa o nome formatado
+                    document.getElementById('detalheCategoria').textContent = nomeExibicao;
                     document.getElementById('detalheData').textContent = formatarData(chamado.created_at);
 
                     modalDetalhes.showModal();
                 });
-                // --- FIM DO AJUSTE JS ---
+                // --- FIM ATUALIZAÇÃO ---
 
                 ticketList.appendChild(row);
             });
         }
 
-        // --- Listar Chamados (Lógica de filtro permanece a mesma) ---
+        // --- Listar Chamados ---
         async function listarChamados() {
             limparMensagem(divRespostaGeral);
             ticketList.querySelectorAll('.data-row').forEach(row => row.remove());
             if (loadingIndicator) loadingIndicator.style.display = 'block';
 
             const params = new URLSearchParams();
-            if (filtroAssunto.value.trim()) {
-                params.append('assunto', filtroAssunto.value.trim());
-            }
-            if (filtroPrioridade.value) {
-                params.append('prioridade', filtroPrioridade.value);
-            }
-            if (filtroStatus.value) {
-                params.append('status', filtroStatus.value);
-            }
+            if (filtroAssunto.value.trim()) params.append('assunto', filtroAssunto.value.trim());
+            if (filtroPrioridade.value) params.append('prioridade', filtroPrioridade.value);
+            if (filtroStatus.value) params.append('status', filtroStatus.value);
             params.append('requisitante_id', userId); 
 
             const url = `${API_URL}/chamados?${params.toString()}`;
 
             try {
+                // Simulação de dados (substitua pelo fetch real)
+                const chamados = [
+                    { id: 564, prioridade: 'Alta', assunto: 'COMPRAS', Categorias: { nome: 'Financeiro' }, Subcategoria: { nome: 'Contas a Pagar' }, status: 'Aberto', Funcionario: { nomeFuncionario: 'Francisca Cunha' }, created_at: new Date().toISOString(), descricao: 'COMPRA MAQUINA DE SOLDA PARA LOJAS DO FUNDO DO VALE, ENTREGAR NO INTERLAGOS' },
+                    { id: 565, prioridade: 'Média', assunto: 'Impressora Fiscal', Categorias: { nome: 'T.I.' }, Subcategoria: { nome: 'Impressora' }, status: 'Em Andamento', Funcionario: { nomeFuncionario: 'João Paulo' }, created_at: new Date().toISOString(), descricao: 'Impressora fiscal da loja 02 parou de imprimir.' }
+                ];
+                renderizarChamados(chamados);
+
+                /* DESCOMENTE ISSO QUANDO TIVER API
                 const response = await fetch(url);
                 if (!response.ok) throw new Error("Erro ao buscar chamados.");
                 const chamados = await response.json();
                 renderizarChamados(chamados);
+                */
             } catch (error) {
                 exibirMensagem(divRespostaGeral, error.message, false);
                 if (loadingIndicator) loadingIndicator.innerHTML = '<p style="color:red;">Falha ao carregar.</p>';
             }
         }
 
-        // --- ATUALIZADO: Criar Novo Chamado ---
+        // --- Criar Novo Chamado ---
         async function criarChamado(event) {
             event.preventDefault();
             limparMensagem(modalResposta);
 
-            // 1. Coletar dados de texto
             const nomeRequisitante = ticketForm.nomeRequisitante.value.trim();
             const emailRequisitante = ticketForm.emailRequisitante.value.trim();
             const telefoneRequisitante = ticketForm.telefoneRequisitante.value.trim();
@@ -663,8 +683,6 @@
             const descricao = ticketForm.descricao.value.trim();
             const prioridade = ticketForm.prioridade.value || 'Média';
             const categoriaId = ticketForm.categoria.value || null;
-            
-            // 1b. COLETAR O NOVO CAMPO DE SUBCATEGORIA
             const subcategoriaId = ticketForm.subcategoria.value || null;
 
             if (!nomeRequisitante || !emailRequisitante || !assunto || !descricao) {
@@ -672,7 +690,6 @@
                 return;
             }
 
-            // 2. Coletar arquivos e validar tamanho (sem mudanças)
             const anexoInput = document.getElementById('anexo');
             const files = anexoInput.files;
             let totalSize = 0;
@@ -687,7 +704,6 @@
                 return;
             }
 
-            // 3. ATUALIZADO: Montar o FormData
             const formData = new FormData();
             const dadosChamado = {
                 chamado: {
@@ -697,9 +713,9 @@
                     assunto: assunto,
                     descricao: descricao,
                     prioridade: prioridade,
-                    requisitante_id: userId, // ID Fixo
+                    requisitante_id: userId,
                     categoria_id: categoriaId ? parseInt(categoriaId) : null,
-                    subcategoria_id: subcategoriaId ? parseInt(subcategoriaId) : null // ENVIAR O NOVO ID
+                    subcategoria_id: subcategoriaId ? parseInt(subcategoriaId) : null
                 }
             };
             
@@ -709,33 +725,82 @@
                 formData.append('anexos', files[i]);
             }
 
-            // 4. Enviar a requisição fetch (sem mudanças)
             try {
+                // Simulação de envio (substitua pelo fetch real)
+                console.log('Enviando chamado:', dadosChamado);
+                
+                /* DESCOMENTE ISSO QUANDO TIVER API
                 const response = await fetch(`${API_URL}/chamados`, {
                     method: 'POST',
                     body: formData 
                 });
                 
-                // O backend agora retorna o chamado criado e formatado
                 const respostaAPI = await response.json();
                 if (!response.ok) {
                     throw new Error(respostaAPI.message || "Erro ao criar chamado.");
                 }
+                */
 
-                exibirMensagem(divRespostaGeral, "Chamado criado com sucesso!", true);
+                exibirMensagem(divRespostaGeral, "Chamado criado com sucesso! (Simulação)", true);
                 modal.close();
-                // ticketForm.reset() é chamado no 'close'
-                await listarChamados(); // Recarrega a lista
+                await listarChamados(); 
             } catch (error) {
                 exibirMensagem(modalResposta, error.message, false);
             }
         }
         
-        // --- ATUALIZADO: Lógica do Modal "Novo Chamado" ---
+        // --- NOVO: Função para Enviar Comentário ---
+        async function enviarNovoComentario() {
+            limparMensagem(comentarioResposta);
+            
+            const ticketId = modalDetalhes.getAttribute('data-current-ticket-id');
+            const texto = textareaComentario.value.trim();
+
+            if (!texto) {
+                exibirMensagem(comentarioResposta, "Por favor, digite um comentário.", false);
+                return;
+            }
+            if (!ticketId) {
+                exibirMensagem(comentarioResposta, "Erro: ID do chamado não encontrado.", false);
+                return;
+            }
+
+            const body = {
+                texto: texto,
+                chamado_id: parseInt(ticketId),
+                user_id: userId // Usando o userId global
+            };
+
+            try {
+                // Simulação de envio (substitua pelo fetch real)
+                console.log('Enviando comentário:', body, `para a rota: ${API_URL}/chamados/${ticketId}/comentarios`);
+                
+                /* DESCOMENTE ISSO QUANDO TIVER API
+                const response = await fetch(`${API_URL}/chamados/${ticketId}/comentarios`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                if (!response.ok) {
+                    const erro = await response.json();
+                    throw new Error(erro.message || "Falha ao enviar comentário.");
+                }
+                */
+
+                textareaComentario.value = ''; // Limpa a caixa de texto
+                exibirMensagem(comentarioResposta, "Comentário enviado com sucesso! (Simulação)", true);
+                
+            } catch (error) {
+                exibirMensagem(comentarioResposta, error.message, false);
+            }
+        }
+        // --- FIM NOVO ---
+
+        // --- Lógica do Modal "Novo Chamado" ---
         function resetarModalForm() {
             ticketForm.reset();
             limparMensagem(modalResposta);
-            // Esconde e reseta o dropdown de subcategoria
             grupoSubcategoria.style.display = 'none';
             selectSubcategoriaModal.innerHTML = '';
             selectSubcategoriaModal.required = false;
@@ -743,21 +808,22 @@
 
         btnAbrir.addEventListener('click', () => {
             resetarModalForm();
-            
-            // Pré-preenche os dados (se houver)
-            document.getElementById('nomeRequisitante').value = ''; // Ajuste se precisar buscar dados do usuário logado
-            document.getElementById('emailRequisitante').value = ''; 
-
+            document.getElementById('nomeRequisitante').value = 'Usuário Padrão'; // Ajuste se precisar buscar dados do usuário logado
+            document.getElementById('emailRequisitante').value = 'usuario@email.com'; 
             if (typeof modal.showModal === 'function') modal.showModal();
             else modal.setAttribute('open', '');
             document.getElementById('assunto').focus();
         });
         
         btnFechar.addEventListener('click', () => { modal.close(); });
-        modal.addEventListener('close', () => { resetarModalForm(); }); // Garante o reset ao fechar
+        modal.addEventListener('close', () => { resetarModalForm(); }); 
         
-        // --- Lógica do Modal "Detalhes" (sem mudanças) ---
+        // --- ATUALIZADO: Lógica do Modal "Detalhes" (Fechar) ---
         btnFecharModalDetalhes.addEventListener('click', () => {
+            // Limpa o formulário de comentário ao fechar
+            textareaComentario.value = '';
+            limparMensagem(comentarioResposta);
+            modalDetalhes.removeAttribute('data-current-ticket-id'); // Limpa o ID salvo
             modalDetalhes.close();
         });
 
@@ -768,28 +834,24 @@
             inputTelefone.addEventListener('input', () => aplicarMascaraTelefone(inputTelefone));
         }
 
-        // ---
-        // ==================================================================
-        //                 LÓGICA DO DROPDOWN EM CASCATA
-        // ==================================================================
-        // ---
+        // --- NOVO: Event Listener do botão de comentário ---
+        btnEnviarComentario.addEventListener('click', enviarNovoComentario);
+        // --- FIM NOVO ---
+
+        // --- Lógica do Dropdown em Cascata ---
         selectCategoriaModal.addEventListener('change', () => {
             const categoriaId = parseInt(selectCategoriaModal.value, 10);
             
-            // 1. Limpa o dropdown de subcategoria
             selectSubcategoriaModal.innerHTML = '<option value="">-- Selecionar Subcategoria --</option>';
 
-            // 2. Se a categoria for inválida (ex: "-- Selecionar --"), esconde o dropdown
             if (isNaN(categoriaId) || !categoriaId) {
                 grupoSubcategoria.style.display = 'none'; 
                 selectSubcategoriaModal.required = false;
                 return;
             }
 
-            // 3. Filtra a lista global de subcategorias
             const subcategoriasFilhas = listaSubcategorias.filter(sub => sub.id_categoria === categoriaId);
 
-            // 4. Se encontrou subcategorias, popula o dropdown e o exibe
             if (subcategoriasFilhas.length > 0) {
                 subcategoriasFilhas.forEach(sub => {
                     const option = document.createElement("option");
@@ -797,25 +859,21 @@
                     option.textContent = sub.nome;
                     selectSubcategoriaModal.appendChild(option);
                 });
-                grupoSubcategoria.style.display = 'block'; // Mostra o dropdown
-                selectSubcategoriaModal.required = true; // Torna obrigatório (se quiser)
+                grupoSubcategoria.style.display = 'block';
+                selectSubcategoriaModal.required = true; 
             } else {
-                // 5. Se não encontrou, mantém o dropdown escondido
                 grupoSubcategoria.style.display = 'none';
                 selectSubcategoriaModal.required = false;
             }
         });
 
-
         // --- Inicialização ---
         async function init() {
-            // Renomeei a função de carregamento
             await carregarDadosIniciais(); 
             await listarChamados(); 
         }
         init();
     </script>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
