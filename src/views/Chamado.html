@@ -780,10 +780,8 @@
             comentarios.forEach(comentario => {
                 // Assumindo que o comentário tem a estrutura:
                 // { texto: "...", created_at: "...", Funcionario: { nomeFuncionario: "..." } }
-                const nome = comentario.Funcionario?.nomeFuncionario || 'Usuário desconhecido';
-                const data = formatarData(comentario.created_at);
+                const nome = comentario.nomeFuncionario || 'Usuário desconhecido';                const data = formatarData(comentario.created_at);
                 const texto = escapeHtml(comentario.texto);
-
                 const commentHtml = `
                     <div class="comment-item">
                         <div class="comment-header">
