@@ -347,22 +347,47 @@
         </dialog>
         
         <dialog id="modalDetalhes" aria-labelledby="modalDetalhesTitle">
-            <h2 id="modalDetalhesTitle">Detalhes do Chamado</h2>
-            <hr>
-            <div class="row">
-                <div class="col-md-4"><div class="detalhe-grupo"><span class="detalhe-label">Ticket ID</span><span id="detalheId" class="detalhe-valor">#...</span></div></div>
-                <div class="col-md-4"><div class="detalhe-grupo"><span class="detalhe-label">Status</span><span id="detalheStatus" class="detalhe-valor">...</span></div></div>
-                <div class="col-md-4"><div class="detalhe-grupo"><span class="detalhe-label">Prioridade</span><span id="detalhePrioridade" class="detalhe-valor">...</span></div></div>
-            </div>
-            <div class="detalhe-grupo"><span class="detalhe-label">Assunto</span><div id="detalheAssunto" class="detalhe-valor"></div></div>
-            <div class="detalhe-grupo"><span class="detalhe-label">Descrição</span><div id="detalheDescricao" class="detalhe-descricao"></div></div>
-            <div class="row">
-                <div class="col-md-6"><div class="detalhe-grupo"><span class="detalhe-label">Requisitante</span><span id="detalheRequisitante" class="detalhe-valor">...</span></div></div>
-                <div class="col-md-6"><div class="detalhe-grupo"><span class="detalhe-label">Categoria</span><span id="detalheCategoria" class="detalhe-valor">...</span></div></div>
-            </div>
-            <div class="detalhe-grupo"><span class="detalhe-label">Criado em</span><span id="detalheData" class="detalhe-valor">...</span></div>
-            <div class="form-actions"><button type="button" id="fecharModalDetalhes">Fechar</button></div>
-        </dialog>
+                        <h2 id="modalDetalhesTitle" style="text-transform: uppercase;">Detalhes do Chamado</h2> 
+            <hr>
+            
+                        <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;">Dados Gerais</h3>
+
+                        <div class="detalhe-grupo">
+                <span class="detalhe-label">Assunto</span>
+                <div id="detalheAssunto" class="detalhe-valor">...</div>
+            </div>
+            
+                        <div class="detalhe-grupo">
+                <span class="detalhe-label">Descrição</span>
+                <div id="detalheDescricao" class="detalhe-descricao">...</div>
+            </div>
+
+                        <div class="row">
+                                <div class="col-md-3">
+                    <div class="detalhe-grupo"><span class="detalhe-label">Contato</span><span id="detalheRequisitante" class="detalhe-valor">...</span></div>
+                </div>
+                                <div class="col-md-3">
+                    <div class="detalhe-grupo"><span class="detalhe-label">Situação</span><span id="detalheStatus" class="detalhe-valor">...</span></div>
+                </div>
+                                <div class="col-md-3">
+                    <div class="detalhe-grupo"><span class="detalhe-label">Categorias</span><span id="detalheCategoria" class="detalhe-valor">...</span></div>
+                </div>
+                                <div class="col-md-3">
+                    <div class="detalhe-grupo"><span class="detalhe-label">Prioridade</span><span id="detalhePrioridade" class="detalhe-valor">...</span></div>
+                </div>
+            </div>
+
+                        <div class="row">
+                <div class="col-md-4">
+                    <div class="detalhe-grupo"><span class="detalhe-label">Ticket ID</span><span id="detalheId" class="detalhe-valor">#...</span></div>
+                </div>
+                <div class="col-md-4">
+                    <div class="detalhe-grupo"><span class="detalhe-label">Criado em</span><span id="detalheData" class="detalhe-valor">...</span></div>
+                </div>
+                            </div>
+            
+                        <div class="form-actions"><button type="button" id="fecharModalDetalhes">Fechar</button></div>
+        </dialog>
         
         <main class="main-content">
             <h1>Meus Chamados</h1> 
