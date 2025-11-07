@@ -1,7 +1,7 @@
 // Substitua o conteúdo do seu comentarioModel.js por isto:
 
 // Use import (ESM) para buscar a conexão
-import pool from '../config/db.js'; // Ajuste o caminho para sua conexão
+import pool from '../config/database.js'; // Ajuste o caminho para sua conexão
 
 const comentarioModel = {
     create: async (dados) => {
