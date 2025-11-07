@@ -7,7 +7,6 @@
 
     <script>
         // --- INÍCIO DO PROTETOR DE PÁGINA (ANTI-FLICKER) ---
-        // Esta variável agora é global para esta página
         const userDataString = localStorage.getItem("userData");
         
         if (!userDataString) {
@@ -20,11 +19,10 @@
                 throw new Error("Dados de usuário inválidos.");
             }
             
-            // VERIFICAÇÃO DE PERFIL (ESPECÍFICA DESTA PÁGINA)
             const userPerfil = userData?.data?.perfil;
             if (userPerfil === 'REQUISITANTE') {
                 alert("Acesso negado. Esta página é para gerenciamento. Redirecionando...");
-                window.location.replace("Chamado.html"); // Redireciona para a pág. de abrir chamado
+                window.location.replace("Chamado.html"); 
                 throw new Error("Acesso negado.");
             }
 
@@ -45,15 +43,15 @@
     <link rel="stylesheet" href="css/ticket.css">
 
     <style>
-        /* --- (NOVO) ESTILOS DO MODAL DE DETALHES (Baseado na Imagem) --- */
+        /* --- ESTILOS DO MODAL DE DETALHES --- */
         dialog:not([open]) { display: none; }
         dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
         dialog {
             border: none;
             border-radius: 8px;
-            padding: 1.5rem 2rem; /* Mais padding lateral */
+            padding: 1.5rem 2rem; 
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-            max-width: 800px; /* (MODIFICADO) Aumentado para 800px */
+            max-width: 800px; /* Mais largo */
             width: calc(100% - 2rem);
         }
         .form-actions {
@@ -63,7 +61,7 @@
             gap: 0.5rem;
         }
         .form-actions button {
-            padding: 0.6rem 1.2rem; /* Botão um pouco menor */
+            padding: 0.6rem 1.2rem; 
             border: none;
             border-radius: 6px;
             cursor: pointer;
@@ -73,43 +71,40 @@
             color: white;
         }
         #modalDetalhes h2 {
-            font-size: 1.75rem; /* Título maior */
+            font-size: 1.75rem; 
             font-weight: 600;
             margin-bottom: 1rem;
         }
         #modalDetalhes .detalhe-grupo { 
-            margin-bottom: 1.25rem; /* Mais espaçamento */
+            margin-bottom: 1.25rem; 
         }
         #modalDetalhes .detalhe-label {
             font-weight: 600;
             color: #495057;
-            font-size: 0.85rem; /* Label um pouco menor */
+            font-size: 0.85rem; 
             text-transform: uppercase;
             margin-bottom: 0.25rem;
             display: block;
         }
-        /* (Modificado) .detalhe-valor agora é <select> ou <div> */
         #modalDetalhes .detalhe-valor,
         #modalDetalhes .detalhe-valor-select {
-            font-size: 1.1rem; /* Valor maior */
+            font-size: 1.1rem; 
             padding: 0.5rem;
-            background-color: #f4f5f7; /* Cor de fundo suave */
+            background-color: #f4f5f7; 
             border-radius: 5px;
             word-wrap: break-word;
-            min-height: 42px; /* Altura mínima (para alinhar com selects) */
+            min-height: 42px; 
             display: flex;
             align-items: center;
         }
-        /* (Novo) Estilo para os selects editáveis */
         #modalDetalhes .detalhe-valor-select {
-            padding: 0.375rem 0.5rem; /* Padding de select */
+            padding: 0.375rem 0.5rem; 
             width: 100%;
             border: 1px solid #ced4da;
-            background-color: #fff; /* Fundo branco para indicar edição */
+            background-color: #fff; 
             font-size: 1.1rem;
-            height: 42px; /* Altura fixa */
+            height: 42px; 
         }
-
         #modalDetalhes .detalhe-descricao {
             font-size: 1.1rem;
             padding: 0.5rem;
@@ -120,7 +115,49 @@
             max-height: 250px;
             overflow-y: auto;
         }
+        
+        /* --- ESTILOS DO HISTÓRICO DE COMENTÁRIOS --- */
+        #listaComentariosContainer {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 1rem;
+            min-height: 100px;
+            max-height: 300px; 
+            overflow-y: auto;
+        }
+        .comment-item {
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        .comment-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .comment-header {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 0.25rem;
+        }
+        .comment-header .comment-date {
+            font-weight: 400;
+            color: #6c757d;
+            margin-left: 0.5rem;
+        }
+        .comment-body {
+            font-size: 1rem;
+            white-space: pre-wrap; 
+            word-wrap: break-word;
+        }
+        .comment-empty-state {
+            color: #6c757d;
+            font-style: italic;
+        }
         /* --- FIM ESTILOS MODAL --- */
+
 
         .main-content {
             grid-area: main;
@@ -153,17 +190,13 @@
             font-size: 0.85em;
             font-weight: 600;
         }
-
-        /* (Modificado) Classes de badge atualizadas para media/planejado */
         .priority-badge.alta, .priority-badge.high { background-color: #f8d7da; color: #842029; }
         .priority-badge.média, .priority-badge.medium, .priority-badge.media { background-color: #fff3cd; color: #664d03; }
         .priority-badge.baixa, .priority-badge.low { background-color: #cfe2ff; color: #084298; }
         .priority-badge.planejado { background-color: #e2d1e7; color: #510f32; } 
-
         .status-badge.aberto, .status-badge.open { background-color: #ffc107; color: #000; }
         .status-badge.concluído, .status-badge.completed { background-color: #d1e7dd; color: #0f5132; }
         .status-badge.em-andamento { background-color: #cfe2ff; color: #084298; }
-
 
         #loadingIndicator { padding: 2rem; text-align: center; color: #6c757d; }
 
@@ -176,11 +209,10 @@
         }
         .btn-concluir { color: green; }
 
-        /* --- ESTILOS ADICIONADOS PARA HEADER E LOGOUT --- */
         .header {
             display: flex;
             align-items: center;
-            justify-content: space-between; /* Alinha itens */
+            justify-content: space-between; 
             padding: 0.75rem 2rem;
             background-color: #ffffff;
             border-bottom: 1px solid #dee2e6;
@@ -217,7 +249,6 @@
             outline: none;
         }
         
-        /* Estilos para Logout */
         .header-actions {
             display: flex;
             align-items: center;
@@ -242,7 +273,6 @@
             background-color: #bb2d3b;
         }
 
-        /* AJUSTES DA SIDEBAR PARA ALINHAMENTO E SUPORTE A QUEBRA DE LINHA */
         .sidebar nav ul li a {
             display: flex;
             align-items: center; 
@@ -251,7 +281,6 @@
             width: 100%;
             height: auto; 
         }
-
         .sidebar .icon {
             margin-right: 10px; 
             min-width: 20px; 
@@ -259,13 +288,123 @@
             flex-shrink: 0; 
             align-self: center; 
         }
-
         .sidebar .text {
             flex-grow: 1; 
             white-space: normal; 
             line-height: 1.2; 
         }
-        /* --- FIM DOS ESTILOS DE AJUSTE --- */
+        
+        /* --- (NOVO) ESTILOS DO BOTÃO DE TEMA --- */
+        .btn-theme-toggle {
+            background: none;
+            border: 1px solid #ced4da;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: #495057;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+        }
+        .btn-theme-toggle:hover {
+            background-color: #f1f3f5;
+        }
+        /* --- FIM ESTILOS BOTÃO --- */
+
+        /* --- (NOVO) ESTILOS DO MODO ESCURO --- */
+        body.dark-mode {
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+        .dark-mode .main-content {
+            background-color: #181818;
+        }
+        .dark-mode .sidebar {
+            background-color: #212121;
+            border-right-color: #333;
+        }
+        .dark-mode .sidebar a {
+            color: #b0b0b0;
+        }
+        .dark-mode .sidebar li.active a,
+        .dark-mode .sidebar a:hover {
+            background-color: #333;
+            color: #ffffff;
+        }
+        .dark-mode .header,
+        .dark-mode .widget,
+        .dark-mode .card,
+        .dark-mode .ticket-row.header {
+            background-color: #2a2a2a;
+            border-color: #383838;
+            color: #f1f1f1;
+        }
+        .dark-mode .ticket-row {
+            border-bottom-color: #383838;
+        }
+        .dark-mode h1,
+        .dark-mode label,
+        .dark-mode .ticket-cell,
+        .dark-mode .logo {
+            color: #f1f1f1;
+        }
+        .dark-mode #userNameDisplay {
+            color: #f1f1f1;
+        }
+
+        /* Forms e Modais no Modo Escuro */
+        .dark-mode .form-control,
+        .dark-mode .form-select,
+        .dark-mode dialog,
+        .dark-mode #modalDetalhes .detalhe-valor,
+        .dark-mode #modalDetalhes .detalhe-descricao,
+        .dark-mode #listaComentariosContainer {
+            background-color: #333;
+            color: #e0e0e0;
+            border-color: #555;
+        }
+        .dark-mode .form-control::placeholder {
+            color: #999;
+        }
+        .dark-mode #modalDetalhes .detalhe-label,
+        .dark-mode #modalDetalhes h2,
+        .dark-mode #modalDetalhes h3 {
+            color: #f1f1f1;
+        }
+
+        /* Comentários no Modo Escuro */
+        .dark-mode .comment-item {
+            border-bottom-color: #444;
+        }
+        .dark-mode .comment-header {
+            color: #f1f1f1;
+        }
+        .dark-mode .comment-header .comment-date {
+            color: #aaa;
+        }
+        .dark-mode .comment-empty-state {
+            color: #aaa;
+        }
+
+        /* Badges no Modo Escuro */
+        .dark-mode .priority-badge.alta { background-color: #842029; color: #f8d7da; }
+        .dark-mode .priority-badge.media { background-color: #664d03; color: #fff3cd; }
+        .dark-mode .priority-badge.baixa { background-color: #084298; color: #cfe2ff; }
+        .dark-mode .priority-badge.planejado { background-color: #510f32; color: #e2d1e7; }
+        .dark-mode .status-badge.aberto { background-color: #ffc107; color: #000; }
+        .dark-mode .status-badge.concluído { background-color: #0f5132; color: #d1e7dd; }
+        .dark-mode .status-badge.em-andamento { background-color: #084298; color: #cfe2ff; }
+
+        /* Botão de Tema no Modo Escuro */
+        .dark-mode .btn-theme-toggle {
+            background-color: #333;
+            border-color: #555;
+            color: #e0e0e0;
+        }
+        .dark-mode .btn-theme-toggle:hover {
+            background-color: #444;
+        }
+        /* --- FIM MODO ESCURO --- */
 
     </style>
 </head>
@@ -279,6 +418,8 @@
             </div>
             
             <div class="header-actions">
+                <button id="themeToggle" class="btn-theme-toggle" title="Alternar Tema">🌙</button>
+                
                 <span id="userNameDisplay"></span>
                 <button id="logoutButton" class="btn-logout">Sair</button>
             </div>
@@ -370,18 +511,10 @@
             
             <hr style="margin-top: 1rem; margin-bottom: 1.25rem;">
             
-            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;">Adicionar Comentário</h3>
+            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;">Histórico de Comentários</h3>
     
-            <div id="formComentario">
-                <div class="grupo-form" style="margin-bottom: 0.5rem;">
-                    <textarea id="novoComentario" name="novoComentario" rows="3" class="form-control" placeholder="Digite seu comentário..." style="width: 100%; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 4px; font-size: 1rem;"></textarea>
-                </div>
-
-                <div id="comentarioResposta" class="mt-2"></div>
-
-                <div class="form-actions" style="margin-top: 0.5rem; padding-top: 0; justify-content: flex-end;">
-                     <button type="button" id="enviarComentario" style="padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; background-color: #198754; color: white;">Enviar Comentário</button>
-                </div>
+            <div id="listaComentariosContainer" class="comment-empty-state">
+                Carregando comentários...
             </div>
             
             <div id="modalDetalhesResposta" class="mt-3"></div>
@@ -411,7 +544,8 @@
                                 <option value="Alta">Alta</option>
                                 <option value="Média">Média</option>
                                 <option value="Baixa">Baixa</option>
-                                <option value="Planejado">Planejado</option> </select>
+                                <option value="Planejado">Planejado</option> 
+                            </select>
                         </div>
 
                         <div class="col-md-2">
@@ -457,7 +591,7 @@
 
     <script type="module">
         const API_URL = ""; 
-        let currentTicketId = null; // (NOVO) Guarda o ID do ticket aberto no modal
+        let currentTicketId = null; 
 
         // --- FUNÇÃO DE LOGOUT ---
         function fazerLogout() {
@@ -465,11 +599,9 @@
             window.location.href = "Login.html"; 
         }
 
-        // O script do <head> já validou o login e o perfil.
         let userData, userId, userPerfil, userCategoriaAtendimento;
 
         try {
-            // Usamos a variável 'userDataString' global definida no <head>
             userData = JSON.parse(userDataString); 
             userId = userData?.data?.id;
             userPerfil = userData?.data?.perfil;
@@ -481,16 +613,11 @@
                 userNameDisplay.textContent = `Olá, ${userData.data.nomeFuncionario.split(' ')[0]}`;
             }
 
-            // O link de chamado é sempre "Gerenciar Chamados" nesta página.
             const linkChamado = document.getElementById("menu-link-chamado");
             if (linkChamado) {
                 const a = linkChamado.querySelector('a');
                 const textSpan = a.querySelector('.text'); 
-
-                // Aplica o novo formato de duas linhas para o texto
                 textSpan.innerHTML = "Gerenciar<br>Chamados";
-                
-                // Certifica-se de que o ícone e o título estão corretos (apenas por garantia)
                 a.querySelector('.icon').textContent = "✔️";
                 a.title = "Gerenciar Chamados";
             }
@@ -500,7 +627,7 @@
             fazerLogout();
         }
 
-        // --- LÓGICA DA PÁGINA DE GERENCIAMENTO (Referências do seu código original) ---
+        // --- REFERÊNCIAS ---
         const ticketList = document.getElementById("ticketList");
         const loadingIndicator = document.getElementById("loadingIndicator");
         const divRespostaGeral = document.getElementById("divRespostaGeral");
@@ -510,28 +637,23 @@
         const filtroCategoria = document.getElementById("filtroCategoria");
         const btnFiltrar = document.getElementById("btnFiltrar");
         const btnLogout = document.getElementById("logoutButton");
-
-        // --- (NOVAS) REFERÊNCIAS DO MODAL ---
         const modalDetalhes = document.getElementById("modalDetalhes");
         const btnFecharModalDetalhes = document.getElementById("fecharModalDetalhes");
         const modalDetalhesConteudo = document.getElementById("modalDetalhesConteudo");
         const modalDetalhesResposta = document.getElementById("modalDetalhesResposta");
-        // Campos de dados
         const detalheId = document.getElementById("detalheId");
         const detalheAssunto = document.getElementById("detalheAssunto");
         const detalheDescricao = document.getElementById("detalheDescricao");
         const detalheRequisitante = document.getElementById("detalheRequisitante");
         const detalheCategoria = document.getElementById("detalheCategoria");
         const detalheData = document.getElementById("detalheData");
-        // Campos editáveis
         const detalheStatusSelect = document.getElementById("detalheStatusSelect");
         const detalhePrioridadeSelect = document.getElementById("detalhePrioridadeSelect");
+        const listaComentariosContainer = document.getElementById("listaComentariosContainer");
         
-        // --- (ADICIONADO) REFERÊNCIAS DO FORM DE COMENTÁRIOS ---
-        const btnEnviarComentario = document.getElementById("enviarComentario");
-        const textareaComentario = document.getElementById("novoComentario");
-        const comentarioResposta = document.getElementById("comentarioResposta");
-        // --- FIM REFERÊNCIAS COMENTÁRIOS ---
+        // --- (NOVO) REFERÊNCIA DO BOTÃO DE TEMA ---
+        const btnThemeToggle = document.getElementById("themeToggle");
+        // --- FIM REFERÊNCIAS ---
 
 
         function exibirMensagem(el, msg, sucesso = true) {
@@ -549,10 +671,9 @@
         function formatarData(d) {
             if (!d) return 'N/A';
             try {
-                // (NOVO) Adicionado ajuste de fuso horário para garantir que a data/hora local seja exibida
                 const dt = new Date(d);
                 const offset = dt.getTimezoneOffset() * 60000;
-                const dtLocal = new Date(dt.getTime() + offset); // Ajusta para o fuso local do navegador
+                const dtLocal = new Date(dt.getTime() + offset); 
 
                 const data = dtLocal.toLocaleDateString('pt-BR');
                 const hora = dtLocal.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -598,7 +719,6 @@
             }
 
             chamados.forEach(ch => {
-                // (Modificado) Corrigido para 'media' e 'planejado'
                 const prioridadeClass = (ch.prioridade || 'Média').toLowerCase().replace('é', 'e');
                 const statusClass = (ch.status || 'Aberto').toLowerCase().replace(/\s+/g, '-');
                 
@@ -645,7 +765,6 @@
             }
         }
 
-        // Esta é a sua função original, para o botão ✔️ (Mantida)
         async function atualizarStatusChamado(id, status) {
             try {
                 const r = await fetch(`${API_URL}/chamados/${id}/status`, {
@@ -664,14 +783,9 @@
 
         // --- (NOVAS) FUNÇÕES DO MODAL ---
 
-        // (NOVA) Busca dados frescos do chamado e abre o modal
         async function abrirModalDetalhes(chamadoId) {
             limparMensagem(modalDetalhesResposta);
-            
-            // (ADICIONADO) Limpa o form de comentário ao abrir
-            textareaComentario.value = '';
-            limparMensagem(comentarioResposta);
-
+            listaComentariosContainer.innerHTML = '<span class="comment-empty-state">Carregando comentários...</span>';
             modalDetalhes.showModal();
             currentTicketId = null; // Reseta
 
@@ -683,19 +797,17 @@
             detalheRequisitante.textContent = 'Carregando...';
             detalheCategoria.textContent = 'Carregando...';
             detalheData.textContent = 'Carregando...';
-            // Reseta os selects para um valor padrão
             detalheStatusSelect.value = "Aberto";
             detalhePrioridadeSelect.value = "Média";
 
             try {
-                // Rota que criámos no controller (buscarChamadoPorId)
                 const response = await fetch(`${API_URL}/chamados/${chamadoId}`);
                 if (!response.ok) {
                     const err = await response.json();
                     throw new Error(err.message || `Erro ao buscar dados do chamado #${chamadoId}`);
                 }
                 
-                const chamado = await response.json(); // Espera o objeto formatado
+                const chamado = await response.json(); 
 
                 // Preenche o modal
                 detalheAssunto.textContent = chamado.assunto;
@@ -704,27 +816,27 @@
                 detalheCategoria.textContent = chamado.Categorias?.nome || 'N/A';
                 detalheData.textContent = formatarData(chamado.created_at);
                 
-                // Define os valores dos selects
                 detalheStatusSelect.value = chamado.status;
                 detalhePrioridadeSelect.value = chamado.prioridade;
                 
                 currentTicketId = chamadoId; // Armazena o ID
                 modalDetalhesConteudo.style.opacity = '1';
 
+                await carregarComentarios(chamadoId);
+
             } catch (error) {
                 exibirMensagem(modalDetalhesResposta, error.message, false);
                 modalDetalhesConteudo.style.opacity = '1';
+                listaComentariosContainer.innerHTML = `<span class="comment-empty-state" style="color: red;">${error.message}</span>`;
             }
         }
         
-        // (NOVA) Lida com a mudança no <select> de Prioridade
         async function handlePrioridadeChange() {
             if (!currentTicketId) return;
             const novaPrioridade = detalhePrioridadeSelect.value;
             limparMensagem(modalDetalhesResposta);
 
             try {
-                // Rota que criámos no controller (atualizarPrioridade)
                 const r = await fetch(`${API_URL}/chamados/${currentTicketId}/prioridade`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
@@ -734,20 +846,18 @@
                 if (!r.ok) throw new Error(data.message);
                 
                 exibirMensagem(modalDetalhesResposta, "Prioridade atualizada!", true);
-                listarChamados(); // Atualiza a lista principal
+                listarChamados(); 
             } catch (e) {
                 exibirMensagem(modalDetalhesResposta, `Erro: ${e.message}`, false);
             }
         }
         
-        // (NOVA) Lida com a mudança no <select> de Status
         async function handleStatusChange() {
             if (!currentTicketId) return;
             const novoStatus = detalheStatusSelect.value;
             limparMensagem(modalDetalhesResposta);
 
             try {
-                // Rota que JÁ EXISTIA (atualizarStatus)
                 const r = await fetch(`${API_URL}/chamados/${currentTicketId}/status`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
@@ -757,79 +867,111 @@
                 if (!r.ok) throw new Error(data.message);
                 
                 exibirMensagem(modalDetalhesResposta, "Status atualizado!", true);
-                listarChamados(); // Atualiza a lista principal
+                listarChamados(); 
             } catch (e) {
                 exibirMensagem(modalDetalhesResposta, `Erro: ${e.message}`, false);
             }
         }
 
-        // --- (ADICIONADO) Função para Enviar Comentário ---
-        async function enviarNovoComentario() {
-            limparMensagem(comentarioResposta);
-            
-            // O ID está na variável global 'currentTicketId' (definida em abrirModalDetalhes)
-            const ticketId = currentTicketId; 
-            const texto = textareaComentario.value.trim();
+        // --- (NOVAS) Funções para LER Comentários ---
+        
+        function renderizarComentarios(comentarios) {
+            listaComentariosContainer.innerHTML = ''; 
+            listaComentariosContainer.classList.remove('comment-empty-state');
 
-            if (!texto) {
-                exibirMensagem(comentarioResposta, "Por favor, digite um comentário.", false);
-                return;
-            }
-            if (!ticketId) {
-                exibirMensagem(comentarioResposta, "Erro: ID do chamado não encontrado.", false);
+            if (!comentarios || comentarios.length === 0) {
+                listaComentariosContainer.classList.add('comment-empty-state');
+                listaComentariosContainer.innerHTML = '<span>Nenhum comentário encontrado.</span>';
                 return;
             }
 
-            // O 'userId' já foi pego do localStorage no topo do script
-            const body = {
-                texto: texto,
-                chamado_id: parseInt(ticketId),
-                user_id: userId 
-            };
+            comentarios.forEach(comentario => {
+                // Correção: Puxa o nome direto de 'nomeFuncionario'
+                const nome = comentario.nomeFuncionario || 'Usuário desconhecido';
+                const data = formatarData(comentario.created_at);
+                const texto = escapeHtml(comentario.texto);
 
+                const commentHtml = `
+                    <div class="comment-item">
+                        <div class="comment-header">
+                            ${escapeHtml(nome)}
+                            <span class="comment-date">em ${data}</span>
+                        </div>
+                        <div class="comment-body">
+                            ${texto}
+                        </div>
+                    </div>
+                `;
+                listaComentariosContainer.insertAdjacentHTML('beforeend', commentHtml);
+            });
+        }
+
+        async function carregarComentarios(ticketId) {
             try {
-                // Rota que você criou no backend (POST /chamados/:id/comentarios)
-                const r = await fetch(`${API_URL}/chamados/${ticketId}/comentarios`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
-                });
-
-                if (!r.ok) {
-                    const erro = await r.json(); // Espera uma resposta JSON do erro
-                    throw new Error(erro.message || "Falha ao enviar comentário.");
+                const response = await fetch(`${API_URL}/chamados/${ticketId}/comentarios`); 
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.message || "Falha ao carregar comentários.");
                 }
-
-                textareaComentario.value = ''; // Limpa a caixa de texto
-                exibirMensagem(comentarioResposta, "Comentário enviado com sucesso!", true);
-                
-                // (Opcional) A gente pode adicionar uma função para recarregar os comentários
-                // Por enquanto, só limpamos e damos sucesso.
-
+                const comentarios = await response.json();
+                renderizarComentarios(comentarios);
+            
             } catch (error) {
-                // Trata o erro de "Unexpected token <" se o backend não responder JSON (ex: erro 404)
                 if (error instanceof SyntaxError) {
-                     exibirMensagem(comentarioResposta, "Erro de comunicação com o servidor. A rota pode não existir.", false);
+                     listaComentariosContainer.innerHTML = `<span class="comment-empty-state" style="color: red;">Erro de comunicação. A rota de comentários existe?</span>`;
                 } else {
-                     exibirMensagem(comentarioResposta, error.message, false);
+                     listaComentariosContainer.innerHTML = `<span class="comment-empty-state" style="color: red;">${error.message}</span>`;
                 }
             }
         }
         
-        // --- EVENT LISTENERS (Seus + Novos) ---
+        // --- (NOVO) LÓGICA DO TEMA ESCURO ---
+        
+        /**
+         * Alterna o tema entre claro e escuro.
+         */
+        function toggleTheme() {
+            document.body.classList.toggle("dark-mode");
+            
+            // Salva a preferência no localStorage
+            let isDark = document.body.classList.contains("dark-mode");
+            localStorage.setItem("theme", isDark ? "dark" : "light");
+            
+            // Muda o ícone do botão
+            btnThemeToggle.textContent = isDark ? "☀️" : "🌙";
+        }
+
+        /**
+         * Carrega o tema salvo do localStorage ao iniciar a página.
+         */
+        function loadTheme() {
+            const savedTheme = localStorage.getItem("theme");
+            if (savedTheme === "dark") {
+                document.body.classList.add("dark-mode");
+                btnThemeToggle.textContent = "☀️";
+            } else {
+                document.body.classList.remove("dark-mode");
+                btnThemeToggle.textContent = "🌙";
+            }
+        }
+        // --- FIM LÓGICA TEMA ---
+
+
+        // --- EVENT LISTENERS ---
         btnFiltrar.addEventListener('click', listarChamados);
         btnLogout.addEventListener('click', fazerLogout);
+        
+        // (NOVO) Event listener do botão de tema
+        btnThemeToggle.addEventListener('click', toggleTheme);
 
         ticketList.addEventListener('click', e => {
             const t = e.target;
             
-            // (MODIFICADO) Evento de Visualizar
             if (t.classList.contains('view-icon')) {
                 const id = t.closest('.ticket-row').dataset.ticketId;
-                abrirModalDetalhes(id); // Chama a nova função
+                abrirModalDetalhes(id); 
             }
             
-            // (INTOCADO) Evento de Concluir (Como pediu)
             if (t.classList.contains('btn-concluir')) {
                 const id = t.dataset.id;
                 if (confirm(`Deseja realmente marcar o chamado #${id} como "Concluído"?`)) {
@@ -838,26 +980,18 @@
             }
         });
 
-        // (NOVOS) Event Listeners do Modal
         btnFecharModalDetalhes.addEventListener('click', () => {
+            listaComentariosContainer.innerHTML = '';
+            modalDetalhes.removeAttribute('data-current-ticket-id'); 
             modalDetalhes.close();
-            limparMensagem(modalDetalhesResposta);
-            currentTicketId = null;
-
-            // (ADICIONADO) Limpa o form de comentário
-            textareaComentario.value = '';
-            limparMensagem(comentarioResposta);
         });
         
         detalhePrioridadeSelect.addEventListener('change', handlePrioridadeChange);
         detalheStatusSelect.addEventListener('change', handleStatusChange);
 
-        // (ADICIONADO) Event Listener do botão de comentário
-        btnEnviarComentario.addEventListener('click', enviarNovoComentario);
-
 
         // --- INICIALIZAÇÃO ---
-        // O script do <head> já garantiu que o perfil é AGENTE ou ADMIN
+        loadTheme(); // (NOVO) Carrega o tema salvo
         carregarCategorias();
         listarChamados();
 
