@@ -28,9 +28,15 @@
             border-radius: 8px;
             padding: 1.5rem;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-            max-width: 600px;
+            max-width: 600px; /* Largura padrão para o modal de NOVO CHAMADO */
             width: calc(100% - 2rem);
         }
+
+        /* --- AJUSTE DE LARGURA PARA O MODAL DE DETALHES --- */
+        #modalDetalhes {
+            max-width: 800px; /* Mais largo para o layout de detalhes */
+        }
+        /* --- FIM DO AJUSTE --- */
 
         .grupo-form {
             margin-bottom: 1rem;
@@ -263,7 +269,7 @@
             <div class="search-bar">
                 <input type="text" placeholder="Buscar produtos, relatórios, chamados...">
             </div>
-            </header>
+        </header>
 
         <dialog id="modalTicket" aria-labelledby="modalTitle">
             <form id="ticketForm">
@@ -327,7 +333,7 @@
                         <div class="grupo-form" id="grupoSubcategoria" style="display: none;">
                             <label for="subcategoria">Subcategoria</label>
                             <select id="subcategoria" name="subcategoria" class="form-select">
-                                </select>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -347,48 +353,47 @@
         </dialog>
         
         <dialog id="modalDetalhes" aria-labelledby="modalDetalhesTitle">
-                        <h2 id="modalDetalhesTitle" style="text-transform: uppercase;">Detalhes do Chamado</h2> 
-            <hr>
-            
-                        <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;">Dados Gerais</h3>
+            <h2 id="modalDetalhesTitle" style="text-transform: uppercase;">Detalhes do Chamado</h2>
+            <hr>
 
-                        <div class="detalhe-grupo">
-                <span class="detalhe-label">Assunto</span>
-                <div id="detalheAssunto" class="detalhe-valor">...</div>
-            </div>
-            
-                        <div class="detalhe-grupo">
-                <span class="detalhe-label">Descrição</span>
-                <div id="detalheDescricao" class="detalhe-descricao">...</div>
-            </div>
+            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;">Dados Gerais</h3>
 
-                        <div class="row">
-                                <div class="col-md-3">
-                    <div class="detalhe-grupo"><span class="detalhe-label">Contato</span><span id="detalheRequisitante" class="detalhe-valor">...</span></div>
-                </div>
-                                <div class="col-md-3">
-                    <div class="detalhe-grupo"><span class="detalhe-label">Situação</span><span id="detalheStatus" class="detalhe-valor">...</span></div>
-                </div>
-                                <div class="col-md-3">
-                    <div class="detalhe-grupo"><span class="detalhe-label">Categorias</span><span id="detalheCategoria" class="detalhe-valor">...</span></div>
-                </div>
-                                <div class="col-md-3">
-                    <div class="detalhe-grupo"><span class="detalhe-label">Prioridade</span><span id="detalhePrioridade" class="detalhe-valor">...</span></div>
-                </div>
-            </div>
+            <div class="detalhe-grupo">
+                <span class="detalhe-label">Assunto</span>
+                <div id="detalheAssunto" class="detalhe-valor">...</div>
+            </div>
 
-                        <div class="row">
-                <div class="col-md-4">
-                    <div class="detalhe-grupo"><span class="detalhe-label">Ticket ID</span><span id="detalheId" class="detalhe-valor">#...</span></div>
-                </div>
-                <div class="col-md-4">
-                    <div class="detalhe-grupo"><span class="detalhe-label">Criado em</span><span id="detalheData" class="detalhe-valor">...</span></div>
-                </div>
-                            </div>
-            
-                        <div class="form-actions"><button type="button" id="fecharModalDetalhes">Fechar</button></div>
-        </dialog>
-        
+            <div class="detalhe-grupo">
+                <span class="detalhe-label">Descrição</span>
+                <div id="detalheDescricao" class="detalhe-descricao">...</div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="detalhe-grupo"><span class="detalhe-label">Contato</span><span id="detalheRequisitante" class="detalhe-valor">...</span></div>
+                </div>
+                <div class="col-md-3">
+                    <div class="detalhe-grupo"><span class="detalhe-label">Situação</span><span id="detalheStatus" class="detalhe-valor">...</span></div>
+                </div>
+                <div class="col-md-3">
+                    <div class="detalhe-grupo"><span class="detalhe-label">Categorias</span><span id="detalheCategoria" class="detalhe-valor">...</span></div>
+                </div>
+                <div class="col-md-3">
+                    <div class="detalhe-grupo"><span class="detalhe-label">Prioridade</span><span id="detalhePrioridade" class="detalhe-valor">...</span></div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="detalhe-grupo"><span class="detalhe-label">Ticket ID</span><span id="detalheId" class="detalhe-valor">#...</span></div>
+                </div>
+                <div class="col-md-4">
+                    <div class="detalhe-grupo"><span class="detalhe-label">Criado em</span><span id="detalheData" class="detalhe-valor">...</span></div>
+                </div>
+            </div>
+            
+            <div class="form-actions"><button type="button" id="fecharModalDetalhes">Fechar</button></div>
+        </dialog>
         <main class="main-content">
             <h1>Meus Chamados</h1> 
             <hr>
@@ -574,9 +579,14 @@
                     </div>
                 `;
 
+                // --- AJUSTE JS: ADICIONADO ATUALIZAÇÃO DO TÍTULO ---
                 row.querySelector('.view-icon').addEventListener('click', (e) => {
                     e.stopPropagation();
                     
+                    // Atualiza o título do modal dinamicamente
+                    document.getElementById('modalDetalhesTitle').textContent = `#${chamado.id} - ${chamado.assunto || 'SEM ASSUNTO'}`;
+                    
+                    // Preenche o resto dos campos
                     document.getElementById('detalheId').textContent = `#${chamado.id}`;
                     document.getElementById('detalheStatus').textContent = chamado.status;
                     document.getElementById('detalhePrioridade').textContent = chamado.prioridade;
@@ -588,6 +598,8 @@
 
                     modalDetalhes.showModal();
                 });
+                // --- FIM DO AJUSTE JS ---
+
                 ticketList.appendChild(row);
             });
         }
@@ -743,7 +755,7 @@
 
         // ---
         // ==================================================================
-        //                   LÓGICA DO DROPDOWN EM CASCATA
+        //                 LÓGICA DO DROPDOWN EM CASCATA
         // ==================================================================
         // ---
         selectCategoriaModal.addEventListener('change', () => {
