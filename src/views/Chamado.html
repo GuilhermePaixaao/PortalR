@@ -3,121 +3,164 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chamados - Portal Supermercado</title>
+    <title>Gerenciar Chamados - Portal</title>
 
     <script>
-        // (Script de proteção anti-flicker, se houver, iria aqui)
+        // --- INÍCIO DO PROTETOR DE PÁGINA (ANTI-FLICKER) ---
+        // Esta variável agora é global para esta página
+        const userDataString = localStorage.getItem("userData");
+        
+        if (!userDataString) {
+            window.location.replace("Login.html"); 
+            throw new Error("Usuário não autenticado.");
+        }
+        try {
+            const userData = JSON.parse(userDataString);
+            if (!userData?.data?.id) {
+                throw new Error("Dados de usuário inválidos.");
+            }
+            
+            // VERIFICAÇÃO DE PERFIL (ESPECÍFICA DESTA PÁGINA)
+            const userPerfil = userData?.data?.perfil;
+            if (userPerfil === 'REQUISITANTE') {
+                alert("Acesso negado. Esta página é para gerenciamento. Redirecionando...");
+                window.location.replace("Chamado.html"); // Redireciona para a pág. de abrir chamado
+                throw new Error("Acesso negado.");
+            }
+
+        } catch (error) {
+            console.error("Sessão inválida:", error.message);
+            if (error.message !== "Acesso negado.") {
+                localStorage.removeItem("userData"); 
+                window.location.replace("Login.html"); 
+                throw new Error("Sessão inválida.");
+            }
+        }
+        // --- FIM DO PROTETOR DE PÁGINA ---
     </script>
-    
+    <link rel="stylesheet" href="css/dashboard.css">
     <link rel="icon" type="image/png" href="/logo.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="css/chamado.css">
     <link rel="stylesheet" href="css/ticket.css">
+
     <style>
-        /* Estilos do Modal (Dialog) */
-        dialog:not([open]) {
-            display: none;
-        }
-
-        dialog::backdrop {
-            background: rgba(0, 0, 0, 0.6);
-        }
-
+        /* --- ESTILOS DO MODAL DE DETALHES --- */
+        dialog:not([open]) { display: none; }
+        dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
         dialog {
             border: none;
             border-radius: 8px;
-            padding: 1.5rem;
+            padding: 1.5rem 2rem; 
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-            max-width: 600px; /* Largura padrão para o modal de NOVO CHAMADO */
+            max-width: 800px; /* Mais largo */
             width: calc(100% - 2rem);
         }
-
-        /* --- AJUSTE DE LARGURA PARA O MODAL DE DETALHES --- */
-        #modalDetalhes {
-            max-width: 800px; /* Mais largo para o layout de detalhes */
-        }
-        /* --- FIM DO AJUSTE --- */
-
-        .grupo-form {
-            margin-bottom: 1rem;
-        }
-
-        .grupo-form label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-        }
-
-        .grupo-form input[type="text"],
-        .grupo-form input[type="tel"],
-        .grupo-form input[type="email"],
-        .grupo-form textarea,
-        .grupo-form select,
-        .grupo-form input[type="file"] {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #ced4da;
-            border-radius: 4px;
-            font-size: 1rem;
-        }
-
         .form-actions {
             margin-top: 1.5rem;
             display: flex;
             justify-content: flex-end;
             gap: 0.5rem;
         }
-
         .form-actions button {
-            padding: 0.75rem 1.5rem;
+            padding: 0.6rem 1.2rem; 
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
         }
-
-        #fecharModal, #fecharModalDetalhes {
+        #fecharModalDetalhes {
             background-color: #6c757d;
             color: white;
         }
-
-        #criarTicket {
-            background-color: #198754;
-            color: white;
-        }
-        
-        /* --- ESTILOS DO NOVO MODAL DE DETALHES --- */
-        #modalDetalhes .detalhe-grupo {
+        #modalDetalhes h2 {
+            font-size: 1.75rem; 
+            font-weight: 600;
             margin-bottom: 1rem;
+        }
+        #modalDetalhes .detalhe-grupo { 
+            margin-bottom: 1.25rem; 
         }
         #modalDetalhes .detalhe-label {
             font-weight: 600;
             color: #495057;
-            font-size: 0.9rem;
+            font-size: 0.85rem; 
             text-transform: uppercase;
             margin-bottom: 0.25rem;
             display: block;
         }
-        #modalDetalhes .detalhe-valor {
-            font-size: 1rem;
+        #modalDetalhes .detalhe-valor,
+        #modalDetalhes .detalhe-valor-select {
+            font-size: 1.1rem; 
             padding: 0.5rem;
-            background-color: #f8f9fa;
-            border-radius: 4px;
+            background-color: #f4f5f7; 
+            border-radius: 5px;
             word-wrap: break-word;
+            min-height: 42px; 
+            display: flex;
+            align-items: center;
+        }
+        #modalDetalhes .detalhe-valor-select {
+            padding: 0.375rem 0.5rem; 
+            width: 100%;
+            border: 1px solid #ced4da;
+            background-color: #fff; 
+            font-size: 1.1rem;
+            height: 42px; 
         }
         #modalDetalhes .detalhe-descricao {
-            font-size: 1rem;
+            font-size: 1.1rem;
             padding: 0.5rem;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-            white-space: pre-wrap; /* Preserva quebras de linha da descrição */
+            background-color: #f4f5f7;
+            border-radius: 5px;
+            white-space: pre-wrap;
             min-height: 100px;
             max-height: 250px;
             overflow-y: auto;
         }
-        /* --- FIM ESTILOS MODAL DETALHES --- */
+        
+        /* --- (NOVO) ESTILOS DO HISTÓRICO DE COMENTÁRIOS --- */
+        #listaComentariosContainer {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 1rem;
+            min-height: 100px;
+            max-height: 300px; /* Altura máxima, scroll se necessário */
+            overflow-y: auto;
+        }
+        .comment-item {
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        .comment-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .comment-header {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 0.25rem;
+        }
+        .comment-header .comment-date {
+            font-weight: 400;
+            color: #6c757d;
+            margin-left: 0.5rem;
+        }
+        .comment-body {
+            font-size: 1rem;
+            white-space: pre-wrap; /* Preserva quebras de linha do comentário */
+            word-wrap: break-word;
+        }
+        .comment-empty-state {
+            color: #6c757d;
+            font-style: italic;
+        }
+        /* --- FIM ESTILOS MODAL --- */
 
 
-        /* Ajuste Main Content */
         .main-content {
             grid-area: main;
             overflow-y: auto;
@@ -125,41 +168,11 @@
             background-color: #f8f9fa;
         }
 
-        .page-actions {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            z-index: 1050;
-        }
-
-        .btn-new-ticket {
-            background-color: #0d6efd;
-            color: white;
-            padding: 1rem 1.5rem;
-            border: none;
-            border-radius: 50px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-            transition: background-color 0.2s ease;
-        }
-
-        .btn-new-ticket:hover {
-            background-color: #0b5ed7;
-        }
-
-        /* Alertas */
-        .alert {
-            padding: 1rem;
-            margin-top: 1rem;
-            border-radius: 4px;
-        }
+        .alert { padding: 1rem; margin-top: 1rem; border-radius: 4px; }
         .alert-success { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
         .alert-danger { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
         .alert-warning { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
 
-        /* Lista de Tickets */
         .ticket-list { display: flex; flex-direction: column; }
         .ticket-row { display: flex; border-bottom: 1px solid #eee; padding: 1rem 0.5rem; align-items: center; }
         .ticket-row.header { background-color: #f8f9fa; font-weight: bold; border-bottom: 2px solid #dee2e6; }
@@ -173,9 +186,7 @@
         .ticket-created { flex: 0 0 100px; text-align: center; }
         .ticket-actions { flex: 0 0 60px; text-align: center; cursor: pointer; }
 
-        /* Badges */
-        .priority-badge,
-        .status-badge {
+        .priority-badge, .status-badge {
             padding: 0.2em 0.6em;
             border-radius: 0.25rem;
             font-size: 0.85em;
@@ -185,14 +196,21 @@
         .priority-badge.média, .priority-badge.medium, .priority-badge.media { background-color: #fff3cd; color: #664d03; }
         .priority-badge.baixa, .priority-badge.low { background-color: #cfe2ff; color: #084298; }
         .priority-badge.planejado { background-color: #e2d1e7; color: #510f32; } 
-
         .status-badge.aberto, .status-badge.open { background-color: #ffc107; color: #000; }
         .status-badge.concluído, .status-badge.completed { background-color: #d1e7dd; color: #0f5132; }
         .status-badge.em-andamento { background-color: #cfe2ff; color: #084298; }
 
         #loadingIndicator { padding: 2rem; text-align: center; color: #6c757d; }
 
-        /* --- ESTILOS DO HEADER ATUALIZADOS --- */
+        .btn-action {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1rem;
+            margin-left: 8px;
+        }
+        .btn-concluir { color: green; }
+
         .header {
             display: flex;
             align-items: center;
@@ -200,7 +218,7 @@
             padding: 0.75rem 2rem;
             background-color: #ffffff;
             border-bottom: 1px solid #dee2e6;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
             position: sticky;
             top: 0;
             z-index: 1030;
@@ -216,7 +234,7 @@
         }
         .search-bar {
             margin-left: 2rem;
-            margin-right: 2rem; 
+            margin-right: 2rem;
             width: 100%;
             max-width: 450px;
         }
@@ -229,11 +247,10 @@
         }
         .search-bar input:focus {
             border-color: #86b7fe;
-            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, .25);
+            box-shadow: 0 0 0 0.25rem rgba(13,110,253,.25);
             outline: none;
         }
         
-        /* Estilos para Logout */
         .header-actions {
             display: flex;
             align-items: center;
@@ -257,171 +274,189 @@
         .btn-logout:hover {
             background-color: #bb2d3b;
         }
-        /* --- FIM ESTILOS HEADER --- */
+
+        .sidebar nav ul li a {
+            display: flex;
+            align-items: center; 
+            text-decoration: none;
+            padding: 10px 15px; 
+            width: 100%;
+            height: auto; 
+        }
+        .sidebar .icon {
+            margin-right: 10px; 
+            min-width: 20px; 
+            text-align: center;
+            flex-shrink: 0; 
+            align-self: center; 
+        }
+        .sidebar .text {
+            flex-grow: 1; 
+            white-space: normal; 
+            line-height: 1.2; 
+        }
     </style>
 </head>
+
 <body>
-
     <div class="dashboard-container">
-
         <header class="header">
             <div class="logo">PORTAL SUPERMERCADO</div>
             <div class="search-bar">
                 <input type="text" placeholder="Buscar produtos, relatórios, chamados...">
             </div>
+            
+            <div class="header-actions">
+                <span id="userNameDisplay"></span>
+                <button id="logoutButton" class="btn-logout">Sair</button>
+            </div>
         </header>
 
-        <dialog id="modalTicket" aria-labelledby="modalTitle">
-            <form id="ticketForm">
-                <h2 id="modalTitle">Novo Chamado</h2>
-                <hr>
-                
+        <aside class="sidebar">
+            <nav>
+                <ul>
+                    <li><a href="Dashboard.html" title="Início"><span class="icon">🏠</span><span class="text">Início</span></a></li>
+                    <li><a href="Imprimir.html" title="Impressão de Preços"><span class="icon">🖨️</span><span class="text">Imprimir</span></a></li>
+                    <li id="menu-link-chamado" class="active"><a href="GerenciarChamados.html" title="Gerenciar Chamados"><span class="icon">✔️</span><span class="text">Gerenciar Chamados</span></a></li>
+                    <li><a href="Chatbot.html" title="Chatbot"><span class="icon">🤖</span><span class="text">Chatbot</span></a></li>
+                    <li><a href="Funcionarios.html" title="Funcionários"><span class="icon">💼</span><span class="text">Funcionários</span></a></li>
+                    <li>
+                        <a href="Categorias.html" title="Categorias">
+                            <span class="icon">🏷️</span>
+                            <span class="text">Categorias</span>
+                        </a>
+                    </li>    
+                    <li style="margin-top: 30px;"><a href="#" title="Configurações"><span class="icon">⚙️</span><span class="text">Ajustes</span></a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <dialog id="modalDetalhes" aria-labelledby="modalDetalhesTitle">
+            <h2 id="modalDetalhesTitle">Detalhes do Chamado</h2>
+            
+            <div id="modalDetalhesConteudo">
                 <div class="row">
-                    <div class="col-md-6">
-                        <div class="grupo-form">
-                            <label for="nomeRequisitante">Seu Nome <span aria-hidden="true" style="color:red;">*</span></label>
-                            <input type="text" id="nomeRequisitante" name="nomeRequisitante" required>
+                    <div class="col-md-4">
+                        <div class="detalhe-grupo">
+                            <span class="detalhe-label">Ticket ID</span>
+                            <div id="detalheId" class="detalhe-valor">#...</div>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="grupo-form">
-                            <label for="emailRequisitante">Seu Email <span aria-hidden="true" style="color:red;">*</span></label>
-                            <input type="email" id="emailRequisitante" name="emailRequisitante" required>
+                    <div class="col-md-4">
+                        <div class="detalhe-grupo">
+                            <span class="detalhe-label">Status</span>
+                            <select id="detalheStatusSelect" class="detalhe-valor-select form-select">
+                                <option value="Aberto">Aberto</option>
+                                <option value="Em Andamento">Em Andamento</option>
+                                <option value="Concluído">Concluído</option>
+                            </select>
                         </div>
                     </div>
-                </div>
-                <div class="grupo-form">
-                    <label for="telefoneRequisitante">Seu Telefone (Opcional)</label>
-                    <input type="tel" id="telefoneRequisitante" name="telefoneRequisitante" placeholder="(XX) XXXXX-XXXX">
-                </div>
-                <hr>
-
-                <div class="grupo-form">
-                    <label for="assunto">Assunto <span aria-hidden="true" style="color:red;">*</span></label>
-                    <input type="text" id="assunto" name="assunto" required>
-                </div>
-
-                <div class="grupo-form">
-                    <label for="descricao">Descrição <span aria-hidden="true" style="color:red;">*</span></label>
-                    <textarea id="descricao" name="descricao" rows="5" required></textarea>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="grupo-form">
-                            <label for="prioridade">Prioridade</label>
-                            <select id="prioridade" name="prioridade" class="form-select">
+                    <div class="col-md-4">
+                        <div class="detalhe-grupo">
+                            <span class="detalhe-label">Prioridade</span>
+                            <select id="detalhePrioridadeSelect" class="detalhe-valor-select form-select">
+                                <option value="Baixa">Baixa</option>
+                                <option value="Média">Média</option>
                                 <option value="Alta">Alta</option>
-                                <option value="Média" selected>Média</option>
+                                <option value="Planejado">Planejado</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detalhe-grupo">
+                    <span class="detalhe-label">Assunto</span>
+                    <div id="detalheAssunto" class="detalhe-valor">...</div>
+                </div>
+
+                <div class="detalhe-grupo">
+                    <span class="detalhe-label">Descrição</span>
+                    <div id="detalheDescricao" class="detalhe-descricao">Carregando...</div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="detalhe-grupo">
+                            <span class="detalhe-label">Requisitante</span>
+                            <div id="detalheRequisitante" class="detalhe-valor">...</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detalhe-grupo">
+                            <span class="detalhe-label">Categoria</span>
+                            <div id="detalheCategoria" class="detalhe-valor">...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="detalhe-grupo">
+                    <span class="detalhe-label">Criado em</span>
+                    <div id="detalheData" class="detalhe-valor">...</div>
+                </div>
+            </div>
+            
+            <hr style="margin-top: 1rem; margin-bottom: 1.25rem;">
+            
+            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;">Histórico de Comentários</h3>
+    
+            <div id="listaComentariosContainer" class="comment-empty-state">
+                Carregando comentários...
+            </div>
+            
+            <div id="modalDetalhesResposta" class="mt-3"></div>
+            
+            <div class="form-actions">
+                <button type="button" id="fecharModalDetalhes">Fechar</button>
+            </div>
+        </dialog>
+        <main class="main-content">
+            <h1>Gerenciar Chamados</h1>
+            <hr>
+
+            <div id="divRespostaGeral" class="mb-3"></div>
+
+            <div class="widget card shadow-sm">
+                <div class="card-body">
+                    <div class="filters mb-3 row g-2">
+                        <div class="col-md-3">
+                            <label for="filtroAssunto" class="form-label">Filtrar por Assunto</label>
+                            <input type="text" id="filtroAssunto" class="form-control" placeholder="Digite o assunto...">
+                        </div>
+
+                        <div class="col-md-2">
+                            <label for="filtroPrioridade" class="form-label">Prioridade</label>
+                            <select id="filtroPrioridade" class="form-select">
+                                <option value="">Todas</option>
+                                <option value="Alta">Alta</option>
+                                <option value="Média">Média</option>
                                 <option value="Baixa">Baixa</option>
                                 <option value="Planejado">Planejado</option> 
                             </select>
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="grupo-form">
-                            <label for="categoria">Categoria</label>
-                            <select id="categoria" name="categoria" class="form-select">
-                                <option value="">-- Selecionar --</option>
+
+                        <div class="col-md-2">
+                            <label for="filtroStatus" class="form-label">Status</label>
+                            <select id="filtroStatus" class="form-select">
+                                <option value="">Todos</option>
+                                <option value="Aberto">Aberto</option>
+                                <option value="Em Andamento">Em Andamento</option>
+                                <option value="Concluído">Concluído</option>
                             </select>
                         </div>
-                    </div>
-                </div>
 
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="grupo-form" id="grupoSubcategoria" style="display: none;">
-                            <label for="subcategoria">Subcategoria</label>
-                            <select id="subcategoria" name="subcategoria" class="form-select">
+                        <div class="col-md-3">
+                            <label for="filtroCategoria" class="form-label">Categoria</label>
+                            <select id="filtroCategoria" class="form-select">
+                                <option value="">Todas</option>
                             </select>
                         </div>
+
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button id="btnFiltrar" class="btn btn-primary w-100">Filtrar</button>
+                        </div>
                     </div>
-                </div>
-                <div class="grupo-form">
-                    <label for="anexo">Anexar Arquivos (Opcional)</label>
-                    <input type="file" id="anexo" name="anexos" multiple>
-                    <small class="form-text text-muted">Limite máximo total: 20MB.</small>
-                </div>
 
-                <div id="modalResposta" class="mt-3"></div>
-
-                <div class="form-actions">
-                    <button type="button" id="fecharModal">Cancelar</button>
-                    <button type="submit" id="criarTicket">Criar Chamado</button>
-                </div>
-            </form>
-        </dialog>
-        
-        <dialog id="modalDetalhes" aria-labelledby="modalDetalhesTitle">
-            <h2 id="modalDetalhesTitle" style="text-transform: uppercase;">Detalhes do Chamado</h2>
-            <hr>
-
-            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;">Dados Gerais</h3>
-
-            <div class="detalhe-grupo">
-                <span class="detalhe-label">Assunto</span>
-                <div id="detalheAssunto" class="detalhe-valor">...</div>
-            </div>
-
-            <div class="detalhe-grupo">
-                <span class="detalhe-label">Descrição</span>
-                <div id="detalheDescricao" class="detalhe-descricao">...</div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-3">
-                    <div class="detalhe-grupo"><span class="detalhe-label">Contato</span><span id="detalheRequisitante" class="detalhe-valor">...</span></div>
-                </div>
-                <div class="col-md-3">
-                    <div class="detalhe-grupo"><span class="detalhe-label">Situação</span><span id="detalheStatus" class="detalhe-valor">...</span></div>
-                </div>
-                <div class="col-md-3">
-                    <div class="detalhe-grupo"><span class="detalhe-label">Categorias</span><span id="detalheCategoria" class="detalhe-valor">...</span></div>
-                </div>
-                <div class="col-md-3">
-                    <div class="detalhe-grupo"><span class="detalhe-label">Prioridade</span><span id="detalhePrioridade" class="detalhe-valor">...</span></div>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-4">
-                    <div class="detalhe-grupo"><span class="detalhe-label">Ticket ID</span><span id="detalheId" class="detalhe-valor">#...</span></div>
-                </div>
-                <div class="col-md-4">
-                    <div class="detalhe-grupo"><span class="detalhe-label">Criado em</span><span id="detalheData" class="detalhe-valor">...</span></div>
-                </div>
-            </div>
-
-            <hr style="margin-top: 1rem; margin-bottom: 1.25rem;">
-            
-            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;">Adicionar Comentário</h3>
-    
-            <div id="formComentario">
-                <div class="grupo-form" style="margin-bottom: 0.5rem;">
-                    <textarea id="novoComentario" name="novoComentario" rows="3" class="form-control" placeholder="Digite seu comentário..." style="width: 100%; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 4px; font-size: 1rem;"></textarea>
-                </div>
-
-                <div id="comentarioResposta" class="mt-2"></div>
-
-                <div class="form-actions" style="margin-top: 0.5rem; padding-top: 0; justify-content: flex-end;">
-                     <button type="button" id="enviarComentario" style="padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; background-color: #198754; color: white;">Enviar Comentário</button>
-                </div>
-            </div>
-
-            <div class="form-actions"><button type="button" id="fecharModalDetalhes">Fechar</button></div>
-        </dialog>
-        <main class="main-content">
-            <h1>Meus Chamados</h1> 
-            <hr>
-            <div id="divRespostaGeral" class="mb-3"></div>
-            <div class="widget card shadow-sm">
-                <div class="card-body">
-                    <div class="filters mb-3 row g-2">
-                        <div class="col-md-4"><label for="filtroAssunto" class="form-label">Filtrar por Assunto</label><input type="text" id="filtroAssunto" class="form-control" placeholder="Digite o assunto..."></div>
-                        <div class="col-md-3"><label for="filtroPrioridade" class="form-label">Prioridade</label><select id="filtroPrioridade" class="form-select"><option value="">Todas</option><option value="Alta">Alta</option><option value="Média">Média</option><option value="Baixa">Baixa</option><option value="Planejado">Planejado</option></select></div>
-                        <div class="col-md-3"><label for="filtroStatus" class="form-label">Status</label><select id="filtroStatus" class="form-select"><option value="">Todos</option><option value="Aberto">Aberto</option><option value="Em Andamento">Em Andamento</option><option value="Concluído">Concluído</option></select></div>
-                        <div class="col-md-2 d-flex align-items-end"><button id="btnFiltrar" class="btn btn-primary w-100">Filtrar</button></div>
-                    </div>
                     <div id="ticketList" class="ticket-list">
                         <div class="ticket-row header">
                             <div class="ticket-cell ticket-id">Ticket</div>
@@ -433,423 +468,409 @@
                             <div class="ticket-cell ticket-created">Criado em</div>
                             <div class="ticket-cell ticket-actions">Ação</div>
                         </div>
+
                         <div id="loadingIndicator"><p>Carregando chamados...</p></div>
                     </div>
                 </div>
             </div>
         </main>
-
-        <div class="page-actions">
-            <button id="newTicketButton" class="btn-new-ticket">
-                Novo Chamado
-            </button>
-        </div>
-
     </div>
 
     <script type="module">
-        const API_URL = ""; // Defina a URL da sua API aqui (ex: "http://localhost:3000/api")
+        const API_URL = ""; 
+        let currentTicketId = null; // Guarda o ID do ticket aberto no modal
 
-        // --- Autenticação (MODO STANDALONE/DEV) ---
-        let userData = null;
-        let userId = 1; // <-- ID Fixo para desenvolvimento. Substitua pelo ID do usuário logado.
+        // --- FUNÇÃO DE LOGOUT ---
+        function fazerLogout() {
+            localStorage.removeItem("userData"); 
+            window.location.href = "Login.html"; 
+        }
 
-        // --- Variáveis Globais de Dados ---
-        let listaSubcategorias = []; 
+        // O script do <head> já validou o login e o perfil.
+        let userData, userId, userPerfil, userCategoriaAtendimento;
 
-        // --- Referências ---
-        const modal = document.getElementById("modalTicket");
-        const btnAbrir = document.getElementById("newTicketButton");
-        const btnFechar = document.getElementById("fecharModal");
-        const ticketForm = document.getElementById("ticketForm");
+        try {
+            // Usamos a variável 'userDataString' global definida no <head>
+            userData = JSON.parse(userDataString); 
+            userId = userData?.data?.id;
+            userPerfil = userData?.data?.perfil;
+            userCategoriaAtendimento = userData?.data?.categoria_id_atendimento;
+
+            // --- CONFIGURAÇÃO DA PÁGINA (NOME E MENU) ---
+            const userNameDisplay = document.getElementById('userNameDisplay');
+            if (userNameDisplay && userData?.data?.nomeFuncionario) {
+                userNameDisplay.textContent = `Olá, ${userData.data.nomeFuncionario.split(' ')[0]}`;
+            }
+
+            const linkChamado = document.getElementById("menu-link-chamado");
+            if (linkChamado) {
+                const a = linkChamado.querySelector('a');
+                const textSpan = a.querySelector('.text'); 
+                textSpan.innerHTML = "Gerenciar<br>Chamados";
+                a.querySelector('.icon').textContent = "✔️";
+                a.title = "Gerenciar Chamados";
+            }
+
+        } catch (error) {
+            console.error("Erro ao configurar a página:", error);
+            fazerLogout();
+        }
+
+        // --- LÓGICA DA PÁGINA DE GERENCIAMENTO (Referências do seu código original) ---
         const ticketList = document.getElementById("ticketList");
         const loadingIndicator = document.getElementById("loadingIndicator");
-        const selectCategoriaModal = document.getElementById("categoria");
-        const modalResposta = document.getElementById("modalResposta");
         const divRespostaGeral = document.getElementById("divRespostaGeral");
-        const modalDetalhes = document.getElementById("modalDetalhes");
-        const btnFecharModalDetalhes = document.getElementById("fecharModalDetalhes");
         const filtroAssunto = document.getElementById("filtroAssunto");
         const filtroPrioridade = document.getElementById("filtroPrioridade");
         const filtroStatus = document.getElementById("filtroStatus");
+        const filtroCategoria = document.getElementById("filtroCategoria");
         const btnFiltrar = document.getElementById("btnFiltrar");
-        const inputTelefone = document.getElementById("telefoneRequisitante");
+        const btnLogout = document.getElementById("logoutButton");
 
-        // --- Referências de Subcategoria ---
-        const selectSubcategoriaModal = document.getElementById("subcategoria");
-        const grupoSubcategoria = document.getElementById("grupoSubcategoria");
+        // --- (NOVAS) REFERÊNCIAS DO MODAL ---
+        const modalDetalhes = document.getElementById("modalDetalhes");
+        const btnFecharModalDetalhes = document.getElementById("fecharModalDetalhes");
+        const modalDetalhesConteudo = document.getElementById("modalDetalhesConteudo");
+        const modalDetalhesResposta = document.getElementById("modalDetalhesResposta");
+        // Campos de dados
+        const detalheId = document.getElementById("detalheId");
+        const detalheAssunto = document.getElementById("detalheAssunto");
+        const detalheDescricao = document.getElementById("detalheDescricao");
+        const detalheRequisitante = document.getElementById("detalheRequisitante");
+        const detalheCategoria = document.getElementById("detalheCategoria");
+        const detalheData = document.getElementById("detalheData");
+        // Campos editáveis
+        const detalheStatusSelect = document.getElementById("detalheStatusSelect");
+        const detalhePrioridadeSelect = document.getElementById("detalhePrioridadeSelect");
+        
+        // --- (MODIFICADO) REFERÊNCIAS DO HISTÓRICO DE COMENTÁRIOS ---
+        const listaComentariosContainer = document.getElementById("listaComentariosContainer");
+        // --- FIM REFERÊNCIAS ---
 
-        // --- NOVO: Referências do Formulário de Comentários ---
-        const btnEnviarComentario = document.getElementById("enviarComentario");
-        const textareaComentario = document.getElementById("novoComentario");
-        const comentarioResposta = document.getElementById("comentarioResposta");
-        // --- FIM NOVO ---
 
-        // --- Funções Auxiliares ---
-        function exibirMensagem(elemento, mensagem, sucesso = true) {
-            elemento.textContent = mensagem;
-            elemento.className = sucesso ? 'alert alert-success' : 'alert alert-danger';
+        function exibirMensagem(el, msg, sucesso = true) {
+            el.textContent = msg;
+            el.className = sucesso ? 'alert alert-success' : 'alert alert-danger';
         }
-        function limparMensagem(elemento) {
-            elemento.textContent = '';
-            elemento.className = '';
+
+        function limparMensagem(el) { el.textContent = ''; el.className = ''; }
+
+        function escapeHtml(t) {
+            if (!t) return '';
+            return t.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
         }
-        function escapeHtml(text) {
-            if (!text) return '';
-            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-            return text.replace(/[&<>"']/g, m => map[m]);
-        }
-        function formatarData(isoString) {
-            if (!isoString) return 'N/A';
+
+        function formatarData(d) {
+            if (!d) return 'N/A';
             try {
-                const dt = new Date(isoString);
-                const data = dt.toLocaleDateString('pt-BR');
-                const hora = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                const dt = new Date(d);
+                const offset = dt.getTimezoneOffset() * 60000;
+                const dtLocal = new Date(dt.getTime() + offset); 
+
+                const data = dtLocal.toLocaleDateString('pt-BR');
+                const hora = dtLocal.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                 return `${data} ${hora}`;
-            } catch (e) {
+            } catch {
                 return 'Data inválida';
             }
         }
-        function aplicarMascaraTelefone(input) {
-            let valor = input.value.replace(/\D/g, "").substring(0, 11);
-            if (valor.length > 6) {
-                valor = valor.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, '($1) $2-$3');
-            } else if (valor.length > 2) {
-                valor = valor.replace(/^(\d{2})(\d{0,5}).*/, '($1) $2');
-            } else if (valor.length > 0) {
-                valor = valor.replace(/^(\d{0,2}).*/, '($1');
-            }
-            input.value = valor;
-        }
 
-        // --- Carregar Categorias e Subcategorias ---
-        async function carregarDadosIniciais() {
+        async function carregarCategorias() {
+            if (userPerfil === 'AGENTE') {
+                filtroCategoria.parentElement.style.display = 'none';
+                return;
+            }
             try {
-                // --- ATIVADO: Busca dados reais da API ---
-                const [catResponse, subCatResponse] = await Promise.all([
-                    fetch(`${API_URL}/categorias`),
-                    fetch(`${API_URL}/subcategorias`)
-                ]);
-
-                if (!catResponse.ok) throw new Error("Erro ao carregar categorias.");
-                if (!subCatResponse.ok) throw new Error("Erro ao carregar subcategorias.");
-
-                const categorias = await catResponse.json();
-                listaSubcategorias = await subCatResponse.json(); 
-                // --- FIM DA ATIVAÇÃO ---
-
-                selectCategoriaModal.innerHTML = '<option value="">-- Selecionar --</option>';
+                const r = await fetch(`${API_URL}/categorias`);
+                if (!r.ok) throw new Error("Erro ao carregar categorias.");
+                const categorias = await r.json();
+                filtroCategoria.innerHTML = '<option value="">Todas</option>';
                 categorias.forEach(cat => {
-                    const option = document.createElement("option");
-                    option.value = cat.id; 
-                    option.textContent = cat.nome;
-                    selectCategoriaModal.appendChild(option);
+                    const opt = document.createElement("option");
+                    opt.value = cat.id;
+                    opt.textContent = cat.nome;
+                    filtroCategoria.appendChild(opt);
                 });
-
-            } catch (error) {
-                console.error(error);
-                exibirMensagem(modal.open ? modalResposta : divRespostaGeral, error.message, false);
+            } catch {
+                filtroCategoria.parentElement.innerHTML = '<p class="text-danger">Falha ao carregar categorias.</p>';
             }
         }
 
-        // --- Renderizar Lista de Chamados ---
         function renderizarChamados(chamados) {
-            if (loadingIndicator) loadingIndicator.style.display = 'none';
-            ticketList.querySelectorAll('.data-row').forEach(row => row.remove());
+            loadingIndicator.style.display = 'none';
+            ticketList.querySelectorAll('.data-row').forEach(r => r.remove());
 
-            if (!chamados || chamados.length === 0) {
-                const noDataRow = document.createElement('div');
-                noDataRow.className = 'ticket-row data-row';
-                noDataRow.innerHTML = `<div class="ticket-cell" style="grid-column: 1 / -1; text-align: center; padding: 1rem;">Nenhum chamado encontrado.</div>`;
-                ticketList.appendChild(noDataRow);
+            if (!chamados?.length) {
+                ticketList.insertAdjacentHTML('beforeend', `
+                <div class="ticket-row data-row">
+                    <div class="ticket-cell" style="grid-column: 1 / -1; text-align:center; padding:1rem;">
+                    Nenhum chamado encontrado.
+                    </div>
+                </div>`);
                 return;
             }
 
-            chamados.forEach(chamado => {
-                const row = document.createElement('div');
-                row.className = 'ticket-row data-row';
-                row.setAttribute('data-ticket-id', chamado.id);
-
-                const prioridadeClass = (chamado.prioridade || 'Média').toLowerCase().replace('é', 'e');
-                const statusClass = (chamado.status || 'Aberto').toLowerCase().replace(/\s+/g, '-');
-
-                let nomeExibicao = 'N/A';
-                if (chamado.Subcategoria && chamado.Subcategoria.nome) {
-                    nomeExibicao = `${chamado.Categorias?.nome || '?'} / ${chamado.Subcategoria.nome}`;
-                } else if (chamado.Categorias && chamado.Categorias.nome) {
-                    nomeExibicao = chamado.Categorias.nome;
-                }
-
-                row.innerHTML = `
-                    <div class="ticket-cell ticket-id">#${chamado.id}</div>
-                    <div class="ticket-cell ticket-priority">
-                        <span class="priority-badge ${prioridadeClass}">${escapeHtml(chamado.prioridade)}</span>
-                    </div>
-                    <div class="ticket-cell ticket-subject">${escapeHtml(chamado.assunto)}</div>
-                    <div class="ticket-cell ticket-category">${escapeHtml(nomeExibicao)}</div>
-                    <div class="ticket-cell ticket-status">
-                        <span class="status-badge ${statusClass}">${escapeHtml(chamado.status)}</span>
-                    </div>
-                    <div class="ticket-cell ticket-operator">${escapeHtml(chamado.Funcionario?.nomeFuncionario || 'Desconhecido')}</div>
-                    <div class="ticket-cell ticket-created">${formatarData(chamado.created_at)}</div>
+            chamados.forEach(ch => {
+                const prioridadeClass = (ch.prioridade || 'Média').toLowerCase().replace('é', 'e');
+                const statusClass = (ch.status || 'Aberto').toLowerCase().replace(/\s+/g, '-');
+                
+                ticketList.insertAdjacentHTML('beforeend', `
+                <div class="ticket-row data-row" data-ticket-id="${ch.id}">
+                    <div class="ticket-cell ticket-id">#${ch.id}</div>
+                    <div class="ticket-cell ticket-priority"><span class="priority-badge ${prioridadeClass}">${escapeHtml(ch.prioridade)}</span></div>
+                    <div class="ticket-cell ticket-subject">${escapeHtml(ch.assunto)}</div>
+                    <div class="ticket-cell ticket-category">${escapeHtml(ch.Categorias?.nome || 'N/A')}</div>
+                    <div class="ticket-cell ticket-status"><span class="status-badge ${statusClass}">${escapeHtml(ch.status)}</span></div>
+                    <div class="ticket-cell ticket-operator">${escapeHtml(ch.Funcionario?.nomeFuncionario || 'Desconhecido')}</div>
+                    <div class="ticket-cell ticket-created">${formatarData(ch.created_at)}</div>
                     <div class="ticket-cell ticket-actions">
-                        <span class="view-icon" title="Visualizar">👁️</span>
+                    <span class="view-icon" title="Visualizar">👁️</span>
+                    ${ch.status !== 'Concluído'
+                        ? `<button class="btn-action btn-concluir" data-id="${ch.id}" title="Marcar como Concluído">✔️</button>` : ''}
                     </div>
-                `;
-
-                // --- ATUALIZADO: Evento de clique para abrir o modal ---
-                row.querySelector('.view-icon').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    
-                    // --- ATUALIZADO: Armazena o ID do ticket no próprio modal ---
-                    modalDetalhes.setAttribute('data-current-ticket-id', chamado.id);
-                    
-                    document.getElementById('modalDetalhesTitle').textContent = `#${chamado.id} - ${chamado.assunto || 'SEM ASSUNTO'}`;
-                    document.getElementById('detalheId').textContent = `#${chamado.id}`;
-                    document.getElementById('detalheStatus').textContent = chamado.status;
-                    document.getElementById('detalhePrioridade').textContent = chamado.prioridade;
-                    document.getElementById('detalheAssunto').textContent = chamado.assunto;
-                    document.getElementById('detalheDescricao').textContent = chamado.descricao;
-                    document.getElementById('detalheRequisitante').textContent = chamado.Funcionario?.nomeFuncionario || 'Desconhecido';
-                    document.getElementById('detalheCategoria').textContent = nomeExibicao;
-                    document.getElementById('detalheData').textContent = formatarData(chamado.created_at);
-
-                    modalDetalhes.showModal();
-                });
-                // --- FIM ATUALIZAÇÃO ---
-
-                ticketList.appendChild(row);
+                </div>`);
             });
         }
 
-        // --- Listar Chamados ---
         async function listarChamados() {
             limparMensagem(divRespostaGeral);
-            ticketList.querySelectorAll('.data-row').forEach(row => row.remove());
-            if (loadingIndicator) loadingIndicator.style.display = 'block';
+            ticketList.querySelectorAll('.data-row').forEach(r => r.remove());
+            loadingIndicator.style.display = 'block';
 
-            const params = new URLSearchParams();
-            if (filtroAssunto.value.trim()) params.append('assunto', filtroAssunto.value.trim());
-            if (filtroPrioridade.value) params.append('prioridade', filtroPrioridade.value);
-            if (filtroStatus.value) params.append('status', filtroStatus.value);
-            params.append('requisitante_id', userId); 
+            const p = new URLSearchParams();
+            if (filtroAssunto.value.trim()) p.append('assunto', filtroAssunto.value.trim());
+            if (filtroPrioridade.value) p.append('prioridade', filtroPrioridade.value);
+            if (filtroStatus.value) p.append('status', filtroStatus.value);
 
-            const url = `${API_URL}/chamados?${params.toString()}`;
+            if (userPerfil === 'ADMIN' && filtroCategoria.value)
+                p.append('categoria_id', filtroCategoria.value);
+            else if (userPerfil === 'AGENTE')
+                p.append('categoria_id', userCategoriaAtendimento);
 
             try {
-                // --- ATIVADO: Busca dados reais da API ---
-                const response = await fetch(url);
-                if (!response.ok) throw new Error("Erro ao buscar chamados.");
-                const chamados = await response.json();
-                renderizarChamados(chamados);
-                // --- FIM DA ATIVAÇÃO ---
-            } catch (error) {
-                exibirMensagem(divRespostaGeral, error.message, false);
-                if (loadingIndicator) loadingIndicator.innerHTML = '<p style="color:red;">Falha ao carregar.</p>';
+                const r = await fetch(`${API_URL}/chamados?${p.toString()}`);
+                if (!r.ok) throw new Error("Erro ao buscar chamados.");
+                renderizarChamados(await r.json());
+            } catch (e) {
+                exibirMensagem(divRespostaGeral, e.message, false);
+                loadingIndicator.innerHTML = '<p style="color:red;">Falha ao carregar.</p>';
             }
         }
 
-        // --- Criar Novo Chamado ---
-        async function criarChamado(event) {
-            event.preventDefault();
-            limparMensagem(modalResposta);
-
-            const nomeRequisitante = ticketForm.nomeRequisitante.value.trim();
-            const emailRequisitante = ticketForm.emailRequisitante.value.trim();
-            const telefoneRequisitante = ticketForm.telefoneRequisitante.value.trim();
-            const assunto = ticketForm.assunto.value.trim();
-            const descricao = ticketForm.descricao.value.trim();
-            const prioridade = ticketForm.prioridade.value || 'Média';
-            const categoriaId = ticketForm.categoria.value || null;
-            const subcategoriaId = ticketForm.subcategoria.value || null;
-
-            if (!nomeRequisitante || !emailRequisitante || !assunto || !descricao) {
-                exibirMensagem(modalResposta, 'Nome, Email, Assunto e Descrição são obrigatórios.', false);
-                return;
-            }
-
-            const anexoInput = document.getElementById('anexo');
-            const files = anexoInput.files;
-            let totalSize = 0;
-            const maxSize = 20 * 1024 * 1024; // 20 MB
-
-            for (let i = 0; i < files.length; i++) {
-                totalSize += files[i].size;
-            }
-
-            if (totalSize > maxSize) {
-                exibirMensagem(modalResposta, `Erro: O tamanho total dos arquivos (${(totalSize / 1024 / 1024).toFixed(2)} MB) excede o limite de 20 MB.`, false);
-                return;
-            }
-
-            const formData = new FormData();
-            const dadosChamado = {
-                chamado: {
-                    nome_requisitante_manual: nomeRequisitante,
-                    email_requisitante_manual: emailRequisitante,
-                    telefone_requisitante_manual: telefoneRequisitante,
-                    assunto: assunto,
-                    descricao: descricao,
-                    prioridade: prioridade,
-                    requisitante_id: userId,
-                    categoria_id: categoriaId ? parseInt(categoriaId) : null,
-                    subcategoria_id: subcategoriaId ? parseInt(subcategoriaId) : null
-                }
-            };
-            
-            formData.append('chamado', JSON.stringify(dadosChamado.chamado));
-
-            for (let i = 0; i < files.length; i++) {
-                formData.append('anexos', files[i]);
-            }
-
+        async function atualizarStatusChamado(id, status) {
             try {
-                // --- ATIVADO: Envio real para a API ---
-                const response = await fetch(`${API_URL}/chamados`, {
-                    method: 'POST',
-                    body: formData 
-                });
-                
-                const respostaAPI = await response.json();
-                if (!response.ok) {
-                    throw new Error(respostaAPI.message || "Erro ao criar chamado.");
-                }
-                // --- FIM DA ATIVAÇÃO ---
-
-                exibirMensagem(divRespostaGeral, "Chamado criado com sucesso!", true);
-                modal.close();
-                await listarChamados(); 
-            } catch (error) {
-                exibirMensagem(modalResposta, error.message, false);
-            }
-        }
-        
-        // --- NOVO: Função para Enviar Comentário ---
-        async function enviarNovoComentario() {
-            limparMensagem(comentarioResposta);
-            
-            const ticketId = modalDetalhes.getAttribute('data-current-ticket-id');
-            const texto = textareaComentario.value.trim();
-
-            if (!texto) {
-                exibirMensagem(comentarioResposta, "Por favor, digite um comentário.", false);
-                return;
-            }
-            if (!ticketId) {
-                exibirMensagem(comentarioResposta, "Erro: ID do chamado não encontrado.", false);
-                return;
-            }
-
-            const body = {
-                texto: texto,
-                chamado_id: parseInt(ticketId),
-                user_id: userId // Usando o userId global
-            };
-
-            try {
-                // --- ATIVADO: Envio real para a API ---
-                // (Ajuste a rota /comentarios se necessário)
-                const response = await fetch(`${API_URL}/chamados/${ticketId}/comentarios`, {
-                    method: 'POST',
+                const r = await fetch(`${API_URL}/chamados/${id}/status`, {
+                    method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
+                    body: JSON.stringify({ status })
                 });
-
-                if (!response.ok) {
-                    const erro = await response.json();
-                    throw new Error(erro.message || "Falha ao enviar comentário.");
-                }
-                // --- FIM DA ATIVAÇÃO ---
-
-                textareaComentario.value = ''; // Limpa a caixa de texto
-                exibirMensagem(comentarioResposta, "Comentário enviado com sucesso!", true);
-                
-            } catch (error) {
-                exibirMensagem(comentarioResposta, error.message, false);
+                const data = await r.json();
+                if (!r.ok) throw new Error(data.message);
+                exibirMensagem(divRespostaGeral, "Chamado atualizado com sucesso!", true);
+                listarChamados(); // Atualiza a lista principal
+            } catch (e) {
+                exibirMensagem(divRespostaGeral, `Erro: ${e.message}`, false);
             }
         }
-        // --- FIM NOVO ---
 
-        // --- Lógica do Modal "Novo Chamado" ---
-        function resetarModalForm() {
-            ticketForm.reset();
-            limparMensagem(modalResposta);
-            grupoSubcategoria.style.display = 'none';
-            selectSubcategoriaModal.innerHTML = '';
-            selectSubcategoriaModal.required = false;
+        // --- (NOVAS) FUNÇÕES DO MODAL ---
+
+        // (NOVA) Busca dados frescos do chamado e abre o modal
+        async function abrirModalDetalhes(chamadoId) {
+            limparMensagem(modalDetalhesResposta);
+            
+            // (MODIFICADO) Limpa o histórico de comentários ao abrir
+            listaComentariosContainer.innerHTML = '<span class="comment-empty-state">Carregando comentários...</span>';
+
+            modalDetalhes.showModal();
+            currentTicketId = null; // Reseta
+
+            // Estado de carregamento
+            modalDetalhesConteudo.style.opacity = '0.5';
+            detalheId.textContent = `#${chamadoId}`;
+            detalheAssunto.textContent = 'Carregando...';
+            detalheDescricao.textContent = 'Carregando...';
+            detalheRequisitante.textContent = 'Carregando...';
+            detalheCategoria.textContent = 'Carregando...';
+            detalheData.textContent = 'Carregando...';
+            detalheStatusSelect.value = "Aberto";
+            detalhePrioridadeSelect.value = "Média";
+
+            try {
+                // Rota que criámos no controller (buscarChamadoPorId)
+                const response = await fetch(`${API_URL}/chamados/${chamadoId}`);
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.message || `Erro ao buscar dados do chamado #${chamadoId}`);
+                }
+                
+                const chamado = await response.json(); 
+
+                // Preenche o modal
+                detalheAssunto.textContent = chamado.assunto;
+                detalheDescricao.textContent = chamado.descricao;
+                detalheRequisitante.textContent = chamado.Funcionario?.nomeFuncionario || 'N/A';
+                detalheCategoria.textContent = chamado.Categorias?.nome || 'N/A';
+                detalheData.textContent = formatarData(chamado.created_at);
+                
+                detalheStatusSelect.value = chamado.status;
+                detalhePrioridadeSelect.value = chamado.prioridade;
+                
+                currentTicketId = chamadoId; // Armazena o ID
+                modalDetalhesConteudo.style.opacity = '1';
+
+                // --- (NOVO) Chama a função para carregar os comentários ---
+                await carregarComentarios(chamadoId);
+
+            } catch (error) {
+                exibirMensagem(modalDetalhesResposta, error.message, false);
+                modalDetalhesConteudo.style.opacity = '1';
+                listaComentariosContainer.innerHTML = `<span class="comment-empty-state" style="color: red;">${error.message}</span>`;
+            }
+        }
+        
+        // (NOVA) Lida com a mudança no <select> de Prioridade
+        async function handlePrioridadeChange() {
+            if (!currentTicketId) return;
+            const novaPrioridade = detalhePrioridadeSelect.value;
+            limparMensagem(modalDetalhesResposta);
+
+            try {
+                // Rota que criámos no controller (atualizarPrioridade)
+                const r = await fetch(`${API_URL}/chamados/${currentTicketId}/prioridade`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prioridade: novaPrioridade })
+                });
+                const data = await r.json();
+                if (!r.ok) throw new Error(data.message);
+                
+                exibirMensagem(modalDetalhesResposta, "Prioridade atualizada!", true);
+                listarChamados(); // Atualiza a lista principal
+            } catch (e) {
+                exibirMensagem(modalDetalhesResposta, `Erro: ${e.message}`, false);
+            }
+        }
+        
+        // (NOVA) Lida com a mudança no <select> de Status
+        async function handleStatusChange() {
+            if (!currentTicketId) return;
+            const novoStatus = detalheStatusSelect.value;
+            limparMensagem(modalDetalhesResposta);
+
+            try {
+                // Rota que JÁ EXISTIA (atualizarStatus)
+                const r = await fetch(`${API_URL}/chamados/${currentTicketId}/status`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: novoStatus })
+                });
+                const data = await r.json();
+                if (!r.ok) throw new Error(data.message);
+                
+                exibirMensagem(modalDetalhesResposta, "Status atualizado!", true);
+                listarChamados(); // Atualiza a lista principal
+            } catch (e) {
+                exibirMensagem(modalDetalhesResposta, `Erro: ${e.message}`, false);
+            }
         }
 
-        btnAbrir.addEventListener('click', () => {
-            resetarModalForm();
-            
-            // --- ATUALIZADO: Limpa os campos. Eles devem ser preenchidos pelo usuário
-            // ou pela sua lógica de autenticação (se houver)
-            document.getElementById('nomeRequisitante').value = ''; 
-            document.getElementById('emailRequisitante').value = ''; 
+        // --- (NOVA) Função para RENDERIZAR Comentários ---
+        function renderizarComentarios(comentarios) {
+            listaComentariosContainer.innerHTML = ''; // Limpa o container
+            listaComentariosContainer.classList.remove('comment-empty-state');
 
-            if (typeof modal.showModal === 'function') modal.showModal();
-            else modal.setAttribute('open', '');
-            document.getElementById('assunto').focus();
-        });
-        
-        btnFechar.addEventListener('click', () => { modal.close(); });
-        modal.addEventListener('close', () => { resetarModalForm(); }); 
-        
-        // --- ATUALIZADO: Lógica do Modal "Detalhes" (Fechar) ---
-        btnFecharModalDetalhes.addEventListener('click', () => {
-            // Limpa o formulário de comentário ao fechar
-            textareaComentario.value = '';
-            limparMensagem(comentarioResposta);
-            modalDetalhes.removeAttribute('data-current-ticket-id'); // Limpa o ID salvo
-            modalDetalhes.close();
-        });
-
-        // --- Event Listeners ---
-        ticketForm.addEventListener('submit', criarChamado);
-        btnFiltrar.addEventListener('click', listarChamados);
-        if(inputTelefone) {
-            inputTelefone.addEventListener('input', () => aplicarMascaraTelefone(inputTelefone));
-        }
-
-        // --- NOVO: Event Listener do botão de comentário ---
-        btnEnviarComentario.addEventListener('click', enviarNovoComentario);
-        // --- FIM NOVO ---
-
-        // --- Lógica do Dropdown em Cascata ---
-        selectCategoriaModal.addEventListener('change', () => {
-            const categoriaId = parseInt(selectCategoriaModal.value, 10);
-            
-            selectSubcategoriaModal.innerHTML = '<option value="">-- Selecionar Subcategoria --</option>';
-
-            if (isNaN(categoriaId) || !categoriaId) {
-                grupoSubcategoria.style.display = 'none'; 
-                selectSubcategoriaModal.required = false;
+            if (!comentarios || comentarios.length === 0) {
+                listaComentariosContainer.classList.add('comment-empty-state');
+                listaComentariosContainer.innerHTML = '<span>Nenhum comentário encontrado.</span>';
                 return;
             }
 
-            const subcategoriasFilhas = listaSubcategorias.filter(sub => sub.id_categoria === categoriaId);
+            comentarios.forEach(comentario => {
+                // Assumindo que o comentário tem a estrutura:
+                // { texto: "...", created_at: "...", Funcionario: { nomeFuncionario: "..." } }
+                const nome = comentario.Funcionario?.nomeFuncionario || 'Usuário desconhecido';
+                const data = formatarData(comentario.created_at);
+                const texto = escapeHtml(comentario.texto);
 
-            if (subcategoriasFilhas.length > 0) {
-                subcategoriasFilhas.forEach(sub => {
-                    const option = document.createElement("option");
-                    option.value = sub.id;
-                    option.textContent = sub.nome;
-                    selectSubcategoriaModal.appendChild(option);
-                });
-                grupoSubcategoria.style.display = 'block';
-                selectSubcategoriaModal.required = true; 
-            } else {
-                grupoSubcategoria.style.display = 'none';
-                selectSubcategoriaModal.required = false;
+                const commentHtml = `
+                    <div class="comment-item">
+                        <div class="comment-header">
+                            ${escapeHtml(nome)}
+                            <span class="comment-date">em ${data}</span>
+                        </div>
+                        <div class="comment-body">
+                            ${texto}
+                        </div>
+                    </div>
+                `;
+                listaComentariosContainer.insertAdjacentHTML('beforeend', commentHtml);
+            });
+        }
+
+        // --- (NOVA) Função para CARREGAR Comentários ---
+        async function carregarComentarios(ticketId) {
+            try {
+                // Esta é a nova rota que você precisará criar no backend
+                const response = await fetch(`${API_URL}/chamados/${ticketId}/comentarios`); 
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.message || "Falha ao carregar comentários.");
+                }
+                const comentarios = await response.json();
+                renderizarComentarios(comentarios);
+            
+            } catch (error) {
+                listaComentariosContainer.innerHTML = `<span class="comment-empty-state" style="color: red;">${error.message}</span>`;
+            }
+        }
+        
+        // --- EVENT LISTENERS (Seus + Novos) ---
+        btnFiltrar.addEventListener('click', listarChamados);
+        btnLogout.addEventListener('click', fazerLogout);
+
+        ticketList.addEventListener('click', e => {
+            const t = e.target;
+            
+            // (MODIFICADO) Evento de Visualizar
+            if (t.classList.contains('view-icon')) {
+                const id = t.closest('.ticket-row').dataset.ticketId;
+                abrirModalDetalhes(id); // Chama a nova função
+            }
+            
+            // (INTOCADO) Evento de Concluir (Como pediu)
+            if (t.classList.contains('btn-concluir')) {
+                const id = t.dataset.id;
+                if (confirm(`Deseja realmente marcar o chamado #${id} como "Concluído"?`)) {
+                    atualizarStatusChamado(id, 'Concluído');
+                }
             }
         });
-        // --- Inicialização ---
-        async function init() {
-            await carregarDadosIniciais(); 
-            await listarChamados(); 
-        }
-        init();
+
+        // (MODIFICADO) Event Listeners do Modal
+        btnFecharModalDetalhes.addEventListener('click', () => {
+            modalDetalhes.close();
+            limparMensagem(modalDetalhesResposta);
+            currentTicketId = null;
+
+            // (MODIFICADO) Limpa o histórico de comentários ao fechar
+            listaComentariosContainer.innerHTML = '';
+        });
+        
+        detalhePrioridadeSelect.addEventListener('change', handlePrioridadeChange);
+        detalheStatusSelect.addEventListener('change', handleStatusChange);
+        
+        // (REMOVIDO) Event Listener do botão de comentário
+        // btnEnviarComentario.addEventListener('click', enviarNovoComentario);
+
+
+        // --- INICIALIZAÇÃO ---
+        // O script do <head> já garantiu que o perfil é AGENTE ou ADMIN
+        carregarCategorias();
+        listarChamados();
+
     </script>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
