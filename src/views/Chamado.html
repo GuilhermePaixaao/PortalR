@@ -116,6 +116,48 @@
         }
         /* --- FIM ESTILOS MODAL DETALHES --- */
 
+        /* --- (NOVO) ESTILOS DO HISTÓRICO DE COMENTÁRIOS --- */
+        #listaComentariosContainer {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 1rem;
+            min-height: 100px;
+            max-height: 300px; /* Altura máxima, scroll se necessário */
+            overflow-y: auto;
+        }
+        .comment-item {
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        .comment-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .comment-header {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 0.25rem;
+        }
+        .comment-header .comment-date {
+            font-weight: 400;
+            color: #6c757d;
+            margin-left: 0.5rem;
+        }
+        .comment-body {
+            font-size: 1rem;
+            white-space: pre-wrap; /* Preserva quebras de linha do comentário */
+            word-wrap: break-word;
+        }
+        .comment-empty-state {
+            color: #6c757d;
+            font-style: italic;
+        }
+        /* --- FIM ESTILOS COMENTÁRIOS --- */
+
 
         /* Ajuste Main Content */
         .main-content {
@@ -392,6 +434,14 @@
                 </div>
             </div>
 
+            <hr style="margin-top: 1rem; margin-bottom: 1.25rem;">
+            
+            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;">Histórico de Comentários</h3>
+    
+            <div id="listaComentariosContainer" class="comment-empty-state">
+                Carregando comentários...
+            </div>
+            
             <div class="form-actions"><button type="button" id="fecharModalDetalhes">Fechar</button></div>
         </dialog>
         <main class="main-content">
@@ -463,11 +513,10 @@
         const selectSubcategoriaModal = document.getElementById("subcategoria");
         const grupoSubcategoria = document.getElementById("grupoSubcategoria");
 
-        // --- Referências de Comentários (REMOVIDAS) ---
-        // const btnEnviarComentario = document.getElementById("enviarComentario");
-        // const textareaComentario = document.getElementById("novoComentario");
-        // const comentarioResposta = document.getElementById("comentarioResposta");
-        
+        // --- (ADICIONADO) Referências do Histórico de Comentários ---
+        const listaComentariosContainer = document.getElementById("listaComentariosContainer");
+        // --- FIM ADIÇÃO ---
+
         // --- Funções Auxiliares ---
         function exibirMensagem(elemento, mensagem, sucesso = true) {
             elemento.textContent = mensagem;
@@ -584,11 +633,12 @@
                 row.querySelector('.view-icon').addEventListener('click', (e) => {
                     e.stopPropagation();
                     
-                    // --- ATUALIZADO: Armazena o ID do ticket no próprio modal ---
-                    modalDetalhes.setAttribute('data-current-ticket-id', chamado.id);
+                    const ticketId = chamado.id; // Pega o ID
                     
-                    document.getElementById('modalDetalhesTitle').textContent = `#${chamado.id} - ${chamado.assunto || 'SEM ASSUNTO'}`;
-                    document.getElementById('detalheId').textContent = `#${chamado.id}`;
+                    modalDetalhes.setAttribute('data-current-ticket-id', ticketId);
+                    
+                    document.getElementById('modalDetalhesTitle').textContent = `#${ticketId} - ${chamado.assunto || 'SEM ASSUNTO'}`;
+                    document.getElementById('detalheId').textContent = `#${ticketId}`;
                     document.getElementById('detalheStatus').textContent = chamado.status;
                     document.getElementById('detalhePrioridade').textContent = chamado.prioridade;
                     document.getElementById('detalheAssunto').textContent = chamado.assunto;
@@ -596,6 +646,11 @@
                     document.getElementById('detalheRequisitante').textContent = chamado.Funcionario?.nomeFuncionario || 'Desconhecido';
                     document.getElementById('detalheCategoria').textContent = nomeExibicao;
                     document.getElementById('detalheData').textContent = formatarData(chamado.created_at);
+                    
+                    // --- (NOVO) Carrega o histórico de comentários ---
+                    listaComentariosContainer.innerHTML = '<span class="comment-empty-state">Carregando comentários...</span>';
+                    carregarComentarios(ticketId); // Chama a nova função
+                    // --- FIM NOVO ---
 
                     modalDetalhes.showModal();
                 });
@@ -707,7 +762,66 @@
             }
         }
         
-        // --- Função para Enviar Comentário (REMOVIDA) ---
+        // --- (NOVAS) Funções para LER Comentários ---
+        
+        /**
+         * Renderiza a lista de comentários no container do modal.
+         */
+        function renderizarComentarios(comentarios) {
+            listaComentariosContainer.innerHTML = ''; // Limpa o container
+            listaComentariosContainer.classList.remove('comment-empty-state');
+
+            if (!comentarios || comentarios.length === 0) {
+                listaComentariosContainer.classList.add('comment-empty-state');
+                listaComentariosContainer.innerHTML = '<span>Nenhum comentário encontrado.</span>';
+                return;
+            }
+
+            comentarios.forEach(comentario => {
+                // Assumindo que o comentário tem a estrutura:
+                // { texto: "...", created_at: "...", Funcionario: { nomeFuncionario: "..." } }
+                const nome = comentario.Funcionario?.nomeFuncionario || 'Usuário desconhecido';
+                const data = formatarData(comentario.created_at);
+                const texto = escapeHtml(comentario.texto);
+
+                const commentHtml = `
+                    <div class="comment-item">
+                        <div class="comment-header">
+                            ${escapeHtml(nome)}
+                            <span class="comment-date">em ${data}</span>
+                        </div>
+                        <div class="comment-body">
+                            ${texto}
+                        </div>
+                    </div>
+                `;
+                listaComentariosContainer.insertAdjacentHTML('beforeend', commentHtml);
+            });
+        }
+
+        /**
+         * Busca os comentários de um ticketId específico na API.
+         */
+        async function carregarComentarios(ticketId) {
+            try {
+                // Esta é a nova rota que você precisará criar no backend
+                const response = await fetch(`${API_URL}/chamados/${ticketId}/comentarios`); 
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.message || "Falha ao carregar comentários.");
+                }
+                const comentarios = await response.json();
+                renderizarComentarios(comentarios);
+            
+            } catch (error) {
+                // Trata o erro de "Unexpected token <" se o backend não responder JSON (ex: erro 404)
+                if (error instanceof SyntaxError) {
+                     listaComentariosContainer.innerHTML = `<span class="comment-empty-state" style="color: red;">Erro de comunicação. A rota de comentários existe?</span>`;
+                } else {
+                     listaComentariosContainer.innerHTML = `<span class="comment-empty-state" style="color: red;">${error.message}</span>`;
+                }
+            }
+        }
         
         // --- Lógica do Modal "Novo Chamado" ---
         function resetarModalForm() {
@@ -736,9 +850,9 @@
         
         // --- ATUALIZADO: Lógica do Modal "Detalhes" (Fechar) ---
         btnFecharModalDetalhes.addEventListener('click', () => {
-            // Limpa o formulário de comentário (REMOVIDO)
-            // textareaComentario.value = '';
-            // limparMensagem(comentarioResposta);
+            // (ADICIONADO) Limpa o histórico de comentários
+            listaComentariosContainer.innerHTML = '';
+            
             modalDetalhes.removeAttribute('data-current-ticket-id'); // Limpa o ID salvo
             modalDetalhes.close();
         });
