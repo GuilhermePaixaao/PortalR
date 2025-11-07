@@ -394,11 +394,21 @@
 
             <hr style="margin-top: 1rem; margin-bottom: 1.25rem;">
             
-            <div id="containerVazio" style="min-height: 100px; padding: 1rem; border-radius: 4px; background-color: #f8f9fa; border: 1px solid #e9ecef;">
+            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;">Adicionar Comentário</h3>
+    
+            <div id="formComentario">
+                <div class="grupo-form" style="margin-bottom: 0.5rem;">
+                    <textarea id="novoComentario" name="novoComentario" rows="3" class="form-control" placeholder="Digite seu comentário..." style="width: 100%; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 4px; font-size: 1rem;"></textarea>
                 </div>
-            
+                
+                <div class="form-actions" style="margin-top: 0.5rem; padding-top: 0; justify-content: flex-end;">
+                     <button type="button" id="enviarComentario" style="padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; background-color: #198754; color: white;">Enviar Comentário</button>
+                </div>
+            </div>
+
             <div class="form-actions"><button type="button" id="fecharModalDetalhes">Fechar</button></div>
         </dialog>
+        ```
         <main class="main-content">
             <h1>Meus Chamados</h1> 
             <hr>
