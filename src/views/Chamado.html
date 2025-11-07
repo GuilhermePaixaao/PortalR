@@ -452,7 +452,7 @@
 
         // --- Autenticação (MODO STANDALONE/DEV) ---
         let userData = null;
-        let userId = 1; // <-- ID Fixo para desenvolvimento
+        let userId = 1; // <-- ID Fixo para desenvolvimento. Substitua pelo ID do usuário logado.
 
         // --- Variáveis Globais de Dados ---
         let listaSubcategorias = []; 
@@ -525,22 +525,7 @@
         // --- Carregar Categorias e Subcategorias ---
         async function carregarDadosIniciais() {
             try {
-                // Simulação de dados (substitua pelo fetch real)
-                const categorias = [
-                    { id: 1, nome: 'Financeiro' },
-                    { id: 2, nome: 'Logística' },
-                    { id: 3, nome: 'T.I.' }
-                ];
-                listaSubcategorias = [
-                    { id: 10, id_categoria: 1, nome: 'Contas a Pagar' },
-                    { id: 11, id_categoria: 1, nome: 'Contas a Receber' },
-                    { id: 12, id_categoria: 2, nome: 'Separação' },
-                    { id: 13, id_categoria: 2, nome: 'Entrega' },
-                    { id: 14, id_categoria: 3, nome: 'Problema no PC' },
-                    { id: 15, id_categoria: 3, nome: 'Impressora' }
-                ];
-
-                /* DESCOMENTE ISSO QUANDO TIVER API
+                // --- ATIVADO: Busca dados reais da API ---
                 const [catResponse, subCatResponse] = await Promise.all([
                     fetch(`${API_URL}/categorias`),
                     fetch(`${API_URL}/subcategorias`)
@@ -551,7 +536,7 @@
 
                 const categorias = await catResponse.json();
                 listaSubcategorias = await subCatResponse.json(); 
-                */
+                // --- FIM DA ATIVAÇÃO ---
 
                 selectCategoriaModal.innerHTML = '<option value="">-- Selecionar --</option>';
                 categorias.forEach(cat => {
@@ -652,19 +637,12 @@
             const url = `${API_URL}/chamados?${params.toString()}`;
 
             try {
-                // Simulação de dados (substitua pelo fetch real)
-                const chamados = [
-                    { id: 564, prioridade: 'Alta', assunto: 'COMPRAS', Categorias: { nome: 'Financeiro' }, Subcategoria: { nome: 'Contas a Pagar' }, status: 'Aberto', Funcionario: { nomeFuncionario: 'Francisca Cunha' }, created_at: new Date().toISOString(), descricao: 'COMPRA MAQUINA DE SOLDA PARA LOJAS DO FUNDO DO VALE, ENTREGAR NO INTERLAGOS' },
-                    { id: 565, prioridade: 'Média', assunto: 'Impressora Fiscal', Categorias: { nome: 'T.I.' }, Subcategoria: { nome: 'Impressora' }, status: 'Em Andamento', Funcionario: { nomeFuncionario: 'João Paulo' }, created_at: new Date().toISOString(), descricao: 'Impressora fiscal da loja 02 parou de imprimir.' }
-                ];
-                renderizarChamados(chamados);
-
-                /* DESCOMENTE ISSO QUANDO TIVER API
+                // --- ATIVADO: Busca dados reais da API ---
                 const response = await fetch(url);
                 if (!response.ok) throw new Error("Erro ao buscar chamados.");
                 const chamados = await response.json();
                 renderizarChamados(chamados);
-                */
+                // --- FIM DA ATIVAÇÃO ---
             } catch (error) {
                 exibirMensagem(divRespostaGeral, error.message, false);
                 if (loadingIndicator) loadingIndicator.innerHTML = '<p style="color:red;">Falha ao carregar.</p>';
@@ -726,10 +704,7 @@
             }
 
             try {
-                // Simulação de envio (substitua pelo fetch real)
-                console.log('Enviando chamado:', dadosChamado);
-                
-                /* DESCOMENTE ISSO QUANDO TIVER API
+                // --- ATIVADO: Envio real para a API ---
                 const response = await fetch(`${API_URL}/chamados`, {
                     method: 'POST',
                     body: formData 
@@ -739,9 +714,9 @@
                 if (!response.ok) {
                     throw new Error(respostaAPI.message || "Erro ao criar chamado.");
                 }
-                */
+                // --- FIM DA ATIVAÇÃO ---
 
-                exibirMensagem(divRespostaGeral, "Chamado criado com sucesso! (Simulação)", true);
+                exibirMensagem(divRespostaGeral, "Chamado criado com sucesso!", true);
                 modal.close();
                 await listarChamados(); 
             } catch (error) {
@@ -772,10 +747,8 @@
             };
 
             try {
-                // Simulação de envio (substitua pelo fetch real)
-                console.log('Enviando comentário:', body, `para a rota: ${API_URL}/chamados/${ticketId}/comentarios`);
-                
-                /* DESCOMENTE ISSO QUANDO TIVER API
+                // --- ATIVADO: Envio real para a API ---
+                // (Ajuste a rota /comentarios se necessário)
                 const response = await fetch(`${API_URL}/chamados/${ticketId}/comentarios`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -786,10 +759,10 @@
                     const erro = await response.json();
                     throw new Error(erro.message || "Falha ao enviar comentário.");
                 }
-                */
+                // --- FIM DA ATIVAÇÃO ---
 
                 textareaComentario.value = ''; // Limpa a caixa de texto
-                exibirMensagem(comentarioResposta, "Comentário enviado com sucesso! (Simulação)", true);
+                exibirMensagem(comentarioResposta, "Comentário enviado com sucesso!", true);
                 
             } catch (error) {
                 exibirMensagem(comentarioResposta, error.message, false);
@@ -808,8 +781,12 @@
 
         btnAbrir.addEventListener('click', () => {
             resetarModalForm();
-            document.getElementById('nomeRequisitante').value = 'Usuário Padrão'; // Ajuste se precisar buscar dados do usuário logado
-            document.getElementById('emailRequisitante').value = 'usuario@email.com'; 
+            
+            // --- ATUALIZADO: Limpa os campos. Eles devem ser preenchidos pelo usuário
+            // ou pela sua lógica de autenticação (se houver)
+            document.getElementById('nomeRequisitante').value = ''; 
+            document.getElementById('emailRequisitante').value = ''; 
+
             if (typeof modal.showModal === 'function') modal.showModal();
             else modal.setAttribute('open', '');
             document.getElementById('assunto').focus();
