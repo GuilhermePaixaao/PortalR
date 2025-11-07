@@ -2,6 +2,9 @@ import { Router } from 'express';
 import multer from 'multer'; // 1. Importar o multer
 import * as ChamadoController from '../controllers/chamadoController.js';
 
+// --- IMPORTAÇÃO ADICIONADA ---
+import { addComentario } from '../controllers/comentarioController.js'; // Ajuste o caminho se necessário
+
 // 2. Inicializar o multer (para lidar com uploads de ficheiros)
 const upload = multer();
 const router = Router();
@@ -32,5 +35,17 @@ router.patch('/chamados/:id/status', ChamadoController.atualizarStatus);
 
 // DELETE /chamados/:id (Deletar um chamado)
 router.delete('/chamados/:id', ChamadoController.deletarChamado);
+
+
+// ====================================================
+// ======== ROTA DE COMENTÁRIOS ========
+// ====================================================
+
+/**
+ * ROTA ADICIONADA: POST /chamados/:id/comentarios
+ * Cria um novo comentário vinculado ao chamado_id (que vem do :id da URL)
+ */
+router.post('/chamados/:id/comentarios', addComentario);
+
 
 export default router;
