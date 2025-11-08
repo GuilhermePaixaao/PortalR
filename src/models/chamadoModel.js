@@ -1,20 +1,19 @@
 import pool from '../config/database.js';
 
 // Cria um novo chamado (com subcategoria_id)
-// (Esta função não precisa de alteração, pois o atendente_id será NULL por padrão)
 export const create = async (chamado) => {
     const { 
         assunto, descricao, prioridade, status, requisitanteIdNum, categoriaIdNum, 
-        subcategoriaIdNum, 
+        subcategoriaIdNum, // <-- CAMPO NOVO
         nomeRequisitanteManual, emailRequisitanteManual, telefoneRequisitanteManual 
     } = chamado; 
 
     const sql = `
         INSERT INTO Chamados 
             (assunto, descricao, prioridade, status, requisitante_id, categoria_id, 
-             subcategoria_id,
+             subcategoria_id, -- <-- COLUNA NOVA
              nome_requisitante_manual, email_requisitante_manual, telefone_requisitante_manual)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) -- <-- ATUALIZADO PARA 10 VALORES
     `;
     
     const values = [
@@ -24,7 +23,7 @@ export const create = async (chamado) => {
         status, 
         requisitanteIdNum, 
         categoriaIdNum,
-        subcategoriaIdNum, 
+        subcategoriaIdNum, // <-- VALOR NOVO
         nomeRequisitanteManual, 
         emailRequisitanteManual, 
         telefoneRequisitanteManual
@@ -35,76 +34,41 @@ export const create = async (chamado) => {
 };
 
 // ====================================================
-// ======== BUSCAR CHAMADO POR ID (MODIFICADO) ========
+// ======== BUSCAR CHAMADO POR ID (ATUALIZADO) ========
 // ====================================================
 export const findById = async (id) => {
-    // <-- MODIFICADO: Adicionado f_atend.nomeFuncionario e o novo LEFT JOIN
     const sql = `
         SELECT 
             ch.*, 
-            
-            -- Dados do Requisitante
-            COALESCE(ch.nome_requisitante_manual, f_req.nomeFuncionario) AS nomeRequisitante,
+            COALESCE(ch.nome_requisitante_manual, f.nomeFuncionario) AS nomeRequisitante,
             ch.email_requisitante_manual AS emailRequisitante,
             ch.telefone_requisitante_manual AS telefoneRequisitante,
-            
-            -- Dados do Atendente (Operador)
-            f_atend.nomeFuncionario AS nomeAtendente, 
-            
-            -- Dados da Categoria/Subcategoria
             ca.nome AS nomeCategoria,
-            subcat.nome AS nomeSubcategoria
-            
+            subcat.nome AS nomeSubcategoria -- <-- CAMPO NOVO
         FROM Chamados ch
-        
-        -- Join para Requisitante
-        LEFT JOIN Funcionario f_req ON ch.requisitante_id = f_req.id
-        
-        -- Join para Atendente (NOVO)
-        LEFT JOIN Funcionario f_atend ON ch.atendente_id = f_atend.id 
-        
-        -- Joins para Categoria/Subcategoria
+        LEFT JOIN Funcionario f ON ch.requisitante_id = f.id
         LEFT JOIN Categorias ca ON ch.categoria_id = ca.id
-        LEFT JOIN Subcategorias subcat ON ch.subcategoria_id = subcat.id 
-        
+        LEFT JOIN Subcategorias subcat ON ch.subcategoria_id = subcat.id -- <-- JOIN NOVO
         WHERE ch.id = ?
     `;
     const [rows] = await pool.query(sql, [id]);
     return rows[0];
 };
 
-// ====================================================
-// ======== BUSCAR TODOS (MODIFICADO) ========
-// ====================================================
+// Busca todos os chamados com filtros opcionais (ATUALIZADO)
 export const findAll = async (filtros = {}) => {
-    // <-- MODIFICADO: Adicionado f_atend.nomeFuncionario e o novo LEFT JOIN
     let sql = `
         SELECT 
             ch.*, 
-            
-            -- Dados do Requisitante
-            COALESCE(ch.nome_requisitante_manual, f_req.nomeFuncionario) AS nomeRequisitante,
+            COALESCE(ch.nome_requisitante_manual, f.nomeFuncionario) AS nomeRequisitante,
             ch.email_requisitante_manual AS emailRequisitante,
             ch.telefone_requisitante_manual AS telefoneRequisitante,
-            
-            -- Dados do Atendente (Operador)
-            f_atend.nomeFuncionario AS nomeAtendente, 
-
-            -- Dados da Categoria/Subcategoria
             ca.nome AS nomeCategoria,
-            subcat.nome AS nomeSubcategoria
-            
+            subcat.nome AS nomeSubcategoria -- <-- CAMPO NOVO
         FROM Chamados ch
-
-        -- Join para Requisitante
-        LEFT JOIN Funcionario f_req ON ch.requisitante_id = f_req.id
-        
-        -- Join para Atendente (NOVO)
-        LEFT JOIN Funcionario f_atend ON ch.atendente_id = f_atend.id 
-
-        -- Joins para Categoria/Subcategoria
+        LEFT JOIN Funcionario f ON ch.requisitante_id = f.id
         LEFT JOIN Categorias ca ON ch.categoria_id = ca.id
-        LEFT JOIN Subcategorias subcat ON ch.subcategoria_id = subcat.id
+        LEFT JOIN Subcategorias subcat ON ch.subcategoria_id = subcat.id -- <-- JOIN NOVO
     `;
 
     const values = [];
@@ -118,7 +82,7 @@ export const findAll = async (filtros = {}) => {
         whereConditions.push("ch.categoria_id = ?");
         values.push(parseInt(filtros.categoria_id));
     }
-    if (filtros.subcategoria_id) { 
+    if (filtros.subcategoria_id) { // <-- FILTRO NOVO
         whereConditions.push("ch.subcategoria_id = ?");
         values.push(parseInt(filtros.subcategoria_id));
     }
@@ -151,25 +115,10 @@ export const deleteById = async (id) => {
     return result;
 };
 
-// ====================================================
-// ======== ATUALIZAR STATUS (MODIFICADO) ========
-// ====================================================
-export const updateStatus = async (id, status, atendenteId) => {
-    // <-- MODIFICADO: Aceita 'atendenteId'
-    let sql;
-    let values;
-
-    if (atendenteId) {
-        // Se um atendenteId é fornecido, atualiza o status E o atendente
-        sql = "UPDATE Chamados SET status = ?, atendente_id = ? WHERE id = ?";
-        values = [status, atendenteId, id];
-    } else {
-        // Se não, atualiza apenas o status (mantém comportamento antigo se necessário)
-        sql = "UPDATE Chamados SET status = ? WHERE id = ?";
-        values = [status, id];
-    }
-    
-    const [result] = await pool.query(sql, values);
+// Atualiza o status de um chamado
+export const updateStatus = async (id, status) => {
+    const sql = "UPDATE Chamados SET status = ? WHERE id = ?";
+    const [result] = await pool.query(sql, [status, id]);
     return result;
 };
 
