@@ -15,11 +15,17 @@
         }
         try {
             const userData = JSON.parse(userDataString);
-            if (!userData?.data?.id) {
-                throw new Error("Dados de usuário inválidos.");
+            
+            // --- MODIFICAÇÃO IMPORTANTE PARA CORRIGIR O 'userId' ---
+            // Tenta pegar o ID de 'userData.data.id' (estrutura aninhada)
+            // Se não encontrar, tenta pegar de 'userData.id' (estrutura plana)
+            const userId = userData?.data?.id || userData?.id; 
+            
+            if (!userId) {
+                throw new Error("Dados de usuário inválidos (ID não encontrado).");
             }
             
-            const userPerfil = userData?.data?.perfil;
+            const userPerfil = userData?.data?.perfil || userData?.perfil;
             if (userPerfil === 'REQUISITANTE') {
                 alert("Acesso negado. Esta página é para gerenciamento. Redirecionando...");
                 window.location.replace("Chamado.html"); 
@@ -620,13 +626,25 @@
 
         try {
             userData = JSON.parse(userDataString); 
-            userId = userData?.data?.id;
-            userPerfil = userData?.data?.perfil;
-            userCategoriaAtendimento = userData?.data?.categoria_id_atendimento;
+            
+            // --- MODIFICAÇÃO IMPORTANTE PARA CORRIGIR O 'userId' ---
+            // Tenta pegar o ID de 'userData.data.id' (estrutura aninhada)
+            // Se não encontrar, tenta pegar de 'userData.id' (estrutura plana)
+            userId = userData?.data?.id || userData?.id; 
+            
+            userPerfil = userData?.data?.perfil || userData?.perfil;
+            userCategoriaAtendimento = userData?.data?.categoria_id_atendimento || userData?.categoria_id_atendimento;
+
+            // --- ADICIONADO PARA TESTE ---
+            console.log("Dados do usuário lidos do Local Storage:", userData);
+            console.log("ID do Usuário (Operador) que foi definido:", userId);
+            // --- FIM TESTE ---
 
             const userNameDisplay = document.getElementById('userNameDisplay');
             if (userNameDisplay && userData?.data?.nomeFuncionario) {
                 userNameDisplay.textContent = `Olá, ${userData.data.nomeFuncionario.split(' ')[0]}`;
+            } else if (userNameDisplay && userData?.nomeFuncionario) {
+                 userNameDisplay.textContent = `Olá, ${userData.nomeFuncionario.split(' ')[0]}`;
             }
 
             const linkChamado = document.getElementById("menu-link-chamado");
@@ -706,9 +724,9 @@
         // ======== CARREGAR CATEGORIAS (MODIFICADO) ========
         // ====================================================
         async function carregarCategorias() {
-            // (Removemos o 'if (userPerfil === 'AGENTE')')
             // Agora o filtro de categoria será carregado para todos.
             try {
+                filtroCategoria.parentElement.style.display = 'block'; // Garante que está visível
                 const r = await fetch(`${API_URL}/categorias`);
                 if (!r.ok) throw new Error("Erro ao carregar categorias.");
                 const categorias = await r.json();
@@ -776,7 +794,6 @@
             if (filtroStatus.value) p.append('status', filtroStatus.value);
 
             // --- LÓGICA DE FILTRO MODIFICADA ---
-            // Removemos a verificação de 'userPerfil'.
             // Se um valor (que não seja "Todas") for selecionado no filtro,
             // ele será aplicado, independente do perfil.
             if (filtroCategoria.value) {
@@ -796,6 +813,11 @@
 
         // --- FUNÇÃO DE ATUALIZAR STATUS (MODIFICADA) ---
         async function atualizarStatusChamado(id, status) {
+            
+            // --- ADICIONADO PARA TESTE ---
+            console.log(`[Botão Rápido ✔️] Enviando ID do Usuário (Operador):`, userId);
+            // --- FIM TESTE ---
+            
             try {
                 const r = await fetch(`${API_URL}/chamados/${id}/status`, {
                     method: 'PATCH',
@@ -895,6 +917,10 @@
             if (!currentTicketId) return;
             const novoStatus = detalheStatusSelect.value;
             limparMensagem(modalDetalhesResposta);
+
+            // --- ADICIONADO PARA TESTE ---
+            console.log(`[Modal 👁️] Enviando ID do Usuário (Operador):`, userId);
+            // --- FIM TESTE ---
 
             try {
                 const r = await fetch(`${API_URL}/chamados/${currentTicketId}/status`, {

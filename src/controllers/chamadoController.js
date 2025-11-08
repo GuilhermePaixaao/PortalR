@@ -213,6 +213,10 @@ export const deletarChamado = async (req, res) => {
 // ======== ATUALIZAR STATUS (MODIFICADO) ========
 // ====================================================
 export const atualizarStatus = async (req, res) => {
+    // --- ADICIONADO PARA TESTE ---
+    console.log("[BACKEND] Corpo da requisição recebido:", req.body);
+    // --- FIM TESTE ---
+    
     try {
         const idNum = parseInt(req.params.id);
         const { status, atendenteId } = req.body; // Recebe o atendenteId
@@ -221,9 +225,11 @@ export const atualizarStatus = async (req, res) => {
             return res.status(400).json({ success: false, message: 'ID e Status são obrigatórios.' });
         }
 
+        // --- ADICIONADO PARA TESTE ---
+        console.log(`[BACKEND] Tentando salvar: ID=${idNum}, Status=${status}, AtendenteID=${atendenteId}`);
+        // --- FIM TESTE ---
+        
         // Passa o atendenteId para o model.
-        // Você DEVE atualizar seu ChamadoModel.updateStatus para aceitar este 3º argumento
-        // e salvar o atendente_id no banco de dados.
         const result = await ChamadoModel.updateStatus(idNum, status, atendenteId ? parseInt(atendenteId) : null);
 
         if (result.affectedRows === 0) {
