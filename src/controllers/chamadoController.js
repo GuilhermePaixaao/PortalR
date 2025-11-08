@@ -90,30 +90,44 @@ export const criarChamado = async (req, res) => {
 };
 
 // ====================================================
-// ======== LISTAR CHAMADOS (ATUALIZADO) ========
+// ======== LISTAR CHAMADOS (MODIFICADO) ========
 // ====================================================
 export const listarChamados = async (req, res) => {
     try {
         const filtros = req.query;
         const chamados = await ChamadoModel.findAll(filtros);
 
-        // Formata a resposta para o frontend (com Subcategoria)
+        // Formata a resposta para o frontend
         const chamadosFormatados = chamados.map(chamado => {
+            // Requisitante (Quem abriu)
             const Funcionario = {
                 nomeFuncionario: chamado.nomeRequisitante,
                 email: chamado.emailRequisitante,
                 telefone: chamado.telefoneRequisitante
             };
+            
+            // Operador (Quem atendeu) - (Seu model DEVE retornar 'nomeAtendente' etc.)
+            const Atendente = chamado.atendente_id ? {
+                nomeFuncionario: chamado.nomeAtendente, 
+                email: chamado.emailAtendente     
+            } : null; // Se não houver atendente_id, envia nulo
+
             const Categorias = chamado.categoria_id ? { id: chamado.categoria_id, nome: chamado.nomeCategoria } : null;
             const Subcategoria = chamado.subcategoria_id ? { id: chamado.subcategoria_id, nome: chamado.nomeSubcategoria } : null;
             
+            // Limpa os campos duplicados
             delete chamado.nomeRequisitante;
             delete chamado.emailRequisitante;
             delete chamado.telefoneRequisitante;
             delete chamado.nomeCategoria;
             delete chamado.nomeSubcategoria; 
+            
+            // (Limpa os novos campos do atendente)
+            delete chamado.nomeAtendente;
+            delete chamado.emailAtendente;
 
-            return { ...chamado, Funcionario, Categorias, Subcategoria };
+            // Retorna o chamado com os objetos aninhados
+            return { ...chamado, Funcionario, Categorias, Subcategoria, Atendente };
         });
 
         res.status(200).json(chamadosFormatados);
@@ -124,7 +138,7 @@ export const listarChamados = async (req, res) => {
 };
 
 // ====================================================
-// ======== BUSCAR CHAMADO POR ID (ATUALIZADO) ========
+// ======== BUSCAR CHAMADO POR ID (MODIFICADO) ========
 // ====================================================
 export const buscarChamadoPorId = async (req, res) => {
     try {
@@ -139,22 +153,32 @@ export const buscarChamadoPorId = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Chamado não encontrado.' });
         }
 
-        // Formata a resposta (com Subcategoria)
-        const Funcionario = {
+        // Formata a resposta
+        const Funcionario = { // Requisitante
             nomeFuncionario: chamado.nomeRequisitante,
             email: chamado.emailRequisitante,
             telefone: chamado.telefoneRequisitante
         };
+        
+        // Operador (Quem atendeu)
+        const Atendente = chamado.atendente_id ? {
+            nomeFuncionario: chamado.nomeAtendente,
+            email: chamado.emailAtendente
+        } : null;
+
         const Categorias = chamado.categoria_id ? { id: chamado.categoria_id, nome: chamado.nomeCategoria } : null;
         const Subcategoria = chamado.subcategoria_id ? { id: chamado.subcategoria_id, nome: chamado.nomeSubcategoria } : null;
 
+        // Limpa campos
         delete chamado.nomeRequisitante;
         delete chamado.emailRequisitante;
         delete chamado.telefoneRequisitante;
         delete chamado.nomeCategoria;
         delete chamado.nomeSubcategoria;
+        delete chamado.nomeAtendente;
+        delete chamado.emailAtendente;
 
-        res.status(200).json({ ...chamado, Funcionario, Categorias, Subcategoria });
+        res.status(200).json({ ...chamado, Funcionario, Categorias, Subcategoria, Atendente });
 
     } catch (error) {
         console.error('Erro ao buscar chamado por ID:', error);
@@ -186,18 +210,21 @@ export const deletarChamado = async (req, res) => {
 };
 
 // ====================================================
-// ======== ATUALIZAR STATUS ========
+// ======== ATUALIZAR STATUS (MODIFICADO) ========
 // ====================================================
 export const atualizarStatus = async (req, res) => {
     try {
         const idNum = parseInt(req.params.id);
-        const { status } = req.body;
+        const { status, atendenteId } = req.body; // Recebe o atendenteId
 
         if (isNaN(idNum) || !status) {
             return res.status(400).json({ success: false, message: 'ID e Status são obrigatórios.' });
         }
 
-        const result = await ChamadoModel.updateStatus(idNum, status);
+        // Passa o atendenteId para o model.
+        // Você DEVE atualizar seu ChamadoModel.updateStatus para aceitar este 3º argumento
+        // e salvar o atendente_id no banco de dados.
+        const result = await ChamadoModel.updateStatus(idNum, status, atendenteId ? parseInt(atendenteId) : null);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ success: false, message: 'Erro: Chamado não encontrado.' });

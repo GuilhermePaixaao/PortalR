@@ -180,7 +180,11 @@
         .ticket-subject { flex: 1 1 auto; min-width: 200px; }
         .ticket-category { flex: 0 0 150px; }
         .ticket-status { flex: 0 0 80px; text-align: center; }
+        
+        /* CLASSES MODIFICADAS/ADICIONADAS */
+        .ticket-requisitante { flex: 0 0 120px; } 
         .ticket-operator { flex: 0 0 120px; }
+        
         .ticket-created { flex: 0 0 100px; text-align: center; }
         .ticket-actions { flex: 0 0 60px; text-align: center; cursor: pointer; }
 
@@ -535,6 +539,7 @@
                 <button type="button" id="fecharModalDetalhes">Fechar</button>
             </div>
         </dialog>
+        
         <main class="main-content">
             <h1>Gerenciar Chamados</h1>
             <hr>
@@ -589,11 +594,11 @@
                             <div class="ticket-cell ticket-subject">Assunto</div>
                             <div class="ticket-cell ticket-category">Categoria</div>
                             <div class="ticket-cell ticket-status">Status</div>
-                            <div class="ticket-cell ticket-operator">Requisitante</div>
+                            <div class="ticket-cell ticket-requisitante">Requisitante</div>
+                            <div class="ticket-cell ticket-operator">Operador</div>
                             <div class="ticket-cell ticket-created">Criado em</div>
                             <div class="ticket-cell ticket-actions">Ação</div>
                         </div>
-
                         <div id="loadingIndicator"><p>Carregando chamados...</p></div>
                     </div>
                 </div>
@@ -718,6 +723,7 @@
             }
         }
 
+        // --- FUNÇÃO RENDERIZAR (MODIFICADA) ---
         function renderizarChamados(chamados) {
             loadingIndicator.style.display = 'none';
             ticketList.querySelectorAll('.data-row').forEach(r => r.remove());
@@ -743,7 +749,8 @@
                     <div class="ticket-cell ticket-subject">${escapeHtml(ch.assunto)}</div>
                     <div class="ticket-cell ticket-category">${escapeHtml(ch.Categorias?.nome || 'N/A')}</div>
                     <div class="ticket-cell ticket-status"><span class="status-badge ${statusClass}">${escapeHtml(ch.status)}</span></div>
-                    <div class="ticket-cell ticket-operator">${escapeHtml(ch.Funcionario?.nomeFuncionario || 'Desconhecido')}</div>
+                    <div class="ticket-cell ticket-requisitante">${escapeHtml(ch.Funcionario?.nomeFuncionario || 'Desconhecido')}</div>
+                    <div class="ticket-cell ticket-operator">${escapeHtml(ch.Atendente?.nomeFuncionario || 'N/A')}</div>
                     <div class="ticket-cell ticket-created">${formatarData(ch.created_at)}</div>
                     <div class="ticket-cell ticket-actions">
                     <span class="view-icon" title="Visualizar">👁️</span>
@@ -779,12 +786,16 @@
             }
         }
 
+        // --- FUNÇÃO DE ATUALIZAR STATUS (MODIFICADA) ---
         async function atualizarStatusChamado(id, status) {
             try {
                 const r = await fetch(`${API_URL}/chamados/${id}/status`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status })
+                    body: JSON.stringify({ 
+                        status: status,
+                        atendenteId: userId // Envia o ID do operador logado
+                    })
                 });
                 const data = await r.json();
                 if (!r.ok) throw new Error(data.message);
@@ -871,6 +882,7 @@
             }
         }
         
+        // --- FUNÇÃO HANDLE STATUS (MODIFICADA) ---
         async function handleStatusChange() {
             if (!currentTicketId) return;
             const novoStatus = detalheStatusSelect.value;
@@ -880,7 +892,10 @@
                 const r = await fetch(`${API_URL}/chamados/${currentTicketId}/status`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: novoStatus })
+                    body: JSON.stringify({ 
+                        status: novoStatus,
+                        atendenteId: userId // Envia o ID do operador logado
+                    })
                 });
                 const data = await r.json();
                 if (!r.ok) throw new Error(data.message);
