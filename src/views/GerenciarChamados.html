@@ -16,7 +16,6 @@
         try {
             const userData = JSON.parse(userDataString);
             
-            // --- MODIFICAÇÃO IMPORTANTE PARA CORRIGIR O 'userId' ---
             const userId = userData?.data?.id || userData?.id; 
             
             if (!userId) {
@@ -747,20 +746,19 @@
         }
 
         // ====================================================
-        // ======== (NOVO) CARREGAR OPERADORES ========
+        // ======== (MODIFICADO) CARREGAR OPERADORES ========
         // ====================================================
         /**
          * Busca a lista de funcionários (Agentes/Admins) para o dropdown.
-         * Assume que você criará uma rota GET /api/funcionarios/operadores no backend.
          */
         async function carregarOperadores() {
             if (listaOperadores.length > 0) return; // Só carrega uma vez
 
             try {
-                // !!! IMPORTANTE !!!
-                // Você precisa criar esta rota no seu backend (ex: no funcionarioRoutes.js)
-                // Ela deve retornar todos os funcionários com perfil 'AGENTE' ou 'ADMIN'
-                const response = await fetch(`${API_URL}/funcionarios`); 
+                // --- MODIFICADO ---
+                // Trocando a rota de '/funcionarios' para '/listarUsuarios' conforme sua informação
+                const response = await fetch(`${API_URL}/listarUsuarios`); 
+                // --- FIM DA MODIFICAÇÃO ---
                 
                 if (!response.ok) throw new Error("Falha ao carregar operadores.");
                 
@@ -778,7 +776,7 @@
                 });
 
             } catch (error) {
-                console.error(error);
+                console.error(error); // Mostra o erro 404 aqui
                 detalheAtendenteSelect.innerHTML = `<option value="">Erro ao carregar</option>`;
             }
         }
