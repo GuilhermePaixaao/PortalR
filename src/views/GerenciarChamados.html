@@ -17,8 +17,6 @@
             const userData = JSON.parse(userDataString);
             
             // --- MODIFICAÇÃO IMPORTANTE PARA CORRIGIR O 'userId' ---
-            // Tenta pegar o ID de 'userData.data.id' (estrutura aninhada)
-            // Se não encontrar, tenta pegar de 'userData.id' (estrutura plana)
             const userId = userData?.data?.id || userData?.id; 
             
             if (!userId) {
@@ -187,7 +185,6 @@
         .ticket-category { flex: 0 0 150px; }
         .ticket-status { flex: 0 0 80px; text-align: center; }
         
-        /* CLASSES MODIFICADAS/ADICIONADAS */
         .ticket-requisitante { flex: 0 0 120px; } 
         .ticket-operator { flex: 0 0 120px; }
         
@@ -513,11 +510,23 @@
                     </div>
                 </div>
                 
-                <div class="detalhe-grupo">
-                    <span class="detalhe-label">Criado em</span>
-                    <div id="detalheData" class="detalhe-valor">...</div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="detalhe-grupo">
+                            <span class="detalhe-label">Operador (Atendente)</span>
+                            <select id="detalheAtendenteSelect" class="detalhe-valor-select form-select" disabled>
+                                <option value="">-- Carregando operadores --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detalhe-grupo">
+                            <span class="detalhe-label">Criado em</span>
+                            <div id="detalheData" class="detalhe-valor">...</div>
+                        </div>
+                    </div>
                 </div>
-            </div>
+                </div>
             
             <hr style="margin-top: 1rem; margin-bottom: 1.25rem;">
             
@@ -615,6 +624,9 @@
     <script type="module">
         const API_URL = ""; 
         let currentTicketId = null; 
+        
+        // --- (NOVO) VARIÁVEL GLOBAL PARA OPERADORES ---
+        let listaOperadores = [];
 
         // --- FUNÇÃO DE LOGOUT ---
         function fazerLogout() {
@@ -627,18 +639,12 @@
         try {
             userData = JSON.parse(userDataString); 
             
-            // --- MODIFICAÇÃO IMPORTANTE PARA CORRIGIR O 'userId' ---
-            // Tenta pegar o ID de 'userData.data.id' (estrutura aninhada)
-            // Se não encontrar, tenta pegar de 'userData.id' (estrutura plana)
             userId = userData?.data?.id || userData?.id; 
-            
             userPerfil = userData?.data?.perfil || userData?.perfil;
             userCategoriaAtendimento = userData?.data?.categoria_id_atendimento || userData?.categoria_id_atendimento;
 
-            // --- ADICIONADO PARA TESTE ---
             console.log("Dados do usuário lidos do Local Storage:", userData);
             console.log("ID do Usuário (Operador) que foi definido:", userId);
-            // --- FIM TESTE ---
 
             const userNameDisplay = document.getElementById('userNameDisplay');
             if (userNameDisplay && userData?.data?.nomeFuncionario) {
@@ -686,7 +692,9 @@
         const listaComentariosContainer = document.getElementById("listaComentariosContainer");
         const btnThemeToggle = document.getElementById("themeToggle");
         
-        // --- (RE-ADICIONADO) REFERÊNCIAS DO FORM DE COMENTÁRIOS ---
+        // --- (NOVO) REFERÊNCIA DO DROPDOWN DE ATENDENTE ---
+        const detalheAtendenteSelect = document.getElementById("detalheAtendenteSelect");
+
         const btnEnviarComentario = document.getElementById("enviarComentario");
         const textareaComentario = document.getElementById("novoComentario");
         const comentarioResposta = document.getElementById("comentarioResposta");
@@ -706,7 +714,7 @@
         }
 
         function formatarData(d) {
-            if (!d) return 'Aguardando...';
+            if (!d) return 'N/A';
             try {
                 const dt = new Date(d);
                 const offset = dt.getTimezoneOffset() * 60000;
@@ -720,13 +728,9 @@
             }
         }
 
-        // ====================================================
-        // ======== CARREGAR CATEGORIAS (MODIFICADO) ========
-        // ====================================================
         async function carregarCategorias() {
-            // Agora o filtro de categoria será carregado para todos.
             try {
-                filtroCategoria.parentElement.style.display = 'block'; // Garante que está visível
+                filtroCategoria.parentElement.style.display = 'block'; 
                 const r = await fetch(`${API_URL}/categorias`);
                 if (!r.ok) throw new Error("Erro ao carregar categorias.");
                 const categorias = await r.json();
@@ -742,7 +746,43 @@
             }
         }
 
-        // --- FUNÇÃO RENDERIZAR (MODIFICADA) ---
+        // ====================================================
+        // ======== (NOVO) CARREGAR OPERADORES ========
+        // ====================================================
+        /**
+         * Busca a lista de funcionários (Agentes/Admins) para o dropdown.
+         * Assume que você criará uma rota GET /api/funcionarios/operadores no backend.
+         */
+        async function carregarOperadores() {
+            if (listaOperadores.length > 0) return; // Só carrega uma vez
+
+            try {
+                // !!! IMPORTANTE !!!
+                // Você precisa criar esta rota no seu backend (ex: no funcionarioRoutes.js)
+                // Ela deve retornar todos os funcionários com perfil 'AGENTE' ou 'ADMIN'
+                const response = await fetch(`${API_URL}/funcionarios`); 
+                
+                if (!response.ok) throw new Error("Falha ao carregar operadores.");
+                
+                const todosFuncionarios = await response.json();
+                
+                // Filtra para incluir apenas quem pode ser operador
+                listaOperadores = todosFuncionarios.filter(f => f.perfil === 'AGENTE' || f.perfil === 'ADMIN');
+
+                // Preenche o dropdown no modal
+                detalheAtendenteSelect.innerHTML = ''; // Limpa o "Carregando..."
+                detalheAtendenteSelect.add(new Option("-- Não Atribuído --", "")); // Opção para desatribuir
+                
+                listaOperadores.forEach(op => {
+                    detalheAtendenteSelect.add(new Option(op.nomeFuncionario, op.id));
+                });
+
+            } catch (error) {
+                console.error(error);
+                detalheAtendenteSelect.innerHTML = `<option value="">Erro ao carregar</option>`;
+            }
+        }
+
         function renderizarChamados(chamados) {
             loadingIndicator.style.display = 'none';
             ticketList.querySelectorAll('.data-row').forEach(r => r.remove());
@@ -780,9 +820,6 @@
             });
         }
 
-        // ====================================================
-        // ======== LISTAR CHAMADOS (MODIFICADO) ========
-        // ====================================================
         async function listarChamados() {
             limparMensagem(divRespostaGeral);
             ticketList.querySelectorAll('.data-row').forEach(r => r.remove());
@@ -793,13 +830,9 @@
             if (filtroPrioridade.value) p.append('prioridade', filtroPrioridade.value);
             if (filtroStatus.value) p.append('status', filtroStatus.value);
 
-            // --- LÓGICA DE FILTRO MODIFICADA ---
-            // Se um valor (que não seja "Todas") for selecionado no filtro,
-            // ele será aplicado, independente do perfil.
             if (filtroCategoria.value) {
                 p.append('categoria_id', filtroCategoria.value);
             }
-            // --- FIM DA MODIFICAÇÃO ---
 
             try {
                 const r = await fetch(`${API_URL}/chamados?${p.toString()}`);
@@ -811,12 +844,8 @@
             }
         }
 
-        // --- FUNÇÃO DE ATUALIZAR STATUS (MODIFICADA) ---
         async function atualizarStatusChamado(id, status) {
-            
-            // --- ADICIONADO PARA TESTE ---
             console.log(`[Botão Rápido ✔️] Enviando ID do Usuário (Operador):`, userId);
-            // --- FIM TESTE ---
             
             try {
                 const r = await fetch(`${API_URL}/chamados/${id}/status`, {
@@ -824,7 +853,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         status: status,
-                        atendenteId: userId // Envia o ID do operador logado
+                        atendenteId: userId 
                     })
                 });
                 const data = await r.json();
@@ -841,24 +870,19 @@
         async function abrirModalDetalhes(chamadoId) {
             limparMensagem(modalDetalhesResposta);
             
-            // Limpa o histórico e o formulário
             listaComentariosContainer.innerHTML = '<span class="comment-empty-state">Carregando comentários...</span>';
             textareaComentario.value = '';
             limparMensagem(comentarioResposta);
 
             modalDetalhes.showModal();
             currentTicketId = null; 
+            detalheAtendenteSelect.disabled = true; // Desativa enquanto carrega
 
-            // Estado de carregamento
             modalDetalhesConteudo.style.opacity = '0.5';
             detalheId.textContent = `#${chamadoId}`;
             detalheAssunto.textContent = 'Carregando...';
-            detalheDescricao.textContent = 'Carregando...';
+            //... (outros campos de carregamento)
             detalheRequisitante.textContent = 'Carregando...';
-            detalheCategoria.textContent = 'Carregando...';
-            detalheData.textContent = 'Carregando...';
-            detalheStatusSelect.value = "Aberto";
-            detalhePrioridadeSelect.value = "Média";
 
             try {
                 const response = await fetch(`${API_URL}/chamados/${chamadoId}`);
@@ -878,6 +902,12 @@
                 
                 detalheStatusSelect.value = chamado.status;
                 detalhePrioridadeSelect.value = chamado.prioridade;
+                
+                // --- (NOVO) PREENCHE O SELECT DO OPERADOR ---
+                // Usa || "" para garantir que o valor "Não Atribuído" (value="") seja selecionado se atendente_id for null
+                detalheAtendenteSelect.value = chamado.atendente_id || ""; 
+                detalheAtendenteSelect.disabled = false; // Ativa o dropdown
+                // --- FIM NOVO ---
                 
                 currentTicketId = chamadoId; 
                 modalDetalhesConteudo.style.opacity = '1';
@@ -912,15 +942,12 @@
             }
         }
         
-        // --- FUNÇÃO HANDLE STATUS (MODIFICADA) ---
         async function handleStatusChange() {
             if (!currentTicketId) return;
             const novoStatus = detalheStatusSelect.value;
             limparMensagem(modalDetalhesResposta);
 
-            // --- ADICIONADO PARA TESTE ---
             console.log(`[Modal 👁️] Enviando ID do Usuário (Operador):`, userId);
-            // --- FIM TESTE ---
 
             try {
                 const r = await fetch(`${API_URL}/chamados/${currentTicketId}/status`, {
@@ -928,11 +955,19 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         status: novoStatus,
-                        atendenteId: userId // Envia o ID do operador logado
+                        atendenteId: userId 
                     })
                 });
                 const data = await r.json();
                 if (!r.ok) throw new Error(data.message);
+                
+                // --- (NOVO) ATUALIZA O DROPDOWN DE ATENDENTE ---
+                // Se o status foi alterado pelo usuário atual, 
+                // atribui o chamado a ele no dropdown
+                if (userId) {
+                    detalheAtendenteSelect.value = userId;
+                }
+                // --- FIM NOVO ---
                 
                 exibirMensagem(modalDetalhesResposta, "Status atualizado!", true);
                 listarChamados(); 
@@ -940,6 +975,38 @@
                 exibirMensagem(modalDetalhesResposta, `Erro: ${e.message}`, false);
             }
         }
+        
+        // ====================================================
+        // ======== (NOVO) HANDLE ATENDENTE CHANGE ========
+        // ====================================================
+        async function handleAtendenteChange() {
+            if (!currentTicketId) return;
+            
+            // Pega o valor. Se for "" (Não Atribuído), envia null.
+            const novoAtendenteId = detalheAtendenteSelect.value ? parseInt(detalheAtendenteSelect.value) : null;
+            limparMensagem(modalDetalhesResposta);
+            
+            console.log(`[Modal 👁️] Trocando atendente para:`, novoAtendenteId);
+
+            try {
+                // Chama a nova rota de API
+                const r = await fetch(`${API_URL}/chamados/${currentTicketId}/atendente`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ atendenteId: novoAtendenteId })
+                });
+                const data = await r.json();
+                if (!r.ok) throw new Error(data.message);
+                
+                exibirMensagem(modalDetalhesResposta, "Atendente atualizado!", true);
+                
+                // Recarrega a lista principal para mostrar o novo nome do operador
+                listarChamados(); 
+            } catch (e) {
+                exibirMensagem(modalDetalhesResposta, `Erro: ${e.message}`, false);
+            }
+        }
+        // --- FIM NOVO ---
 
         // --- Funções para LER Comentários ---
         
@@ -992,11 +1059,10 @@
             }
         }
 
-        // --- (RE-ADICIONADO) Função para ENVIAR Comentário ---
         async function enviarNovoComentario() {
             limparMensagem(comentarioResposta);
             
-            const ticketId = currentTicketId; // Pega o ID salvo
+            const ticketId = currentTicketId; 
             const texto = textareaComentario.value.trim();
 
             if (!texto) {
@@ -1011,7 +1077,7 @@
             const body = {
                 texto: texto,
                 chamado_id: parseInt(ticketId),
-                user_id: userId // Pega o ID do usuário logado
+                user_id: userId 
             };
 
             try {
@@ -1026,10 +1092,9 @@
                     throw new Error(erro.message || "Falha ao enviar comentário.");
                 }
 
-                textareaComentario.value = ''; // Limpa a caixa de texto
-                limparMensagem(comentarioResposta); // Limpa msg de sucesso/erro anterior
+                textareaComentario.value = ''; 
+                limparMensagem(comentarioResposta); 
                 
-                // (IMPORTANTE) Recarrega a lista de comentários
                 await carregarComentarios(ticketId); 
                 
             } catch (error) {
@@ -1086,7 +1151,6 @@
 
         btnFecharModalDetalhes.addEventListener('click', () => {
             listaComentariosContainer.innerHTML = '';
-            // (RE-ADICIONADO) Limpa o form de comentário
             textareaComentario.value = '';
             limparMensagem(comentarioResposta);
             
@@ -1097,14 +1161,27 @@
         detalhePrioridadeSelect.addEventListener('change', handlePrioridadeChange);
         detalheStatusSelect.addEventListener('change', handleStatusChange);
 
-        // --- (RE-ADICIONADO) Event Listener do botão de comentário ---
+        // --- (NOVO) LISTENER PARA TROCA DE ATENDENTE ---
+        detalheAtendenteSelect.addEventListener('change', handleAtendenteChange);
+
         btnEnviarComentario.addEventListener('click', enviarNovoComentario);
 
 
-        // --- INICIALIZAÇÃO ---
-        loadTheme(); 
-        carregarCategorias(); // Agora carrega para todos os perfis
-        listarChamados(); // Agora lista para todos os perfis
+        // ====================================================
+        // ======== (NOVO) INICIALIZAÇÃO ATUALIZADA ========
+        // ====================================================
+        async function init() {
+            loadTheme(); 
+            // Carrega categorias e operadores em paralelo
+            await Promise.all([
+                carregarCategorias(),
+                carregarOperadores() 
+            ]);
+            // Só lista os chamados depois que tudo estiver pronto
+            await listarChamados(); 
+        }
+        
+        init(); // Inicia a aplicação
 
     </script>
 

@@ -1,10 +1,10 @@
 import { Router } from 'express';
 import multer from 'multer'; // 1. Importar o multer
-import * as ChamadoController from '../controllers/chamadoController.js';
 
-// --- IMPORTAÇÃO ADICIONADA E CORRIGIDA ---
-// Importa as DUAS funções necessárias do controller de comentários
-import { addComentario, listarComentariosPorChamado } from '../controllers/comentarioController.js'; // Ajuste o caminho se necessário
+// --- IMPORTAÇÃO MODIFICADA ---
+import * as ChamadoController from '../controllers/chamadoController.js';
+// Adiciona 'atualizarAtendente' à lista de importações
+import { addComentario, listarComentariosPorChamado } from '../controllers/comentarioController.js'; 
 
 // 2. Inicializar o multer (para lidar com uploads de ficheiros)
 const upload = multer();
@@ -29,10 +29,14 @@ router.get('/chamados/:id', ChamadoController.buscarChamadoPorId);
 // PATCH /chamados/:id/prioridade (Atualizar só a prioridade)
 router.patch('/chamados/:id/prioridade', ChamadoController.atualizarPrioridade);
 
-// --- (ROTAS ANTIGAS) ---
-
 // PATCH /chamados/:id/status (Atualizar só o status)
 router.patch('/chamados/:id/status', ChamadoController.atualizarStatus);
+
+// --- (NOVA ROTA ADICIONADA) ---
+// PATCH /chamados/:id/atendente (Atualizar só o operador/atendente)
+router.patch('/chamados/:id/atendente', ChamadoController.atualizarAtendente);
+
+// --- (ROTAS ANTIGAS) ---
 
 // DELETE /chamados/:id (Deletar um chamado)
 router.delete('/chamados/:id', ChamadoController.deletarChamado);

@@ -1,7 +1,6 @@
 import pool from '../config/database.js';
 
 // Cria um novo chamado (com subcategoria_id)
-// (Esta função não precisa de alteração, pois o atendente_id será NULL por padrão)
 export const create = async (chamado) => {
     const { 
         assunto, descricao, prioridade, status, requisitanteIdNum, categoriaIdNum, 
@@ -38,7 +37,6 @@ export const create = async (chamado) => {
 // ======== BUSCAR CHAMADO POR ID (MODIFICADO) ========
 // ====================================================
 export const findById = async (id) => {
-    // <-- MODIFICADO: Adicionado f_atend.nomeFuncionario e o novo LEFT JOIN
     const sql = `
         SELECT 
             ch.*, 
@@ -77,7 +75,6 @@ export const findById = async (id) => {
 // ======== BUSCAR TODOS (MODIFICADO) ========
 // ====================================================
 export const findAll = async (filtros = {}) => {
-    // <-- MODIFICADO: Adicionado f_atend.nomeFuncionario e o novo LEFT JOIN
     let sql = `
         SELECT 
             ch.*, 
@@ -155,7 +152,6 @@ export const deleteById = async (id) => {
 // ======== ATUALIZAR STATUS (MODIFICADO) ========
 // ====================================================
 export const updateStatus = async (id, status, atendenteId) => {
-    // <-- MODIFICADO: Aceita 'atendenteId'
     let sql;
     let values;
 
@@ -164,7 +160,7 @@ export const updateStatus = async (id, status, atendenteId) => {
         sql = "UPDATE Chamados SET status = ?, atendente_id = ? WHERE id = ?";
         values = [status, atendenteId, id];
     } else {
-        // Se não, atualiza apenas o status (mantém comportamento antigo se necessário)
+        // Se não, atualiza apenas o status
         sql = "UPDATE Chamados SET status = ? WHERE id = ?";
         values = [status, id];
     }
@@ -177,5 +173,15 @@ export const updateStatus = async (id, status, atendenteId) => {
 export const updatePrioridade = async (id, prioridade) => {
     const sql = "UPDATE Chamados SET prioridade = ? WHERE id = ?";
     const [result] = await pool.query(sql, [prioridade, id]);
+    return result;
+};
+
+// ====================================================
+// ======== (NOVO) ATUALIZAR SÓ O ATENDENTE ========
+// ====================================================
+export const updateAtendente = async (id, atendenteId) => {
+    // Permite definir como NULL (Não Atribuído)
+    const sql = "UPDATE Chamados SET atendente_id = ? WHERE id = ?";
+    const [result] = await pool.query(sql, [atendenteId, id]);
     return result;
 };

@@ -267,3 +267,30 @@ export const atualizarPrioridade = async (req, res) => {
         res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
     }
 };
+
+// ====================================================
+// ======== (NOVO) ATUALIZAR SÓ O ATENDENTE ========
+// ====================================================
+export const atualizarAtendente = async (req, res) => {
+    try {
+        const idNum = parseInt(req.params.id);
+        const { atendenteId } = req.body; // Pega o novo ID do corpo
+
+        // Converte "" (string vazia) ou 0 para NULL.
+        // Se for um ID válido, usa o parseInt.
+        const novoAtendenteId = (atendenteId && parseInt(atendenteId) > 0) ? parseInt(atendenteId) : null;
+
+        console.log(`[BACKEND] Trocando atendente: ID=${idNum}, Novo AtendenteID=${novoAtendenteId}`);
+
+        const result = await ChamadoModel.updateAtendente(idNum, novoAtendenteId);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'Erro: Chamado não encontrado.' });
+        }
+
+        res.status(200).json({ success: true, message: 'Atendente atualizado com sucesso.' });
+    } catch (error) {
+        console.error('Erro ao atualizar atendente:', error);
+        res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
+    }
+};
