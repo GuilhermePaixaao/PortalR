@@ -706,7 +706,7 @@
         }
 
         function formatarData(d) {
-            if (!d) return 'N/A';
+            if (!d) return 'Aguardando...';
             try {
                 const dt = new Date(d);
                 const offset = dt.getTimezoneOffset() * 60000;

@@ -535,7 +535,7 @@
             return text.replace(/[&<>"']/g, m => map[m]);
         }
         function formatarData(isoString) {
-            if (!isoString) return 'N/A';
+            if (!isoString) return 'Aguardando...';
             try {
                 const dt = new Date(isoString);
                 const data = dt.toLocaleDateString('pt-BR');
@@ -608,7 +608,7 @@
                 const prioridadeClass = (chamado.prioridade || 'Média').toLowerCase().replace('é', 'e');
                 const statusClass = (chamado.status || 'Aberto').toLowerCase().replace(/\s+/g, '-');
 
-                let nomeExibicao = 'N/A';
+                let nomeExibicao = 'Aguardamdo...';
                 if (chamado.Subcategoria && chamado.Subcategoria.nome) {
                     nomeExibicao = `${chamado.Categorias?.nome || '?'} / ${chamado.Subcategoria.nome}`;
                 } else if (chamado.Categorias && chamado.Categorias.nome) {
