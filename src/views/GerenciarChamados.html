@@ -756,8 +756,9 @@
 
             try {
                 // --- MODIFICADO ---
-                // Trocando a rota de '/funcionarios' para '/listarUsuarios' conforme sua informação
-                const response = await fetch(`${API_URL}/listarUsuarios`); 
+                // Trocando a rota de '/listarUsuarios' para '/usuarios' 
+                // com base no 'funcionarioRouter.js' que você enviou.
+                const response = await fetch(`${API_URL}/usuarios`); 
                 // --- FIM DA MODIFICAÇÃO ---
                 
                 if (!response.ok) throw new Error("Falha ao carregar operadores.");
@@ -765,6 +766,7 @@
                 const todosFuncionarios = await response.json();
                 
                 // Filtra para incluir apenas quem pode ser operador
+                // (O controller 'listarUsuarios' já envia o perfil)
                 listaOperadores = todosFuncionarios.filter(f => f.perfil === 'AGENTE' || f.perfil === 'ADMIN');
 
                 // Preenche o dropdown no modal
