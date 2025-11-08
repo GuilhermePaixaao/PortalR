@@ -211,6 +211,7 @@
         .ticket-subject { flex: 1 1 auto; min-width: 200px; }
         .ticket-category { flex: 0 0 150px; }
         .ticket-status { flex: 0 0 80px; text-align: center; }
+        .ticket-requisitante { flex: 0 0 120px; }
         .ticket-operator { flex: 0 0 120px; }
         .ticket-created { flex: 0 0 100px; text-align: center; }
         .ticket-actions { flex: 0 0 60px; text-align: center; cursor: pointer; }
@@ -444,6 +445,7 @@
             
             <div class="form-actions"><button type="button" id="fecharModalDetalhes">Fechar</button></div>
         </dialog>
+        
         <main class="main-content">
             <h1>Meus Chamados</h1> 
             <hr>
@@ -463,7 +465,8 @@
                             <div class="ticket-cell ticket-subject">Assunto</div>
                             <div class="ticket-cell ticket-category">Categoria</div>
                             <div class="ticket-cell ticket-status">Status</div>
-                            <div class="ticket-cell ticket-operator">Requisitante</div>
+                            <div class="ticket-cell ticket-requisitante">Requisitante</div>
+                            <div class="ticket-cell ticket-operator">Operador</div>
                             <div class="ticket-cell ticket-created">Criado em</div>
                             <div class="ticket-cell ticket-actions">Ação</div>
                         </div>
@@ -622,7 +625,8 @@
                     <div class="ticket-cell ticket-status">
                         <span class="status-badge ${statusClass}">${escapeHtml(chamado.status)}</span>
                     </div>
-                    <div class="ticket-cell ticket-operator">${escapeHtml(chamado.Funcionario?.nomeFuncionario || 'Desconhecido')}</div>
+                    <div class="ticket-cell ticket-requisitante">${escapeHtml(chamado.Funcionario?.nomeFuncionario || 'Desconhecido')}</div>
+                    <div class="ticket-cell ticket-operator">${escapeHtml(chamado.Atendente?.nomeFuncionario || 'N/A')}</div>
                     <div class="ticket-cell ticket-created">${formatarData(chamado.created_at)}</div>
                     <div class="ticket-cell ticket-actions">
                         <span class="view-icon" title="Visualizar">👁️</span>
@@ -780,7 +784,8 @@
             comentarios.forEach(comentario => {
                 // Assumindo que o comentário tem a estrutura:
                 // { texto: "...", created_at: "...", Funcionario: { nomeFuncionario: "..." } }
-                const nome = comentario.nomeFuncionario || 'Usuário desconhecido';                const data = formatarData(comentario.created_at);
+                const nome = comentario.nomeFuncionario || 'Usuário desconhecido'; 
+                const data = formatarData(comentario.created_at);
                 const texto = escapeHtml(comentario.texto);
                 const commentHtml = `
                     <div class="comment-item">
