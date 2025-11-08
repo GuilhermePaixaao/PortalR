@@ -702,11 +702,12 @@
             }
         }
 
+        // ====================================================
+        // ======== CARREGAR CATEGORIAS (MODIFICADO) ========
+        // ====================================================
         async function carregarCategorias() {
-            if (userPerfil === 'AGENTE') {
-                filtroCategoria.parentElement.style.display = 'none';
-                return;
-            }
+            // (Removemos o 'if (userPerfil === 'AGENTE')')
+            // Agora o filtro de categoria será carregado para todos.
             try {
                 const r = await fetch(`${API_URL}/categorias`);
                 if (!r.ok) throw new Error("Erro ao carregar categorias.");
@@ -761,6 +762,9 @@
             });
         }
 
+        // ====================================================
+        // ======== LISTAR CHAMADOS (MODIFICADO) ========
+        // ====================================================
         async function listarChamados() {
             limparMensagem(divRespostaGeral);
             ticketList.querySelectorAll('.data-row').forEach(r => r.remove());
@@ -771,10 +775,14 @@
             if (filtroPrioridade.value) p.append('prioridade', filtroPrioridade.value);
             if (filtroStatus.value) p.append('status', filtroStatus.value);
 
-            if (userPerfil === 'ADMIN' && filtroCategoria.value)
+            // --- LÓGICA DE FILTRO MODIFICADA ---
+            // Removemos a verificação de 'userPerfil'.
+            // Se um valor (que não seja "Todas") for selecionado no filtro,
+            // ele será aplicado, independente do perfil.
+            if (filtroCategoria.value) {
                 p.append('categoria_id', filtroCategoria.value);
-            else if (userPerfil === 'AGENTE')
-                p.append('categoria_id', userCategoriaAtendimento);
+            }
+            // --- FIM DA MODIFICAÇÃO ---
 
             try {
                 const r = await fetch(`${API_URL}/chamados?${p.toString()}`);
@@ -1069,8 +1077,8 @@
 
         // --- INICIALIZAÇÃO ---
         loadTheme(); 
-        carregarCategorias();
-        listarChamados();
+        carregarCategorias(); // Agora carrega para todos os perfis
+        listarChamados(); // Agora lista para todos os perfis
 
     </script>
 
