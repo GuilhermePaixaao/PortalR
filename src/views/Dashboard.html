@@ -10,34 +10,27 @@
         const userDataString = localStorage.getItem("userData");
         
         if (!userDataString) {
-            // 1. Se NÃO houver dados, redireciona IMEDIATAMENTE
-            // Usamos .replace() para que o "voltar" do navegador não caia aqui
             window.location.replace("Login.html"); 
-            
-            // Lança um erro para parar qualquer outra execução
             throw new Error("Usuário não autenticado.");
         }
 
         try {
-            // 2. Tenta decodificar os dados
             const userData = JSON.parse(userDataString);
-            
-            // 3. Se os dados forem inválidos (corrompidos)
             if (!userData?.data?.id) {
                 throw new Error("Dados de usuário inválidos.");
             }
-            
         } catch (error) {
-            // 4. Se falhar (dados corrompidos ou inválidos)
             console.error("Sessão inválida:", error.message);
-            localStorage.removeItem("userData"); // Limpa os dados ruins
-            window.location.replace("Login.html"); // Manda para o login
+            localStorage.removeItem("userData"); 
+            window.location.replace("Login.html"); 
             throw new Error("Sessão inválida.");
         }
         // --- FIM DO PROTETOR DE PÁGINA ---
     </script>
     <link rel="icon" type="image/png" href="/logo.png">
     <link rel="stylesheet" href="css/dashboard.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
         .header {
@@ -144,17 +137,39 @@
         .stat-card.in-progress .stat-value { color: #0d6efd; }
         .stat-card.completed .stat-value { color: #198754; }
 
-        /* --- (NOVO) ESTILO PARA O CONTAINER VERTICAL --- */
+        /* --- (NOVO) LAYOUT EM GRADE PARA O CONTEÚDO --- */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 350px 1fr; /* Coluna 1 (pilha) | Coluna 2 (gráfico) */
+            gap: 24px;
+            align-items: flex-start;
+        }
+        
+        /* Estilo da pilha vertical de status (Coluna 1) */
         .dashboard-stack {
-            /* Define uma largura máxima para os cards não ficarem muito largos */
-            max-width: 800px; 
-            /* Centraliza a pilha de cards na página */
-            margin: 0 auto; 
-            
             display: flex;
             flex-direction: column;
-            /* Adiciona espaço entre os cards empilhados */
             gap: 20px; 
+        }
+
+        /* Estilo do container do gráfico (Coluna 2) */
+        .chart-container .widget {
+            padding: 24px;
+        }
+        
+        .chart-container h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: var(--text-dark);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        /* Responsividade: em telas pequenas, volta a ser 1 coluna */
+        @media (max-width: 992px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr; /* Pilha tudo verticalmente */
+            }
         }
         
     </style>
@@ -231,30 +246,41 @@
         
         <main class="main-content">
             
-            <div class="dashboard-stack">
+            <div class="dashboard-grid">
+            
+                <div class="dashboard-stack">
+                    
+                    <div class="widget stat-card open">
+                        <div class="stat-info">
+                            <h3>Chamados Abertos</h3>
+                            <span class="stat-value" id="abertoCount">0</span>
+                        </div>
+                        <div class="icon" style="color: #ffc107;">🚨</div>
+                    </div>
+
+                    <div class="widget stat-card in-progress">
+                        <div class="stat-info">
+                            <h3>Em Andamento</h3>
+                            <span class="stat-value" id="andamentoCount">0</span>
+                        </div>
+                        <div class="icon" style="color: #0d6efd;">🛠️</div>
+                    </div>
+
+                    <div class="widget stat-card completed">
+                        <div class="stat-info">
+                            <h3>Concluídos</h3>
+                            <span class="stat-value" id="concluidoCount">0</span>
+                        </div>
+                        <div class="icon" style="color: #198754;">✅</div>
+                    </div>
+                    
+                </div>
                 
-                <div class="widget stat-card open">
-                    <div class="stat-info">
-                        <h3>Chamados Abertos</h3>
-                        <span class="stat-value" id="abertoCount">0</span>
+                <div class="chart-container">
+                    <div class="widget">
+                        <h3>Chamados por Status</h3>
+                        <canvas id="chamadosPieChart"></canvas>
                     </div>
-                    <div class="icon" style="color: #ffc107;">🚨</div>
-                </div>
-
-                <div class="widget stat-card in-progress">
-                    <div class="stat-info">
-                        <h3>Em Andamento</h3>
-                        <span class="stat-value" id="andamentoCount">0</span>
-                    </div>
-                    <div class="icon" style="color: #0d6efd;">🛠️</div>
-                </div>
-
-                <div class="widget stat-card completed">
-                    <div class="stat-info">
-                        <h3>Concluídos</h3>
-                        <span class="stat-value" id="concluidoCount">0</span>
-                    </div>
-                    <div class="icon" style="color: #198754;">✅</div>
                 </div>
                 
             </div>
@@ -275,6 +301,9 @@
             // Agora, apenas lemos os dados para USAR na página.
             const userDataString = localStorage.getItem("userData");
             const API_URL = ""; 
+
+            // (NOVO) Variável global para guardar a instância do gráfico
+            let myPieChart = null;
 
             // Não precisamos de 'if (!userDataString)' aqui,
             // porque o script do <head> já teria parado a página.
@@ -321,28 +350,80 @@
             // ===== LÓGICA PARA BUSCAR E EXIBIR CONTAGENS DE CHAMADOS =====
             // ======================================================
 
+            /**
+             * (NOVO) Desenha o gráfico de pizza
+             */
+            function renderPieChart(counts) {
+                const ctx = document.getElementById('chamadosPieChart');
+                if (!ctx) return; // Sai se o elemento do gráfico não for encontrado
+
+                // Se o gráfico já existe (ex: atualização de dados), destrói o antigo
+                if (myPieChart) {
+                    myPieChart.destroy();
+                }
+
+                const data = {
+                    labels: [
+                        'Chamados Abertos',
+                        'Em Andamento',
+                        'Concluídos'
+                    ],
+                    datasets: [{
+                        label: 'Chamados',
+                        data: [
+                            counts['Aberto'] || 0,
+                            counts['Em Andamento'] || 0,
+                            counts['Concluído'] || 0
+                        ],
+                        backgroundColor: [
+                            '#ffc107', // Amarelo (Aberto)
+                            '#0d6efd', // Azul (Em Andamento)
+                            '#198754'  // Verde (Concluído)
+                        ],
+                        hoverOffset: 4
+                    }]
+                };
+
+                // Cria a nova instância do gráfico
+                myPieChart = new Chart(ctx, {
+                    type: 'pie', // Tipo de gráfico
+                    data: data,
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'top', // Posição da legenda
+                            },
+                        }
+                    }
+                });
+            }
+
+            /**
+             * (MODIFICADO) Busca os dados e atualiza o texto E o gráfico
+             */
             async function fetchChamadoCounts() {
                 try {
                     // Chama o novo endpoint da API
                     const response = await fetch(`${API_URL}/chamados/contagem`);
                     if (!response.ok) {
-                        // Se for erro 404/500, o servidor ainda não tem a rota
                         console.error(`Falha ao buscar contagens. Status: ${response.status}`);
                         return;
                     }
                     
                     const counts = await response.json();
                     
-                    // Elementos dos contadores
+                    // 1. Atualiza os contadores de TEXTO
                     const abertoEl = document.getElementById('abertoCount');
                     const andamentoEl = document.getElementById('andamentoCount');
                     const concluidoEl = document.getElementById('concluidoCount');
                     
-                    // Atualiza os valores na tela
-                    // O backend garante que as chaves 'Aberto', 'Em Andamento', 'Concluído' existem.
                     if (abertoEl) abertoEl.textContent = counts['Aberto'] || 0;
                     if (andamentoEl) andamentoEl.textContent = counts['Em Andamento'] || 0;
                     if (concluidoEl) concluidoEl.textContent = counts['Concluído'] || 0;
+                    
+                    // 2. (NOVO) Chama a função para renderizar o gráfico
+                    renderPieChart(counts);
                     
                 } catch (error) {
                     console.error("Erro ao buscar contagens de chamados:", error);
