@@ -126,17 +126,17 @@
 
         /* --- (AJUSTE) ESTILOS DOS CARDS DE STATUS --- */
         .stat-card {
-            padding: 0.8rem 1rem; /* Diminui o padding interno */
+            padding: 0.8rem 1rem; 
         }
         .stat-card h3 {
-            font-size: 1.05rem; /* Diminui a fonte do título */
+            font-size: 1.05rem; 
             margin-bottom: 2px;
         }
         .stat-card .stat-value {
-            font-size: 1.75rem; /* Diminui a fonte do valor */
+            font-size: 1.75rem; 
         }
         .stat-card .icon {
-            font-size: 2.2rem; /* Diminui o ícone */
+            font-size: 2.2rem; 
         }
 
         .stat-card.open { 
@@ -160,11 +160,9 @@
             gap: 20px;
             align-items: flex-start;
             
-            /* A MUDANÇA MAIS IMPORTANTE: 
-               Limita a largura total da grade para que '1fr' não seja enorme. */
-            max-width: 750px; 
+            /* (REMOVIDO) max-width: 750px; */
             
-            /* Mantém a grade alinhada à esquerda */
+            /* Mantém a grade alinhada à esquerda (ou centralizada, se preferir 'margin: 0 auto;') */
             margin: 0; 
         }
         
@@ -177,7 +175,7 @@
 
         /* Estilo do container do gráfico (Coluna 2) */
         .chart-container .widget {
-            padding: 15px; /* Reduz padding */
+            padding: 15px; 
         }
         
         .chart-container h3 {
@@ -185,20 +183,19 @@
             margin-bottom: 10px; 
             border-bottom: 1px solid var(--border-color);
             padding-bottom: 8px;
-            font-size: 1.1rem; /* Reduz fonte */
+            font-size: 1.1rem; 
         }
 
         /* Controla o canvas do gráfico */
         #chamadosPieChart {
             position: relative;
-            max-width: 100%; /* Garante que não estoure o container */
+            max-width: 100%; 
         }
 
-        /* Responsividade */
-        @media (max-width: 768px) { /* Ajusta o breakpoint da responsividade */
+        /* (AJUSTE) Responsividade: Ponto de quebra diminuído para 650px */
+        @media (max-width: 650px) { 
             .dashboard-grid {
                 grid-template-columns: 1fr; /* Pilha tudo verticalmente */
-                max-width: 100%; /* Ocupa toda a largura em telas pequenas */
             }
             .chart-container {
                 margin-top: 15px; /* Adiciona espaço quando empilhado */
