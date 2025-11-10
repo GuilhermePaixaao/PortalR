@@ -124,62 +124,84 @@
         }
         /* --- FIM DOS ESTILOS DE AJUSTE --- */
 
-        /* --- ESTILOS DOS CARDS DE STATUS --- */
+        /* --- (AJUSTE) ESTILOS DOS CARDS DE STATUS --- */
+        .stat-card {
+            padding: 0.8rem 1rem; /* Diminui o padding interno */
+        }
+        .stat-card h3 {
+            font-size: 1.05rem; /* Diminui a fonte do título */
+            margin-bottom: 2px;
+        }
+        .stat-card .stat-value {
+            font-size: 1.75rem; /* Diminui a fonte do valor */
+        }
+        .stat-card .icon {
+            font-size: 2.2rem; /* Diminui o ícone */
+        }
+
         .stat-card.open { 
-            border-left: 5px solid #ffc107; /* Amarelo */
+            border-left: 5px solid #ffc107;
         }
         .stat-card.in-progress { 
-            border-left: 5px solid #0d6efd; /* Azul Primário */
+            border-left: 5px solid #0d6efd;
         }
         .stat-card.completed { 
-            border-left: 5px solid #198754; /* Verde */
+            border-left: 5px solid #198754;
         }
         .stat-card.open .stat-value { color: #ffc107; }
         .stat-card.in-progress .stat-value { color: #0d6efd; }
         .stat-card.completed .stat-value { color: #198754; }
 
-        /* --- (AJUSTE) LAYOUT EM GRADE PARA O CONTEÚDO --- */
+        /* --- (AJUSTE PRINCIPAL) LAYOUT EM GRADE PARA O CONTEÚDO --- */
         .dashboard-grid {
-            /* Diminui a coluna da pilha de cards de 350px para 280px */
-            grid-template-columns: 280px 1fr; /* Coluna 1 (pilha) | Coluna 2 (gráfico) */
-            display: grid; /* Mantém a exibição em grade */
-            gap: 20px; /* Reduz o espaçamento entre as colunas */
+            display: grid;
+            /* Coluna 1 (pilha) 240px | Coluna 2 (gráfico) o resto */
+            grid-template-columns: 240px 1fr; 
+            gap: 20px;
             align-items: flex-start;
+            
+            /* A MUDANÇA MAIS IMPORTANTE: 
+               Limita a largura total da grade para que '1fr' não seja enorme. */
+            max-width: 750px; 
+            
+            /* Mantém a grade alinhada à esquerda */
+            margin: 0; 
         }
         
         /* Estilo da pilha vertical de status (Coluna 1) */
         .dashboard-stack {
             display: flex;
             flex-direction: column;
-            gap: 15px; /* Reduz o espaçamento entre os cards */
+            gap: 15px; 
         }
 
         /* Estilo do container do gráfico (Coluna 2) */
         .chart-container .widget {
-            padding: 20px; /* Reduz o padding interno do widget do gráfico */
+            padding: 15px; /* Reduz padding */
         }
         
         .chart-container h3 {
             margin-top: 0;
-            margin-bottom: 12px; /* Reduz a margem inferior do título do gráfico */
-            color: var(--text-dark);
+            margin-bottom: 10px; 
             border-bottom: 1px solid var(--border-color);
-            padding-bottom: 8px; /* Reduz o padding inferior do título */
-            font-size: 1.1rem; /* Reduz o tamanho da fonte do título do gráfico */
+            padding-bottom: 8px;
+            font-size: 1.1rem; /* Reduz fonte */
         }
 
-        /* (NOVO) Controla a altura máxima do canvas para o gráfico */
+        /* Controla o canvas do gráfico */
         #chamadosPieChart {
-            max-height: 300px; /* Define uma altura máxima para o gráfico */
-            width: 100% !important; /* Garante que o gráfico ocupe a largura total disponível */
-            height: auto !important; /* Mantém a proporção */
+            position: relative;
+            max-width: 100%; /* Garante que não estoure o container */
         }
 
-
-        /* Responsividade: em telas pequenas, volta a ser 1 coluna */
-        @media (max-width: 992px) {
+        /* Responsividade */
+        @media (max-width: 768px) { /* Ajusta o breakpoint da responsividade */
             .dashboard-grid {
                 grid-template-columns: 1fr; /* Pilha tudo verticalmente */
+                max-width: 100%; /* Ocupa toda a largura em telas pequenas */
+            }
+            .chart-container {
+                margin-top: 15px; /* Adiciona espaço quando empilhado */
             }
         }
         
@@ -290,7 +312,7 @@
                 <div class="chart-container">
                     <div class="widget">
                         <h3>Chamados por Status</h3>
-                        <canvas id="chamadosPieChart"></canvas>
+                        <canvas id="chamadosPieChart" height="250"></canvas>
                     </div>
                 </div>
                 
@@ -401,14 +423,15 @@
                     data: data,
                     options: {
                         responsive: true,
-                        maintainAspectRatio: false, // Permite que o max-height funcione melhor
+                        maintainAspectRatio: false, // (MUITO IMPORTANTE) Permite que o gráfico use a altura do canvas
                         plugins: {
                             legend: {
                                 position: 'right', // Mudei para 'right' para economizar espaço vertical
                                 labels: {
                                     font: {
-                                        size: 12 // Tamanho menor da fonte da legenda
-                                    }
+                                        size: 11 // (AJUSTE) Tamanho menor da fonte da legenda
+                                    },
+                                    padding: 10 // Espaço entre os itens da legenda
                                 }
                             },
                             tooltip: {
