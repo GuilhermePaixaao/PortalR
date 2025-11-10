@@ -134,6 +134,7 @@
                 </div>
                 
                 <div class="header-actions">
+                    <button id="themeToggle" class="btn-theme-toggle" title="Alternar Tema">🌙</button>
                     <span id="userNameDisplay"></span>
                     <button id="logoutButton" class="btn-logout">Sair</button>
                 </div>
@@ -180,7 +181,7 @@
                         </a>
                         </li>
                         <li style="margin-top: 30px;">
-                            <a href="#" title="Configurações">
+                            <a href="javascript:void(0);" title="Configurações" id="themeToggleLink">
                                 <span class="icon">⚙️</span>
                                 <span class="text">Ajustes</span>
                             </a>
@@ -195,7 +196,7 @@
 
                 <div class="row g-4">
                     <div class="col-lg-4">
-                        <div class="card shadow-sm">
+                        <div class="card shadow-sm widget">
                             <div class="card-header">
                                 <strong>Cadastro / Edição</strong>
                             </div>
@@ -242,7 +243,7 @@
                     </div>
 
                     <div class="col-lg-8">
-                        <div class="card shadow-sm mb-4">
+                        <div class="card shadow-sm mb-4 widget">
                             <div class="card-header">
                                 <strong>Filtros</strong>
                             </div>
@@ -262,7 +263,7 @@
                             </div>
                         </div>
 
-                        <div class="card shadow-sm">
+                        <div class="card shadow-sm widget">
                             <div class="card-header">
                                 <strong>Funcionários Cadastrados</strong>
                             </div>
@@ -285,6 +286,39 @@
                 localStorage.removeItem("userData"); 
                 window.location.href = "Login.html"; 
             }
+
+            // --- (NOVO) LÓGICA DO TEMA ESCURO ---
+            const btnThemeToggle = document.getElementById("themeToggle");
+            const linkThemeToggle = document.getElementById("themeToggleLink");
+            
+            function toggleTheme() {
+                document.body.classList.toggle("dark-mode");
+                let isDark = document.body.classList.contains("dark-mode");
+                localStorage.setItem("theme", isDark ? "dark" : "light");
+                if (btnThemeToggle) {
+                    btnThemeToggle.textContent = isDark ? "☀️" : "🌙";
+                }
+            }
+
+            function loadTheme() {
+                const savedTheme = localStorage.getItem("theme");
+                if (savedTheme === "dark") {
+                    document.body.classList.add("dark-mode");
+                    if (btnThemeToggle) btnThemeToggle.textContent = "☀️";
+                } else {
+                    document.body.classList.remove("dark-mode");
+                    if (btnThemeToggle) btnThemeToggle.textContent = "🌙";
+                }
+            }
+            
+            // Adiciona os gatilhos
+            if (btnThemeToggle) btnThemeToggle.addEventListener('click', toggleTheme);
+            if (linkThemeToggle) linkThemeToggle.addEventListener('click', toggleTheme);
+
+            // Carrega o tema salvo IMEDIATAMENTE
+            loadTheme();
+            // --- FIM LÓGICA DO TEMA ---
+
 
             // --- LÓGICA INSERIDA PARA O NOME DO USUÁRIO E AJUSTE DE MENU ---
             // O script do <head> já validou. Apenas lemos os dados.

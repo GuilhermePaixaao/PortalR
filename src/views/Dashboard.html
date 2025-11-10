@@ -46,6 +46,13 @@
             top: 0;
             z-index: 1030;
         }
+        /* (NOVO) Ajusta o .header-actions para o novo botão */
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem; 
+        }
+        
         .logo {
             font-size: 1.4rem;
             font-weight: 700;
@@ -75,11 +82,6 @@
         }
         
         /* Estilos para Logout (Mantidos) */
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 1rem; 
-        }
         #userNameDisplay {
             font-weight: 500;
             color: #495057;
@@ -196,8 +198,6 @@
             width: 100% !important;
         }
         
-        /* (REMOVIDO) A regra @media foi removida para evitar o empilhamento prematuro */
-        
     </style>
 </head>
 <body>
@@ -212,6 +212,7 @@
             </div>
             
             <div class="header-actions">
+                <button id="themeToggle" class="btn-theme-toggle" title="Alternar Tema">🌙</button>
                 <span id="userNameDisplay"></span>
                 <button id="logoutButton" class="btn-logout">Sair</button>
             </div>
@@ -261,7 +262,7 @@
                         </a>
                     </li>    
                     <li style="margin-top: 30px;">
-                        <a href="#" title="Configurações">
+                        <a href="javascript:void(0);" title="Configurações" id="themeToggleLink">
                             <span class="icon">⚙️</span>
                             <span class="text">Ajustes</span>
                         </a>
@@ -323,45 +324,35 @@
                 window.location.href = "Login.html"; 
             }
 
-            // O script do <head> JÁ VERIFICOU o login.
-            // Agora, apenas lemos os dados para USAR na página.
             const userDataString = localStorage.getItem("userData");
             const API_URL = ""; 
-
-            // (NOVO) Variável global para guardar a instância do gráfico
             let myPieChart = null;
 
-            // Não precisamos de 'if (!userDataString)' aqui,
-            // porque o script do <head> já teria parado a página.
-            // Mas o try/catch ainda é bom por segurança.
+            // --- (NOVO) REFERÊNCIAS DOS BOTÕES DE TEMA ---
+            const btnThemeToggle = document.getElementById("themeToggle");
+            const linkThemeToggle = document.getElementById("themeToggleLink");
+
             try {
                 const userData = JSON.parse(userDataString); 
-                
-                // Atualiza o nome do usuário no header
                 const userNameDisplay = document.getElementById('userNameDisplay'); 
                 if (userNameDisplay && userData?.data?.nomeFuncionario) {
                     userNameDisplay.textContent = `Olá, ${userData.data.nomeFuncionario.split(' ')[0]}`;
                 }
 
-                // Atualiza o menu dinâmico (com quebra de linha)
                 const userPerfil = userData?.data?.perfil; 
                 const linkChamadoLi = document.getElementById("menu-link-chamado"); 
 
                 if (linkChamadoLi && (userPerfil === 'AGENTE' || userPerfil === 'ADMIN')) {
                     const a = linkChamadoLi.querySelector('a');
                     const textSpan = a.querySelector('.text');
-
                     a.href = "GerenciarChamados.html"; 
                     a.title = "Gerenciar Chamados";
                     a.querySelector('.icon').textContent = "✔️"; 
-                    
-                    // Aplica o novo formato de duas linhas para o texto
                     textSpan.innerHTML = "Gerenciar<br>Chamados";
                     linkChamadoLi.classList.remove('active');
                 }
 
             } catch (error) {
-                // Caso algo muito estranho aconteça
                 console.error("Erro ao configurar página:", error.message);
                 fazerLogout(); // Desloga por segurança
             }
@@ -373,17 +364,44 @@
             }
 
             // ======================================================
+            // ===== (NOVO) LÓGICA DO TEMA ESCURO =====
+            // ======================================================
+            
+            function toggleTheme() {
+                document.body.classList.toggle("dark-mode");
+                let isDark = document.body.classList.contains("dark-mode");
+                localStorage.setItem("theme", isDark ? "dark" : "light");
+                if (btnThemeToggle) {
+                    btnThemeToggle.textContent = isDark ? "☀️" : "🌙";
+                }
+            }
+
+            function loadTheme() {
+                const savedTheme = localStorage.getItem("theme");
+                if (savedTheme === "dark") {
+                    document.body.classList.add("dark-mode");
+                    if (btnThemeToggle) btnThemeToggle.textContent = "☀️";
+                } else {
+                    document.body.classList.remove("dark-mode");
+                    if (btnThemeToggle) btnThemeToggle.textContent = "🌙";
+                }
+            }
+            
+            // Adiciona os gatilhos
+            if (btnThemeToggle) btnThemeToggle.addEventListener('click', toggleTheme);
+            if (linkThemeToggle) linkThemeToggle.addEventListener('click', toggleTheme);
+
+            // Carrega o tema salvo IMEDIATAMENTE
+            loadTheme();
+
+            // ======================================================
             // ===== LÓGICA PARA BUSCAR E EXIBIR CONTAGENS DE CHAMADOS =====
             // ======================================================
 
-            /**
-             * Desenha o gráfico de pizza
-             */
             function renderPieChart(counts) {
                 const ctx = document.getElementById('chamadosPieChart');
                 if (!ctx) return; 
 
-                // Se o gráfico já existe (ex: atualização de dados), destrói o antigo
                 if (myPieChart) {
                     myPieChart.destroy();
                 }
@@ -410,13 +428,12 @@
                     }]
                 };
 
-                // Cria a nova instância do gráfico
                 myPieChart = new Chart(ctx, {
                     type: 'pie', 
                     data: data,
                     options: {
                         responsive: true,
-                        maintainAspectRatio: false, // Permite que o max-height funcione melhor
+                        maintainAspectRatio: false, 
                         plugins: {
                             legend: {
                                 position: 'right', 
@@ -437,9 +454,6 @@
                 });
             }
 
-            /**
-             * Busca os dados e atualiza o texto E o gráfico
-             */
             async function fetchChamadoCounts() {
                 try {
                     const response = await fetch(`${API_URL}/chamados/contagem`);
@@ -450,7 +464,6 @@
                     
                     const counts = await response.json();
                     
-                    // 1. Atualiza os contadores de TEXTO
                     const abertoEl = document.getElementById('abertoCount');
                     const andamentoEl = document.getElementById('andamentoCount');
                     const concluidoEl = document.getElementById('concluidoCount');
@@ -459,7 +472,6 @@
                     if (andamentoEl) andamentoEl.textContent = counts['Em Andamento'] || 0;
                     if (concluidoEl) concluidoEl.textContent = counts['Concluído'] || 0;
                     
-                    // 2. Chama a função para renderizar o gráfico
                     renderPieChart(counts);
                     
                 } catch (error) {
