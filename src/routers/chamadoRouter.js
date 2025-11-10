@@ -36,6 +36,10 @@ router.patch('/chamados/:id/status', ChamadoController.atualizarStatus);
 // PATCH /chamados/:id/atendente (Atualizar só o operador/atendente)
 router.patch('/chamados/:id/atendente', ChamadoController.atualizarAtendente);
 
+// --- (NOVA ROTA PARA O DASHBOARD) ---
+// GET /chamados/contagem (Contagem de chamados por status)
+router.get('/chamados/contagem', ChamadoController.contarChamadosPorStatus);
+
 // --- (ROTAS ANTIGAS) ---
 
 // DELETE /chamados/:id (Deletar um chamado)

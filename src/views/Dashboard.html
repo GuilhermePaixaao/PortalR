@@ -129,6 +129,33 @@
             line-height: 1.2; 
         }
         /* --- FIM DOS ESTILOS DE AJUSTE --- */
+
+        /* AJUSTES ADICIONADOS PARA NOVOS WIDGETS */
+        .stat-card.open { 
+            border-left: 5px solid #ffc107; /* Amarelo */
+        }
+        .stat-card.in-progress { 
+            border-left: 5px solid #0d6efd; /* Azul Primário */
+        }
+        .stat-card.completed { 
+            border-left: 5px solid #198754; /* Verde */
+        }
+        .stat-card.open .stat-value { color: #ffc107; }
+        .stat-card.in-progress .stat-value { color: #0d6efd; }
+        .stat-card.completed .stat-value { color: #198754; }
+
+        /* Garante que o grid se adapte aos novos 6 itens de stat */
+        .widget-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        .widget.large {
+            /* Permite que gráficos maiores voltem a ocupar duas colunas se necessário, mas mantendo a flexibilidade */
+            grid-column: span 1; 
+            min-height: 250px;
+        }
+        /* FIM AJUSTES ADICIONADOS */
     </style>
 </head>
 <body>
@@ -206,6 +233,30 @@
             
             <div class="widget-grid">
                 
+                <div class="widget stat-card open">
+                    <div class="stat-info">
+                        <h3>Chamados Abertos</h3>
+                        <span class="stat-value" id="abertoCount">0</span>
+                    </div>
+                    <div class="icon" style="color: #ffc107;">🚨</div>
+                </div>
+
+                <div class="widget stat-card in-progress">
+                    <div class="stat-info">
+                        <h3>Em Andamento</h3>
+                        <span class="stat-value" id="andamentoCount">0</span>
+                    </div>
+                    <div class="icon" style="color: #0d6efd;">🛠️</div>
+                </div>
+
+                <div class="widget stat-card completed">
+                    <div class="stat-info">
+                        <h3>Concluídos</h3>
+                        <span class="stat-value" id="concluidoCount">0</span>
+                    </div>
+                    <div class="icon" style="color: #198754;">✅</div>
+                </div>
+                
                 <div class="widget large">
                     <h3>Vendas Diárias</h3>
                     <div class="placeholder-chart">(Gráfico de Linha: Vendas R$)</div>
@@ -216,30 +267,12 @@
                     <div class="placeholder-chart">(Gráfico de Barras: Estoque)</div>
                 </div>
 
-                <div class="widget">
-                    <h3>Promoções Ativas</h3>
-                    <div class="placeholder-image">(Imagem da promoção da semana)</div>
-                </div>
-
-                <div class="widget">
-                    <h3>Status das Filiais</h3>
-                    <div class="placeholder-chart">(Gráfico Radial: Filiais Online)</div>
-                </div>
-                
-                <div class="widget stat-card">
+                <div class="widget large stat-card" style="border-left: 5px solid #dc3545;">
                     <div class="stat-info">
-                        <h3>Pedidos Online (Hoje)</h3>
-                        <span class="stat-value">142</span>
+                        <h3>Pedidos/Visitantes (Total)</h3>
+                        <span class="stat-value" style="color: #dc3545;">229</span>
                     </div>
-                    <div class="icon">🛒</div>
-                </div>
-
-                <div class="widget stat-card">
-                    <div class="stat-info">
-                        <h3>Visitantes na Loja (Agora)</h3>
-                        <span class="stat-value">87</span>
-                    </div>
-                    <div class="icon">👀</div>
+                    <div class="icon" style="color: #dc3545;">📈</div>
                 </div>
 
             </div>
@@ -259,7 +292,8 @@
             // O script do <head> JÁ VERIFICOU o login.
             // Agora, apenas lemos os dados para USAR na página.
             const userDataString = localStorage.getItem("userData");
-            
+            const API_URL = ""; 
+
             // Não precisamos de 'if (!userDataString)' aqui,
             // porque o script do <head> já teria parado a página.
             // Mas o try/catch ainda é bom por segurança.
@@ -300,6 +334,41 @@
             if (btnLogout) {
                 btnLogout.addEventListener('click', fazerLogout);
             }
+
+            // ======================================================
+            // ===== (NOVO) LÓGICA PARA BUSCAR E EXIBIR CONTAGENS DE CHAMADOS =====
+            // ======================================================
+
+            async function fetchChamadoCounts() {
+                try {
+                    // Chama o novo endpoint da API
+                    const response = await fetch(`${API_URL}/chamados/contagem`);
+                    if (!response.ok) {
+                        // Se for erro 404/500, o servidor ainda não tem a rota
+                        console.error(`Falha ao buscar contagens. Status: ${response.status}`);
+                        return;
+                    }
+                    
+                    const counts = await response.json();
+                    
+                    // Elementos dos contadores
+                    const abertoEl = document.getElementById('abertoCount');
+                    const andamentoEl = document.getElementById('andamentoCount');
+                    const concluidoEl = document.getElementById('concluidoCount');
+                    
+                    // Atualiza os valores na tela
+                    // O backend garante que as chaves 'Aberto', 'Em Andamento', 'Concluído' existem.
+                    if (abertoEl) abertoEl.textContent = counts['Aberto'] || 0;
+                    if (andamentoEl) andamentoEl.textContent = counts['Em Andamento'] || 0;
+                    if (concluidoEl) concluidoEl.textContent = counts['Concluído'] || 0;
+                    
+                } catch (error) {
+                    console.error("Erro ao buscar contagens de chamados:", error);
+                }
+            }
+            
+            fetchChamadoCounts(); // Executa a busca ao carregar a página
+            
         });
     </script>
 

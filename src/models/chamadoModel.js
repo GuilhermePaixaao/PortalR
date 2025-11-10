@@ -160,8 +160,8 @@ export const updateStatus = async (id, status, atendenteId) => {
         sql = "UPDATE Chamados SET status = ?, atendente_id = ? WHERE id = ?";
         values = [status, atendenteId, id];
     } else {
-        // Se não, atualiza apenas o status
-        sql = "UPDATE Chamados SET status = ? WHERE id = ?";
+        // Se não, atualiza apenas o status e define o atendente como NULL
+        sql = "UPDATE Chamados SET status = ?, atendente_id = NULL WHERE id = ?";
         values = [status, id];
     }
     
@@ -184,4 +184,22 @@ export const updateAtendente = async (id, atendenteId) => {
     const sql = "UPDATE Chamados SET atendente_id = ? WHERE id = ?";
     const [result] = await pool.query(sql, [atendenteId, id]);
     return result;
+};
+
+// ====================================================
+// ======== (NOVO) CONTAR POR STATUS ========
+// ====================================================
+export const countByStatus = async () => {
+    // Retorna a contagem de chamados agrupados por status
+    const sql = `
+        SELECT 
+            status, 
+            COUNT(id) as count
+        FROM 
+            Chamados
+        GROUP BY 
+            status;
+    `;
+    const [rows] = await pool.query(sql);
+    return rows; 
 };

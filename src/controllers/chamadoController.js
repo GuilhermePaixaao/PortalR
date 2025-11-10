@@ -294,3 +294,30 @@ export const atualizarAtendente = async (req, res) => {
         res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
     }
 };
+
+// ====================================================
+// ======== (NOVO) CONTAR CHAMADOS POR STATUS ========
+// ====================================================
+export const contarChamadosPorStatus = async (req, res) => {
+    try {
+        const counts = await ChamadoModel.countByStatus();
+        
+        // Formata o resultado para um objeto mais fácil de usar no frontend
+        const resultadoFormatado = counts.reduce((acc, item) => {
+            acc[item.status] = item.count;
+            return acc;
+        }, {});
+
+        // Garante que os status principais estejam presentes, mesmo que com 0
+        const finalData = {
+            "Aberto": resultadoFormatado["Aberto"] || 0,
+            "Em Andamento": resultadoFormatado["Em Andamento"] || 0,
+            "Concluído": resultadoFormatado["Concluído"] || 0,
+        };
+
+        res.status(200).json(finalData);
+    } catch (error) {
+        console.error('Erro ao contar chamados por status:', error);
+        res.status(500).json({ success: false, message: 'Erro interno do servidor ao buscar contagens.' });
+    }
+};
