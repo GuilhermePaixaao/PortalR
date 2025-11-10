@@ -33,10 +33,11 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <style>
+        /* Estilos do Header (Mantidos) */
         .header {
             display: flex;
             align-items: center;
-            justify-content: space-between; /* Alinha itens */
+            justify-content: space-between; 
             padding: 0.75rem 2rem;
             background-color: #ffffff;
             border-bottom: 1px solid #dee2e6;
@@ -73,7 +74,7 @@
             outline: none;
         }
         
-        /* Estilos para Logout */
+        /* Estilos para Logout (Mantidos) */
         .header-actions {
             display: flex;
             align-items: center;
@@ -98,7 +99,7 @@
             background-color: #bb2d3b;
         }
         
-        /* AJUSTES DA SIDEBAR PARA ALINHAMENTO E SUPORTE A QUEBRA DE LINHA */
+        /* AJUSTES DA SIDEBAR (Mantidos) */
         .sidebar nav ul li a {
             display: flex;
             align-items: center; 
@@ -137,11 +138,12 @@
         .stat-card.in-progress .stat-value { color: #0d6efd; }
         .stat-card.completed .stat-value { color: #198754; }
 
-        /* --- (NOVO) LAYOUT EM GRADE PARA O CONTEÚDO --- */
+        /* --- (AJUSTE) LAYOUT EM GRADE PARA O CONTEÚDO --- */
         .dashboard-grid {
-            display: grid;
-            grid-template-columns: 350px 1fr; /* Coluna 1 (pilha) | Coluna 2 (gráfico) */
-            gap: 24px;
+            /* Diminui a coluna da pilha de cards de 350px para 280px */
+            grid-template-columns: 280px 1fr; /* Coluna 1 (pilha) | Coluna 2 (gráfico) */
+            display: grid; /* Mantém a exibição em grade */
+            gap: 20px; /* Reduz o espaçamento entre as colunas */
             align-items: flex-start;
         }
         
@@ -149,21 +151,30 @@
         .dashboard-stack {
             display: flex;
             flex-direction: column;
-            gap: 20px; 
+            gap: 15px; /* Reduz o espaçamento entre os cards */
         }
 
         /* Estilo do container do gráfico (Coluna 2) */
         .chart-container .widget {
-            padding: 24px;
+            padding: 20px; /* Reduz o padding interno do widget do gráfico */
         }
         
         .chart-container h3 {
             margin-top: 0;
-            margin-bottom: 15px;
+            margin-bottom: 12px; /* Reduz a margem inferior do título do gráfico */
             color: var(--text-dark);
             border-bottom: 1px solid var(--border-color);
-            padding-bottom: 10px;
+            padding-bottom: 8px; /* Reduz o padding inferior do título */
+            font-size: 1.1rem; /* Reduz o tamanho da fonte do título do gráfico */
         }
+
+        /* (NOVO) Controla a altura máxima do canvas para o gráfico */
+        #chamadosPieChart {
+            max-height: 300px; /* Define uma altura máxima para o gráfico */
+            width: 100% !important; /* Garante que o gráfico ocupe a largura total disponível */
+            height: auto !important; /* Mantém a proporção */
+        }
+
 
         /* Responsividade: em telas pequenas, volta a ser 1 coluna */
         @media (max-width: 992px) {
@@ -355,7 +366,7 @@
              */
             function renderPieChart(counts) {
                 const ctx = document.getElementById('chamadosPieChart');
-                if (!ctx) return; // Sai se o elemento do gráfico não for encontrado
+                if (!ctx) return; 
 
                 // Se o gráfico já existe (ex: atualização de dados), destrói o antigo
                 if (myPieChart) {
@@ -386,14 +397,25 @@
 
                 // Cria a nova instância do gráfico
                 myPieChart = new Chart(ctx, {
-                    type: 'pie', // Tipo de gráfico
+                    type: 'pie', 
                     data: data,
                     options: {
                         responsive: true,
+                        maintainAspectRatio: false, // Permite que o max-height funcione melhor
                         plugins: {
                             legend: {
-                                position: 'top', // Posição da legenda
+                                position: 'right', // Mudei para 'right' para economizar espaço vertical
+                                labels: {
+                                    font: {
+                                        size: 12 // Tamanho menor da fonte da legenda
+                                    }
+                                }
                             },
+                            tooltip: {
+                                bodyFont: {
+                                    size: 12 // Tamanho menor da fonte do tooltip
+                                }
+                            }
                         }
                     }
                 });
@@ -404,7 +426,6 @@
              */
             async function fetchChamadoCounts() {
                 try {
-                    // Chama o novo endpoint da API
                     const response = await fetch(`${API_URL}/chamados/contagem`);
                     if (!response.ok) {
                         console.error(`Falha ao buscar contagens. Status: ${response.status}`);
@@ -422,7 +443,7 @@
                     if (andamentoEl) andamentoEl.textContent = counts['Em Andamento'] || 0;
                     if (concluidoEl) concluidoEl.textContent = counts['Concluído'] || 0;
                     
-                    // 2. (NOVO) Chama a função para renderizar o gráfico
+                    // 2. Chama a função para renderizar o gráfico
                     renderPieChart(counts);
                     
                 } catch (error) {
