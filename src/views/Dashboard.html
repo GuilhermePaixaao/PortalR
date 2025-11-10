@@ -130,7 +130,7 @@
         }
         /* --- FIM DOS ESTILOS DE AJUSTE --- */
 
-        /* AJUSTES ADICIONADOS PARA NOVOS WIDGETS */
+        /* --- ESTILOS DOS CARDS DE STATUS --- */
         .stat-card.open { 
             border-left: 5px solid #ffc107; /* Amarelo */
         }
@@ -144,18 +144,19 @@
         .stat-card.in-progress .stat-value { color: #0d6efd; }
         .stat-card.completed .stat-value { color: #198754; }
 
-        /* Garante que o grid se adapte aos novos 6 itens de stat */
-        .widget-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
+        /* --- (NOVO) ESTILO PARA O CONTAINER VERTICAL --- */
+        .dashboard-stack {
+            /* Define uma largura máxima para os cards não ficarem muito largos */
+            max-width: 800px; 
+            /* Centraliza a pilha de cards na página */
+            margin: 0 auto; 
+            
+            display: flex;
+            flex-direction: column;
+            /* Adiciona espaço entre os cards empilhados */
+            gap: 20px; 
         }
-        .widget.large {
-            /* Permite que gráficos maiores voltem a ocupar duas colunas se necessário, mas mantendo a flexibilidade */
-            grid-column: span 1; 
-            min-height: 250px;
-        }
-        /* FIM AJUSTES ADICIONADOS */
+        
     </style>
 </head>
 <body>
@@ -229,9 +230,8 @@
         </aside>
         
         <main class="main-content">
-            <h1>Dashboard</h1>
             
-            <div class="widget-grid">
+            <div class="dashboard-stack">
                 
                 <div class="widget stat-card open">
                     <div class="stat-info">
@@ -257,7 +257,7 @@
                     <div class="icon" style="color: #198754;">✅</div>
                 </div>
                 
-                </div>
+            </div>
         </main>
         
     </div>
@@ -318,7 +318,7 @@
             }
 
             // ======================================================
-            // ===== (NOVO) LÓGICA PARA BUSCAR E EXIBIR CONTAGENS DE CHAMADOS =====
+            // ===== LÓGICA PARA BUSCAR E EXIBIR CONTAGENS DE CHAMADOS =====
             // ======================================================
 
             async function fetchChamadoCounts() {
