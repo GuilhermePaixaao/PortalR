@@ -152,18 +152,14 @@
         .stat-card.in-progress .stat-value { color: #0d6efd; }
         .stat-card.completed .stat-value { color: #198754; }
 
-        /* --- (AJUSTE PRINCIPAL) LAYOUT EM GRADE PARA O CONTEÚDO --- */
-        .dashboard-grid {
-            display: grid;
-            /* Coluna 1 (pilha) 240px | Coluna 2 (gráfico) o resto */
-            grid-template-columns: 240px 1fr; 
+        /* --- (MUDANÇA) LAYOUT EM FLEXBOX PARA O CONTEÚDO --- */
+        
+        /* Substitui o .dashboard-grid */
+        .dashboard-flex-container {
+            display: flex;
             gap: 20px;
-            align-items: flex-start;
-            
-            /* (REMOVIDO) max-width: 750px; */
-            
-            /* Mantém a grade alinhada à esquerda (ou centralizada, se preferir 'margin: 0 auto;') */
-            margin: 0; 
+            align-items: flex-start; /* Alinha os itens no topo */
+            flex-wrap: wrap; /* Permite que o gráfico caia em telas MUITO pequenas */
         }
         
         /* Estilo da pilha vertical de status (Coluna 1) */
@@ -171,9 +167,16 @@
             display: flex;
             flex-direction: column;
             gap: 15px; 
+            width: 260px; /* Largura fixa para os cards */
+            flex-shrink: 0; /* Impede que a pilha de cards encolha */
         }
 
         /* Estilo do container do gráfico (Coluna 2) */
+        .chart-container {
+            flex: 1; /* Ocupa o resto do espaço */
+            min-width: 250px; /* Largura mínima antes de encolher/quebrar */
+        }
+        
         .chart-container .widget {
             padding: 15px; 
         }
@@ -189,18 +192,11 @@
         /* Controla o canvas do gráfico */
         #chamadosPieChart {
             position: relative;
-            max-width: 100%; 
+            max-height: 280px; /* Define altura máxima */
+            width: 100% !important;
         }
-
-        /* (AJUSTE) Responsividade: Ponto de quebra diminuído para 650px */
-        @media (max-width: 650px) { 
-            .dashboard-grid {
-                grid-template-columns: 1fr; /* Pilha tudo verticalmente */
-            }
-            .chart-container {
-                margin-top: 15px; /* Adiciona espaço quando empilhado */
-            }
-        }
+        
+        /* (REMOVIDO) A regra @media foi removida para evitar o empilhamento prematuro */
         
     </style>
 </head>
@@ -276,7 +272,7 @@
         
         <main class="main-content">
             
-            <div class="dashboard-grid">
+            <div class="dashboard-flex-container">
             
                 <div class="dashboard-stack">
                     
@@ -309,7 +305,7 @@
                 <div class="chart-container">
                     <div class="widget">
                         <h3>Chamados por Status</h3>
-                        <canvas id="chamadosPieChart" height="250"></canvas>
+                        <canvas id="chamadosPieChart"></canvas>
                     </div>
                 </div>
                 
@@ -381,7 +377,7 @@
             // ======================================================
 
             /**
-             * (NOVO) Desenha o gráfico de pizza
+             * Desenha o gráfico de pizza
              */
             function renderPieChart(counts) {
                 const ctx = document.getElementById('chamadosPieChart');
@@ -420,20 +416,20 @@
                     data: data,
                     options: {
                         responsive: true,
-                        maintainAspectRatio: false, // (MUITO IMPORTANTE) Permite que o gráfico use a altura do canvas
+                        maintainAspectRatio: false, // Permite que o max-height funcione melhor
                         plugins: {
                             legend: {
-                                position: 'right', // Mudei para 'right' para economizar espaço vertical
+                                position: 'right', 
                                 labels: {
                                     font: {
-                                        size: 11 // (AJUSTE) Tamanho menor da fonte da legenda
+                                        size: 11 
                                     },
-                                    padding: 10 // Espaço entre os itens da legenda
+                                    padding: 10 
                                 }
                             },
                             tooltip: {
                                 bodyFont: {
-                                    size: 12 // Tamanho menor da fonte do tooltip
+                                    size: 12 
                                 }
                             }
                         }
@@ -442,7 +438,7 @@
             }
 
             /**
-             * (MODIFICADO) Busca os dados e atualiza o texto E o gráfico
+             * Busca os dados e atualiza o texto E o gráfico
              */
             async function fetchChamadoCounts() {
                 try {
