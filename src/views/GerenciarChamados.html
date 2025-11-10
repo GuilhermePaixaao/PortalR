@@ -468,12 +468,7 @@
                             <span class="text">Categorias</span>
                         </a>
                     </li>    
-                    <li style="margin-top: 30px;">
-                        <a href="javascript:void(0);" title="Configurações" id="themeToggleLink">
-                            <span class="icon">⚙️</span>
-                            <span class="text">Ajustes</span>
-                        </a>
-                    </li>
+                    
                 </ul>
             </nav>
         </aside>
@@ -1161,7 +1156,6 @@
         btnLogout.addEventListener('click', fazerLogout);
         btnThemeToggle.addEventListener('click', toggleTheme);
         // (NOVO) Aciona o tema pelo link "Ajustes"
-        document.getElementById("themeToggleLink").addEventListener('click', toggleTheme);
 
         ticketList.addEventListener('click', e => {
             const t = e.target;
