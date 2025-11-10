@@ -311,6 +311,12 @@
             cursor: pointer;
             color: #495057;
             transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+            
+            /* (NOVO) Ajuste para ficar alinhado com o nome/logout */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
         }
         .btn-theme-toggle:hover {
             background-color: #f1f3f5;
@@ -345,9 +351,17 @@
             border-color: #383838;
             color: #787878;
         }
-        .dark-mode .ticket-row {
+        
+        /* (INÍCIO DA CORREÇÃO) --- */
+        .dark-mode .ticket-row.data-row {
+            background-color: #2a2a2a; /* Mesmo fundo do header da tabela */
             border-bottom-color: #383838;
         }
+        .dark-mode .ticket-row.data-row:hover {
+            background-color: #333; /* Um pouco mais claro no hover */
+        }
+        /* (FIM DA CORREÇÃO) --- */
+
         .dark-mode h1,
         .dark-mode label,
         .dark-mode .ticket-cell,
@@ -425,7 +439,6 @@
             
             <div class="header-actions">
                 <button id="themeToggle" class="btn-theme-toggle" title="Alternar Tema">🌙</button>
-                
                 <span id="userNameDisplay"></span>
                 <button id="logoutButton" class="btn-logout">Sair</button>
             </div>
@@ -445,7 +458,12 @@
                             <span class="text">Categorias</span>
                         </a>
                     </li>    
-                    
+                    <li style="margin-top: 30px;">
+                        <a href="javascript:void(0);" title="Configurações" id="themeToggleLink">
+                            <span class="icon">⚙️</span>
+                            <span class="text">Ajustes</span>
+                        </a>
+                    </li>
                 </ul>
             </nav>
         </aside>
@@ -1132,6 +1150,8 @@
         btnFiltrar.addEventListener('click', listarChamados);
         btnLogout.addEventListener('click', fazerLogout);
         btnThemeToggle.addEventListener('click', toggleTheme);
+        // (NOVO) Aciona o tema pelo link "Ajustes"
+        document.getElementById("themeToggleLink").addEventListener('click', toggleTheme);
 
         ticketList.addEventListener('click', e => {
             const t = e.target;
@@ -1171,7 +1191,8 @@
         // ======== (NOVO) INICIALIZAÇÃO ATUALIZADA ========
         // ====================================================
         async function init() {
-            loadTheme(); 
+            loadTheme(); // Carrega o tema primeiro
+            
             // Carrega categorias e operadores em paralelo
             await Promise.all([
                 carregarCategorias(),
