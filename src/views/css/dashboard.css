@@ -207,425 +207,6 @@
             color: var(--primary-blue);
             opacity: 0.7;
         }
-        /* --- Configurações Globais --- */
-        :root {
-            --primary-blue: #0056b3;  /* Azul primário */
-            --primary-red: #d93025;   /* Vermelho de destaque (para chamados) */
-            --dark-bg: #232a34;     /* Fundo escuro da sidebar (baseado no original) */
-            --light-bg: #ffffff;   /* Fundo claro (cards e header) */
-            --main-bg: #f4f7fa;    /* Fundo principal da área de conteúdo */
-            --text-light: #f8f9fa;  /* Texto sobre fundos escuros */
-            --text-dark: #333333;   /* Texto sobre fundos claros */
-            --border-color: #e0e0e0; /* Cor da borda */
-        }
-
-        body, html {
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--main-bg);
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        /* --- Estrutura Principal (Grid) --- */
-        .dashboard-container {
-            display: grid;
-            grid-template-columns: 80px 1fr; /* Sidebar estreita + conteúdo */
-            grid-template-rows: 60px 1fr;  /* Header fixo + conteúdo */
-            grid-template-areas:
-                "sidebar header"
-                "sidebar main";
-            height: 100vh;
-        }
-
-        /* --- Cabeçalho (Header) --- */
-        .header {
-            grid-area: header;
-            background-color: var(--light-bg);
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 24px;
-        }
-
-        .header .logo {
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: var(--primary-blue);
-        }
-
-        .header .search-bar {
-            flex-grow: 1;
-            max-width: 400px;
-            margin: 0 20px;
-        }
-
-        .header .search-bar input {
-            width: 100%;
-            padding: 8px 15px;
-            border-radius: 20px;
-            border: 1px solid var(--border-color);
-            font-size: 14px;
-        }
-
-        .header .user-profile {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .header .user-profile .icon {
-            font-size: 20px;
-            cursor: pointer;
-            color: #555;
-        }
-
-        /* --- Barra Lateral (Sidebar) --- */
-        .sidebar {
-            grid-area: sidebar;
-            background-color: var(--dark-bg);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding-top: 15px;
-        }
-
-        .sidebar nav {
-            width: 100%;
-        }
-
-        .sidebar nav ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .sidebar nav li a {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 18px 0;
-            color: var(--text-light);
-            text-decoration: none;
-            width: 100%;
-            transition: background-color 0.2s ease;
-        }
-
-        .sidebar nav li a .icon {
-            font-size: 24px;
-        }
-
-        .sidebar nav li a .text {
-            font-size: 10px;
-            margin-top: 5px;
-            font-weight: 500;
-        }
-
-        .sidebar nav li a:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-
-        /* Aba "Home" ativa */
-        .sidebar nav li.active a {
-            background-color: var(--primary-blue);
-            color: var(--light-bg);
-        }
-
-        /* Destaque para "Abrir Chamados" em vermelho */
-        
-        .sidebar nav li.ticket-item a:hover {
-            background-color: rgba(217, 48, 37, 0.1);
-        }
-
-        /* --- Conteúdo Principal --- */
-        .main-content {
-            grid-area: main;
-            overflow-y: auto;
-            padding: 24px;
-        }
-
-        .main-content h1 {
-            font-size: 2rem;
-            color: var(--text-dark);
-            margin-top: 0;
-            margin-bottom: 20px;
-        }
-
-        /* Grid de Widgets (baseado na foto) */
-        .widget-grid {
-            display: grid;
-            /* Grid responsivo: 2 colunas, 1 em telas pequenas */
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-        }
-
-        .widget {
-            background-color: var(--light-bg);
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-        }
-
-        .widget h3 {
-            margin-top: 0;
-            margin-bottom: 15px;
-            color: var(--text-dark);
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 10px;
-        }
-
-        /* Placeholders para gráficos e stats */
-        .placeholder-chart, .placeholder-image {
-            display: grid;
-            place-items: center;
-            min-height: 200px;
-            background-color: #f9f9f9;
-            border: 1px dashed #ccc;
-            border-radius: 4px;
-            color: #888;
-            font-size: 14px;
-        }
-        
-        /* Widgets de estatísticas (como na foto) */
-        .stat-card {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        
-        .stat-card .stat-info {
-             font-size: 14px;
-             color: #555;
-        }
-        
-        .stat-card .stat-value {
-            font-size: 2.2rem;
-            font-weight: bold;
-            color: var(--primary-blue);
-        }
-
-        .stat-card .icon {
-            font-size: 2rem;
-            color: var(--primary-blue);
-            opacity: 0.7;
-        }
-        
-/* --- Configurações Globais --- */
-        :root {
-            --primary-blue: #0056b3;  /* Azul primário */
-            --primary-red: #d93025;   /* Vermelho de destaque (para chamados) */
-            --dark-bg: #232a34;     /* Fundo escuro da sidebar (baseado no original) */
-            --light-bg: #ffffff;   /* Fundo claro (cards e header) */
-            --main-bg: #f4f7fa;    /* Fundo principal da área de conteúdo */
-            --text-light: #f8f9fa;  /* Texto sobre fundos escuros */
-            --text-dark: #333333;   /* Texto sobre fundos claros */
-            --border-color: #e0e0e0; /* Cor da borda */
-        }
-
-        body, html {
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--main-bg);
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        /* --- Estrutura Principal (Grid) --- */
-        .dashboard-container {
-            display: grid;
-            grid-template-columns: 80px 1fr; /* Sidebar estreita + conteúdo */
-            grid-template-rows: 60px 1fr;  /* Header fixo + conteúdo */
-            grid-template-areas:
-                "sidebar header"
-                "sidebar main";
-            height: 100vh;
-        }
-
-        /* --- Cabeçalho (Header) --- */
-        .header {
-            grid-area: header;
-            background-color: var(--light-bg);
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 24px;
-        }
-
-        .header .logo {
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: var(--primary-blue);
-        }
-
-        .header .search-bar {
-            flex-grow: 1;
-            max-width: 400px;
-            margin: 0 20px;
-        }
-
-        .header .search-bar input {
-            width: 100%;
-            padding: 8px 15px;
-            border-radius: 20px;
-            border: 1px solid var(--border-color);
-            font-size: 14px;
-        }
-
-        .header .user-profile {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .header .user-profile .icon {
-            font-size: 20px;
-            cursor: pointer;
-            color: #555;
-        }
-
-        /* --- Barra Lateral (Sidebar) --- */
-        .sidebar {
-            grid-area: sidebar;
-            background-color: var(--dark-bg);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding-top: 15px;
-        }
-
-        .sidebar nav {
-            width: 100%;
-        }
-
-        .sidebar nav ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .sidebar nav li a {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 18px 0;
-            color: var(--text-light);
-            text-decoration: none;
-            width: 100%;
-            transition: background-color 0.2s ease;
-        }
-
-        .sidebar nav li a .icon {
-            font-size: 24px;
-        }
-
-        .sidebar nav li a .text {
-            font-size: 10px;
-            margin-top: 5px;
-            font-weight: 500;
-        }
-
-        .sidebar nav li a:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-
-        /* Aba "Home" ativa */
-        .sidebar nav li.active a {
-            background-color: var(--primary-blue);
-            color: var(--light-bg);
-        }
-
-        /* Destaque para "Abrir Chamados" em vermelho */
-        
-        .sidebar nav li.ticket-item a:hover {
-            background-color: rgba(217, 48, 37, 0.1);
-        }
-
-        /* --- Conteúdo Principal --- */
-        .main-content {
-            grid-area: main;
-            overflow-y: auto;
-            padding: 24px;
-        }
-
-        .main-content h1 {
-            font-size: 2rem;
-            color: var(--text-dark);
-            margin-top: 0;
-            margin-bottom: 20px;
-        }
-
-        /* Grid de Widgets (baseado na foto) */
-        .widget-grid {
-            display: grid;
-            /* Grid responsivo: 2 colunas, 1 em telas pequenas */
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-        }
-
-        .widget {
-            background-color: var(--light-bg);
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-        }
-
-        .widget h3 {
-            margin-top: 0;
-            margin-bottom: 15px;
-            color: var(--text-dark);
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 10px;
-        }
-
-        /* Placeholders para gráficos e stats */
-        .placeholder-chart, .placeholder-image {
-            display: grid;
-            place-items: center;
-            min-height: 200px;
-            background-color: #f9f9f9;
-            border: 1px dashed #ccc;
-            border-radius: 4px;
-            color: #888;
-            font-size: 14px;
-        }
-        
-        /* Widgets de estatísticas (como na foto) */
-        .stat-card {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        
-        .stat-card .stat-info {
-             font-size: 14px;
-             color: #555;
-        }
-        
-        .stat-card .stat-value {
-            font-size: 2.2rem;
-            font-weight: bold;
-            color: var(--primary-blue);
-        }
-
-        .stat-card .icon {
-            font-size: 2rem;
-            color: var(--primary-blue);
-            opacity: 0.7;
-        }
         
 /* ====================================================== */
 /* CÓDIGO DE TEMA ESCURO */
@@ -709,7 +290,7 @@ body.dark-mode {
 .dark-mode .form-control,
 .dark-mode .form-select,
 .dark-mode .search-bar input,
-/* (NOVO) Seletor para a página Imprimir.html */
+/* Seletor para a página Imprimir.html */
 .dark-mode .search-container input[type="text"]
 {
     background-color: #333;
@@ -718,7 +299,7 @@ body.dark-mode {
 }
 .dark-mode .form-control::placeholder,
 .dark-mode .search-bar input::placeholder,
-/* (NOVO) Seletor para a página Imprimir.html */
+/* Seletor para a página Imprimir.html */
 .dark-mode .search-container input[type="text"]::placeholder
 {
     color: #999;
@@ -731,13 +312,7 @@ body.dark-mode {
     border-color: #555;
     color: #aaa;
 }
-.dark-mode .ticket-row.data-row {
-            background-color: #2a2a2a; /* Mesmo fundo do header da tabela */
-            border-bottom-color: #383838;
-        }
-        .dark-mode .ticket-row.data-row:hover {
-            background-color: #333; /* Um pouco mais claro no hover */
-        }
+
 /* Botão de Tema no Modo Escuro */
 .dark-mode .btn-theme-toggle {
     background-color: #333;
@@ -747,4 +322,46 @@ body.dark-mode {
 .dark-mode .btn-theme-toggle:hover {
     background-color: #444;
 }
+
+/* ====================================================== */
+/* (INÍCIO DA CORREÇÃO) --- ESTILOS DE TABELA PARA MODO ESCURO */
+/* ====================================================== */
+
+.dark-mode .table {
+    color: #e0e0e0; /* Cor do texto da tabela */
+    border-color: #444; /* Cor da borda principal */
+}
+
+/* Cor do cabeçalho (que usa .table-light) */
+.dark-mode .table-light {
+    --bs-table-bg: #333; /* Fundo do cabeçalho */
+    --bs-table-color: #f1f1f1; /* Texto do cabeçalho */
+    border-color: #444;
+}
+
+/* Cor das bordas das células */
+.dark-mode .table th,
+.dark-mode .table td,
+.dark-mode .table-bordered th,
+.dark-mode .table-bordered td {
+    border-color: #444;
+}
+
+/* Cor da tabela listrada (striped) */
+.dark-mode .table-striped > tbody > tr:nth-of-type(odd) > * {
+    --bs-table-accent-bg: #2f2f2f; /* Fundo da linha ímpar */
+    color: #e0e0e0;
+}
+/* Cor da linha par (para garantir) */
+.dark-mode .table-striped > tbody > tr:nth-of-type(even) > * {
+    color: #e0e0e0;
+}
+
+/* Cor do hover */
+.dark-mode .table-hover > tbody > tr:hover > * {
+    --bs-table-accent-bg: #3a3a3a; /* Fundo ao passar o mouse */
+    color: #f1f1f1;
+}
+
+/* --- FIM DA CORREÇÃO DE TABELA --- */
 /* --- FIM MODO ESCURO --- */
