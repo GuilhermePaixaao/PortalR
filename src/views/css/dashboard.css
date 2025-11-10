@@ -731,7 +731,13 @@ body.dark-mode {
     border-color: #555;
     color: #aaa;
 }
-
+.dark-mode .ticket-row.data-row {
+            background-color: #2a2a2a; /* Mesmo fundo do header da tabela */
+            border-bottom-color: #383838;
+        }
+        .dark-mode .ticket-row.data-row:hover {
+            background-color: #333; /* Um pouco mais claro no hover */
+        }
 /* Botão de Tema no Modo Escuro */
 .dark-mode .btn-theme-toggle {
     background-color: #333;
