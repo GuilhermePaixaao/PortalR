@@ -332,34 +332,43 @@ body.dark-mode {
     border-color: #444; /* Cor da borda principal */
 }
 
-/* Cor do cabeçalho (que usa .table-light) */
-.dark-mode .table-light {
-    --bs-table-bg: #333; /* Fundo do cabeçalho */
-    --bs-table-color: #f1f1f1; /* Texto do cabeçalho */
+/* (REGRA CORRIGIDA) Define o fundo padrão para TODAS as células */
+.dark-mode .table th,
+.dark-mode .table td {
+    background-color: #2a2a2a; /* Fundo escuro padrão da célula */
     border-color: #444;
+    color: #e0e0e0; /* (NOVO) Garante a cor do texto na célula */
 }
 
-/* Cor das bordas das células */
-.dark-mode .table th,
-.dark-mode .table td,
-.dark-mode .table-bordered th,
-.dark-mode .table-bordered td {
+/* Cor do cabeçalho (que usa .table-light) */
+.dark-mode .table-light,
+.dark-mode .table .table-light { /* Mais específico */
+    --bs-table-bg: #333; /* Fundo do cabeçalho */
+    background-color: #333 !important; /* Força o fundo do cabeçalho */
+    color: #f1f1f1; /* Texto do cabeçalho */
     border-color: #444;
+}
+.dark-mode .table-light th {
+     background-color: #333 !important; /* Garante que o TH do cabeçalho também pegue */
+     color: #f1f1f1;
 }
 
 /* Cor da tabela listrada (striped) */
 .dark-mode .table-striped > tbody > tr:nth-of-type(odd) > * {
     --bs-table-accent-bg: #2f2f2f; /* Fundo da linha ímpar */
+    background-color: #2f2f2f; /* Fundo explícito */
     color: #e0e0e0;
 }
-/* Cor da linha par (para garantir) */
+/* (REGRA ATUALIZADA) Define o fundo da linha par */
 .dark-mode .table-striped > tbody > tr:nth-of-type(even) > * {
+    background-color: #2a2a2a; /* Fundo da linha par */
     color: #e0e0e0;
 }
 
 /* Cor do hover */
 .dark-mode .table-hover > tbody > tr:hover > * {
     --bs-table-accent-bg: #3a3a3a; /* Fundo ao passar o mouse */
+    background-color: #3a3a3a; /* Fundo explícito */
     color: #f1f1f1;
 }
 
