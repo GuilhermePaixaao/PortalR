@@ -296,9 +296,11 @@ export const atualizarAtendente = async (req, res) => {
 };
 
 // ====================================================
-// ======== (NOVO) CONTAR CHAMADOS POR STATUS ========
+// ======== CONTAR CHAMADOS POR STATUS (REVISADO) ========
 // ====================================================
 export const contarChamadosPorStatus = async (req, res) => {
+    // A função não precisa de req.body nem req.query. 
+    // É um GET simples, não há risco de Bad Request interno.
     try {
         const counts = await ChamadoModel.countByStatus();
         
@@ -318,6 +320,7 @@ export const contarChamadosPorStatus = async (req, res) => {
         res.status(200).json(finalData);
     } catch (error) {
         console.error('Erro ao contar chamados por status:', error);
+        // Retorna 500 (Internal Server Error) em caso de erro no banco
         res.status(500).json({ success: false, message: 'Erro interno do servidor ao buscar contagens.' });
     }
 };
