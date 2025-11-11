@@ -13,13 +13,13 @@ export const criarChamado = async (req, res) => {
             });
         }
 
-        // O 'req.body.chamado' vem como STRING do FormData.
         const chamado = JSON.parse(req.body.chamado);
-        const arquivos = req.files; // Arquivos do Multer
+        const arquivos = req.files; 
 
         const {
-            assunto, descricao, prioridade, requisitante_id, categoria_id,
-            subcategoria_id, // <-- CAMPO NOVO
+            assunto, descricao, prioridade, requisitante_id,
+            // (ATUALIZADO) Trocamos os dois IDs por um só
+            categoria_unificada_id, 
             nome_requisitante_manual, email_requisitante_manual, telefone_requisitante_manual
         } = chamado;
 
@@ -31,16 +31,14 @@ export const criarChamado = async (req, res) => {
             });
         }
 
-        // Os nomes das chaves (ex: categoriaIdNum)
-        // devem ser os mesmos que o Model espera.
         const dadosParaCriar = {
             assunto: assunto,
             descricao: descricao,
             prioridade: prioridade || 'Média',
             status: 'Aberto',
             requisitanteIdNum: parseInt(requisitante_id),
-            categoriaIdNum: categoria_id ? parseInt(categoria_id) : null,
-            subcategoriaIdNum: subcategoria_id ? parseInt(subcategoria_id) : null, // <-- VALOR NOVO
+            // (ATUALIZADO) Passa o ID unificado para o Model
+            categoriaUnificadaIdNum: categoria_unificada_id ? parseInt(categoria_unificada_id) : null,
             nomeRequisitanteManual: nome_requisitante_manual,
             emailRequisitanteManual: email_requisitante_manual,
             telefoneRequisitanteManual: telefone_requisitante_manual
@@ -48,33 +46,36 @@ export const criarChamado = async (req, res) => {
 
         const novoId = await ChamadoModel.create(dadosParaCriar);
         
-        // Lógica para salvar anexos (se houver)
         if (arquivos && arquivos.length > 0) {
-            // ... (Sua lógica para salvar 'arquivos' associados ao 'novoId' iria aqui)
             console.log(`Salvando ${arquivos.length} anexos para o chamado ${novoId}`);
         }
         
-        // Retorna o chamado completo que acabou de ser criado
         const novoChamado = await ChamadoModel.findById(novoId);
         
-        // Formata o novo chamado antes de enviar
+        // (ATUALIZADO) Formata a resposta
         const Funcionario = {
             nomeFuncionario: novoChamado.nomeRequisitante,
             email: novoChamado.emailRequisitante,
             telefone: novoChamado.telefoneRequisitante
         };
-        const Categorias = novoChamado.categoria_id ? { id: novoChamado.categoria_id, nome: novoChamado.nomeCategoria } : null;
-        const Subcategoria = novoChamado.subcategoria_id ? { id: novoChamado.subcategoria_id, nome: novoChamado.nomeSubcategoria } : null;
+        
+        // (NOVO) Formata a categoria com o nome do pai (se houver)
+        const Categorias = novoChamado.categoria_unificada_id ? { 
+            id: novoChamado.categoria_unificada_id, 
+            nome: novoChamado.nomeCategoria,
+            nomePai: novoChamado.nomeCategoriaPai // <-- O model agora envia isso
+        } : null;
 
+        // Limpa campos duplicados
         delete novoChamado.nomeRequisitante;
         delete novoChamado.emailRequisitante;
         delete novoChamado.telefoneRequisitante;
         delete novoChamado.nomeCategoria;
-        delete novoChamado.nomeSubcategoria;
+        delete novoChamado.nomeCategoriaPai; // <-- Limpa o novo campo
 
-        const chamadoFormatado = { ...novoChamado, Funcionario, Categorias, Subcategoria };
+        const chamadoFormatado = { ...novoChamado, Funcionario, Categorias };
 
-        res.status(201).json({ success: true, data: chamadoFormatado }); // Envia o chamado formatado
+        res.status(201).json({ success: true, data: chamadoFormatado });
 
     } catch (error) {
         if (error instanceof SyntaxError) {
@@ -90,44 +91,42 @@ export const criarChamado = async (req, res) => {
 };
 
 // ====================================================
-// ======== LISTAR CHAMADOS (MODIFICADO) ========
+// ======== LISTAR CHAMADOS (ATUALIZADO) ========
 // ====================================================
 export const listarChamados = async (req, res) => {
     try {
         const filtros = req.query;
         const chamados = await ChamadoModel.findAll(filtros);
 
-        // Formata a resposta para o frontend
         const chamadosFormatados = chamados.map(chamado => {
-            // Requisitante (Quem abriu)
             const Funcionario = {
                 nomeFuncionario: chamado.nomeRequisitante,
                 email: chamado.emailRequisitante,
                 telefone: chamado.telefoneRequisitante
             };
             
-            // Operador (Quem atendeu) - (Seu model DEVE retornar 'nomeAtendente' etc.)
             const Atendente = chamado.atendente_id ? {
                 nomeFuncionario: chamado.nomeAtendente, 
                 email: chamado.emailAtendente     
-            } : null; // Se não houver atendente_id, envia nulo
+            } : null; 
 
-            const Categorias = chamado.categoria_id ? { id: chamado.categoria_id, nome: chamado.nomeCategoria } : null;
-            const Subcategoria = chamado.subcategoria_id ? { id: chamado.subcategoria_id, nome: chamado.nomeSubcategoria } : null;
+            // (NOVO) Formata a categoria com o nome do pai (se houver)
+            const Categorias = chamado.categoria_unificada_id ? { 
+                id: chamado.categoria_unificada_id, 
+                nome: chamado.nomeCategoria,
+                nomePai: chamado.nomeCategoriaPai 
+            } : null;
             
             // Limpa os campos duplicados
             delete chamado.nomeRequisitante;
             delete chamado.emailRequisitante;
             delete chamado.telefoneRequisitante;
             delete chamado.nomeCategoria;
-            delete chamado.nomeSubcategoria; 
-            
-            // (Limpa os novos campos do atendente)
+            delete chamado.nomeCategoriaPai; // <-- Limpa
             delete chamado.nomeAtendente;
             delete chamado.emailAtendente;
 
-            // Retorna o chamado com os objetos aninhados
-            return { ...chamado, Funcionario, Categorias, Subcategoria, Atendente };
+            return { ...chamado, Funcionario, Categorias, Atendente };
         });
 
         res.status(200).json(chamadosFormatados);
@@ -138,7 +137,7 @@ export const listarChamados = async (req, res) => {
 };
 
 // ====================================================
-// ======== BUSCAR CHAMADO POR ID (MODIFICADO) ========
+// ======== BUSCAR CHAMADO POR ID (ATUALIZADO) ========
 // ====================================================
 export const buscarChamadoPorId = async (req, res) => {
     try {
@@ -154,31 +153,34 @@ export const buscarChamadoPorId = async (req, res) => {
         }
 
         // Formata a resposta
-        const Funcionario = { // Requisitante
+        const Funcionario = { 
             nomeFuncionario: chamado.nomeRequisitante,
             email: chamado.emailRequisitante,
             telefone: chamado.telefoneRequisitante
         };
         
-        // Operador (Quem atendeu)
         const Atendente = chamado.atendente_id ? {
             nomeFuncionario: chamado.nomeAtendente,
             email: chamado.emailAtendente
         } : null;
 
-        const Categorias = chamado.categoria_id ? { id: chamado.categoria_id, nome: chamado.nomeCategoria } : null;
-        const Subcategoria = chamado.subcategoria_id ? { id: chamado.subcategoria_id, nome: chamado.nomeSubcategoria } : null;
+        // (NOVO) Formata a categoria com o nome do pai (se houver)
+        const Categorias = chamado.categoria_unificada_id ? { 
+            id: chamado.categoria_unificada_id, 
+            nome: chamado.nomeCategoria,
+            nomePai: chamado.nomeCategoriaPai
+        } : null;
 
         // Limpa campos
         delete chamado.nomeRequisitante;
         delete chamado.emailRequisitante;
         delete chamado.telefoneRequisitante;
         delete chamado.nomeCategoria;
-        delete chamado.nomeSubcategoria;
+        delete chamado.nomeCategoriaPai; // <-- Limpa
         delete chamado.nomeAtendente;
         delete chamado.emailAtendente;
 
-        res.status(200).json({ ...chamado, Funcionario, Categorias, Subcategoria, Atendente });
+        res.status(200).json({ ...chamado, Funcionario, Categorias, Atendente });
 
     } catch (error) {
         console.error('Erro ao buscar chamado por ID:', error);
@@ -188,20 +190,20 @@ export const buscarChamadoPorId = async (req, res) => {
 
 
 // ====================================================
-// ======== DELETAR CHAMADO ========
+// ======== ROTAS RESTANTES (SEM MUDANÇAS) ========
 // ====================================================
+
+// DELETAR CHAMADO
 export const deletarChamado = async (req, res) => {
     try {
         const idNum = parseInt(req.params.id);
         if (isNaN(idNum)) {
             return res.status(400).json({ success: false, message: 'ID de chamado inválido.' });
         }
-
         const result = await ChamadoModel.deleteById(idNum);
         if (result.affectedRows === 0) {
             return res.status(404).json({ success: false, message: 'Erro: Chamado não encontrado.' });
         }
-
         res.status(200).json({ success: true, message: 'Chamado deletado com sucesso.' });
     } catch (error) {
         console.error('Erro ao deletar chamado:', error);
@@ -209,33 +211,20 @@ export const deletarChamado = async (req, res) => {
     }
 };
 
-// ====================================================
-// ======== ATUALIZAR STATUS (MODIFICADO) ========
-// ====================================================
+// ATUALIZAR STATUS
 export const atualizarStatus = async (req, res) => {
-    // --- ADICIONADO PARA TESTE ---
     console.log("[BACKEND] Corpo da requisição recebido:", req.body);
-    // --- FIM TESTE ---
-    
     try {
         const idNum = parseInt(req.params.id);
-        const { status, atendenteId } = req.body; // Recebe o atendenteId
-
+        const { status, atendenteId } = req.body; 
         if (isNaN(idNum) || !status) {
             return res.status(400).json({ success: false, message: 'ID e Status são obrigatórios.' });
         }
-
-        // --- ADICIONADO PARA TESTE ---
         console.log(`[BACKEND] Tentando salvar: ID=${idNum}, Status=${status}, AtendenteID=${atendenteId}`);
-        // --- FIM TESTE ---
-        
-        // Passa o atendenteId para o model.
         const result = await ChamadoModel.updateStatus(idNum, status, atendenteId ? parseInt(atendenteId) : null);
-
         if (result.affectedRows === 0) {
             return res.status(404).json({ success: false, message: 'Erro: Chamado não encontrado.' });
         }
-
         res.status(200).json({ success: true, message: 'Status atualizado com sucesso.' });
     } catch (error) {
         console.error('Erro ao atualizar status:', error);
@@ -243,24 +232,18 @@ export const atualizarStatus = async (req, res) => {
     }
 };
 
-// ====================================================
-// ======== ATUALIZAR PRIORIDADE ========
-// ====================================================
+// ATUALIZAR PRIORIDADE
 export const atualizarPrioridade = async (req, res) => {
     try {
         const idNum = parseInt(req.params.id);
         const { prioridade } = req.body;
-
         if (isNaN(idNum) || !prioridade) {
             return res.status(400).json({ success: false, message: 'ID e Prioridade são obrigatórios.' });
         }
-        
         const result = await ChamadoModel.updatePrioridade(idNum, prioridade);
-
         if (result.affectedRows === 0) {
             return res.status(404).json({ success: false, message: 'Erro: Chamado não encontrado.' });
         }
-
         res.status(200).json({ success: true, message: 'Prioridade atualizada com sucesso.' });
     } catch (error) {
         console.error('Erro ao atualizar prioridade:', error);
@@ -268,26 +251,17 @@ export const atualizarPrioridade = async (req, res) => {
     }
 };
 
-// ====================================================
-// ======== (NOVO) ATUALIZAR SÓ O ATENDENTE ========
-// ====================================================
+// ATUALIZAR ATENDENTE
 export const atualizarAtendente = async (req, res) => {
     try {
         const idNum = parseInt(req.params.id);
-        const { atendenteId } = req.body; // Pega o novo ID do corpo
-
-        // Converte "" (string vazia) ou 0 para NULL.
-        // Se for um ID válido, usa o parseInt.
+        const { atendenteId } = req.body; 
         const novoAtendenteId = (atendenteId && parseInt(atendenteId) > 0) ? parseInt(atendenteId) : null;
-
         console.log(`[BACKEND] Trocando atendente: ID=${idNum}, Novo AtendenteID=${novoAtendenteId}`);
-
         const result = await ChamadoModel.updateAtendente(idNum, novoAtendenteId);
-
         if (result.affectedRows === 0) {
             return res.status(404).json({ success: false, message: 'Erro: Chamado não encontrado.' });
         }
-
         res.status(200).json({ success: true, message: 'Atendente atualizado com sucesso.' });
     } catch (error) {
         console.error('Erro ao atualizar atendente:', error);
@@ -295,33 +269,23 @@ export const atualizarAtendente = async (req, res) => {
     }
 };
 
-// ====================================================
-// ======== CONTAR CHAMADOS POR STATUS (REVISADO) ========
-// ====================================================
+// CONTAR CHAMADOS POR STATUS
 export const contarChamadosPorStatus = async (req, res) => {
-    // A função não precisa de req.body nem req.query. 
-    // É um GET simples, não há risco de Bad Request interno.
     try {
         const counts = await ChamadoModel.countByStatus();
-        
-        // Formata o resultado para um objeto mais fácil de usar no frontend
         const resultadoFormatado = counts.reduce((acc, item) => {
             acc[item.status] = item.count;
             return acc;
         }, {});
-
-        // Garante que os status principais estejam presentes, mesmo que com 0
         const finalData = {
             "Aberto": resultadoFormatado["Aberto"] || 0,
             "Em Andamento": resultadoFormatado["Em Andamento"] || 0,
             "Concluído": resultadoFormatado["Concluído"] || 0,
             "Pausado": resultadoFormatado["Pausado"] || 0,
         };
-
         res.status(200).json(finalData);
     } catch (error) {
         console.error('Erro ao contar chamados por status:', error);
-        // Retorna 500 (Internal Server Error) em caso de erro no banco
         res.status(500).json({ success: false, message: 'Erro interno do servidor ao buscar contagens.' });
     }
 };

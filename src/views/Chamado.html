@@ -376,21 +376,12 @@
                         <div class="grupo-form">
                             <label for="categoria">Categoria</label>
                             <select id="categoria" name="categoria" class="form-select">
-                                <option value="">-- Selecionar --</option>
+                                <option value="">-- Carregando... --</option>
                             </select>
                         </div>
                     </div>
                 </div>
 
-                <div class="row">
-                    <div class="col-md-12">
-                        <div class="grupo-form" id="grupoSubcategoria" style="display: none;">
-                            <label for="subcategoria">Subcategoria</label>
-                            <select id="subcategoria" name="subcategoria" class="form-select">
-                            </select>
-                        </div>
-                    </div>
-                </div>
                 <div class="grupo-form">
                     <label for="anexo">Anexar Arquivos (Opcional)</label>
                     <input type="file" id="anexo" name="anexos" multiple>
@@ -505,14 +496,27 @@
     </div>
 
     <script type="module">
-        const API_URL = ""; // Defina a URL da sua API aqui (ex: "http://localhost:3000/api")
+        const API_URL = ""; 
 
         // --- Autenticação (MODO STANDALONE/DEV) ---
-        let userData = null;
-        let userId = 1; // <-- ID Fixo para desenvolvimento. Substitua pelo ID do usuário logado.
+        // (ATENÇÃO: Este ID será usado como 'requisitante_id'
+        // Mude para 1 ou o ID de um usuário real no seu banco
+        let userId = 1; 
+        try {
+            // Tenta pegar o ID do usuário logado no localStorage
+            const userDataString = localStorage.getItem("userData");
+            const userData = JSON.parse(userDataString);
+            const idLogado = userData?.data?.id || userData?.id;
+            if (idLogado) {
+                userId = idLogado;
+            } else {
+                console.warn("Não foi possível encontrar ID do usuário no localStorage. Usando ID=1 padrão.");
+            }
+        } catch (e) {
+            console.error("Erro ao ler localStorage. Usando ID=1 padrão.", e);
+        }
 
-        // --- Variáveis Globais de Dados ---
-        let listaSubcategorias = []; 
+        // --- (REMOVIDO) Variável listaSubcategorias ---
 
         // --- Referências ---
         const modal = document.getElementById("modalTicket");
@@ -531,16 +535,11 @@
         const filtroStatus = document.getElementById("filtroStatus");
         const btnFiltrar = document.getElementById("btnFiltrar");
         const inputTelefone = document.getElementById("telefoneRequisitante");
-
-        // --- Referências de Subcategoria ---
-        const selectSubcategoriaModal = document.getElementById("subcategoria");
-        const grupoSubcategoria = document.getElementById("grupoSubcategoria");
-
-        // --- (ADICIONADO) Referências do Histórico de Comentários ---
         const listaComentariosContainer = document.getElementById("listaComentariosContainer");
-        // --- FIM ADIÇÃO ---
 
-        // --- Funções Auxiliares ---
+        // --- (REMOVIDO) Referências de Subcategoria ---
+
+        // --- Funções Auxiliares (sem mudanças) ---
         function exibirMensagem(elemento, mensagem, sucesso = true) {
             elemento.textContent = mensagem;
             elemento.className = sucesso ? 'alert alert-success' : 'alert alert-danger';
@@ -577,37 +576,41 @@
             input.value = valor;
         }
 
-        // --- Carregar Categorias e Subcategorias ---
+        // --- (ATUALIZADO) Carregar Categorias (Unificadas) ---
         async function carregarDadosIniciais() {
             try {
-                // --- ATIVADO: Busca dados reais da API ---
-                const [catResponse, subCatResponse] = await Promise.all([
-                    fetch(`${API_URL}/categorias`),
-                    fetch(`${API_URL}/subcategorias`)
-                ]);
+                const response = await fetch(`${API_URL}/categorias`);
+                if (!response.ok) throw new Error("Erro ao carregar categorias.");
 
-                if (!catResponse.ok) throw new Error("Erro ao carregar categorias.");
-                if (!subCatResponse.ok) throw new Error("Erro ao carregar subcategorias.");
+                const categorias = await response.json();
 
-                const categorias = await catResponse.json();
-                listaSubcategorias = await subCatResponse.json(); 
-                // --- FIM DA ATIVAÇÃO ---
-
-                selectCategoriaModal.innerHTML = '<option value="">-- Selecionar --</option>';
-                categorias.forEach(cat => {
+                selectCategoriaModal.innerHTML = '<option value="">-- Selecionar Categoria --</option>';
+                
+                // 1. Adiciona as Categorias Principais
+                categorias.filter(c => !c.parent_id).forEach(catPai => {
                     const option = document.createElement("option");
-                    option.value = cat.id; 
-                    option.textContent = cat.nome;
+                    option.value = catPai.id; 
+                    option.textContent = catPai.nome;
+                    selectCategoriaModal.appendChild(option);
+                });
+                
+                // 2. Adiciona as Subcategorias (com prefixo)
+                categorias.filter(c => c.parent_id).forEach(catFilha => {
+                    const option = document.createElement("option");
+                    option.value = catFilha.id; 
+                    // Usa o nome_pai que o backend agora envia
+                    option.textContent = `... ${catFilha.nome} (em ${catFilha.nome_pai || '?'})`;
                     selectCategoriaModal.appendChild(option);
                 });
 
             } catch (error) {
                 console.error(error);
                 exibirMensagem(modal.open ? modalResposta : divRespostaGeral, error.message, false);
+                selectCategoriaModal.innerHTML = '<option value="">-- Erro ao carregar --</option>';
             }
         }
 
-        // --- Renderizar Lista de Chamados ---
+        // --- (ATUALIZADO) Renderizar Lista de Chamados ---
         function renderizarChamados(chamados) {
             if (loadingIndicator) loadingIndicator.style.display = 'none';
             ticketList.querySelectorAll('.data-row').forEach(row => row.remove());
@@ -628,13 +631,19 @@
                 const prioridadeClass = (chamado.prioridade || 'Média').toLowerCase().replace('é', 'e');
                 const statusClass = (chamado.status || 'Aberto').toLowerCase().replace(/\s+/g, '-');
 
-                let nomeExibicao = 'Aguardamdo...';
-                if (chamado.Subcategoria && chamado.Subcategoria.nome) {
-                    nomeExibicao = `${chamado.Categorias?.nome || '?'} / ${chamado.Subcategoria.nome}`;
-                } else if (chamado.Categorias && chamado.Categorias.nome) {
-                    nomeExibicao = chamado.Categorias.nome;
+                // (ATUALIZADO) Lógica de exibição de nome
+                let nomeExibicao = 'N/A';
+                if (chamado.Categorias) {
+                    if (chamado.Categorias.nomePai) {
+                        // É uma subcategoria
+                        nomeExibicao = `${chamado.Categorias.nomePai} / ${chamado.Categorias.nome}`;
+                    } else {
+                        // É uma categoria principal
+                        nomeExibicao = chamado.Categorias.nome;
+                    }
                 }
-
+                
+                // (ATUALIZADO) Usa 'nomeExibicao'
                 row.innerHTML = `
                     <div class="ticket-cell ticket-id">#${chamado.id}</div>
                     <div class="ticket-cell ticket-priority">
@@ -653,11 +662,10 @@
                     </div>
                 `;
 
-                // --- ATUALIZADO: Evento de clique para abrir o modal ---
                 row.querySelector('.view-icon').addEventListener('click', (e) => {
                     e.stopPropagation();
                     
-                    const ticketId = chamado.id; // Pega o ID
+                    const ticketId = chamado.id; 
                     
                     modalDetalhes.setAttribute('data-current-ticket-id', ticketId);
                     
@@ -668,23 +676,20 @@
                     document.getElementById('detalheAssunto').textContent = chamado.assunto;
                     document.getElementById('detalheDescricao').textContent = chamado.descricao;
                     document.getElementById('detalheRequisitante').textContent = chamado.Funcionario?.nomeFuncionario || 'Desconhecido';
-                    document.getElementById('detalheCategoria').textContent = nomeExibicao;
+                    document.getElementById('detalheCategoria').textContent = nomeExibicao; // <-- USA A VARIÁVEL ATUALIZADA
                     document.getElementById('detalheData').textContent = formatarData(chamado.created_at);
                     
-                    // --- (NOVO) Carrega o histórico de comentários ---
                     listaComentariosContainer.innerHTML = '<span class="comment-empty-state">Carregando comentários...</span>';
-                    carregarComentarios(ticketId); // Chama a nova função
-                    // --- FIM NOVO ---
+                    carregarComentarios(ticketId); 
 
                     modalDetalhes.showModal();
                 });
-                // --- FIM ATUALIZAÇÃO ---
 
                 ticketList.appendChild(row);
             });
         }
 
-        // --- Listar Chamados ---
+        // --- Listar Chamados (sem mudanças na lógica, mas o filtro de requisitante é importante) ---
         async function listarChamados() {
             limparMensagem(divRespostaGeral);
             ticketList.querySelectorAll('.data-row').forEach(row => row.remove());
@@ -694,24 +699,27 @@
             if (filtroAssunto.value.trim()) params.append('assunto', filtroAssunto.value.trim());
             if (filtroPrioridade.value) params.append('prioridade', filtroPrioridade.value);
             if (filtroStatus.value) params.append('status', filtroStatus.value);
-            params.append('requisitante_id', userId); 
+            
+            // Esta página é pública, mas podemos filtrar por um ID de usuário se ele estiver logado
+            // (Assumindo que `userId` foi pego do localStorage)
+            if (userId) {
+                params.append('requisitante_id', userId); 
+            }
 
             const url = `${API_URL}/chamados?${params.toString()}`;
 
             try {
-                // --- ATIVADO: Busca dados reais da API ---
                 const response = await fetch(url);
                 if (!response.ok) throw new Error("Erro ao buscar chamados.");
                 const chamados = await response.json();
                 renderizarChamados(chamados);
-                // --- FIM DA ATIVAÇÃO ---
             } catch (error) {
                 exibirMensagem(divRespostaGeral, error.message, false);
                 if (loadingIndicator) loadingIndicator.innerHTML = '<p style="color:red;">Falha ao carregar.</p>';
             }
         }
 
-        // --- Criar Novo Chamado ---
+        // --- (ATUALIZADO) Criar Novo Chamado ---
         async function criarChamado(event) {
             event.preventDefault();
             limparMensagem(modalResposta);
@@ -722,8 +730,9 @@
             const assunto = ticketForm.assunto.value.trim();
             const descricao = ticketForm.descricao.value.trim();
             const prioridade = ticketForm.prioridade.value || 'Média';
-            const categoriaId = ticketForm.categoria.value || null;
-            const subcategoriaId = ticketForm.subcategoria.value || null;
+            
+            // (ATUALIZADO) Pega o ID da categoria unificada
+            const categoriaUnificadaId = ticketForm.categoria.value || null;
 
             if (!nomeRequisitante || !emailRequisitante || !assunto || !descricao) {
                 exibirMensagem(modalResposta, 'Nome, Email, Assunto e Descrição são obrigatórios.', false);
@@ -753,9 +762,10 @@
                     assunto: assunto,
                     descricao: descricao,
                     prioridade: prioridade,
-                    requisitante_id: userId,
-                    categoria_id: categoriaId ? parseInt(categoriaId) : null,
-                    subcategoria_id: subcategoriaId ? parseInt(subcategoriaId) : null
+                    requisitante_id: userId, // <-- Usa o ID do usuário (logado ou padrão)
+                    
+                    // (ATUALIZADO) Envia o ID unificado
+                    categoria_unificada_id: categoriaUnificadaId ? parseInt(categoriaUnificadaId) : null
                 }
             };
             
@@ -766,7 +776,6 @@
             }
 
             try {
-                // --- ATIVADO: Envio real para a API ---
                 const response = await fetch(`${API_URL}/chamados`, {
                     method: 'POST',
                     body: formData 
@@ -776,7 +785,6 @@
                 if (!response.ok) {
                     throw new Error(respostaAPI.message || "Erro ao criar chamado.");
                 }
-                // --- FIM DA ATIVAÇÃO ---
 
                 exibirMensagem(divRespostaGeral, "Chamado criado com sucesso!", true);
                 modal.close();
@@ -786,13 +794,9 @@
             }
         }
         
-        // --- (NOVAS) Funções para LER Comentários ---
-        
-        /**
-         * Renderiza a lista de comentários no container do modal.
-         */
+        // --- (ATUALIZADO) Funções de Comentários (sem mudanças na lógica interna) ---
         function renderizarComentarios(comentarios) {
-            listaComentariosContainer.innerHTML = ''; // Limpa o container
+            listaComentariosContainer.innerHTML = ''; 
             listaComentariosContainer.classList.remove('comment-empty-state');
 
             if (!comentarios || comentarios.length === 0) {
@@ -802,8 +806,6 @@
             }
 
             comentarios.forEach(comentario => {
-                // Assumindo que o comentário tem a estrutura:
-                // { texto: "...", created_at: "...", Funcionario: { nomeFuncionario: "..." } }
                 const nome = comentario.nomeFuncionario || 'Usuário desconhecido'; 
                 const data = formatarData(comentario.created_at);
                 const texto = escapeHtml(comentario.texto);
@@ -822,12 +824,8 @@
             });
         }
 
-        /**
-         * Busca os comentários de um ticketId específico na API.
-         */
         async function carregarComentarios(ticketId) {
             try {
-                // Esta é a nova rota que você precisará criar no backend
                 const response = await fetch(`${API_URL}/chamados/${ticketId}/comentarios`); 
                 if (!response.ok) {
                     const err = await response.json();
@@ -837,7 +835,6 @@
                 renderizarComentarios(comentarios);
             
             } catch (error) {
-                // Trata o erro de "Unexpected token <" se o backend não responder JSON (ex: erro 404)
                 if (error instanceof SyntaxError) {
                      listaComentariosContainer.innerHTML = `<span class="comment-empty-state" style="color: red;">Erro de comunicação. A rota de comentários existe?</span>`;
                 } else {
@@ -846,22 +843,28 @@
             }
         }
         
-        // --- Lógica do Modal "Novo Chamado" ---
+        // --- (ATUALIZADO) Lógica do Modal "Novo Chamado" ---
         function resetarModalForm() {
             ticketForm.reset();
             limparMensagem(modalResposta);
-            grupoSubcategoria.style.display = 'none';
-            selectSubcategoriaModal.innerHTML = '';
-            selectSubcategoriaModal.required = false;
+            // (REMOVIDO) Lógica de subcategoria
         }
 
         btnAbrir.addEventListener('click', () => {
             resetarModalForm();
             
-            // --- ATUALIZADO: Limpa os campos. Eles devem ser preenchidos pelo usuário
-            // ou pela sua lógica de autenticação (se houver)
-            document.getElementById('nomeRequisitante').value = ''; 
-            document.getElementById('emailRequisitante').value = ''; 
+            // Tenta pré-preencher com dados do usuário logado (se houver)
+            try {
+                const userDataString = localStorage.getItem("userData");
+                const userData = JSON.parse(userDataString);
+                document.getElementById('nomeRequisitante').value = userData?.data?.nomeFuncionario || ''; 
+                document.getElementById('emailRequisitante').value = userData?.data?.email || ''; 
+            } catch(e) {
+                console.warn("Não foi possível pré-preencher dados do usuário.");
+                document.getElementById('nomeRequisitante').value = ''; 
+                document.getElementById('emailRequisitante').value = ''; 
+            }
+
 
             if (typeof modal.showModal === 'function') modal.showModal();
             else modal.setAttribute('open', '');
@@ -871,12 +874,9 @@
         btnFechar.addEventListener('click', () => { modal.close(); });
         modal.addEventListener('close', () => { resetarModalForm(); }); 
         
-        // --- ATUALIZADO: Lógica do Modal "Detalhes" (Fechar) ---
         btnFecharModalDetalhes.addEventListener('click', () => {
-            // (ADICIONADO) Limpa o histórico de comentários
             listaComentariosContainer.innerHTML = '';
-            
-            modalDetalhes.removeAttribute('data-current-ticket-id'); // Limpa o ID salvo
+            modalDetalhes.removeAttribute('data-current-ticket-id');
             modalDetalhes.close();
         });
 
@@ -886,37 +886,9 @@
         if(inputTelefone) {
             inputTelefone.addEventListener('input', () => aplicarMascaraTelefone(inputTelefone));
         }
-
-        // --- Event Listener do botão de comentário (REMOVIDO) ---
         
-        // --- Lógica do Dropdown em Cascata ---
-        selectCategoriaModal.addEventListener('change', () => {
-            const categoriaId = parseInt(selectCategoriaModal.value, 10);
-            
-            selectSubcategoriaModal.innerHTML = '<option value="">-- Selecionar Subcategoria --</option>';
-
-            if (isNaN(categoriaId) || !categoriaId) {
-                grupoSubcategoria.style.display = 'none'; 
-                selectSubcategoriaModal.required = false;
-                return;
-            }
-
-            const subcategoriasFilhas = listaSubcategorias.filter(sub => sub.id_categoria === categoriaId);
-
-            if (subcategoriasFilhas.length > 0) {
-                subcategoriasFilhas.forEach(sub => {
-                    const option = document.createElement("option");
-                    option.value = sub.id;
-                    option.textContent = sub.nome;
-                    selectSubcategoriaModal.appendChild(option);
-                });
-                grupoSubcategoria.style.display = 'block';
-                selectSubcategoriaModal.required = true; 
-            } else {
-                grupoSubcategoria.style.display = 'none';
-                selectSubcategoriaModal.required = false;
-            }
-        });
+        // --- (REMOVIDO) Event Listener do dropdown de categoria (não é mais cascata) ---
+        
         // --- Inicialização ---
         async function init() {
             await carregarDadosIniciais(); 

@@ -92,7 +92,7 @@
         <div class="col-lg-4">
           <div class="card shadow-sm widget">
             <div class="card-header">
-              <strong>Cadastro / Edição (Categoria Pai)</strong>
+              <strong>Cadastro / Edição</strong>
             </div>
             <div class="card-body">
               <form id="formCategoria">
@@ -104,6 +104,14 @@
                   <label for="txtNomeCategoria" class="form-label">Nome da Categoria</label>
                   <input type="text" id="txtNomeCategoria" class="form-control" required>
                 </div>
+                
+                <div class="mb-3">
+                  <label for="cboParent" class="form-label">Categoria Pai</label>
+                  <select id="cboParent" class="form-select">
+                    <option value="">-- Nenhuma (Categoria Principal) --</option>
+                    </select>
+                </div>
+                
               </form>
               <div id="divBotoes" class="d-grid gap-2 d-md-flex"></div>
               <div id="divResposta" class="mt-3"></div>
@@ -136,69 +144,22 @@
     </main>
   </div>
 
-  <div class="modal fade" id="modalSubcategoria" tabindex="-1" aria-labelledby="modalSubcategoriaLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-      <div class="modal-content widget">
-        <div class="modal-header">
-          <h1 class="modal-title fs-5" id="modalSubcategoriaLabel">Subcategorias</h1>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        
-        <div class="modal-body">
-          <div class="row">
-            
-            <div class="col-md-5">
-              <h5>Cadastro / Edição</h5>
-              <form id="formSubcategoria">
-                <div class="mb-3">
-                  <label for="txtIdSub" class="form-label">ID</label>
-                  <input type="text" id="txtIdSub" class="form-control" disabled>
-                </div>
-                <div class="mb-3">
-                  <label for="txtNomeSub" class="form-label">Nome da Subcategoria</label>
-                  <input type="text" id="txtNomeSub" class="form-control" required>
-                </div>
-              </form>
-              <div id="divBotoesModal" class="d-grid gap-2 d-md-flex">
-                </div>
-              <div id="divRespostaModal" class="mt-3"></div>
-            </div>
-
-            <div class="col-md-7">
-              <h5>Subcategorias Atuais</h5>
-              <div id="divTabelaModal" class="table-responsive" style="max-height: 300px; overflow-y: auto;">
-                </div>
-            </div>
-
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-
   <script type="module">
     const API_URL = "";
 
-    // --- FUNÇÕES DE LOGOUT E NOME/MENU ---
+    // --- FUNÇÕES DE LOGOUT, TEMA E NOME/MENU (permanecem iguais) ---
     function fazerLogout() {
       localStorage.removeItem("userData");
       window.location.href = "Login.html";
     }
-
-    // --- (NOVO) LÓGICA DO TEMA ESCURO ---
     const btnThemeToggle = document.getElementById("themeToggle");
     const linkThemeToggle = document.getElementById("themeToggleLink");
-    
     function toggleTheme() {
         document.body.classList.toggle("dark-mode");
         let isDark = document.body.classList.contains("dark-mode");
         localStorage.setItem("theme", isDark ? "dark" : "light");
-        if (btnThemeToggle) {
-            btnThemeToggle.textContent = isDark ? "☀️" : "🌙";
-        }
+        if (btnThemeToggle) btnThemeToggle.textContent = isDark ? "☀️" : "🌙";
     }
-
     function loadTheme() {
         const savedTheme = localStorage.getItem("theme");
         if (savedTheme === "dark") {
@@ -209,16 +170,9 @@
             if (btnThemeToggle) btnThemeToggle.textContent = "🌙";
         }
     }
-    
-    // Adiciona os gatilhos
     if (btnThemeToggle) btnThemeToggle.addEventListener('click', toggleTheme);
     if (linkThemeToggle) linkThemeToggle.addEventListener('click', toggleTheme);
-
-    // Carrega o tema salvo IMEDIATAMENTE
     loadTheme();
-    // --- FIM LÓGICA DO TEMA ---
-
-
     try {
       const userData = JSON.parse(userDataString);
       const userNameDisplay = document.getElementById('userNameDisplay');
@@ -238,30 +192,24 @@
     } catch (error) {
       console.error("Erro ao tentar exibir o nome do usuário:", error);
     }
+    // --- FIM DAS FUNÇÕES HELPER PADRÃO ---
 
-    // --- VARIÁVEIS GLOBAIS ---
-    let API_DATA_CATEGORIAS;
-    let idCategoriaPaiAtual = null; 
+    // --- (ATUALIZADO) VARIÁVEIS GLOBAIS ---
+    let API_DATA_CATEGORIAS = []; // Agora armazena todas as categorias
 
-    // --- REFERÊNCIAS (CATEGORIA) ---
+    // --- (ATUALIZADO) REFERÊNCIAS ---
     const txtId = document.getElementById("txtId");
     const txtNomeCategoria = document.getElementById("txtNomeCategoria");
+    const cboParent = document.getElementById("cboParent"); // <-- NOVO
     const divBotoes = document.getElementById("divBotoes");
     const divResposta = document.getElementById("divResposta");
     const divTabela = document.getElementById("divTabela");
     const btnLogout = document.getElementById("logoutButton");
     const txtFiltroCategoria = document.getElementById("txtFiltroCategoria");
 
-    // --- REFERÊNCIAS (MODAL) ---
-    const modalSubcategoria = new bootstrap.Modal('#modalSubcategoria');
-    const modalTitulo = document.getElementById('modalSubcategoriaLabel');
-    const txtIdSub = document.getElementById('txtIdSub');
-    const txtNomeSub = document.getElementById('txtNomeSub');
-    const divBotoesModal = document.getElementById('divBotoesModal');
-    const divRespostaModal = document.getElementById('divRespostaModal');
-    const divTabelaModal = document.getElementById('divTabelaModal');
-
-    // --- FUNÇÕES HELPER ---
+    // --- (REMOVIDO) Referências do Modal ---
+    
+    // --- (ATUALIZADO) FUNÇÕES HELPER ---
     function createButton(text, id, className) {
       const btn = document.createElement("button");
       btn.textContent = text;
@@ -270,7 +218,6 @@
       return btn;
     }
 
-    // Limpar formulário PRINCIPAL
     function limparFormulario(message = "") {
       if (message) {
         divResposta.textContent = message;
@@ -281,47 +228,38 @@
       }
       txtId.value = "";
       txtNomeCategoria.value = "";
+      cboParent.value = ""; // <-- ATUALIZADO (limpa o select-pai)
     }
 
-    // Erro formulário PRINCIPAL
     function exibirErro(mensagem) {
       divResposta.textContent = mensagem;
       divResposta.className = 'alert alert-danger mt-3';
     }
 
-    // --- NOVAS FUNÇÕES HELPER PARA O MODAL ---
-    function limparFormularioSub(message = "") {
-      if (message) {
-        divRespostaModal.textContent = message;
-        divRespostaModal.className = "alert alert-success mt-3";
-      } else {
-        divRespostaModal.textContent = "";
-        divRespostaModal.className = "";
-      }
-      txtIdSub.value = "";
-      txtNomeSub.value = "";
-    }
+    // --- (REMOVIDO) Funções Helper do Modal ---
 
-    function exibirErroModal(mensagem) {
-      divRespostaModal.textContent = mensagem;
-      divRespostaModal.className = 'alert alert-danger mt-2 p-2';
-    }
-
-
-    // --- CRUD DE CATEGORIAS (PRINCIPAL) ---
+    // --- (ATUALIZADO) CRUD DE CATEGORIAS (PRINCIPAL) ---
     const btnCriar = createButton("Criar", "btnCriar", "btn-success");
     btnCriar.onclick = async () => {
       if (txtNomeCategoria.value.trim() === "") {
         exibirErro("Por favor, preencha o nome da categoria.");
         return;
       }
-      const dadosCadastro = { categoria: { nome: txtNomeCategoria.value.trim() } };
+      // (ATUALIZADO) Envia o parent_id
+      const dadosCadastro = { 
+        categoria: { 
+          nome: txtNomeCategoria.value.trim(),
+          parent_id: cboParent.value ? parseInt(cboParent.value) : null
+        } 
+      };
+      
       try {
         const response = await fetch(`${API_URL}/categorias`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dadosCadastro) });
         const respostaAPI = await response.json();
         if (!response.ok) throw new Error(respostaAPI.message || "Erro desconhecido");
+        
         limparFormulario("Categoria criada com sucesso!");
-        await listAll();
+        await listAll(); // Recarrega a lista
       } catch (error) { exibirErro(error.message); }
     };
     divBotoes.appendChild(btnCriar);
@@ -330,12 +268,28 @@
     btnAtualizar.onclick = async () => {
       const id = txtId.value;
       if (!id) { exibirErro("Selecione uma categoria da lista para atualizar."); return; }
+      
       if (txtNomeCategoria.value.trim() === "") { exibirErro("O nome da categoria é obrigatório para atualizar."); return; }
-      const dadosAtualizar = { categoria: { nome: txtNomeCategoria.value.trim() } };
+      
+      // (ATUALIZADO) Envia o parent_id
+      const dadosAtualizar = { 
+        categoria: { 
+          nome: txtNomeCategoria.value.trim(),
+          parent_id: cboParent.value ? parseInt(cboParent.value) : null
+        } 
+      };
+      
+      // (NOVO) Validação anti-loop (não pode ser pai de si mesmo)
+      if (parseInt(id) === parseInt(dadosAtualizar.categoria.parent_id)) {
+        exibirErro("Uma categoria não pode ser pai de si mesma.");
+        return;
+      }
+      
       try {
         const response = await fetch(`${API_URL}/categorias/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dadosAtualizar) });
         const respostaAPI = await response.json();
         if (!response.ok) throw new Error(respostaAPI.message || "Erro desconhecido");
+        
         limparFormulario("Categoria atualizada com sucesso!");
         await listAll();
       } catch (error) { exibirErro(error.message); }
@@ -346,11 +300,12 @@
     btnExcluir.onclick = async () => {
       const id = txtId.value;
       if (!id) { exibirErro("Selecione uma categoria da lista para excluir."); return; }
-      if (confirm("Tem certeza que deseja excluir esta categoria? Isso pode afetar subcategorias.")) {
+      if (confirm("Tem certeza que deseja excluir? Se esta for uma 'Categoria Pai', ela pode causar erros em outras categorias.")) {
         try {
           const response = await fetch(`${API_URL}/categorias/${id}`, { method: 'DELETE' });
           const respostaAPI = await response.json();
           if (!response.ok) throw new Error(respostaAPI.message || "Erro desconhecido");
+          
           limparFormulario("Categoria excluída com sucesso!");
           await listAll();
         } catch (error) { exibirErro(error.message); }
@@ -358,19 +313,45 @@
     };
     divBotoes.appendChild(btnExcluir);
 
-    // --- LISTAGEM DE CATEGORIAS (PRINCIPAL) ---
+    // --- (ATUALIZADO) LISTAGEM DE CATEGORIAS (PRINCIPAL) ---
     async function listAll() {
       try {
         const response = await fetch(`${API_URL}/categorias`);
         if (!response.ok) throw new Error("Erro ao buscar categorias.");
         API_DATA_CATEGORIAS = await response.json();
+        
         renderTable(API_DATA_CATEGORIAS);
+        preencherSelectPai(API_DATA_CATEGORIAS); // <-- ATUALIZADO
+        
       } catch (error) {
         exibirErro(error.message);
       }
     }
+    
+    // (NOVO) Função para preencher o dropdown de "Categoria Pai"
+    function preencherSelectPai(categorias) {
+        const idAtual = txtId.value; // Pega o ID do item que está sendo editado
+        cboParent.innerHTML = '<option value="">-- Nenhuma (Categoria Principal) --</option>';
+        
+        categorias.forEach(cat => {
+            // (NOVO) Impede que a categoria apareça na lista de pais dela mesma
+            if (cat.id.toString() === idAtual) {
+                return; 
+            }
+            
+            const option = document.createElement("option");
+            option.value = cat.id;
+            // (NOVO) Adiciona prefixo para subcategorias para fácil identificação
+            if (cat.parent_id) {
+                option.textContent = `... ${cat.nome} (Filha de: ${cat.nome_pai || '?'})`;
+            } else {
+                option.textContent = `${cat.nome} (Principal)`;
+            }
+            cboParent.appendChild(option);
+        });
+    }
 
-    // Tabela PRINCIPAL
+    // (ATUALIZADO) Tabela PRINCIPAL
     function renderTable(categorias) {
       divTabela.innerHTML = "";
       const table = document.createElement("table");
@@ -380,7 +361,8 @@
           <tr>
             <th>ID</th>
             <th>Nome</th>
-            <th>Ações</th> </tr>
+            <th>Categoria Pai</th> <th>Ações</th> 
+          </tr>
         </thead>
         <tbody></tbody>
       `;
@@ -392,31 +374,36 @@
           tr.innerHTML = `
             <td>${cat.id}</td>
             <td>${cat.nome}</td>
-            <td>
+            <td>${cat.nome_pai || '--'}</td> <td>
               <button class="btn btn-sm btn-info btn-selecionar">Selecionar</button>
-              <button class="btn btn-sm btn-secondary btn-ver-sub">Subcategorias</button>
             </td>
           `;
           tr.querySelector('.btn-selecionar').addEventListener('click', () => {
             txtId.value = cat.id;
             txtNomeCategoria.value = cat.nome || '';
+            
+            // (ATUALIZADO) Atualiza o dropdown de pais e seleciona o pai correto
+            preencherSelectPai(API_DATA_CATEGORIAS); // Recarrega o select (para excluir a si mesmo)
+            cboParent.value = cat.parent_id || ""; // Seleciona o pai
+            
             divResposta.innerHTML = "";
           });
-          tr.querySelector('.btn-ver-sub').addEventListener('click', () => {
-            abrirModalSubcategorias(cat.id, cat.nome);
-          });
+          
+          // (REMOVIDO) O botão 'btn-ver-sub' foi removido
+          
           tbody.appendChild(tr);
         });
       } else {
-        tbody.innerHTML = '<tr><td colspan="3" class="text-center">Nenhuma categoria encontrada.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center">Nenhuma categoria encontrada.</td></tr>';
       }
       divTabela.appendChild(table);
     }
 
-    // --- FILTRO DE CATEGORIAS (PRINCIPAL) ---
+    // --- (ATUALIZADO) FILTRO DE CATEGORIAS (PRINCIPAL) ---
     function filterData() {
       if (!API_DATA_CATEGORIAS) return;
       const nomeFiltro = txtFiltroCategoria.value.trim().toLowerCase();
+      
       const dadosFiltrados = API_DATA_CATEGORIAS.filter(cat => {
         let match = true;
         if (nomeFiltro) {
@@ -427,187 +414,14 @@
       renderTable(dadosFiltrados);
     }
     
-
-    // ---
-    // ==================================================================
-    //                   LÓGICA DO MODAL ATUALIZADA
-    // ==================================================================
-    // ---
-
-    // 1. Função para abrir o modal
-    async function abrirModalSubcategorias(id, nome) {
-      idCategoriaPaiAtual = id; 
-      modalTitulo.textContent = `Subcategorias de: ${nome}`;
-      limparFormularioSub(); 
-      await carregarSubcategoriasNoModal(id); 
-      modalSubcategoria.show(); 
-    }
-
-    // 2. Função para buscar e RENDERIZAR A TABELA DENTRO do modal
-    async function carregarSubcategoriasNoModal(idCategoriaPai) {
-      divTabelaModal.innerHTML = "<p>Carregando...</p>";
-      
-      try {
-        const response = await fetch(`${API_URL}/subcategorias`);
-        if (!response.ok) throw new Error("Erro ao buscar subcategorias.");
-        
-        const todasSubcategorias = await response.json();
-        const subcategoriasFilhas = todasSubcategorias.filter(sub => sub.id_categoria === idCategoriaPai);
-
-        divTabelaModal.innerHTML = "";
-        
-        const table = document.createElement("table");
-        table.className = "table table-bordered table-striped table-hover table-sm";
-        table.innerHTML = `
-          <thead class="table-light">
-            <tr>
-              <th>ID</th>
-              <th>Nome</th>
-              <th>Ação</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        `;
-        const tbody = table.querySelector("tbody");
-
-        if (subcategoriasFilhas.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="3" class="text-center">Nenhuma subcategoria encontrada.</td></tr>';
-        } else {
-          subcategoriasFilhas.forEach(sub => {
-            const tr = document.createElement("tr");
-            tr.innerHTML = `
-              <td>${sub.id}</td>
-              <td>${sub.nome}</td>
-              <td><button class="btn btn-sm btn-info btn-selecionar-sub">Selecionar</button></td>
-            `;
-            
-            // --- ESTA É A CORREÇÃO ---
-            // Event listener para preencher o formulário DO MODAL
-            tr.querySelector('.btn-selecionar-sub').addEventListener('click', () => {
-              txtIdSub.value = sub.id;
-              txtNomeSub.value = sub.nome;
-              // Limpa apenas a mensagem de erro, não o formulário
-              divRespostaModal.innerHTML = ""; 
-              divRespostaModal.className = "";
-            });
-            // --- FIM DA CORREÇÃO ---
-            
-            tbody.appendChild(tr);
-          });
-        }
-        divTabelaModal.appendChild(table);
-        
-      } catch (error) {
-        divTabelaModal.innerHTML = `<p class='text-danger'>${error.message}</p>`;
-      }
-    }
-
-    // 3. CRIANDO OS BOTÕES DO MODAL (só precisa fazer isso uma vez)
-    const btnCriarSub = createButton("Criar", "btnCriarSub", "btn-success");
-    const btnAtualizarSub = createButton("Atualizar", "btnAtualizarSub", "btn-warning");
-    const btnExcluirSub = createButton("Excluir", "btnExcluirSub", "btn-danger");
-    divBotoesModal.append(btnCriarSub, btnAtualizarSub, btnExcluirSub);
-
-    // 4. Event listener para o botão CRIAR DENTRO do modal
-    btnCriarSub.addEventListener('click', async () => {
-      const nomeNovaSub = txtNomeSub.value.trim();
-      if (nomeNovaSub === "") {
-        exibirErroModal("O nome é obrigatório.");
-        return;
-      }
-      
-      const dadosCadastro = {
-        subcategoria: {
-          nome: nomeNovaSub,
-          id_categoria: idCategoriaPaiAtual 
-        }
-      };
-
-      try {
-        const response = await fetch(`${API_URL}/subcategorias`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(dadosCadastro)
-        });
-        const respostaAPI = await response.json();
-        if (!response.ok) throw new Error(respostaAPI.message || "Erro");
-
-        limparFormularioSub("Subcategoria criada com sucesso!");
-        await carregarSubcategoriasNoModal(idCategoriaPaiAtual);
-
-      } catch (error) {
-        exibirErroModal(error.message);
-      }
-    });
-    
-    // 5. Event listener para o botão ATUALIZAR DENTRO do modal
-    btnAtualizarSub.addEventListener('click', async () => {
-      const idSub = txtIdSub.value;
-      if (!idSub) {
-        exibirErroModal("Selecione uma subcategoria da lista para atualizar.");
-        return;
-      }
-      
-      const nomeSub = txtNomeSub.value.trim();
-      if (nomeSub === "") {
-        exibirErroModal("O nome é obrigatório.");
-        return;
-      }
-
-      const dadosAtualizar = {
-        subcategoria: {
-          nome: nomeSub,
-          id_categoria: idCategoriaPaiAtual
-        }
-      };
-
-      try {
-        const response = await fetch(`${API_URL}/subcategorias/${idSub}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(dadosAtualizar)
-        });
-        const respostaAPI = await response.json();
-        if (!response.ok) throw new Error(respostaAPI.message || "Erro");
-
-        limparFormularioSub("Subcategoria atualizada com sucesso!");
-        await carregarSubcategoriasNoModal(idCategoriaPaiAtual);
-
-      } catch (error) {
-        exibirErroModal(error.message);
-      }
-    });
-
-    // 6. Event listener para o botão EXCLUIR DENTRO do modal
-    btnExcluirSub.addEventListener('click', async () => {
-      const idSub = txtIdSub.value;
-      if (!idSub) {
-        exibirErroModal("Selecione uma subcategoria da lista para excluir.");
-        return;
-      }
-
-      if (confirm(`Tem certeza que deseja excluir esta subcategoria?`)) {
-        try {
-          const response = await fetch(`${API_URL}/subcategorias/${idSub}`, { method: 'DELETE' });
-          const respostaAPI = await response.json();
-          if (!response.ok) throw new Error(respostaAPI.message || "Erro");
-
-          limparFormularioSub("Subcategoria excluída com sucesso!");
-          await carregarSubcategoriasNoModal(idCategoriaPaiAtual);
-
-        } catch (error) {
-          exibirErroModal(error.message);
-        }
-      }
-    });
-
+    // --- (REMOVIDO) Toda a Lógica do Modal foi removida ---
 
     // --- INICIALIZAÇÃO ---
     if (txtFiltroCategoria) txtFiltroCategoria.addEventListener("input", filterData);
     if (btnLogout) btnLogout.addEventListener('click', fazerLogout);
 
     async function init() {
-      await listAll(); // Carrega a tabela principal de categorias
+      await listAll(); // Carrega tudo
     }
 
     init();
