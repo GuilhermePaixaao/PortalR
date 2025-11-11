@@ -300,6 +300,17 @@
         .btn-logout:hover {
             background-color: #bb2d3b;
         }
+        .logo {
+    display: flex;
+    align-items: center; /* Alinha verticalmente */
+    gap: 10px; /* Cria um espaço entre o ícone e o texto */
+}
+
+/* Para definir o tamanho do ícone */
+.logo-icon {
+    height: 30px; /* Ajuste a altura conforme necessário */
+    width: auto;  /* Mantém a proporção da imagem */
+}
         /* --- FIM ESTILOS HEADER --- */
     </style>
 </head>
@@ -309,9 +320,9 @@
 
         <header class="header">
             <div class="logo">
-                <img src="/img.png" alt="logo Portal Supermercado" class="logo-icon">
-                PORTAL SUPERMERCADO ROSALINA</div>
-            
+            <img src="/img.png" alt="Logo Portal Supermercado" class="logo-icon">              
+                PORTAL SUPERMERCADO ROSALINA
+            </div>
         </header>
 
         <dialog id="modalTicket" aria-labelledby="modalTitle">

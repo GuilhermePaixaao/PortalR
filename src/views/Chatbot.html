@@ -119,6 +119,17 @@
             white-space: normal; 
             line-height: 1.2; 
         }
+        .logo {
+    display: flex;
+    align-items: center; /* Alinha verticalmente */
+    gap: 10px; /* Cria um espaço entre o ícone e o texto */
+}
+
+/* Para definir o tamanho do ícone */
+.logo-icon {
+    height: 30px; /* Ajuste a altura conforme necessário */
+    width: auto;  /* Mantém a proporção da imagem */
+}
         /* --- FIM DOS ESTILOS DE AJUSTE --- */
 
     </style>
@@ -126,7 +137,10 @@
 <body>
     <div class="dashboard-container">
         <header class="header">
-            <div class="logo">PORTAL SUPERMERCADO ROSALINA</div>
+            <div class="logo">
+            <img src="/img.png" alt="Logo Portal Supermercado" class="logo-icon">              
+                PORTAL SUPERMERCADO ROSALINA
+            </div>
             
             
             <div class="header-actions">
