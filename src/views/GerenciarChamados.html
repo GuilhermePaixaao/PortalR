@@ -217,6 +217,15 @@
         }
         .btn-concluir { color: green; }
 
+        /* --- (INÍCIO) CSS DOS NOVOS BOTÕES --- */
+        .btn-iniciar, .btn-retomar {
+            color: #0d6efd; /* Azul */
+        }
+        .btn-pausar {
+            color: #fd7e14; /* Laranja */
+        }
+        /* --- (FIM) CSS DOS NOVOS BOTÕES --- */
+
         .header {
             display: flex;
             align-items: center;
@@ -826,6 +835,9 @@
             }
         }
 
+        // ====================================================
+        // ======== (INÍCIO) FUNÇÃO RENDERIZAR CHAMADOS ATUALIZADA ========
+        // ====================================================
         function renderizarChamados(chamados) {
             loadingIndicator.style.display = 'none';
             ticketList.querySelectorAll('.data-row').forEach(r => r.remove());
@@ -844,6 +856,23 @@
                 const prioridadeClass = (ch.prioridade || 'Média').toLowerCase().replace('é', 'e');
                 const statusClass = (ch.status || 'Aberto').toLowerCase().replace(/\s+/g, '-');
                 
+                // --- INÍCIO DA LÓGICA DE BOTÕES ATUALIZADA ---
+                let actionButtons = `<span class="view-icon" title="Visualizar">👁️</span>`;
+
+                if (ch.status === 'Aberto') {
+                    actionButtons += ` <button class="btn-action btn-iniciar" data-id="${ch.id}" title="Iniciar Atendimento">▶️</button>`;
+                } else if (ch.status === 'Em Andamento') {
+                    actionButtons += ` <button class="btn-action btn-pausar" data-id="${ch.id}" title="Pausar Atendimento">⏸️</button>`;
+                } else if (ch.status === 'Pausado') {
+                    actionButtons += ` <button class="btn-action btn-retomar" data-id="${ch.id}" title="Retomar Atendimento">▶️</button>`;
+                }
+
+                // Adiciona o botão de concluir, exceto se já estiver concluído
+                if (ch.status !== 'Concluído') {
+                    actionButtons += ` <button class="btn-action btn-concluir" data-id="${ch.id}" title="Marcar como Concluído">✔️</button>`;
+                }
+                // --- FIM DA LÓGICA DE BOTÕES ---
+
                 ticketList.insertAdjacentHTML('beforeend', `
                 <div class="ticket-row data-row" data-ticket-id="${ch.id}">
                     <div class="ticket-cell ticket-id">#${ch.id}</div>
@@ -855,13 +884,15 @@
                     <div class="ticket-cell ticket-operator">${escapeHtml(ch.Atendente?.nomeFuncionario || 'N/A')}</div>
                     <div class="ticket-cell ticket-created">${formatarData(ch.created_at)}</div>
                     <div class="ticket-cell ticket-actions">
-                    <span class="view-icon" title="Visualizar">👁️</span>
-                    ${ch.status !== 'Concluído'
-                        ? `<button class="btn-action btn-concluir" data-id="${ch.id}" title="Marcar como Concluído">✔️</button>` : ''}
+                        ${actionButtons}
                     </div>
                 </div>`);
             });
         }
+        // ====================================================
+        // ======== (FIM) FUNÇÃO RENDERIZAR CHAMADOS ATUALIZADA ========
+        // ====================================================
+
 
         async function listarChamados() {
             limparMensagem(divRespostaGeral);
@@ -888,7 +919,7 @@
         }
 
         async function atualizarStatusChamado(id, status) {
-            console.log(`[Botão Rápido ✔️] Enviando ID do Usuário (Operador):`, userId);
+            console.log(`[Botão Rápido] Enviando ID do Usuário (Operador):`, userId);
             
             try {
                 const r = await fetch(`${API_URL}/chamados/${id}/status`, {
@@ -896,7 +927,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         status: status,
-                        atendenteId: userId 
+                        atendenteId: userId // <-- A MÁGICA ACONTECE AQUI
                     })
                 });
                 const data = await r.json();
@@ -1171,27 +1202,52 @@
         // --- FIM LÓGICA TEMA ---
 
 
-        // --- EVENT LISTENERS ---
+        // ====================================================
+        // ======== (INÍCIO) EVENT LISTENERS ATUALIZADOS ========
+        // ====================================================
         btnFiltrar.addEventListener('click', listarChamados);
         btnLogout.addEventListener('click', fazerLogout);
         btnThemeToggle.addEventListener('click', toggleTheme);
         // (NOVO) Aciona o tema pelo link "Ajustes"
 
+        // --- LISTENER DA LISTA DE TICKETS ATUALIZADO ---
         ticketList.addEventListener('click', e => {
             const t = e.target;
-            
+            const id = t.dataset.id; // Todos os botões de ação terão o data-id
+
+            // Ação de Visualizar (Ícone)
             if (t.classList.contains('view-icon')) {
-                const id = t.closest('.ticket-row').dataset.ticketId;
-                abrirModalDetalhes(id); 
+                const rowId = t.closest('.ticket-row').dataset.ticketId;
+                abrirModalDetalhes(rowId);
             }
-            
-            if (t.classList.contains('btn-concluir')) {
-                const id = t.dataset.id;
+            // Ação de Iniciar (Botão)
+            else if (t.classList.contains('btn-iniciar')) {
+                if (confirm(`Iniciar atendimento do chamado #${id}?\nIsto irá atribuir o chamado a você.`)) {
+                    // Chama a função que já envia o seu userId como atendente
+                    atualizarStatusChamado(id, 'Em Andamento');
+                }
+            }
+            // Ação de Retomar (Botão)
+            else if (t.classList.contains('btn-retomar')) {
+                 if (confirm(`Retomar atendimento do chamado #${id}?`)) {
+                    // A lógica é a mesma de "Iniciar"
+                    atualizarStatusChamado(id, 'Em Andamento');
+                }
+            }
+            // Ação de Pausar (Botão)
+            else if (t.classList.contains('btn-pausar')) {
+                if (confirm(`Pausar atendimento do chamado #${id}?`)) {
+                    atualizarStatusChamado(id, 'Pausado');
+                }
+            }
+            // Ação de Concluir (Botão)
+            else if (t.classList.contains('btn-concluir')) {
                 if (confirm(`Deseja realmente marcar o chamado #${id} como "Concluído"?`)) {
                     atualizarStatusChamado(id, 'Concluído');
                 }
             }
         });
+        // --- FIM DO LISTENER ATUALIZADO ---
 
         btnFecharModalDetalhes.addEventListener('click', () => {
             listaComentariosContainer.innerHTML = '';
