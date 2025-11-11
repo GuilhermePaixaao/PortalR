@@ -200,10 +200,12 @@
         .priority-badge.média, .priority-badge.medium, .priority-badge.media { background-color: #fff3cd; color: #664d03; }
         .priority-badge.baixa, .priority-badge.low { background-color: #cfe2ff; color: #084298; }
         .priority-badge.planejado { background-color: #e2d1e7; color: #510f32; } 
+        
+        /* --- Bloco de Status (Modo Claro) --- */
         .status-badge.aberto, .status-badge.open { background-color: #ffc107; color: #000; }
         .status-badge.concluído, .status-badge.completed { background-color: #d1e7dd; color: #0f5132; }
         .status-badge.em-andamento { background-color: #cfe2ff; color: #084298; }
-        .status-badge.pausado { background-color: #000; color: #fff; } /* <-- ALTERADO PARA PRETO */
+        .status-badge.pausado { background-color: #6c757d; color: #fff; } /* <-- COR CINZA (FOTO 2) */
 
         #loadingIndicator { padding: 2rem; text-align: center; color: #6c757d; }
 
@@ -422,10 +424,12 @@
         .dark-mode .priority-badge.media { background-color: #664d03; color: #fff3cd; }
         .dark-mode .priority-badge.baixa { background-color: #084298; color: #cfe2ff; }
         .dark-mode .priority-badge.planejado { background-color: #510f32; color: #e2d1e7; }
+        
+        /* --- Bloco de Status (Modo Escuro) --- */
         .dark-mode .status-badge.aberto { background-color: #ffc107; color: #000; }
         .dark-mode .status-badge.concluído { background-color: #0f5132; color: #d1e7dd; }
         .dark-mode .status-badge.em-andamento { background-color: #084298; color: #cfe2ff; }
-        .dark-mode .status-badge.pausado { background-color: #000; color: #fff; } /* <-- ALTERADO PARA PRETO */
+        .dark-mode .status-badge.pausado { background-color: #5a6268; color: #e0e0e0; } /* <-- COR CINZA ESCURO (FOTO 2) */
 
         /* Botão de Tema no Modo Escuro */
         .dark-mode .btn-theme-toggle {
@@ -506,7 +510,8 @@
                             <select id="detalheStatusSelect" class="detalhe-valor-select form-select">
                                 <option value="Aberto">Aberto</option>
                                 <option value="Em Andamento">Em Andamento</option>
-                                <option value="Pausado">Pausado</option> <option value="Concluído">Concluído</option>
+                                <option value="Pausado">Pausado</option> 
+                                <option value="Concluído">Concluído</option>
                             </select>
                         </div>
                     </div>
@@ -624,7 +629,8 @@
                                 <option value="">Todos</option>
                                 <option value="Aberto">Aberto</option>
                                 <option value="Em Andamento">Em Andamento</option>
-                                <option value="Pausado">Pausado</option> <option value="Concluído">Concluído</option>
+                                <option value="Pausado">Pausado</option> 
+                                <option value="Concluído">Concluído</option>
                             </select>
                         </div>
 
