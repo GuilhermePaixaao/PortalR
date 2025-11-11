@@ -232,6 +232,7 @@
         .status-badge.aberto, .status-badge.open { background-color: #ffc107; color: #000; }
         .status-badge.concluído, .status-badge.completed { background-color: #d1e7dd; color: #0f5132; }
         .status-badge.em-andamento { background-color: #cfe2ff; color: #084298; }
+        .status-badge.pausado { background-color: #6c757d; color: #fff; } /* <-- ADICIONADO */
 
         #loadingIndicator { padding: 2rem; text-align: center; color: #6c757d; }
 
@@ -468,7 +469,14 @@
                     <div class="filters mb-3 row g-2">
                         <div class="col-md-4"><label for="filtroAssunto" class="form-label">Filtrar por Assunto</label><input type="text" id="filtroAssunto" class="form-control" placeholder="Digite o assunto..."></div>
                         <div class="col-md-3"><label for="filtroPrioridade" class="form-label">Prioridade</label><select id="filtroPrioridade" class="form-select"><option value="">Todas</option><option value="Alta">Alta</option><option value="Média">Média</option><option value="Baixa">Baixa</option><option value="Planejado">Planejado</option></select></div>
-                        <div class="col-md-3"><label for="filtroStatus" class="form-label">Status</label><select id="filtroStatus" class="form-select"><option value="">Todos</option><option value="Aberto">Aberto</option><option value="Em Andamento">Em Andamento</option><option value="Concluído">Concluído</option></select></div>
+                        <div class="col-md-3"><label for="filtroStatus" class="form-label">Status</label>
+                            <select id="filtroStatus" class="form-select">
+                                <option value="">Todos</option>
+                                <option value="Aberto">Aberto</option>
+                                <option value="Em Andamento">Em Andamento</option>
+                                <option value="Pausado">Pausado</option> <option value="Concluído">Concluído</option>
+                            </select>
+                        </div>
                         <div class="col-md-2 d-flex align-items-end"><button id="btnFiltrar" class="btn btn-primary w-100">Filtrar</button></div>
                     </div>
                     <div id="ticketList" class="ticket-list">
