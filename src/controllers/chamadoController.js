@@ -315,6 +315,7 @@ export const contarChamadosPorStatus = async (req, res) => {
             "Aberto": resultadoFormatado["Aberto"] || 0,
             "Em Andamento": resultadoFormatado["Em Andamento"] || 0,
             "Concluído": resultadoFormatado["Concluído"] || 0,
+            "Pausado": resultadoFormatado["Pausado"] || 0,
         };
 
         res.status(200).json(finalData);
