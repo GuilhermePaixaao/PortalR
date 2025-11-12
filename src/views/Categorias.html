@@ -110,7 +110,7 @@
                   <label for="cboParent" class="form-label">Categoria Pai</label>
                   <select id="cboParent" class="form-select">
                     <option value="">-- Nenhuma (Categoria Principal) --</option>
-                    </select>
+                  </select>
                 </div>
                 
               </form>
@@ -124,13 +124,20 @@
           <div class="card shadow-sm mb-4 widget">
             <div class="card-header"><strong>Filtros</strong></div>
             <div class="card-body">
+              
               <div class="row g-2">
-                <div class="col-md-12">
-                  <label for="txtFiltroCategoria" class="form-label">Filtrar por Nome</label>
+                <div class="col-md-8"> <label for="txtFiltroCategoria" class="form-label">Filtrar por Nome</label>
                   <input type="text" id="txtFiltroCategoria" class="form-control" placeholder="Digite o nome da categoria...">
                 </div>
+                <div class="col-md-4 d-flex align-items-end"> <div class="form-check pb-1">
+                      <input class="form-check-input" type="checkbox" id="chkSoSubcategorias">
+                      <label class="form-check-label" for="chkSoSubcategorias">
+                        Mostrar apenas subcategorias
+                      </label>
+                    </div>
+                </div>
               </div>
-            </div>
+              </div>
           </div>
           <div class="card shadow-sm widget">
             <div class="card-header"><strong>Categorias Cadastradas</strong></div>
@@ -195,20 +202,23 @@
     }
     // --- FIM DAS FUNÇÕES HELPER PADRÃO ---
 
-    // --- (ATUALIZADO) VARIÁVEIS GLOBAIS ---
-    let API_DATA_CATEGORIAS = []; // Armazena todas as categorias
+    let API_DATA_CATEGORIAS = []; 
 
-    // --- (ATUALIZADO) REFERÊNCIAS ---
+    // --- (INÍCIO DA ALTERAÇÃO JS) ---
+    // Referências
     const txtId = document.getElementById("txtId");
     const txtNomeCategoria = document.getElementById("txtNomeCategoria");
-    const cboParent = document.getElementById("cboParent"); // <-- NOVO
+    const cboParent = document.getElementById("cboParent");
     const divBotoes = document.getElementById("divBotoes");
     const divResposta = document.getElementById("divResposta");
     const divTabela = document.getElementById("divTabela");
     const btnLogout = document.getElementById("logoutButton");
     const txtFiltroCategoria = document.getElementById("txtFiltroCategoria");
+    
+    // Nova referência para o checkbox
+    const chkSoSubcategorias = document.getElementById("chkSoSubcategorias"); 
+    // --- (FIM DA ALTERAÇÃO JS) ---
 
-    // --- (ATUALIZADO) FUNÇÕES HELPER ---
     function createButton(text, id, className) {
       const btn = document.createElement("button");
       btn.textContent = text;
@@ -227,7 +237,7 @@
       }
       txtId.value = "";
       txtNomeCategoria.value = "";
-      cboParent.value = ""; // <-- ATUALIZADO (limpa o select-pai)
+      cboParent.value = ""; 
     }
 
     function exibirErro(mensagem) {
@@ -235,14 +245,13 @@
       divResposta.className = 'alert alert-danger mt-3';
     }
 
-    // --- (ATUALIZADO) CRUD DE CATEGORIAS ---
+    // --- CRUD DE CATEGORIAS (Permanece igual) ---
     const btnCriar = createButton("Criar", "btnCriar", "btn-success");
     btnCriar.onclick = async () => {
       if (txtNomeCategoria.value.trim() === "") {
         exibirErro("Por favor, preencha o nome da categoria.");
         return;
       }
-      // (ATUALIZADO) Envia o parent_id
       const dadosCadastro = { 
         categoria: { 
           nome: txtNomeCategoria.value.trim(),
@@ -256,7 +265,7 @@
         if (!response.ok) throw new Error(respostaAPI.message || "Erro desconhecido");
         
         limparFormulario("Categoria criada com sucesso!");
-        await listAll(); // Recarrega a lista
+        await listAll(); 
       } catch (error) { exibirErro(error.message); }
     };
     divBotoes.appendChild(btnCriar);
@@ -268,7 +277,6 @@
       
       if (txtNomeCategoria.value.trim() === "") { exibirErro("O nome da categoria é obrigatório para atualizar."); return; }
       
-      // (ATUALIZADO) Envia o parent_id
       const dadosAtualizar = { 
         categoria: { 
           nome: txtNomeCategoria.value.trim(),
@@ -276,7 +284,6 @@
         } 
       };
       
-      // (NOVO) Validação anti-loop (não pode ser pai de si mesmo)
       if (parseInt(id) === parseInt(dadosAtualizar.categoria.parent_id)) {
         exibirErro("Uma categoria não pode ser pai de si mesma.");
         return;
@@ -310,12 +317,12 @@
     };
     divBotoes.appendChild(btnExcluir);
 
-    // --- (ATUALIZADO) LISTAGEM DE CATEGORIAS ---
+    // --- LISTAGEM (Permanece igual) ---
     async function listAll() {
       try {
         const response = await fetch(`${API_URL}/categorias`, {
             method: 'GET',
-            cache: 'no-store' // Garante que os dados sejam sempre novos
+            cache: 'no-store' 
         });
 
         if (!response.ok) throw new Error("Erro ao buscar categorias.");
@@ -329,13 +336,12 @@
       }
     }
     
-    // (NOVO) Função para preencher o dropdown de "Categoria Pai"
+    // --- Preencher Dropdown (Permanece igual) ---
     function preencherSelectPai(categorias) {
-        const idAtual = txtId.value; // Pega o ID do item que está sendo editado
+        const idAtual = txtId.value; 
         cboParent.innerHTML = '<option value="">-- Nenhuma (Categoria Principal) --</option>';
         
         categorias.forEach(cat => {
-            // Impede que a categoria apareça na lista de pais dela mesma
             if (cat.id.toString() === idAtual) {
                 return; 
             }
@@ -343,7 +349,6 @@
             const option = document.createElement("option");
             option.value = cat.id;
             
-            // Adiciona prefixo para subcategorias para fácil identificação
             if (cat.parent_id) {
                 option.textContent = `... ${cat.nome} (Filha de: ${cat.nome_pai || '?'})`;
             } else {
@@ -353,7 +358,7 @@
         });
     }
 
-    // (ATUALIZADO) Tabela
+    // --- Renderizar Tabela (Permanece igual) ---
     function renderTable(categorias) {
       divTabela.innerHTML = "";
       const table = document.createElement("table");
@@ -363,7 +368,8 @@
           <tr>
             <th>ID</th>
             <th>Nome</th>
-            <th>Categoria Pai</th> <th>Ações</th> 
+            <th>Categoria Pai</th>
+            <th>Ações</th> 
           </tr>
         </thead>
         <tbody></tbody>
@@ -376,7 +382,8 @@
           tr.innerHTML = `
             <td>${cat.id}</td>
             <td>${cat.nome}</td>
-            <td>${cat.nome_pai || '--'}</td> <td>
+            <td>${cat.nome_pai || '--'}</td> 
+            <td>
               <button class="btn btn-sm btn-info btn-selecionar">Selecionar</button>
             </td>
           `;
@@ -384,9 +391,8 @@
             txtId.value = cat.id;
             txtNomeCategoria.value = cat.nome || '';
             
-            // (ATUALIZADO) Atualiza o dropdown de pais e seleciona o pai correto
-            preencherSelectPai(API_DATA_CATEGORIAS); // Recarrega o select (para excluir a si mesmo)
-            cboParent.value = cat.parent_id || ""; // Seleciona o pai
+            preencherSelectPai(API_DATA_CATEGORIAS); 
+            cboParent.value = cat.parent_id || ""; 
             
             divResposta.innerHTML = "";
           });
@@ -399,35 +405,48 @@
       divTabela.appendChild(table);
     }
 
-    // --- (ATUALIZADO) FILTRO DE CATEGORIAS ---
+    // --- (INÍCIO DA ALTERAÇÃO JS) ---
+    // --- FILTRO DE CATEGORIAS (Atualizado para ler o checkbox) ---
     function filterData() {
       if (!API_DATA_CATEGORIAS) return;
+      
       const nomeFiltro = txtFiltroCategoria.value.trim().toLowerCase();
+      const mostrarSoSubcategorias = chkSoSubcategorias.checked; // Lê o estado do checkbox
       
       const dadosFiltrados = API_DATA_CATEGORIAS.filter(cat => {
-        let match = true;
+        // Filtro por nome (como antes)
+        let matchNome = true;
         if (nomeFiltro) {
-          // Filtra pelo nome OU pelo nome do pai
-          match = match && (
+          matchNome = (
             cat.nome.toLowerCase().includes(nomeFiltro) ||
             (cat.nome_pai && cat.nome_pai.toLowerCase().includes(nomeFiltro))
           );
         }
-        return match;
+
+        // NOVO: Filtro por tipo (subcategoria)
+        let matchTipo = true;
+        if (mostrarSoSubcategorias) {
+            matchTipo = cat.parent_id !== null; // Só mostra se parent_id NÃO for nulo
+        }
+
+        return matchNome && matchTipo; // Retorna verdadeiro só se passar nos dois filtros
       });
       renderTable(dadosFiltrados);
     }
     
     // --- INICIALIZAÇÃO ---
     if (txtFiltroCategoria) txtFiltroCategoria.addEventListener("input", filterData);
+    if (chkSoSubcategorias) chkSoSubcategorias.addEventListener("change", filterData); // Adiciona listener para o checkbox
     if (btnLogout) btnLogout.addEventListener('click', fazerLogout);
+    // --- (FIM DA ALTERAÇÃO JS) ---
 
     async function init() {
-      await listAll(); // Carrega tudo
+      await listAll(); 
     }
 
     init();
   </script>
+
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
