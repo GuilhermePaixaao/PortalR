@@ -14,194 +14,43 @@
     <link rel="stylesheet" href="css/chamado.css">
     <link rel="stylesheet" href="css/ticket.css">
     <style>
-        /* Estilos do Modal (Dialog) */
-        dialog:not([open]) {
-            display: none;
-        }
-
-        dialog::backdrop {
-            background: rgba(0, 0, 0, 0.6);
-        }
-
-        dialog {
-            border: none;
-            border-radius: 8px;
-            padding: 1.5rem;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-            max-width: 600px; /* Largura padrão para o modal de NOVO CHAMADO */
-            width: calc(100% - 2rem);
-        }
-
-        /* --- AJUSTE DE LARGURA PARA O MODAL DE DETALHES --- */
-        #modalDetalhes {
-            max-width: 800px; /* Mais largo para o layout de detalhes */
-        }
-        /* --- FIM DO AJUSTE --- */
-
-        .grupo-form {
-            margin-bottom: 1rem;
-        }
-
-        .grupo-form label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-        }
-
+        /* (Seus estilos CSS ...
+... permanecem os mesmos) */
+        dialog:not([open]) { display: none; }
+        dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
+        dialog { border: none; border-radius: 8px; padding: 1.5rem; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); max-width: 600px; width: calc(100% - 2rem); }
+        #modalDetalhes { max-width: 800px; }
+        .grupo-form { margin-bottom: 1rem; }
+        .grupo-form label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
         .grupo-form input[type="text"],
         .grupo-form input[type="tel"],
         .grupo-form input[type="email"],
         .grupo-form textarea,
         .grupo-form select,
-        .grupo-form input[type="file"] {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #ced4da;
-            border-radius: 4px;
-            font-size: 1rem;
-        }
-
-        .form-actions {
-            margin-top: 1.5rem;
-            display: flex;
-            justify-content: flex-end;
-            gap: 0.5rem;
-        }
-
-        .form-actions button {
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        #fecharModal, #fecharModalDetalhes {
-            background-color: #6c757d;
-            color: white;
-        }
-
-        #criarTicket {
-            background-color: #198754;
-            color: white;
-        }
-        
-        /* --- ESTILOS DO NOVO MODAL DE DETALHES --- */
-        #modalDetalhes .detalhe-grupo {
-            margin-bottom: 1rem;
-        }
-        #modalDetalhes .detalhe-label {
-            font-weight: 600;
-            color: #495057;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            margin-bottom: 0.25rem;
-            display: block;
-        }
-        #modalDetalhes .detalhe-valor {
-            font-size: 1rem;
-            padding: 0.5rem;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-            word-wrap: break-word;
-        }
-        #modalDetalhes .detalhe-descricao {
-            font-size: 1rem;
-            padding: 0.5rem;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-            white-space: pre-wrap; /* Preserva quebras de linha da descrição */
-            min-height: 100px;
-            max-height: 250px;
-            overflow-y: auto;
-        }
-        /* --- FIM ESTILOS MODAL DETALHES --- */
-
-        /* --- (NOVO) ESTILOS DO HISTÓRICO DE COMENTÁRIOS --- */
-        #listaComentariosContainer {
-            background-color: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 5px;
-            padding: 1rem;
-            min-height: 100px;
-            max-height: 300px; /* Altura máxima, scroll se necessário */
-            overflow-y: auto;
-        }
-        .comment-item {
-            border-bottom: 1px solid #dee2e6;
-            padding-bottom: 0.75rem;
-            margin-bottom: 0.75rem;
-        }
-        .comment-item:last-child {
-            border-bottom: none;
-            margin-bottom: 0;
-            padding-bottom: 0;
-        }
-        .comment-header {
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: #495057;
-            margin-bottom: 0.25rem;
-        }
-        .comment-header .comment-date {
-            font-weight: 400;
-            color: #6c757d;
-            margin-left: 0.5rem;
-        }
-        .comment-body {
-            font-size: 1rem;
-            white-space: pre-wrap; /* Preserva quebras de linha do comentário */
-            word-wrap: break-word;
-        }
-        .comment-empty-state {
-            color: #6c757d;
-            font-style: italic;
-        }
-        /* --- FIM ESTILOS COMENTÁRIOS --- */
-
-
-        /* Ajuste Main Content */
-        .main-content {
-            grid-area: main;
-            overflow-y: auto;
-            padding: 2rem;
-            background-color: #f8f9fa;
-        }
-
-        .page-actions {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            z-index: 1050;
-        }
-
-        .btn-new-ticket {
-            background-color: #0d6efd;
-            color: white;
-            padding: 1rem 1.5rem;
-            border: none;
-            border-radius: 50px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-            transition: background-color 0.2s ease;
-        }
-
-        .btn-new-ticket:hover {
-            background-color: #0b5ed7;
-        }
-
-        /* Alertas */
-        .alert {
-            padding: 1rem;
-            margin-top: 1rem;
-            border-radius: 4px;
-        }
+        .grupo-form input[type="file"] { width: 100%; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 4px; font-size: 1rem; }
+        .form-actions { margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 0.5rem; }
+        .form-actions button { padding: 0.75rem 1.5rem; border: none; border-radius: 4px; cursor: pointer; }
+        #fecharModal, #fecharModalDetalhes { background-color: #6c757d; color: white; }
+        #criarTicket { background-color: #198754; color: white; }
+        #modalDetalhes .detalhe-grupo { margin-bottom: 1rem; }
+        #modalDetalhes .detalhe-label { font-weight: 600; color: #495057; font-size: 0.9rem; text-transform: uppercase; margin-bottom: 0.25rem; display: block; }
+        #modalDetalhes .detalhe-valor { font-size: 1rem; padding: 0.5rem; background-color: #f8f9fa; border-radius: 4px; word-wrap: break-word; }
+        #modalDetalhes .detalhe-descricao { font-size: 1rem; padding: 0.5rem; background-color: #f8f9fa; border-radius: 4px; white-space: pre-wrap; min-height: 100px; max-height: 250px; overflow-y: auto; }
+        #listaComentariosContainer { background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 5px; padding: 1rem; min-height: 100px; max-height: 300px; overflow-y: auto; }
+        .comment-item { border-bottom: 1px solid #dee2e6; padding-bottom: 0.75rem; margin-bottom: 0.75rem; }
+        .comment-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .comment-header { font-size: 0.9rem; font-weight: 600; color: #495057; margin-bottom: 0.25rem; }
+        .comment-header .comment-date { font-weight: 400; color: #6c757d; margin-left: 0.5rem; }
+        .comment-body { font-size: 1rem; white-space: pre-wrap; word-wrap: break-word; }
+        .comment-empty-state { color: #6c757d; font-style: italic; }
+        .main-content { grid-area: main; overflow-y: auto; padding: 2rem; background-color: #f8f9fa; }
+        .page-actions { position: fixed; bottom: 2rem; right: 2rem; z-index: 1050; }
+        .btn-new-ticket { background-color: #0d6efd; color: white; padding: 1rem 1.5rem; border: none; border-radius: 50px; font-size: 1.1rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); transition: background-color 0.2s ease; }
+        .btn-new-ticket:hover { background-color: #0b5ed7; }
+        .alert { padding: 1rem; margin-top: 1rem; border-radius: 4px; }
         .alert-success { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
         .alert-danger { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
         .alert-warning { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
-
-        /* Lista de Tickets */
         .ticket-list { display: flex; flex-direction: column; }
         .ticket-row { display: flex; border-bottom: 1px solid #eee; padding: 1rem 0.5rem; align-items: center; }
         .ticket-row.header { background-color: #f8f9fa; font-weight: bold; border-bottom: 2px solid #dee2e6; }
@@ -215,103 +64,28 @@
         .ticket-operator { flex: 0 0 120px; }
         .ticket-created { flex: 0 0 100px; text-align: center; }
         .ticket-actions { flex: 0 0 60px; text-align: center; cursor: pointer; }
-
-        /* Badges */
         .priority-badge,
-        .status-badge {
-            padding: 0.2em 0.6em;
-            border-radius: 0.25rem;
-            font-size: 0.85em;
-            font-weight: 600;
-        }
+        .status-badge { padding: 0.2em 0.6em; border-radius: 0.25rem; font-size: 0.85em; font-weight: 600; }
         .priority-badge.alta, .priority-badge.high { background-color: #f8d7da; color: #842029; }
         .priority-badge.média, .priority-badge.medium, .priority-badge.media { background-color: #fff3cd; color: #664d03; }
         .priority-badge.baixa, .priority-badge.low { background-color: #cfe2ff; color: #084298; }
         .priority-badge.planejado { background-color: #898989; color: #000000; } 
-
         .status-badge.aberto, .status-badge.open { background-color: #7d7d7d; color: #3f3f3f; }
         .status-badge.concluído, .status-badge.completed { background-color: #d1e7dd; color: #0f5132; }
         .status-badge.em-andamento { background-color: #cfe2ff; color: #084298; }
         .status-badge.pausado { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
         #loadingIndicator { padding: 2rem; text-align: center; color: #6c757d; }
-
-        /* --- ESTILOS DO HEADER ATUALIZADOS --- */
-        .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between; 
-            padding: 0.75rem 2rem;
-            background-color: #ffffff;
-            border-bottom: 1px solid #dee2e6;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-            position: sticky;
-            top: 0;
-            z-index: 1030;
-        }
-        .logo {
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: #0d6efd;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin: 0;
-            white-space: nowrap;
-        }
-        .search-bar {
-            margin-left: 2rem;
-            margin-right: 2rem; 
-            width: 100%;
-            max-width: 450px;
-        }
-        .search-bar input {
-            width: 100%;
-            padding: 0.6rem 1rem;
-            border: 1px solid #ced4da;
-            border-radius: 20px;
-            font-size: 0.95rem;
-        }
-        .search-bar input:focus {
-            border-color: #86b7fe;
-            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, .25);
-            outline: none;
-        }
-        
-        /* Estilos para Logout */
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 1rem; 
-        }
-        #userNameDisplay {
-            font-weight: 500;
-            color: #495057;
-            white-space: nowrap; 
-        }
-        .btn-logout {
-            background-color: #dc3545; 
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
-        }
-        .btn-logout:hover {
-            background-color: #bb2d3b;
-        }
-        .logo {
-    display: flex;
-    align-items: center; /* Alinha verticalmente */
-    gap: 10px; /* Cria um espaço entre o ícone e o texto */
-}
-
-/* Para definir o tamanho do ícone */
-.logo-icon {
-    height: 30px; /* Ajuste a altura conforme necessário */
-    width: auto;  /* Mantém a proporção da imagem */
-}
-        /* --- FIM ESTILOS HEADER --- */
+        .header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 2rem; background-color: #ffffff; border-bottom: 1px solid #dee2e6; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); position: sticky; top: 0; z-index: 1030; }
+        .logo { font-size: 1.4rem; font-weight: 700; color: #0d6efd; text-transform: uppercase; letter-spacing: 0.5px; margin: 0; white-space: nowrap; }
+        .search-bar { margin-left: 2rem; margin-right: 2rem; width: 100%; max-width: 450px; }
+        .search-bar input { width: 100%; padding: 0.6rem 1rem; border: 1px solid #ced4da; border-radius: 20px; font-size: 0.95rem; }
+        .search-bar input:focus { border-color: #86b7fe; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, .25); outline: none; }
+        .header-actions { display: flex; align-items: center; gap: 1rem; }
+        #userNameDisplay { font-weight: 500; color: #495057; white-space: nowrap; }
+        .btn-logout { background-color: #dc3545; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500; cursor: pointer; transition: background-color 0.2s ease; }
+        .btn-logout:hover { background-color: #bb2d3b; }
+        .logo { display: flex; align-items: center; gap: 10px; }
+        .logo-icon { height: 30px; width: auto; }
     </style>
 </head>
 <body>
@@ -372,16 +146,23 @@
                             </select>
                         </div>
                     </div>
+                    
                     <div class="col-md-6">
                         <div class="grupo-form">
-                            <label for="categoria">Categoria</label>
-                            <select id="categoria" name="categoria" class="form-select">
+                            <label for="categoriaPai">Categoria</label>
+                            <select id="categoriaPai" name="categoriaPai" class="form-select">
                                 <option value="">-- Carregando... --</option>
                             </select>
                         </div>
                     </div>
                 </div>
-
+                
+                <div class="grupo-form" id="subcategoriaWrapper" style="display: none;">
+                    <label for="subcategoria">Subcategoria</label>
+                    <select id="subcategoria" name="subcategoria" class="form-select">
+                        <option value="">-- Selecione uma subcategoria --</option>
+                    </select>
+                </div>
                 <div class="grupo-form">
                     <label for="anexo">Anexar Arquivos (Opcional)</label>
                     <input type="file" id="anexo" name="anexos" multiple>
@@ -400,19 +181,15 @@
         <dialog id="modalDetalhes" aria-labelledby="modalDetalhesTitle">
             <h2 id="modalDetalhesTitle" style="text-transform: uppercase;">Detalhes do Chamado</h2>
             <hr>
-
             <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;">Dados Gerais</h3>
-
             <div class="detalhe-grupo">
                 <span class="detalhe-label">Assunto</span>
                 <div id="detalheAssunto" class="detalhe-valor">...</div>
             </div>
-
             <div class="detalhe-grupo">
                 <span class="detalhe-label">Descrição</span>
                 <div id="detalheDescricao" class="detalhe-descricao">...</div>
             </div>
-
             <div class="row">
                 <div class="col-md-3">
                     <div class="detalhe-grupo"><span class="detalhe-label">Contato</span><span id="detalheRequisitante" class="detalhe-valor">...</span></div>
@@ -427,7 +204,6 @@
                     <div class="detalhe-grupo"><span class="detalhe-label">Prioridade</span><span id="detalhePrioridade" class="detalhe-valor">...</span></div>
                 </div>
             </div>
-
             <div class="row">
                 <div class="col-md-4">
                     <div class="detalhe-grupo"><span class="detalhe-label">Ticket ID</span><span id="detalheId" class="detalhe-valor">#...</span></div>
@@ -436,22 +212,16 @@
                     <div class="detalhe-grupo"><span class="detalhe-label">Criado em</span><span id="detalheData" class="detalhe-valor">...</span></div>
                 </div>
             </div>
-
             <hr style="margin-top: 1rem; margin-bottom: 1.25rem;">
-            
             <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;">Histórico de Comentários</h3>
-    
             <div id="listaComentariosContainer" class="comment-empty-state">
                 Carregando comentários...
             </div>
-            
             <div class="form-actions"><button type="button" id="fecharModalDetalhes">Fechar</button></div>
         </dialog>
         
         <main class="main-content">
             <img src="/imgrosa.png" height="126" width="320" >              
-
-       
             <hr>
             <div id="divRespostaGeral" class="mb-3"></div>
             <div class="widget card shadow-sm">
@@ -497,23 +267,18 @@
 
     <script type="module">
         const API_URL = ""; 
-
-        // --- Autenticação ---
-        let userId = 1; // ID Padrão
+        let userId = 1; 
         try {
             const userDataString = localStorage.getItem("userData");
             const userData = JSON.parse(userDataString);
             const idLogado = userData?.data?.id || userData?.id;
-            if (idLogado) {
-                userId = idLogado;
-            } else {
-                console.warn("Não foi possível encontrar ID do usuário no localStorage. Usando ID=1 padrão.");
-            }
+            if (idLogado) userId = idLogado;
         } catch (e) {
             console.error("Erro ao ler localStorage. Usando ID=1 padrão.", e);
         }
 
-        // --- (REMOVIDO) Variável listaSubcategorias ---
+        // (NOVO) Armazenamento local de categorias para a cascata
+        let allCategories = [];
 
         // --- Referências ---
         const modal = document.getElementById("modalTicket");
@@ -522,7 +287,6 @@
         const ticketForm = document.getElementById("ticketForm");
         const ticketList = document.getElementById("ticketList");
         const loadingIndicator = document.getElementById("loadingIndicator");
-        const selectCategoriaModal = document.getElementById("categoria");
         const modalResposta = document.getElementById("modalResposta");
         const divRespostaGeral = document.getElementById("divRespostaGeral");
         const modalDetalhes = document.getElementById("modalDetalhes");
@@ -534,7 +298,10 @@
         const inputTelefone = document.getElementById("telefoneRequisitante");
         const listaComentariosContainer = document.getElementById("listaComentariosContainer");
 
-        // --- (REMOVIDO) Referências de Subcategoria ---
+        // (NOVO) Referências para os dropdowns em cascata
+        const selectCategoriaPai = document.getElementById("categoriaPai");
+        const subcategoriaWrapper = document.getElementById("subcategoriaWrapper");
+        const selectSubcategoria = document.getElementById("subcategoria");
 
         // --- Funções Auxiliares (sem mudanças) ---
         function exibirMensagem(elemento, mensagem, sucesso = true) {
@@ -553,8 +320,6 @@
         function formatarData(isoString) {
             if (!isoString) return 'Aguardando...';
             try {
-                // (CORREÇÃO) Remove o ajuste manual de fuso horário que estava 
-                // fazendo a data retroceder indevidamente.
                 const dt = new Date(isoString);
                 const data = dt.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
                 const hora = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
@@ -575,42 +340,60 @@
             input.value = valor;
         }
 
-        // --- (ATUALIZADO) Carregar Categorias (Unificadas) ---
+        // --- (ATUALIZADO) Carregar Categorias (em Cascata) ---
         async function carregarDadosIniciais() {
             try {
-                // Busca da API (que agora retorna 'nome_pai')
                 const response = await fetch(`${API_URL}/categorias`);
                 if (!response.ok) throw new Error("Erro ao carregar categorias.");
 
-                const categorias = await response.json();
+                allCategories = await response.json(); // Salva na variável global
 
-                selectCategoriaModal.innerHTML = '<option value="">-- Selecionar Categoria --</option>';
+                selectCategoriaPai.innerHTML = '<option value="">-- Selecione uma Categoria --</option>';
                 
-                // 1. Adiciona as Categorias Principais (parent_id é null)
-                categorias.filter(c => !c.parent_id).forEach(catPai => {
+                // 1. Adiciona apenas as Categorias Principais ao primeiro dropdown
+                const categoriasPai = allCategories.filter(c => !c.parent_id);
+                
+                categoriasPai.forEach(catPai => {
                     const option = document.createElement("option");
                     option.value = catPai.id; 
                     option.textContent = catPai.nome; // Ex: "TI"
-                    selectCategoriaModal.appendChild(option);
-                });
-                
-                // 2. Adiciona as Subcategorias (com prefixo)
-                categorias.filter(c => c.parent_id).forEach(catFilha => {
-                    const option = document.createElement("option");
-                    option.value = catFilha.id; 
-                    // Usa o nome_pai que o backend agora envia
-                    option.textContent = `... ${catFilha.nome} (em ${catFilha.nome_pai || '?'})`; // Ex: "... Redes (em TI)"
-                    selectCategoriaModal.appendChild(option);
+                    selectCategoriaPai.appendChild(option);
                 });
 
             } catch (error) {
                 console.error(error);
                 exibirMensagem(modal.open ? modalResposta : divRespostaGeral, error.message, false);
-                selectCategoriaModal.innerHTML = '<option value="">-- Erro ao carregar --</option>';
+                selectCategoriaPai.innerHTML = '<option value="">-- Erro ao carregar --</option>';
+            }
+        }
+        
+        // (NOVO) Função para lidar com a mudança da Categoria Pai
+        function handleCategoriaPaiChange() {
+            const paiId = selectCategoriaPai.value;
+            
+            // Limpa e esconde o dropdown de subcategoria
+            selectSubcategoria.innerHTML = '<option value="">-- Selecione uma subcategoria --</option>';
+            subcategoriaWrapper.style.display = 'none';
+
+            if (!paiId) return; // Se selecionou "-- Selecione --", para aqui
+
+            // Filtra a lista global por filhas da categoria selecionada
+            const subcategorias = allCategories.filter(c => c.parent_id == paiId);
+
+            // Se encontrou subcategorias...
+            if (subcategorias.length > 0) {
+                subcategorias.forEach(catFilha => {
+                    const option = document.createElement("option");
+                    option.value = catFilha.id;
+                    option.textContent = catFilha.nome; // Ex: "Redes"
+                    selectSubcategoria.appendChild(option);
+                });
+                // Mostra o dropdown de subcategoria
+                subcategoriaWrapper.style.display = 'block';
             }
         }
 
-        // --- (ATUALIZADO) Renderizar Lista de Chamados ---
+        // --- (ATUALIZADO) Renderizar Lista de Chamados (lógica de 'nomeExibicao' permanece) ---
         function renderizarChamados(chamados) {
             if (loadingIndicator) loadingIndicator.style.display = 'none';
             ticketList.querySelectorAll('.data-row').forEach(row => row.remove());
@@ -631,20 +414,15 @@
                 const prioridadeClass = (chamado.prioridade || 'Média').toLowerCase().replace('é', 'e');
                 const statusClass = (chamado.status || 'Aberto').toLowerCase().replace(/\s+/g, '-');
 
-                // (ATUALIZADO) Lógica de exibição de nome
-                // O controller (Passo 5) agora nos envia um objeto 'Categorias'
                 let nomeExibicao = 'N/A';
                 if (chamado.Categorias) {
                     if (chamado.Categorias.nomePai) {
-                        // É uma subcategoria
                         nomeExibicao = `${chamado.Categorias.nomePai} / ${chamado.Categorias.nome}`;
                     } else {
-                        // É uma categoria principal
                         nomeExibicao = chamado.Categorias.nome;
                     }
                 }
                 
-                // (ATUALIZADO) Usa 'nomeExibicao'
                 row.innerHTML = `
                     <div class="ticket-cell ticket-id">#${chamado.id}</div>
                     <div class="ticket-cell ticket-priority">
@@ -665,11 +443,8 @@
 
                 row.querySelector('.view-icon').addEventListener('click', (e) => {
                     e.stopPropagation();
-                    
                     const ticketId = chamado.id; 
-                    
                     modalDetalhes.setAttribute('data-current-ticket-id', ticketId);
-                    
                     document.getElementById('modalDetalhesTitle').textContent = `#${ticketId} - ${chamado.assunto || 'SEM ASSUNTO'}`;
                     document.getElementById('detalheId').textContent = `#${ticketId}`;
                     document.getElementById('detalheStatus').textContent = chamado.status;
@@ -677,12 +452,10 @@
                     document.getElementById('detalheAssunto').textContent = chamado.assunto;
                     document.getElementById('detalheDescricao').textContent = chamado.descricao;
                     document.getElementById('detalheRequisitante').textContent = chamado.Funcionario?.nomeFuncionario || 'Desconhecido';
-                    document.getElementById('detalheCategoria').textContent = nomeExibicao; // <-- USA A VARIÁVEL ATUALIZADA
+                    document.getElementById('detalheCategoria').textContent = nomeExibicao; 
                     document.getElementById('detalheData').textContent = formatarData(chamado.created_at);
-                    
                     listaComentariosContainer.innerHTML = '<span class="comment-empty-state">Carregando comentários...</span>';
                     carregarComentarios(ticketId); 
-
                     modalDetalhes.showModal();
                 });
 
@@ -690,7 +463,7 @@
             });
         }
 
-        // --- Listar Chamados (Filtro de requisitante é importante) ---
+        // --- Listar Chamados (permanece igual) ---
         async function listarChamados() {
             limparMensagem(divRespostaGeral);
             ticketList.querySelectorAll('.data-row').forEach(row => row.remove());
@@ -700,11 +473,7 @@
             if (filtroAssunto.value.trim()) params.append('assunto', filtroAssunto.value.trim());
             if (filtroPrioridade.value) params.append('prioridade', filtroPrioridade.value);
             if (filtroStatus.value) params.append('status', filtroStatus.value);
-            
-            // Filtra pelos chamados do usuário logado
-            if (userId) {
-                params.append('requisitante_id', userId); 
-            }
+            if (userId) params.append('requisitante_id', userId); 
 
             const url = `${API_URL}/chamados?${params.toString()}`;
 
@@ -724,6 +493,7 @@
             event.preventDefault();
             limparMensagem(modalResposta);
 
+            // ... (validações de nome, email, assunto, etc. permanecem iguais)
             const nomeRequisitante = ticketForm.nomeRequisitante.value.trim();
             const emailRequisitante = ticketForm.emailRequisitante.value.trim();
             const telefoneRequisitante = ticketForm.telefoneRequisitante.value.trim();
@@ -731,23 +501,33 @@
             const descricao = ticketForm.descricao.value.trim();
             const prioridade = ticketForm.prioridade.value || 'Média';
             
-            // (ATUALIZADO) Pega o ID da categoria unificada
-            const categoriaUnificadaId = ticketForm.categoria.value || null;
+            // (NOVA LÓGICA DE CAPTURA DE ID)
+            const catPaiId = ticketForm.categoriaPai.value;
+            const subCatId = ticketForm.subcategoria.value;
+            
+            // Se a subcategoria estiver visível e selecionada, usa o ID dela.
+            // Senão, usa o ID da categoria pai.
+            const categoriaUnificadaId = (subCatId && subcategoriaWrapper.style.display !== 'none') 
+                                            ? subCatId 
+                                            : catPaiId;
 
             if (!nomeRequisitante || !emailRequisitante || !assunto || !descricao) {
                 exibirMensagem(modalResposta, 'Nome, Email, Assunto e Descrição são obrigatórios.', false);
                 return;
             }
+            
+            // (NOVO) Validação para forçar seleção de categoria
+            if (!categoriaUnificadaId) {
+                exibirMensagem(modalResposta, 'Por favor, selecione uma Categoria (e Subcategoria, se houver).', false);
+                return;
+            }
 
+            // ... (lógica de anexo permanece a mesma)
             const anexoInput = document.getElementById('anexo');
             const files = anexoInput.files;
             let totalSize = 0;
             const maxSize = 20 * 1024 * 1024; // 20 MB
-
-            for (let i = 0; i < files.length; i++) {
-                totalSize += files[i].size;
-            }
-
+            for (let i = 0; i < files.length; i++) { totalSize += files[i].size; }
             if (totalSize > maxSize) {
                 exibirMensagem(modalResposta, `Erro: O tamanho total dos arquivos (${(totalSize / 1024 / 1024).toFixed(2)} MB) excede o limite de 20 MB.`, false);
                 return;
@@ -762,21 +542,19 @@
                     assunto: assunto,
                     descricao: descricao,
                     prioridade: prioridade,
-                    requisitante_id: userId, // <-- Usa o ID do usuário (logado ou padrão)
+                    requisitante_id: userId,
                     
                     // (ATUALIZADO) Envia o ID unificado
-                    categoria_unificada_id: categoriaUnificadaId ? parseInt(categoriaUnificadaId) : null
+                    categoria_unificada_id: parseInt(categoriaUnificadaId)
                 }
             };
             
             formData.append('chamado', JSON.stringify(dadosChamado.chamado));
-
             for (let i = 0; i < files.length; i++) {
                 formData.append('anexos', files[i]);
             }
 
             try {
-                // O Controller (Passo 5) já está pronto para receber isso
                 const response = await fetch(`${API_URL}/chamados`, {
                     method: 'POST',
                     body: formData 
@@ -795,17 +573,15 @@
             }
         }
         
-        // --- (ATUALIZADO) Funções de Comentários (sem mudanças na lógica interna) ---
+        // --- Funções de Comentários (sem mudanças) ---
         function renderizarComentarios(comentarios) {
             listaComentariosContainer.innerHTML = ''; 
             listaComentariosContainer.classList.remove('comment-empty-state');
-
             if (!comentarios || comentarios.length === 0) {
                 listaComentariosContainer.classList.add('comment-empty-state');
                 listaComentariosContainer.innerHTML = '<span>Nenhum comentário encontrado.</span>';
                 return;
             }
-
             comentarios.forEach(comentario => {
                 const nome = comentario.nomeFuncionario || 'Usuário desconhecido'; 
                 const data = formatarData(comentario.created_at);
@@ -824,7 +600,6 @@
                 listaComentariosContainer.insertAdjacentHTML('beforeend', commentHtml);
             });
         }
-
         async function carregarComentarios(ticketId) {
             try {
                 const response = await fetch(`${API_URL}/chamados/${ticketId}/comentarios`); 
@@ -834,7 +609,6 @@
                 }
                 const comentarios = await response.json();
                 renderizarComentarios(comentarios);
-            
             } catch (error) {
                  listaComentariosContainer.innerHTML = `<span class="comment-empty-state" style="color: red;">${error.message}</span>`;
             }
@@ -844,13 +618,13 @@
         function resetarModalForm() {
             ticketForm.reset();
             limparMensagem(modalResposta);
-            // (REMOVIDO) Lógica de subcategoria
+            subcategoriaWrapper.style.display = 'none'; // Esconde o campo de subcategoria
+            selectSubcategoria.innerHTML = '<option value="">-- Selecione uma subcategoria --</option>';
         }
 
         btnAbrir.addEventListener('click', () => {
             resetarModalForm();
             
-            // Tenta pré-preencher com dados do usuário logado (se houver)
             try {
                 const userDataString = localStorage.getItem("userData");
                 const userData = JSON.parse(userDataString);
@@ -883,12 +657,13 @@
             inputTelefone.addEventListener('input', () => aplicarMascaraTelefone(inputTelefone));
         }
         
-        // --- (REMOVIDO) Event Listener do dropdown de categoria (não é mais cascata) ---
+        // (NOVO) Event Listener para o dropdown de Categoria Pai
+        selectCategoriaPai.addEventListener('change', handleCategoriaPaiChange);
         
         // --- Inicialização ---
         async function init() {
-            await carregarDadosIniciais(); // Carrega o dropdown unificado
-            await listarChamados(); // Lista os chamados do usuário
+            await carregarDadosIniciais(); 
+            await listarChamados(); 
         }
         init();
     </script>
