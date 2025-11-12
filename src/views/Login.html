@@ -13,6 +13,14 @@
             text-align: center;
             margin-top: 10px;
         }
+
+        /* Novo estilo para a logo */
+        .login-header .logo {
+            display: block; /* A imagem se comporta como um bloco para poder aplicar margin auto */
+            margin: 0 auto 20px auto; /* Centraliza horizontalmente e adiciona margem inferior */
+            max-width: 150px; /* Define uma largura máxima para a logo (ajuste se precisar) */
+            height: auto; /* Mantém a proporção da imagem */
+        }
     </style>
 </head>
 <body>
@@ -21,7 +29,7 @@
         <div class="login-card">
             
             <div class="login-header">
-                <h2>PORTAL SUPERMERCADO</h2>
+                <img src="/img.png" alt="Logo do Supermercado" class="logo">
                 <p>Bem-vindo! Faça login para continuar.</p>
             </div>
             
@@ -41,8 +49,6 @@
             
             <div id="divResposta"></div>
             
-            
-
         </div>
     </div>
 
