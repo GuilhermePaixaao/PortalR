@@ -314,14 +314,23 @@
     divBotoes.appendChild(btnExcluir);
 
     // --- (ATUALIZADO) LISTAGEM DE CATEGORIAS (PRINCIPAL) ---
+    // --- (ATUALIZADO) LISTAGEM DE CATEGORIAS (PRINCIPAL) ---
     async function listAll() {
       try {
-        const response = await fetch(`${API_URL}/categorias`);
+        // --- INÍCIO DA CORREÇÃO ---
+        // Adicionamos { cache: 'no-store' } para forçar o fetch
+        // a sempre buscar os dados mais recentes do servidor.
+        const response = await fetch(`${API_URL}/categorias`, {
+            method: 'GET',
+            cache: 'no-store' 
+        });
+        // --- FIM DA CORREÇÃO ---
+
         if (!response.ok) throw new Error("Erro ao buscar categorias.");
         API_DATA_CATEGORIAS = await response.json();
         
         renderTable(API_DATA_CATEGORIAS);
-        preencherSelectPai(API_DATA_CATEGORIAS); // <-- ATUALIZADO
+        preencherSelectPai(API_DATA_CATEGORIAS); 
         
       } catch (error) {
         exibirErro(error.message);
