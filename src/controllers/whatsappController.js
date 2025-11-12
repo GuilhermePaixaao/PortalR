@@ -19,10 +19,7 @@ client.on('qr', (qr) => {
     statusConexao = "Aguardando leitura do QR Code";
     listaDeChats = []; 
     qrcode.toDataURL(qr, (err, url) => {
-        if (err) {
-            console.error("Erro ao gerar QR Code URL:", err);
-            return;
-        }
+        if (err) { console.error("Erro ao gerar QR Code URL:", err); return; }
         qrCodeDataUrl = url; 
     });
 });
@@ -55,42 +52,39 @@ client.on('ready', async () => {
 });
 
 
-// --- (INÍCIO DA CORREÇÃO) ---
+// --- (INÍCIO DA CORREÇÃO DEFINITIVA) ---
 client.on('message', async (message) => {
-    console.log(`Mensagem recebida de ${message.from}: ${message.body}`); // Esta linha funciona
+    console.log(`Mensagem recebida de ${message.from}: ${message.body}`);
     
-    // Procura o ÍNDICE do chat na lista
     const chatIndex = listaDeChats.findIndex(chat => chat.id === message.from);
     
     if (chatIndex !== -1) {
         // --- CHAT JÁ EXISTE ---
-        // Apenas atualiza o timestamp para trazê-lo para o topo
-        // (Usamos o timestamp atual em segundos)
-        listaDeChats[chatIndex].timestamp = Math.floor(Date.now() / 1000); 
+        // Apenas atualiza o timestamp
+        listaDeChats[chatIndex].timestamp = message.timestamp || Math.floor(Date.now() / 1000); 
         console.log(`Timestamp atualizado para o chat: ${listaDeChats[chatIndex].name}`);
+    
     } else {
         // --- CHAT NOVO ---
-        // Tenta buscar os dados do chat e adicioná-lo
-        try {
-            const newChat = await message.getChat();
-            if (newChat.isUser && !newChat.isMe) {
-                listaDeChats.unshift({ // Adiciona no início da lista
-                    id: newChat.id._serialized,
-                    name: newChat.name || newChat.id.user, 
-                    timestamp: newChat.timestamp || Math.floor(Date.now() / 1000)
-                });
-                console.log(`Novo chat adicionado: ${newChat.name}`);
-            }
-        } catch (err) {
-            console.error("Erro ao buscar novo chat:", err);
-        }
+        // NÃO vamos usar 'await message.getChat()' pois é instável.
+        // Vamos criar o chat manualmente com o que temos.
+        
+        // Tenta pegar o nome (como aparece na notificação) ou usa o número
+        const newChatName = message._data.notifyName || message.from.split('@')[0];
+        
+        listaDeChats.unshift({ 
+            id: message.from,
+            name: newChatName, 
+            timestamp: message.timestamp || Math.floor(Date.now() / 1000)
+        });
+        console.log(`Novo chat ADICIONADO (via mensagem): ${newChatName}`);
     }
 
     if (message.body.toLowerCase() === 'ping') {
         await client.sendMessage(message.from, 'pong');
     }
 });
-// --- (FIM DA CORREÇÃO) ---
+// --- (FIM DA CORREÇÃO DEFINITIVA) ---
 
 
 client.on('disconnected', (reason) => {
@@ -111,9 +105,7 @@ export const getStatus = (req, res) => {
 };
 
 export const getChats = (req, res) => {
-    // Esta ordenação agora vai funcionar
     listaDeChats.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-    
     res.status(200).json({
         status: statusConexao,
         chats: listaDeChats
