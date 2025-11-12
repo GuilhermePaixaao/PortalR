@@ -319,6 +319,7 @@
     divBotoes.appendChild(btnExcluir);
 
     // --- (ATUALIZADO) LISTAGEM ---
+    // --- (ATUALIZADO) LISTAGEM ---
     async function listAll() {
       try {
         const response = await fetch(`${API_URL}/categorias`, {
@@ -329,8 +330,15 @@
         if (!response.ok) throw new Error("Erro ao buscar categorias.");
         API_DATA_CATEGORIAS = await response.json();
         
+        // Renderiza a tabela principal (que mostra tudo)
         renderTable(API_DATA_CATEGORIAS);
-        renderSubCategoriaTable(API_DATA_CATEGORIAS); // (NOVO) Chama a função da nova tabela
+        
+        // --- INÍCIO DA CORREÇÃO ---
+        // Filtra a lista ANTES de enviar para a tabela de relatório
+        const subcategorias = API_DATA_CATEGORIAS.filter(cat => cat.parent_id !== null);
+        renderSubCategoriaTable(subcategorias); // Passa a lista já filtrada
+        // --- FIM DA CORREÇÃO ---
+        
         preencherSelectPai(API_DATA_CATEGORIAS); 
         
       } catch (error) {
