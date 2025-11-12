@@ -29,7 +29,8 @@
   <link rel="icon" type="image/png" href="/logo.png">
 
   <style>
-    /* (Estilos CSS permanecem os mesmos) */
+    /* (Seus estilos CSS <style>...
+... permanecem os mesmos) */
     .header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 2rem; background-color: #ffffff; border-bottom: 1px solid #dee2e6; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 1030; }
     .logo { font-size: 1.4rem; font-weight: 700; color: #0d6efd; text-transform: uppercase; letter-spacing: 0.5px; margin: 0; white-space: nowrap; }
     .search-bar { margin-left: 2rem; margin-right: 2rem; width: 100%; max-width: 450px; }
@@ -195,7 +196,7 @@
     // --- FIM DAS FUNÇÕES HELPER PADRÃO ---
 
     // --- (ATUALIZADO) VARIÁVEIS GLOBAIS ---
-    let API_DATA_CATEGORIAS = []; // Agora armazena todas as categorias
+    let API_DATA_CATEGORIAS = []; // Armazena todas as categorias
 
     // --- (ATUALIZADO) REFERÊNCIAS ---
     const txtId = document.getElementById("txtId");
@@ -207,8 +208,6 @@
     const btnLogout = document.getElementById("logoutButton");
     const txtFiltroCategoria = document.getElementById("txtFiltroCategoria");
 
-    // --- (REMOVIDO) Referências do Modal ---
-    
     // --- (ATUALIZADO) FUNÇÕES HELPER ---
     function createButton(text, id, className) {
       const btn = document.createElement("button");
@@ -236,9 +235,7 @@
       divResposta.className = 'alert alert-danger mt-3';
     }
 
-    // --- (REMOVIDO) Funções Helper do Modal ---
-
-    // --- (ATUALIZADO) CRUD DE CATEGORIAS (PRINCIPAL) ---
+    // --- (ATUALIZADO) CRUD DE CATEGORIAS ---
     const btnCriar = createButton("Criar", "btnCriar", "btn-success");
     btnCriar.onclick = async () => {
       if (txtNomeCategoria.value.trim() === "") {
@@ -300,7 +297,7 @@
     btnExcluir.onclick = async () => {
       const id = txtId.value;
       if (!id) { exibirErro("Selecione uma categoria da lista para excluir."); return; }
-      if (confirm("Tem certeza que deseja excluir? Se esta for uma 'Categoria Pai', ela pode causar erros em outras categorias.")) {
+      if (confirm("Tem certeza que deseja excluir? Se esta for uma 'Categoria Pai', ela pode causar erros em outras categorias ou chamados.")) {
         try {
           const response = await fetch(`${API_URL}/categorias/${id}`, { method: 'DELETE' });
           const respostaAPI = await response.json();
@@ -313,18 +310,13 @@
     };
     divBotoes.appendChild(btnExcluir);
 
-    // --- (ATUALIZADO) LISTAGEM DE CATEGORIAS (PRINCIPAL) ---
-    // --- (ATUALIZADO) LISTAGEM DE CATEGORIAS (PRINCIPAL) ---
+    // --- (ATUALIZADO) LISTAGEM DE CATEGORIAS ---
     async function listAll() {
       try {
-        // --- INÍCIO DA CORREÇÃO ---
-        // Adicionamos { cache: 'no-store' } para forçar o fetch
-        // a sempre buscar os dados mais recentes do servidor.
         const response = await fetch(`${API_URL}/categorias`, {
             method: 'GET',
-            cache: 'no-store' 
+            cache: 'no-store' // Garante que os dados sejam sempre novos
         });
-        // --- FIM DA CORREÇÃO ---
 
         if (!response.ok) throw new Error("Erro ao buscar categorias.");
         API_DATA_CATEGORIAS = await response.json();
@@ -343,14 +335,15 @@
         cboParent.innerHTML = '<option value="">-- Nenhuma (Categoria Principal) --</option>';
         
         categorias.forEach(cat => {
-            // (NOVO) Impede que a categoria apareça na lista de pais dela mesma
+            // Impede que a categoria apareça na lista de pais dela mesma
             if (cat.id.toString() === idAtual) {
                 return; 
             }
             
             const option = document.createElement("option");
             option.value = cat.id;
-            // (NOVO) Adiciona prefixo para subcategorias para fácil identificação
+            
+            // Adiciona prefixo para subcategorias para fácil identificação
             if (cat.parent_id) {
                 option.textContent = `... ${cat.nome} (Filha de: ${cat.nome_pai || '?'})`;
             } else {
@@ -360,7 +353,7 @@
         });
     }
 
-    // (ATUALIZADO) Tabela PRINCIPAL
+    // (ATUALIZADO) Tabela
     function renderTable(categorias) {
       divTabela.innerHTML = "";
       const table = document.createElement("table");
@@ -398,8 +391,6 @@
             divResposta.innerHTML = "";
           });
           
-          // (REMOVIDO) O botão 'btn-ver-sub' foi removido
-          
           tbody.appendChild(tr);
         });
       } else {
@@ -408,7 +399,7 @@
       divTabela.appendChild(table);
     }
 
-    // --- (ATUALIZADO) FILTRO DE CATEGORIAS (PRINCIPAL) ---
+    // --- (ATUALIZADO) FILTRO DE CATEGORIAS ---
     function filterData() {
       if (!API_DATA_CATEGORIAS) return;
       const nomeFiltro = txtFiltroCategoria.value.trim().toLowerCase();
@@ -416,15 +407,17 @@
       const dadosFiltrados = API_DATA_CATEGORIAS.filter(cat => {
         let match = true;
         if (nomeFiltro) {
-          match = match && cat.nome.toLowerCase().includes(nomeFiltro);
+          // Filtra pelo nome OU pelo nome do pai
+          match = match && (
+            cat.nome.toLowerCase().includes(nomeFiltro) ||
+            (cat.nome_pai && cat.nome_pai.toLowerCase().includes(nomeFiltro))
+          );
         }
         return match;
       });
       renderTable(dadosFiltrados);
     }
     
-    // --- (REMOVIDO) Toda a Lógica do Modal foi removida ---
-
     // --- INICIALIZAÇÃO ---
     if (txtFiltroCategoria) txtFiltroCategoria.addEventListener("input", filterData);
     if (btnLogout) btnLogout.addEventListener('click', fazerLogout);
@@ -435,7 +428,6 @@
 
     init();
   </script>
-
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

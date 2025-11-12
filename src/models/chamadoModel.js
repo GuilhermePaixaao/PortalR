@@ -155,6 +155,12 @@ export const findAll = async (filtros = {}) => {
 
 // Deleta um chamado
 export const deleteById = async (id) => {
+    // (NOVO) Deleta comentários primeiro para evitar erro de FK
+    await pool.query('DELETE FROM Comentarios WHERE chamado_id = ?', [id]);
+    // (NOVO) Deleta anexos (se existirem)
+    // await pool.query('DELETE FROM Anexos WHERE chamado_id = ?', [id]);
+    
+    // Deleta o chamado
     const [result] = await pool.query('DELETE FROM Chamados WHERE id = ?', [id]);
     return result;
 };
@@ -168,9 +174,14 @@ export const updateStatus = async (id, status, atendenteId) => {
         sql = "UPDATE Chamados SET status = ?, atendente_id = ? WHERE id = ?";
         values = [status, atendenteId, id];
     } else {
-        sql = "UPDATE Chamados SET status = ?, atendente_id = NULL WHERE id = ?";
+        // Se o atendenteId for nulo/undefined, NÃO atualiza o atendente
+        sql = "UPDATE Chamados SET status = ? WHERE id = ?";
         values = [status, id];
     }
+    
+    // (ATUALIZAÇÃO) Se o status for "Em Andamento" e o atendente_id for passado,
+    // o controller vai garantir que o chamado seja atribuído.
+    // Esta lógica foi movida para o CONTROLLER.
     
     const [result] = await pool.query(sql, values);
     return result;

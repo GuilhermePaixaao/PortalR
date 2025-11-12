@@ -48,6 +48,7 @@ export const criarChamado = async (req, res) => {
         
         if (arquivos && arquivos.length > 0) {
             console.log(`Salvando ${arquivos.length} anexos para o chamado ${novoId}`);
+            // (Lógica para salvar anexos no banco de dados iria aqui)
         }
         
         const novoChamado = await ChamadoModel.findById(novoId);

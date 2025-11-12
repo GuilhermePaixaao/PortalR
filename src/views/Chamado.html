@@ -498,12 +498,9 @@
     <script type="module">
         const API_URL = ""; 
 
-        // --- Autenticação (MODO STANDALONE/DEV) ---
-        // (ATENÇÃO: Este ID será usado como 'requisitante_id'
-        // Mude para 1 ou o ID de um usuário real no seu banco
-        let userId = 1; 
+        // --- Autenticação ---
+        let userId = 1; // ID Padrão
         try {
-            // Tenta pegar o ID do usuário logado no localStorage
             const userDataString = localStorage.getItem("userData");
             const userData = JSON.parse(userDataString);
             const idLogado = userData?.data?.id || userData?.id;
@@ -556,9 +553,11 @@
         function formatarData(isoString) {
             if (!isoString) return 'Aguardando...';
             try {
+                // (CORREÇÃO) Remove o ajuste manual de fuso horário que estava 
+                // fazendo a data retroceder indevidamente.
                 const dt = new Date(isoString);
-                const data = dt.toLocaleDateString('pt-BR');
-                const hora = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                const data = dt.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+                const hora = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
                 return `${data} ${hora}`;
             } catch (e) {
                 return 'Data inválida';
@@ -579,6 +578,7 @@
         // --- (ATUALIZADO) Carregar Categorias (Unificadas) ---
         async function carregarDadosIniciais() {
             try {
+                // Busca da API (que agora retorna 'nome_pai')
                 const response = await fetch(`${API_URL}/categorias`);
                 if (!response.ok) throw new Error("Erro ao carregar categorias.");
 
@@ -586,11 +586,11 @@
 
                 selectCategoriaModal.innerHTML = '<option value="">-- Selecionar Categoria --</option>';
                 
-                // 1. Adiciona as Categorias Principais
+                // 1. Adiciona as Categorias Principais (parent_id é null)
                 categorias.filter(c => !c.parent_id).forEach(catPai => {
                     const option = document.createElement("option");
                     option.value = catPai.id; 
-                    option.textContent = catPai.nome;
+                    option.textContent = catPai.nome; // Ex: "TI"
                     selectCategoriaModal.appendChild(option);
                 });
                 
@@ -599,7 +599,7 @@
                     const option = document.createElement("option");
                     option.value = catFilha.id; 
                     // Usa o nome_pai que o backend agora envia
-                    option.textContent = `... ${catFilha.nome} (em ${catFilha.nome_pai || '?'})`;
+                    option.textContent = `... ${catFilha.nome} (em ${catFilha.nome_pai || '?'})`; // Ex: "... Redes (em TI)"
                     selectCategoriaModal.appendChild(option);
                 });
 
@@ -632,6 +632,7 @@
                 const statusClass = (chamado.status || 'Aberto').toLowerCase().replace(/\s+/g, '-');
 
                 // (ATUALIZADO) Lógica de exibição de nome
+                // O controller (Passo 5) agora nos envia um objeto 'Categorias'
                 let nomeExibicao = 'N/A';
                 if (chamado.Categorias) {
                     if (chamado.Categorias.nomePai) {
@@ -689,7 +690,7 @@
             });
         }
 
-        // --- Listar Chamados (sem mudanças na lógica, mas o filtro de requisitante é importante) ---
+        // --- Listar Chamados (Filtro de requisitante é importante) ---
         async function listarChamados() {
             limparMensagem(divRespostaGeral);
             ticketList.querySelectorAll('.data-row').forEach(row => row.remove());
@@ -700,8 +701,7 @@
             if (filtroPrioridade.value) params.append('prioridade', filtroPrioridade.value);
             if (filtroStatus.value) params.append('status', filtroStatus.value);
             
-            // Esta página é pública, mas podemos filtrar por um ID de usuário se ele estiver logado
-            // (Assumindo que `userId` foi pego do localStorage)
+            // Filtra pelos chamados do usuário logado
             if (userId) {
                 params.append('requisitante_id', userId); 
             }
@@ -776,6 +776,7 @@
             }
 
             try {
+                // O Controller (Passo 5) já está pronto para receber isso
                 const response = await fetch(`${API_URL}/chamados`, {
                     method: 'POST',
                     body: formData 
@@ -835,11 +836,7 @@
                 renderizarComentarios(comentarios);
             
             } catch (error) {
-                if (error instanceof SyntaxError) {
-                     listaComentariosContainer.innerHTML = `<span class="comment-empty-state" style="color: red;">Erro de comunicação. A rota de comentários existe?</span>`;
-                } else {
-                     listaComentariosContainer.innerHTML = `<span class="comment-empty-state" style="color: red;">${error.message}</span>`;
-                }
+                 listaComentariosContainer.innerHTML = `<span class="comment-empty-state" style="color: red;">${error.message}</span>`;
             }
         }
         
@@ -864,7 +861,6 @@
                 document.getElementById('nomeRequisitante').value = ''; 
                 document.getElementById('emailRequisitante').value = ''; 
             }
-
 
             if (typeof modal.showModal === 'function') modal.showModal();
             else modal.setAttribute('open', '');
@@ -891,8 +887,8 @@
         
         // --- Inicialização ---
         async function init() {
-            await carregarDadosIniciais(); 
-            await listarChamados(); 
+            await carregarDadosIniciais(); // Carrega o dropdown unificado
+            await listarChamados(); // Lista os chamados do usuário
         }
         init();
     </script>
