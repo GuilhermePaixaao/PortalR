@@ -1,6 +1,6 @@
 /* --- Variáveis de Cor (do dashboard anterior) --- */
         :root {
-            --primary-blue: #0056b3;  /* Azul primário */
+            --primary-blue: #3F51B5;  /* Azul primário */
             --primary-red: #d93025;   /* Vermelho de destaque */
             --light-bg: #ffffff;   /* Fundo claro (card) */
             --main-bg: #f4f7fa;    /* Fundo principal da página */
@@ -100,7 +100,7 @@
         }
 
         .login-button:hover {
-            background-color: #004494; /* Tom de azul mais escuro */
+            background-color: #3F51B5; /* Tom de azul mais escuro */
         }
 
         /* --- Rodapé (Link) --- */
