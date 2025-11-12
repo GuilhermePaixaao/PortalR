@@ -124,30 +124,33 @@
           <div class="card shadow-sm mb-4 widget">
             <div class="card-header"><strong>Filtros</strong></div>
             <div class="card-body">
-              
               <div class="row g-2">
-                <div class="col-md-8"> <label for="txtFiltroCategoria" class="form-label">Filtrar por Nome</label>
+                <div class="col-md-12">
+                  <label for="txtFiltroCategoria" class="form-label">Filtrar por Nome (em ambas as tabelas)</label>
                   <input type="text" id="txtFiltroCategoria" class="form-control" placeholder="Digite o nome da categoria...">
                 </div>
-                <div class="col-md-4 d-flex align-items-end"> <div class="form-check pb-1">
-                      <input class="form-check-input" type="checkbox" id="chkSoSubcategorias">
-                      <label class="form-check-label" for="chkSoSubcategorias">
-                        Mostrar apenas subcategorias
-                      </label>
-                    </div>
-                </div>
               </div>
-              </div>
+            </div>
           </div>
+
           <div class="card shadow-sm widget">
-            <div class="card-header"><strong>Categorias Cadastradas</strong></div>
+            <div class="card-header"><strong>Gerenciamento (Todas as Categorias)</strong></div>
             <div class="card-body">
               <div id="divTabela" class="table-responsive">
                 <p>Carregando...</p>
               </div>
             </div>
           </div>
-        </div>
+
+          <div class="card shadow-sm widget mt-4">
+            <div class="card-header"><strong>Relatório de Subcategorias</strong></div>
+            <div class="card-body">
+              <div id="divSubTabela" class="table-responsive">
+                <p>Carregando...</p>
+              </div>
+            </div>
+          </div>
+          </div>
       </div>
     </main>
   </div>
@@ -204,7 +207,6 @@
 
     let API_DATA_CATEGORIAS = []; 
 
-    // --- (INÍCIO DA ALTERAÇÃO JS) ---
     // Referências
     const txtId = document.getElementById("txtId");
     const txtNomeCategoria = document.getElementById("txtNomeCategoria");
@@ -214,10 +216,9 @@
     const divTabela = document.getElementById("divTabela");
     const btnLogout = document.getElementById("logoutButton");
     const txtFiltroCategoria = document.getElementById("txtFiltroCategoria");
-    
-    // Nova referência para o checkbox
-    const chkSoSubcategorias = document.getElementById("chkSoSubcategorias"); 
-    // --- (FIM DA ALTERAÇÃO JS) ---
+
+    // (NOVO) Referência para a nova tabela
+    const divSubTabela = document.getElementById("divSubTabela"); 
 
     function createButton(text, id, className) {
       const btn = document.createElement("button");
@@ -317,7 +318,7 @@
     };
     divBotoes.appendChild(btnExcluir);
 
-    // --- LISTAGEM (Permanece igual) ---
+    // --- (ATUALIZADO) LISTAGEM ---
     async function listAll() {
       try {
         const response = await fetch(`${API_URL}/categorias`, {
@@ -329,6 +330,7 @@
         API_DATA_CATEGORIAS = await response.json();
         
         renderTable(API_DATA_CATEGORIAS);
+        renderSubCategoriaTable(API_DATA_CATEGORIAS); // (NOVO) Chama a função da nova tabela
         preencherSelectPai(API_DATA_CATEGORIAS); 
         
       } catch (error) {
@@ -358,7 +360,7 @@
         });
     }
 
-    // --- Renderizar Tabela (Permanece igual) ---
+    // --- Renderizar Tabela Principal (Permanece igual) ---
     function renderTable(categorias) {
       divTabela.innerHTML = "";
       const table = document.createElement("table");
@@ -404,41 +406,70 @@
       }
       divTabela.appendChild(table);
     }
+    
+    // (NOVA) Função para renderizar a tabela SÓ DE SUBCATEGORIAS
+    function renderSubCategoriaTable(subcategorias) {
+      divSubTabela.innerHTML = "";
+      const table = document.createElement("table");
+      table.className = "table table-bordered table-striped"; // Sem hover
+      table.innerHTML = `
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>Nome da Subcategoria</th>
+            <th>Categoria Pai</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      `;
+      const tbody = table.querySelector("tbody");
 
-    // --- (INÍCIO DA ALTERAÇÃO JS) ---
-    // --- FILTRO DE CATEGORIAS (Atualizado para ler o checkbox) ---
+      if (subcategorias && subcategorias.length > 0) {
+        subcategorias.forEach(cat => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${cat.id}</td>
+            <td>${cat.nome}</td>
+            <td>${cat.nome_pai || '(Pai não encontrado)'}</td> 
+          `;
+          tbody.appendChild(tr);
+        });
+      } else {
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center">Nenhuma subcategoria encontrada.</td></tr>';
+      }
+      divSubTabela.appendChild(table);
+    }
+
+    // --- (ATUALIZADO) FILTRO DE CATEGORIAS ---
     function filterData() {
       if (!API_DATA_CATEGORIAS) return;
       
       const nomeFiltro = txtFiltroCategoria.value.trim().toLowerCase();
-      const mostrarSoSubcategorias = chkSoSubcategorias.checked; // Lê o estado do checkbox
       
       const dadosFiltrados = API_DATA_CATEGORIAS.filter(cat => {
-        // Filtro por nome (como antes)
-        let matchNome = true;
+        let match = true;
         if (nomeFiltro) {
-          matchNome = (
+          match = (
             cat.nome.toLowerCase().includes(nomeFiltro) ||
             (cat.nome_pai && cat.nome_pai.toLowerCase().includes(nomeFiltro))
           );
         }
-
-        // NOVO: Filtro por tipo (subcategoria)
-        let matchTipo = true;
-        if (mostrarSoSubcategorias) {
-            matchTipo = cat.parent_id !== null; // Só mostra se parent_id NÃO for nulo
-        }
-
-        return matchNome && matchTipo; // Retorna verdadeiro só se passar nos dois filtros
+        return match;
       });
+      
+      // Renderiza a tabela principal com os dados filtrados
       renderTable(dadosFiltrados);
+      
+      // (NOVO) Filtra *novamente* os dados filtrados para pegar só as subcategorias
+      const subCategoriasFiltradas = dadosFiltrados.filter(cat => cat.parent_id !== null);
+      
+      // Renderiza a tabela de subcategorias com os dados filtrados
+      renderSubCategoriaTable(subCategoriasFiltradas);
     }
     
     // --- INICIALIZAÇÃO ---
     if (txtFiltroCategoria) txtFiltroCategoria.addEventListener("input", filterData);
-    if (chkSoSubcategorias) chkSoSubcategorias.addEventListener("change", filterData); // Adiciona listener para o checkbox
     if (btnLogout) btnLogout.addEventListener('click', fazerLogout);
-    // --- (FIM DA ALTERAÇÃO JS) ---
 
     async function init() {
       await listAll(); 
