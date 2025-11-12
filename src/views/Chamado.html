@@ -4,10 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chamados - Portal Supermercado</title>
-
-    <script>
-        // (Script de proteção anti-flicker, se houver, iria aqui)
-    </script>
     
     <link rel="icon" type="image/png" href="/logo.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -86,6 +82,11 @@
         .btn-logout:hover { background-color: #bb2d3b; }
         .logo { display: flex; align-items: center; gap: 10px; }
         .logo-icon { height: 30px; width: auto; }
+        
+        /* (NOVO) CSS para o container da cascata */
+        #categoriaCascataWrapper .grupo-form {
+            margin-bottom: 0; /* Remove a margem de baixo dentro da cascata */
+        }
     </style>
 </head>
 <body>
@@ -148,20 +149,9 @@
                     </div>
                     
                     <div class="col-md-6">
-                        <div class="grupo-form">
-                            <label for="categoriaPai">Categoria</label>
-                            <select id="categoriaPai" name="categoriaPai" class="form-select">
-                                <option value="">-- Carregando... --</option>
-                            </select>
-                        </div>
+                        <div id="categoriaCascataWrapper">
+                            </div>
                     </div>
-                </div>
-                
-                <div class="grupo-form" id="subcategoriaWrapper" style="display: none;">
-                    <label for="subcategoria">Subcategoria</label>
-                    <select id="subcategoria" name="subcategoria" class="form-select">
-                        <option value="">-- Selecione uma subcategoria --</option>
-                    </select>
                 </div>
                 <div class="grupo-form">
                     <label for="anexo">Anexar Arquivos (Opcional)</label>
@@ -277,7 +267,7 @@
             console.error("Erro ao ler localStorage. Usando ID=1 padrão.", e);
         }
 
-        // (NOVO) Armazenamento local de categorias para a cascata
+        // Armazenamento local de categorias para a cascata
         let allCategories = [];
 
         // --- Referências ---
@@ -298,10 +288,8 @@
         const inputTelefone = document.getElementById("telefoneRequisitante");
         const listaComentariosContainer = document.getElementById("listaComentariosContainer");
 
-        // (NOVO) Referências para os dropdowns em cascata
-        const selectCategoriaPai = document.getElementById("categoriaPai");
-        const subcategoriaWrapper = document.getElementById("subcategoriaWrapper");
-        const selectSubcategoria = document.getElementById("subcategoria");
+        // (NOVO) Referência para o container da cascata
+        const cascataWrapper = document.getElementById("categoriaCascataWrapper");
 
         // --- Funções Auxiliares (sem mudanças) ---
         function exibirMensagem(elemento, mensagem, sucesso = true) {
@@ -347,53 +335,81 @@
                 if (!response.ok) throw new Error("Erro ao carregar categorias.");
 
                 allCategories = await response.json(); // Salva na variável global
-
-                selectCategoriaPai.innerHTML = '<option value="">-- Selecione uma Categoria --</option>';
                 
-                // 1. Adiciona apenas as Categorias Principais ao primeiro dropdown
-                const categoriasPai = allCategories.filter(c => !c.parent_id);
-                
-                categoriasPai.forEach(catPai => {
-                    const option = document.createElement("option");
-                    option.value = catPai.id; 
-                    option.textContent = catPai.nome; // Ex: "TI"
-                    selectCategoriaPai.appendChild(option);
-                });
+                // Limpa o wrapper e cria o primeiro dropdown
+                cascataWrapper.innerHTML = ''; 
+                criarProximoDropdown(null, 0); // null = "pai de todos" (root)
 
             } catch (error) {
                 console.error(error);
                 exibirMensagem(modal.open ? modalResposta : divRespostaGeral, error.message, false);
-                selectCategoriaPai.innerHTML = '<option value="">-- Erro ao carregar --</option>';
+                cascataWrapper.innerHTML = '<p class="text-danger">Erro ao carregar categorias.</p>';
             }
         }
         
-        // (NOVO) Função para lidar com a mudança da Categoria Pai
-        function handleCategoriaPaiChange() {
-            const paiId = selectCategoriaPai.value;
+        // (NOVO) Função recursiva para criar dropdowns
+        function criarProximoDropdown(parentId, level) {
+            // parentId = null (para level 0), ou "5" (para level 1), etc.
             
-            // Limpa e esconde o dropdown de subcategoria
-            selectSubcategoria.innerHTML = '<option value="">-- Selecione uma subcategoria --</option>';
-            subcategoriaWrapper.style.display = 'none';
+            // Encontra as categorias filhas
+            const children = allCategories.filter(c => c.parent_id == parentId);
+            
+            // Se não houver filhas, não faz nada
+            if (children.length === 0) return;
 
-            if (!paiId) return; // Se selecionou "-- Selecione --", para aqui
+            // Cria os elementos HTML
+            const div = document.createElement('div');
+            div.className = 'grupo-form';
+            
+            const label = document.createElement('label');
+            label.textContent = level === 0 ? 'Categoria' : 'Subcategoria';
+            
+            const select = document.createElement('select');
+            select.className = 'form-select';
+            select.dataset.level = level; // Salva o nível (0, 1, 2...)
+            
+            // Adiciona a opção padrão
+            const placeholder = level === 0 ? '-- Selecione uma Categoria --' : '-- Selecione uma Subcategoria --';
+            select.add(new Option(placeholder, ""));
 
-            // Filtra a lista global por filhas da categoria selecionada
-            const subcategorias = allCategories.filter(c => c.parent_id == paiId);
+            // Adiciona as categorias filhas
+            children.forEach(cat => {
+                select.add(new Option(cat.nome, cat.id));
+            });
+            
+            // Monta o bloco
+            div.appendChild(label);
+            div.appendChild(select);
+            cascataWrapper.appendChild(div);
+        }
+        
+        // (NOVO) Listener de evento para a cascata
+        function handleCascataChange(event) {
+            const select = event.target;
+            
+            // Verifica se o clique foi em um <select>
+            if (select.tagName !== 'SELECT') return;
 
-            // Se encontrou subcategorias...
-            if (subcategorias.length > 0) {
-                subcategorias.forEach(catFilha => {
-                    const option = document.createElement("option");
-                    option.value = catFilha.id;
-                    option.textContent = catFilha.nome; // Ex: "Redes"
-                    selectSubcategoria.appendChild(option);
-                });
-                // Mostra o dropdown de subcategoria
-                subcategoriaWrapper.style.display = 'block';
+            const selectedId = select.value;
+            const level = parseInt(select.dataset.level);
+
+            // 1. Remove todos os dropdowns *depois* deste
+            const allDropdowns = cascataWrapper.querySelectorAll('.grupo-form');
+            allDropdowns.forEach(div => {
+                const sel = div.querySelector('select');
+                if (parseInt(sel.dataset.level) > level) {
+                    div.remove();
+                }
+            });
+
+            // 2. Se um valor foi selecionado, tenta criar o próximo nível
+            if (selectedId) {
+                criarProximoDropdown(selectedId, level + 1);
             }
         }
 
-        // --- (ATUALIZADO) Renderizar Lista de Chamados (lógica de 'nomeExibicao' permanece) ---
+
+        // --- Renderizar Lista de Chamados (sem mudanças) ---
         function renderizarChamados(chamados) {
             if (loadingIndicator) loadingIndicator.style.display = 'none';
             ticketList.querySelectorAll('.data-row').forEach(row => row.remove());
@@ -463,7 +479,7 @@
             });
         }
 
-        // --- Listar Chamados (permanece igual) ---
+        // --- Listar Chamados (sem mudanças) ---
         async function listarChamados() {
             limparMensagem(divRespostaGeral);
             ticketList.querySelectorAll('.data-row').forEach(row => row.remove());
@@ -493,7 +509,6 @@
             event.preventDefault();
             limparMensagem(modalResposta);
 
-            // ... (validações de nome, email, assunto, etc. permanecem iguais)
             const nomeRequisitante = ticketForm.nomeRequisitante.value.trim();
             const emailRequisitante = ticketForm.emailRequisitante.value.trim();
             const telefoneRequisitante = ticketForm.telefoneRequisitante.value.trim();
@@ -502,23 +517,26 @@
             const prioridade = ticketForm.prioridade.value || 'Média';
             
             // (NOVA LÓGICA DE CAPTURA DE ID)
-            const catPaiId = ticketForm.categoriaPai.value;
-            const subCatId = ticketForm.subcategoria.value;
+            const allSelects = cascataWrapper.querySelectorAll('select');
+            let categoriaUnificadaId = null;
             
-            // Se a subcategoria estiver visível e selecionada, usa o ID dela.
-            // Senão, usa o ID da categoria pai.
-            const categoriaUnificadaId = (subCatId && subcategoriaWrapper.style.display !== 'none') 
-                                            ? subCatId 
-                                            : catPaiId;
-
+            // Pega o valor do ÚLTIMO dropdown que tenha um valor selecionado
+            for (const select of allSelects) {
+                if (select.value) {
+                    categoriaUnificadaId = select.value;
+                } else {
+                    // Se um dropdown no meio não foi selecionado, para.
+                    break;
+                }
+            }
+            
             if (!nomeRequisitante || !emailRequisitante || !assunto || !descricao) {
                 exibirMensagem(modalResposta, 'Nome, Email, Assunto e Descrição são obrigatórios.', false);
                 return;
             }
             
-            // (NOVO) Validação para forçar seleção de categoria
             if (!categoriaUnificadaId) {
-                exibirMensagem(modalResposta, 'Por favor, selecione uma Categoria (e Subcategoria, se houver).', false);
+                exibirMensagem(modalResposta, 'Por favor, selecione uma Categoria.', false);
                 return;
             }
 
@@ -543,8 +561,6 @@
                     descricao: descricao,
                     prioridade: prioridade,
                     requisitante_id: userId,
-                    
-                    // (ATUALIZADO) Envia o ID unificado
                     categoria_unificada_id: parseInt(categoriaUnificadaId)
                 }
             };
@@ -618,8 +634,9 @@
         function resetarModalForm() {
             ticketForm.reset();
             limparMensagem(modalResposta);
-            subcategoriaWrapper.style.display = 'none'; // Esconde o campo de subcategoria
-            selectSubcategoria.innerHTML = '<option value="">-- Selecione uma subcategoria --</option>';
+            // Limpa a cascata e recria o primeiro dropdown
+            cascataWrapper.innerHTML = '';
+            criarProximoDropdown(null, 0); 
         }
 
         btnAbrir.addEventListener('click', () => {
@@ -658,7 +675,7 @@
         }
         
         // (NOVO) Event Listener para o dropdown de Categoria Pai
-        selectCategoriaPai.addEventListener('change', handleCategoriaPaiChange);
+        cascataWrapper.addEventListener('change', handleCascataChange);
         
         // --- Inicialização ---
         async function init() {
