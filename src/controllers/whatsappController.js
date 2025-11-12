@@ -1,22 +1,26 @@
-// --- (INÍCIO DA CORREÇÃO) ---
-// Importa o pacote como 'padrão'
+// src/controllers/whatsappController.js
 import pkg from 'whatsapp-web.js';
-// Extrai as classes que precisamos (Client e LocalAuth)
 const { Client, LocalAuth } = pkg;
 import qrcode from 'qrcode';
 
-// Esta variável vai armazenar o QR Code para que o frontend possa buscá-lo
 let qrCodeDataUrl = null;
 let statusConexao = "Iniciando...";
 
 // 1. Cria o cliente do WhatsApp
 const client = new Client({
-    authStrategy: new LocalAuth() // Salva a sessão localmente para não escanear sempre
+    authStrategy: new LocalAuth(),
+    
+    // --- (INÍCIO DA ADIÇÃO) ---
+    // Adicione esta seção para desativar o sandbox no Docker
+    puppeteer: {
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    }
+    // --- (FIM DA ADIÇÃO) ---
 });
 
 // 2. Ouve o evento 'qr'
 client.on('qr', (qr) => {
-    // A biblioteca nos deu um texto de QR, vamos converter em imagem URL
+    // ... (o resto do seu código permanece igual) ...
     console.log('QR Code recebido, gerando imagem...');
     statusConexao = "Aguardando leitura do QR Code";
     qrcode.toDataURL(qr, (err, url) => {
@@ -24,30 +28,33 @@ client.on('qr', (qr) => {
             console.error("Erro ao gerar QR Code URL:", err);
             return;
         }
-        qrCodeDataUrl = url; // Salva a imagem URL na variável
+        qrCodeDataUrl = url; 
     });
 });
 
 // 3. Ouve o evento 'ready' (conectado)
 client.on('ready', () => {
+    // ... (o resto do seu código permanece igual) ...
     console.log('Cliente WhatsApp está pronto!');
-    qrCodeDataUrl = null; // Limpa o QR Code, pois já foi lido
+    qrCodeDataUrl = null; 
     statusConexao = "Conectado!";
 });
 
 // 4. Ouve o evento 'disconnected'
 client.on('disconnected', (reason) => {
+    // ... (o resto do seu código permanece igual) ...
     console.log('Cliente foi desconectado:', reason);
     statusConexao = "Desconectado. Tentando reconectar...";
     qrCodeDataUrl = null;
-    client.initialize(); // Tenta reconectar
+    client.initialize(); 
 });
 
 // 5. Inicia o cliente
 client.initialize();
 
-// 6. Rota para o frontend buscar o status e o QR Code
+// 6. Rota para o frontend
 export const getStatus = (req, res) => {
+    // ... (o resto do seu código permanece igual) ...
     res.status(200).json({
         status: statusConexao,
         qrCodeUrl: qrCodeDataUrl 
