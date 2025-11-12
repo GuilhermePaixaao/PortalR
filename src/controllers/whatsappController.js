@@ -1,4 +1,8 @@
-import { Client, LocalAuth } from 'whatsapp-web.js';
+// --- (INÍCIO DA CORREÇÃO) ---
+// Importa o pacote como 'padrão'
+import pkg from 'whatsapp-web.js';
+// Extrai as classes que precisamos (Client e LocalAuth)
+const { Client, LocalAuth } = pkg;
 import qrcode from 'qrcode';
 
 // Esta variável vai armazenar o QR Code para que o frontend possa buscá-lo
