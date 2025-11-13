@@ -7,8 +7,8 @@ import chamadoRouter from './chamadoRouter.js';
 import chatRouter from './chatRouter.js';
 import funcionarioRouter from './funcionarioRouter.js';
 
-// (REMOVIDO) O router de subcategoria não é mais necessário
-// import subcategoriaRouter from './sbcategoriaRouter.js';
+// (NOVO) Importa o router do WhatsApp
+import whatsappRouter from './whatsappRouter.js';
 
 const router = Router();
 
@@ -18,7 +18,8 @@ router.use(categoriaRouter);
 router.use(chamadoRouter);
 router.use(chatRouter);
 router.use(funcionarioRouter);
-// (REMOVIDO) O router de subcategoria não é mais necessário
-// router.use(subcategoriaRouter); 
+
+// (NOVO) Adiciona o router do WhatsApp
+router.use(whatsappRouter); 
 
 export default router;

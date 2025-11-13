@@ -1,79 +1,100 @@
 // =======================================================
 // IMPORTAÇÕES E CONFIGURAÇÃO
 // =======================================================
-import 'dotenv/config'; // Garante que o .env seja lido primeiro
+import 'dotenv/config'; 
 import express from 'express';
 import cors from 'cors';
-import path from 'path'; // Módulo nativo do Node para lidar com caminhos
-import { fileURLToPath } from 'url'; // Módulo nativo do Node
+import path from 'path'; 
+import { fileURLToPath } from 'url';
 
-// Importa o "Roteador Chefe" que vai unificar todas as suas rotas
+// --- (NOVO) Importações para Socket.io ---
+import { createServer } from 'http'; // Módulo HTTP nativo
+import { Server } from 'socket.io'; // O Servidor do Socket.io
+// --- FIM NOVO ---
+
 import mainRouter from './src/routers/index.js';
 
-// Configuração para __dirname funcionar com ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 
+// --- (NOVO) Cria o servidor HTTP e o servidor de Socket ---
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: "*", // Em produção, mude para a URL do seu portal
+    methods: ["GET", "POST"]
+  }
+});
+// --- FIM NOVO ---
+
 // =======================================================
 // CONFIGURAÇÕES DO APP (MIDDLEWARE)
 // =======================================================
-app.use(cors()); // Permite requisições de outros domínios
-app.use(express.json()); // Permite que o Express entenda JSON
-app.use(express.urlencoded({ extended: true })); // Permite que o Express entenda Form-Data
+app.use(cors()); 
+app.use(express.json()); 
+app.use(express.urlencoded({ extended: true })); 
 
+// --- (NOVO) Middleware para injetar o 'io' em todas as requisições ---
+// Isso permite que seus controllers (como o whatsappController) usem o io
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+// --- FIM NOVO ---
 
 // =======================================================
-// (MUDANÇA AQUI) ROTAS PARA PÁGINAS HTML
+// ROTAS PARA PÁGINAS HTML
 // =======================================================
-// Estas rotas DEVEM vir ANTES de 'express.static'
-
-// 1. Rota para /login (em vez de /Login.html)
+// (Suas rotas de páginas HTML /login, /atendimento, etc. continuam aqui)
 app.get('/login', (req, res) => {
     res.sendFile(path.join(__dirname, 'src', 'views', 'Login.html'));
 });
-
-// 2. Rota para /atendimento (em vez de /Chamado.html)
-//    (Este é o nome "menos na cara")
 app.get('/atendimento', (req, res) => {
     res.sendFile(path.join(__dirname, 'src', 'views', 'Chamado.html'));
 });
-
-// 3. Rota para /gerenciar (em vez de /GerenciarChamados.html)
 app.get('/gerenciar', (req, res) => {
     res.sendFile(path.join(__dirname, 'src', 'views', 'GerenciarChamados.html'));
 });
 
-// (Adicione outras rotas .get() aqui para outras páginas, se necessário)
-// Ex:
-// app.get('/dashboard', (req, res) => {
-//     res.sendFile(path.join(__dirname, 'src', 'views', 'Dashboard.html'));
-// });
-
-
-// 4. Redirecionamento da raiz (/)
-app.get('/', (req, res) => {
-  res.redirect('/login'); // Agora redireciona para a rota limpa /login
+// (NOVO) Rota para a nova página de atendimento
+app.get('/whatsapp', (req, res) => {
+    res.sendFile(path.join(__dirname, 'src', 'views', 'AtendimentoWhatsApp.html'));
 });
 
-// 5. Servir os arquivos estáticos (CSS, JS, Imagens)
-// Esta linha serve os seus ficheiros CSS, JS, e a pasta 'public'
+// Redirecionamento da raiz (/)
+app.get('/', (req, res) => {
+  res.redirect('/login');
+});
+
+// Servir os arquivos estáticos (CSS, JS, Imagens)
 app.use(express.static(path.join(__dirname, 'src', 'views')));
 app.use(express.static(path.join(__dirname, 'public')));
 
 
-// 6. Usar TODAS as suas rotas da API (vem depois das páginas)
+// Usar TODAS as suas rotas da API
 app.use(mainRouter); // Gerencia /chamados, /categorias, etc.
 
-
 // =======================================================
-// INICIAR O SERVIDOR
+// (NOVO) LÓGICA DE CONEXÃO DO SOCKET.IO
 // =======================================================
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Servidor rodando liso na porta ${PORT}`);
-  console.log(`API disponível em: http://localhost:${PORT}`);
-  console.log(`Página de Login: http://localhost:${PORT}/login`); // Atualizado
+io.on('connection', (socket) => {
+  console.log(`Socket conectado: ${socket.id}`);
+  
+  socket.on('disconnect', () => {
+    console.log(`Socket desconectado: ${socket.id}`);
+  });
 });
 
+// =======================================================
+// INICIAR O SERVIDOR (MODIFICADO)
+// =======================================================
+const PORT = process.env.PORT || 3000;
+
+// (MUDANÇA) Use 'httpServer.listen' em vez de 'app.listen'
+httpServer.listen(PORT, () => {
+  console.log(`Servidor rodando liso na porta ${PORT}`);
+  console.log(`API disponível em: http://localhost:${PORT}`);
+  console.log(`Página de Login: http://localhost:${PORT}/login`);
+});
