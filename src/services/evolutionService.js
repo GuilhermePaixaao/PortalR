@@ -57,7 +57,11 @@ export const conectarInstancia = async () => {
  */
 export const enviarTexto = async (numero, mensagem) => {
   try {
-    const response = await apiClient.post('/message/sendText', {
+    // --- ESTA É A CORREÇÃO ---
+    // Precisamos de incluir o INSTANCE_NAME na URL da chamada
+    const url = `/message/sendText/${INSTANCE_NAME}`;
+    
+    const response = await apiClient.post(url, { // <-- O 'url' foi para aqui
       number: numero,
       options: {
         delay: 1200,
