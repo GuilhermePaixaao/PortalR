@@ -124,3 +124,63 @@
 .typing-indicator {
     display: none;
 }
+/* --- ADICIONE ESTAS REGRAS AO SEU CSS --- */
+
+/* 1. Para o botão 'X' de fechar chat na fila */
+.fila-item {
+    position: relative; /* Já estava, mas é importante */
+}
+
+.close-chat-btn {
+    position: absolute;
+    top: 2px;
+    right: 5px;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #aaa;
+    cursor: pointer;
+    padding: 0 5px;
+    line-height: 1;
+    display: none; /* Só aparece no hover */
+}
+
+.fila-item:hover .close-chat-btn {
+    display: block;
+}
+
+.close-chat-btn:hover {
+    color: #dc3545;
+}
+
+/* 2. Para a mensagem de sistema/erro no chat */
+.chat-message.message-system {
+    justify-content: center;
+    margin: 10px 0;
+}
+
+.chat-message.message-system .message-bubble {
+    background-color: transparent;
+    color: var(--text-color);
+    box-shadow: none;
+    font-style: italic;
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+/* 3. Para preservar quebras de linha (CRÍTICO para a sanitização de XSS) */
+.message-bubble p {
+    white-space: pre-wrap; /* Isso preserva as quebras de linha */
+    margin: 0;
+    padding: 0;
+}
+
+/* 4. Ajuste no badge de não lido para não sobrepor o 'X' */
+.fila-item .badge-nao-lido {
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%); /* Centraliza verticalmente */
+}
+
+.fila-item:hover .badge-nao-lido {
+    display: none; /* Esconde o badge ao passar o mouse (para ver o 'X') */
+}
