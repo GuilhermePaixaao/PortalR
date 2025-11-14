@@ -296,6 +296,18 @@
             });
 
             // 3. Funções de ajuda da UI
+            
+            // ***** INÍCIO DA CORREÇÃO 1 *****
+            // (Funções que estavam faltando)
+            function showTyping() {
+                typingIndicator.style.display = 'flex';
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+            }
+            function hideTyping() {
+                typingIndicator.style.display = 'none';
+            }
+            // ***** FIM DA CORREÇÃO 1 *****
+
             function criarHtmlMensagem(message, sender) {
                 const msgWrap = document.createElement('div');
                 msgWrap.classList.add('chat-message');
@@ -409,7 +421,12 @@
             });
             
             // --- Inicialização ---
+            
+            // ***** INÍCIO DA CORREÇÃO 2 *****
+            // (Chamada da função que faltava)
             hideTyping();
+            // ***** FIM DA CORREÇÃO 2 *****
+            
             chatInput.disabled = true; // Começa desabilitado até conectar
 
         });
