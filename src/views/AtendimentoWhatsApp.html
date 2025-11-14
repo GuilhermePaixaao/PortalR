@@ -181,11 +181,12 @@
                 <div class="chat-widget-column">
                     <div class="chat-widget widget">
                         
-                        <div class="chat-history" id="chatHistory">
-                            <div id="qrCodeContainer">
-                                <p class="system-message">Clique em "Conectar" para gerar o QR Code.</p>
-                            </div>
+                        <div id="qrCodeContainer">
+                            <p class="system-message">Clique em "Conectar" para gerar o QR Code.</p>
                         </div>
+                        
+                        <div class="chat-history" id="chatHistory">
+                            </div>
                         
                         <div class="typing-indicator" id="typingIndicator">
                             <span class="avatar">👤</span>
@@ -297,8 +298,6 @@
 
             // 3. Funções de ajuda da UI
             
-            // ***** INÍCIO DA CORREÇÃO 1 *****
-            // (Funções que estavam faltando)
             function showTyping() {
                 typingIndicator.style.display = 'flex';
                 chatHistory.scrollTop = chatHistory.scrollHeight;
@@ -306,7 +305,6 @@
             function hideTyping() {
                 typingIndicator.style.display = 'none';
             }
-            // ***** FIM DA CORREÇÃO 1 *****
 
             function criarHtmlMensagem(message, sender) {
                 const msgWrap = document.createElement('div');
@@ -371,6 +369,10 @@
             }
             
             // 5. Lógica da Fila
+            
+            // ===================================================================
+            // --- CORREÇÃO 2: Função 'atualizarFila' reescrita para usar 'textContent' ---
+            // ===================================================================
             function atualizarFila(numero, nome, marcarNaoLida = false) {
                 let item = document.querySelector(`.fila-item[data-numero="${numero}"]`);
                 
@@ -378,11 +380,26 @@
                     item = document.createElement('div');
                     item.className = 'fila-item';
                     item.dataset.numero = numero;
-                    item.innerHTML = `
-                        <span class="badge-nao-lido">!</span>
-                        <span class="nome">${nome}</span>
-                        <span class="numero">${numero.split('@')[0]}</span>
-                    `;
+                    
+                    // --- INÍCIO DA CORREÇÃO ---
+                    // Cria os elementos separadamente para usar .textContent
+                    const badge = document.createElement('span');
+                    badge.className = 'badge-nao-lido';
+                    badge.textContent = '!';
+
+                    const nomeSpan = document.createElement('span');
+                    nomeSpan.className = 'nome';
+                    nomeSpan.textContent = nome; // <-- Define o nome de forma segura
+
+                    const numeroSpan = document.createElement('span');
+                    numeroSpan.className = 'numero';
+                    numeroSpan.textContent = numero.split('@')[0];
+
+                    item.appendChild(badge);
+                    item.appendChild(nomeSpan);
+                    item.appendChild(numeroSpan);
+                    // --- FIM DA CORREÇÃO ---
+
                     item.addEventListener('click', () => selecionarConversa(numero));
                     filaAtendimento.prepend(item); // Adiciona no topo
                 }
@@ -421,12 +438,7 @@
             });
             
             // --- Inicialização ---
-            
-            // ***** INÍCIO DA CORREÇÃO 2 *****
-            // (Chamada da função que faltava)
             hideTyping();
-            // ***** FIM DA CORREÇÃO 2 *****
-            
             chatInput.disabled = true; // Começa desabilitado até conectar
 
         });
