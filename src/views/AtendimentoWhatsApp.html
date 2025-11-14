@@ -34,8 +34,8 @@
     </script>
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="icon" type="image/png" href="/logo.png">
-    <link rel="stylesheet" href="css/chatbot.css"> 
-
+    
+    <link rel="stylesheet" href="css/whatsapp-style.css"> 
     <style>
         /* --- ESTILOS GERAIS (Layout) --- */
         .header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 2rem; background-color: #ffffff; border-bottom: 1px solid #dee2e6; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 1030; }
@@ -55,17 +55,7 @@
         .main-content { padding: 0; display: flex; flex-direction: column; height: calc(100vh - 60px); }
         .main-content h1 { padding: 1rem 2rem; margin: 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
         
-        /* Botão Conectar */
-        #btnConectarWhats {
-            background-color: #28a745;
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-weight: 500;
-            cursor: pointer;
-            font-size: 0.9rem;
-        }
+        #btnConectarWhats { background-color: #28a745; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500; cursor: pointer; font-size: 0.9rem; }
         #btnConectarWhats:hover { background-color: #218838; }
         #statusConexao { font-size: 0.9rem; font-weight: bold; }
         #statusConexao.connected { color: #198754; }
@@ -79,56 +69,69 @@
         #filaAtendimento { flex-grow: 1; overflow-y: auto; }
         .fila-item { padding: 1rem; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: background-color 0.2s; position: relative; }
         .fila-item:hover { background-color: #f0f0f0; }
-        .fila-item.active { background-color: var(--primary-blue); color: white; }
+        .fila-item.active { background-color: #e6e6e6; color: inherit; }
         .fila-item .nome { font-weight: bold; display: block; }
         .fila-item .numero { font-size: 0.9rem; color: #555; }
-        .fila-item.active .numero { color: #eee; }
-        .fila-item .badge-nao-lido {
-            background-color: #dc3545;
-            color: white;
-            font-size: 0.75rem;
-            font-weight: bold;
-            padding: 3px 8px;
-            border-radius: 10px;
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            display: none; /* Escondido por padrão */
-        }
-        .fila-item.unread .badge-nao-lido {
-            display: block; /* Mostra se tiver a classe unread */
-        }
+        .fila-item.active .numero { color: #333; }
+        .fila-item .badge-nao-lido { background-color: #dc3545; color: white; font-size: 0.75rem; font-weight: bold; padding: 3px 8px; border-radius: 10px; position: absolute; top: 10px; right: 10px; display: none; }
+        .fila-item.unread .badge-nao-lido { display: block; }
 
         /* Coluna do Chat (Direita) */
         .chat-widget-column { flex: 1; display: flex; flex-direction: column; }
         .chat-widget-column .chat-widget { height: 100%; border-radius: 0; box-shadow: none; border: none; }
-        .chat-widget-column .chat-history { flex-grow: 1; padding: 1rem; }
-        .chat-history .system-message { font-size: 0.9rem; font-style: italic; text-align: center; color: #6c757d; margin: 10px 0; }
+        
+        /* Mensagem do sistema (Carregando, Erro, etc.) */
+        .system-message { font-size: 0.9rem; font-style: italic; text-align: center; color: #6c757d; margin: 10px 0; }
 
-        /* (NOVO) Container do QR Code */
-        #qrCodeContainer {
-            padding: 20px;
-            text-align: center;
-        }
-        #qrCodeContainer img {
-            width: 300px;
-            height: 300px;
-            border: 5px solid var(--primary-blue);
-            border-radius: 8px;
-        }
+        #qrCodeContainer { padding: 20px; text-align: center; }
+        #qrCodeContainer img { width: 300px; height: 300px; border: 5px solid var(--primary-blue); border-radius: 8px; }
 
-        /* --- (NOVO) CSS MODO ESCURO --- */
+        /* --- CSS MODO ESCURO --- */
         body.dark-mode .main-content { background-color: #181818; border-color: #383838; }
         body.dark-mode .main-content h1 { border-color: #383838; }
         body.dark-mode .chat-list-column { background-color: #2a2a2a; border-color: #383838; }
         body.dark-mode .fila-item { border-color: #383838; }
         body.dark-mode .fila-item:hover { background-color: #333; }
-        body.dark-mode .fila-item.active { background-color: var(--primary-blue); }
+        body.dark-mode .fila-item.active { background-color: #444; }
         body.dark-mode .fila-item .numero { color: #aaa; }
-        body.dark-mode .fila-item.active .numero { color: #eee; }
+        body.dark-mode .fila-item.active .numero { color: #ccc; }
         body.dark-mode .chat-widget-column .chat-widget { background-color: #2a2a2a; }
-        body.dark-mode .chat-input-area { background-color: #333; border-color: #383838; }
-        body.dark-mode .chat-history .message-bot .message-bubble { background-color: #333; }
+        
+        /* Fundo modo escuro */
+        body.dark-mode .chat-history {
+            background-color: #0d1418; /* Cor escura do WhatsApp */
+            background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png");
+            opacity: 0.6;
+        }
+        
+        /* Balões modo escuro */
+        body.dark-mode .message-bubble {
+            color: #e0e0e0;
+        }
+        body.dark-mode .chat-message.message-bot .message-bubble {
+            background-color: #262d31; /* Cinza escuro */
+        }
+        body.dark-mode .chat-message.message-user .message-bubble {
+            background-color: #005c4b; /* Verde escuro */
+        }
+        body.dark-mode .message-sender-name {
+            color: #339d6f;
+        }
+        body.dark-mode .message-bubble .timestamp {
+            color: #a1a1a1;
+        }
+
+        /* Input modo escuro */
+        body.dark-mode .chat-input-area { background-color: #202c33; border-color: #383838; }
+        body.dark-mode .chat-input-area input[type="text"] {
+            background-color: #2a3942;
+            border-color: #2a3942;
+            color: #e0e0e0;
+        }
+        body.dark-mode .chat-input-area .send-btn {
+            background-color: #008069;
+        }
+
     </style>
 </head>
 
@@ -189,11 +192,7 @@
                             </div>
                         
                         <div class="typing-indicator" id="typingIndicator">
-                            <span class="avatar">👤</span>
-                            <div class="message-bubble">
-                                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
                             </div>
-                        </div>
                         
                         <div class="chat-input-area">
                             <input type="text" id="chatInput" class="form-control" placeholder="Digite sua resposta...">
@@ -214,20 +213,29 @@
     <script type="module">
         document.addEventListener('DOMContentLoaded', () => {
             
-            // --- (COPIADO) FUNÇÕES DE LOGOUT, TEMA E AUTH ---
+            // --- FUNÇÕES DE LOGOUT, TEMA E AUTH ---
             function fazerLogout() { localStorage.removeItem("userData"); window.location.href = "Login.html"; }
             const btnThemeToggle = document.getElementById("themeToggle");
             function toggleTheme() { document.body.classList.toggle("dark-mode"); let d = document.body.classList.contains("dark-mode"); localStorage.setItem("theme", d ? "dark" : "light"); if (btnThemeToggle) btnThemeToggle.textContent = d ? "☀️" : "🌙"; }
             function loadTheme() { const t = localStorage.getItem("theme"); if (t === "dark") { document.body.classList.add("dark-mode"); if (btnThemeToggle) btnThemeToggle.textContent = "☀️"; } else { document.body.classList.remove("dark-mode"); if (btnThemeToggle) btnThemeToggle.textContent = "🌙"; } }
             if (btnThemeToggle) btnThemeToggle.addEventListener('click', toggleTheme);
             loadTheme();
-            try { const u = JSON.parse(userDataString); const d = document.getElementById('userNameDisplay'); if (d && u?.data?.nomeFuncionario) { d.textContent = `Olá, ${u.data.nomeFuncionario.split(' ')[0]}`; } const p = u?.data?.perfil; const l = document.getElementById("menu-link-chamado"); if (l && (p === 'AGENTE' || p === 'ADMIN')) { const a = l.querySelector('a'); const t = a.querySelector('.text'); a.href = "GerenciarChamados.html"; a.title = "Gerenciar Chamados"; a.querySelector('.icon').textContent = "✔️"; t.innerHTML = "Gerenciar<br>Chamados"; } } catch (e) { console.error('Erro:', e); fazerLogout(); }
+            let nomeAtendente = "Atendente"; // Nome padrão
+            try { 
+                const u = JSON.parse(userDataString); 
+                const d = document.getElementById('userNameDisplay'); 
+                if (d && u?.data?.nomeFuncionario) { 
+                    const primeiroNome = u.data.nomeFuncionario.split(' ')[0];
+                    d.textContent = `Olá, ${primeiroNome}`; 
+                    nomeAtendente = primeiroNome; // <-- Salva o nome do atendente
+                } 
+                const p = u?.data?.perfil; const l = document.getElementById("menu-link-chamado"); if (l && (p === 'AGENTE' || p === 'ADMIN')) { const a = l.querySelector('a'); const t = a.querySelector('.text'); a.href = "GerenciarChamados.html"; a.title = "Gerenciar Chamados"; a.querySelector('.icon').textContent = "✔️"; t.innerHTML = "Gerenciar<br>Chamados"; } 
+            } catch (e) { console.error('Erro:', e); fazerLogout(); }
             const btnLogout = document.getElementById("logoutButton");
             if (btnLogout) btnLogout.addEventListener('click', fazerLogout);
             
-            // --- (NOVO) LÓGICA DO CHAT WHATSAPP ---
+            // --- LÓGICA DO CHAT WHATSAPP ---
             
-            // Referências
             const chatHistory = document.getElementById('chatHistory');
             const chatInput = document.getElementById('chatInput');
             const sendButton = document.getElementById('sendButton');
@@ -237,54 +245,57 @@
             const qrCodeContainer = document.getElementById('qrCodeContainer');
             const statusConexao = document.getElementById('statusConexao');
             
-            // Variáveis de estado
-            let conversaAtiva = null; // Armazena o ID (numero@s.whatsapp.net) da conversa
-            let conversas = {}; // Armazena o HISTÓRICO de HTML de cada conversa
+            let conversaAtiva = null; 
+            let conversas = {}; 
 
-            // 1. Conecta ao Socket.io
             const socket = io();
 
-            // 2. Ouve os eventos do Backend
-            
-            // Evento: 'novaMensagemWhatsapp' (Webhook de mensagem)
+            // --- Evento: 'novaMensagemWhatsapp' ---
             socket.on('novaMensagemWhatsapp', (data) => {
-                // data = { de: "numero@s.whatsapp.net", nome: "Nome", texto: "Oi" }
                 console.log('Socket: Mensagem recebida:', data);
                 
-                const novaMsgHtml = criarHtmlMensagem(data.texto, 'bot'); // 'bot' = cliente
+                // =======================================================
+                // MUDANÇA 2: Passa o 'data.nome' para a função
+                // =======================================================
+                const novaMsgHtml = criarHtmlMensagem(data.texto, 'bot', data.nome);
                 
-                // Salva a mensagem no histórico
                 if (!conversas[data.de]) {
                     conversas[data.de] = "";
                 }
                 conversas[data.de] += novaMsgHtml;
 
-                // Atualiza ou adiciona o item na fila
-                atualizarFila(data.de, data.nome, true); // true = marcar como não lida
+                atualizarFila(data.de, data.nome, true); 
                 
-                // Se a mensagem for da conversa ativa, mostra na tela
                 if (data.de === conversaAtiva) {
                     chatHistory.innerHTML += novaMsgHtml;
                     chatHistory.scrollTop = chatHistory.scrollHeight;
                 }
             });
             
-            // Evento: 'qrCodeRecebido' (Webhook do QR Code)
+            // --- Evento: 'qrCodeRecebido' ---
             socket.on('qrCodeRecebido', (data) => {
                 if (data.qr) {
                     qrCodeContainer.innerHTML = `<img src="${data.qr}" alt="Escaneie o QR Code com seu WhatsApp">`;
                     statusConexao.textContent = "Escaneie o QR Code";
                     statusConexao.className = "disconnected";
+                    qrCodeContainer.style.display = 'block';
+                    chatHistory.style.display = 'none';
                 }
             });
             
-            // Evento: 'statusConexao' (Webhook de Status)
+            // --- Evento: 'statusConexao' ---
             socket.on('statusConexao', (data) => {
                 if (data.status === 'open') {
                     statusConexao.textContent = "Conectado";
                     statusConexao.className = "connected";
                     qrCodeContainer.innerHTML = '<p class="system-message">Conectado com sucesso!</p>';
                     chatInput.disabled = false;
+                    // Esconde o QR Code e mostra o chat (se não houver conversa)
+                    if (!conversaAtiva) {
+                        qrCodeContainer.style.display = 'none';
+                        chatHistory.style.display = 'flex';
+                        chatHistory.innerHTML = '<p class="system-message">Selecione uma conversa na fila para começar.</p>';
+                    }
                 } else if (data.status === 'connecting') {
                     statusConexao.textContent = "Conectando...";
                     statusConexao.className = "disconnected";
@@ -292,71 +303,79 @@
                     statusConexao.textContent = "Desconectado";
                     statusConexao.className = "disconnected";
                     qrCodeContainer.innerHTML = '<p class="system-message">Desconectado. Clique em "Conectar" para tentar novamente.</p>';
+                    qrCodeContainer.style.display = 'block';
+                    chatHistory.style.display = 'none';
                     chatInput.disabled = true;
                 }
             });
 
-            // 3. Funções de ajuda da UI
-            
-            function showTyping() {
-                typingIndicator.style.display = 'flex';
-                chatHistory.scrollTop = chatHistory.scrollHeight;
-            }
-            function hideTyping() {
-                typingIndicator.style.display = 'none';
-            }
-
-            function criarHtmlMensagem(message, sender) {
+            // =======================================================
+            // MUDANÇA 3: Função 'criarHtmlMensagem' ATUALIZADA
+            // =======================================================
+            function criarHtmlMensagem(message, sender, nome) {
                 const msgWrap = document.createElement('div');
                 msgWrap.classList.add('chat-message');
                 const timestamp = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                let avatar = (sender === 'bot') ? '👤' : '👨‍💻'; // bot = Cliente, user = Help Desk
+
+                // Lógica para adicionar o NOME de quem enviou
+                let nomeHtml = '';
+                if (sender === 'bot' && nome) {
+                    nomeHtml = `<span class="message-sender-name">${nome}</span>`;
+                }
                 
-                msgWrap.classList.add(sender === 'bot' ? 'message-bot' : 'message-user');
-                msgWrap.innerHTML = `
-                    <span class="avatar">${avatar}</span>
-                    <div class="message-bubble">
-                        <p>${message.replace(/\n/g, '<br>')}</p>
-                        <span class="timestamp">${timestamp}</span>
-                    </div>
-                `;
+                if (sender === 'bot') {
+                    // INCOMING (Cliente)
+                    msgWrap.classList.add('message-bot');
+                    msgWrap.innerHTML = `
+                        <div class="message-bubble">
+                            ${nomeHtml}
+                            <p>${message.replace(/\n/g, '<br>')}</p>
+                            <span class="timestamp">${timestamp}</span>
+                        </div>
+                    `;
+                } else {
+                    // OUTGOING (Atendente)
+                    msgWrap.classList.add('message-user');
+                    msgWrap.innerHTML = `
+                        <div class="message-bubble">
+                            <p>${message.replace(/\n/g, '<br>')}</p>
+                            <span class="timestamp">${timestamp}</span>
+                        </div>
+                    `;
+                }
                 return msgWrap.outerHTML;
             }
-
-            function addMensagemSistema(texto) {
-                chatHistory.innerHTML += `<p class="system-message">${texto}</p>`;
-            }
             
-            // 4. Funções de Ação (Triggers)
-
-            // Botão "Conectar"
+            // --- Botão "Conectar" ---
             btnConectarWhats.addEventListener('click', async () => {
                 qrCodeContainer.innerHTML = '<p class="system-message">Pedindo QR Code ao servidor, aguarde...</p>';
+                qrCodeContainer.style.display = 'block';
+                chatHistory.style.display = 'none';
                 try {
-                    // Chama a rota do NOSSO backend (PortalR)
                     await fetch('/api/whatsapp/connect');
                 } catch (error) {
                     qrCodeContainer.innerHTML = `<p class="system-message" style="color:red;">Erro ao pedir conexão: ${error.message}</p>`;
                 }
             });
 
-            // Enviar Resposta (Help Desk -> Cliente)
+            // --- Enviar Resposta (Help Desk -> Cliente) ---
             async function handleSendMessage() {
                 const mensagem = chatInput.value.trim();
                 if (mensagem === '' || !conversaAtiva) {
                     if(!conversaAtiva) alert('Selecione uma conversa na fila primeiro.');
                     return;
                 }
-
-                // Adiciona a msg do Help Desk na UI e no histórico
-                const msgHtml = criarHtmlMensagem(mensagem, 'user');
+                
+                // =======================================================
+                // MUDANÇA 4: Passa 'null' para o nome (é o atendente)
+                // =======================================================
+                const msgHtml = criarHtmlMensagem(mensagem, 'user', null); 
                 chatHistory.innerHTML += msgHtml;
                 chatHistory.scrollTop = chatHistory.scrollHeight;
                 conversas[conversaAtiva] += msgHtml;
                 chatInput.value = '';
                 
                 try {
-                    // Manda a msg para o backend (que manda para a Evolution)
                     const response = await fetch('/api/whatsapp/send', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -368,11 +387,7 @@
                 }
             }
             
-            // 5. Lógica da Fila
-            
-            // ===================================================================
-            // --- CORREÇÃO 2: Função 'atualizarFila' reescrita para usar 'textContent' ---
-            // ===================================================================
+            // --- Lógica da Fila (Corrigida na sua última interação) ---
             function atualizarFila(numero, nome, marcarNaoLida = false) {
                 let item = document.querySelector(`.fila-item[data-numero="${numero}"]`);
                 
@@ -381,8 +396,6 @@
                     item.className = 'fila-item';
                     item.dataset.numero = numero;
                     
-                    // --- INÍCIO DA CORREÇÃO ---
-                    // Cria os elementos separadamente para usar .textContent
                     const badge = document.createElement('span');
                     badge.className = 'badge-nao-lido';
                     badge.textContent = '!';
@@ -398,10 +411,9 @@
                     item.appendChild(badge);
                     item.appendChild(nomeSpan);
                     item.appendChild(numeroSpan);
-                    // --- FIM DA CORREÇÃO ---
 
                     item.addEventListener('click', () => selecionarConversa(numero));
-                    filaAtendimento.prepend(item); // Adiciona no topo
+                    filaAtendimento.prepend(item);
                 }
                 
                 if (marcarNaoLida && conversaAtiva !== numero) {
@@ -410,22 +422,19 @@
             }
             
             function selecionarConversa(numero) {
-                if (conversaAtiva === numero) return; // Já está selecionada
+                if (conversaAtiva === numero) return; 
                 
                 conversaAtiva = numero;
                 
-                // Atualiza o visual da fila
                 document.querySelectorAll('.fila-item').forEach(item => {
+                    item.classList.toggle('active', item.dataset.numero === numero);
                     if (item.dataset.numero === numero) {
-                        item.classList.add('active');
-                        item.classList.remove('unread'); // Marca como lida
-                    } else {
-                        item.classList.remove('active');
+                         item.classList.remove('unread');
                     }
                 });
                 
-                // Carrega o histórico da conversa
-                qrCodeContainer.style.display = 'none'; // Esconde o QR Code
+                qrCodeContainer.style.display = 'none';
+                chatHistory.style.display = 'flex'; // Garante que o chat apareça
                 chatHistory.innerHTML = conversas[numero] || "";
                 chatHistory.scrollTop = chatHistory.scrollHeight;
                 chatInput.focus();
@@ -438,8 +447,8 @@
             });
             
             // --- Inicialização ---
-            hideTyping();
-            chatInput.disabled = true; // Começa desabilitado até conectar
+            chatInput.disabled = true; 
+            chatHistory.style.display = 'none'; // Começa com o chat escondido
 
         });
     </script>

@@ -1,0 +1,126 @@
+/* ======================================= */
+/* ESTILO DE CHAT WHATSAPP */
+/* ======================================= */
+
+/* --- 1. A Janela de Chat (Fundo) --- */
+.chat-history {
+    /* Cor de fundo do WhatsApp */
+    background-color: #E5DDD5;
+    
+    /* Imagem clássica de "doodle" do WhatsApp */
+    background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png");
+    
+    /* Garante que o histórico role e as mensagens comecem de baixo */
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 12px 6%; /* Espaçamento lateral responsivo */
+    display: flex;
+    flex-direction: column;
+}
+
+/* --- 2. O Balão de Mensagem (Geral) --- */
+.chat-message {
+    display: flex;
+    margin-bottom: 8px;
+    padding: 0;
+    max-width: 75%; /* Mensagem nunca ocupa 100% */
+}
+
+.message-bubble {
+    padding: 8px 12px;
+    border-radius: 8px;
+    position: relative; /* Essencial para o timestamp */
+    word-wrap: break-word; /* Quebra palavras longas */
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.08);
+}
+
+.message-bubble p {
+    margin: 0;
+    padding-bottom: 15px; /* Espaço para o timestamp */
+    line-height: 1.4;
+    font-size: 0.95rem;
+}
+
+/* --- 3. Nome do Remetente (Quem enviou) --- */
+.message-sender-name {
+    font-weight: bold;
+    font-size: 0.85em;
+    color: #307a5d; /* Cor do nome (pode ajustar) */
+    margin-bottom: 3px;
+    display: block;
+}
+
+/* --- 4. Timestamp (Hora) --- */
+.message-bubble .timestamp {
+    font-size: 0.7em;
+    position: absolute;
+    bottom: 5px;
+    right: 10px;
+}
+
+/* --- 5. Mensagem Recebida (Cliente) --- */
+.chat-message.message-bot {
+    align-self: flex-start; /* Alinha à esquerda */
+}
+.chat-message.message-bot .message-bubble {
+    background-color: #FFFFFF;
+    border-top-left-radius: 0;
+}
+.chat-message.message-bot .timestamp {
+    color: #a1a1a1;
+}
+
+/* --- 6. Mensagem Enviada (Atendente) --- */
+.chat-message.message-user {
+    align-self: flex-end; /* Alinha à direita */
+}
+.chat-message.message-user .message-bubble {
+    background-color: #DCF8C6; /* Verde clássico do WhatsApp */
+    border-top-right-radius: 0;
+}
+.chat-message.message-user .timestamp {
+    color: #728b64;
+}
+
+/* --- 7. Área de Digitação --- */
+.chat-input-area {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-top: 1px solid #ccc;
+    background-color: #f0f0f0; /* Fundo da área de digitação */
+    gap: 12px;
+}
+
+.chat-input-area input[type="text"] {
+    flex-grow: 1;
+    padding: 10px 18px;
+    font-size: 1rem;
+    border: 1px solid #fff;
+    border-radius: 20px;
+    outline: none;
+}
+
+.chat-input-area .send-btn {
+    background-color: #007bff; /* Azul do Portal */
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 42px;
+    height: 42px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.chat-input-area .send-btn:hover {
+    background-color: #0056b3;
+}
+
+/* --- Indicador "Digitando..." (oculto) --- */
+.typing-indicator {
+    display: none;
+}
