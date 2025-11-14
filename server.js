@@ -14,6 +14,14 @@ import { Server } from 'socket.io'; // O Servidor do Socket.io
 
 import mainRouter from './src/routers/index.js';
 
+
+console.log("====================================");
+console.log("DEBUG: A EVOLUTION_API_URL é:");
+console.log(process.env.EVOLUTION_API_URL);
+console.log("DEBUG: A EVOLUTION_API_KEY é:");
+console.log(process.env.EVOLUTION_API_KEY);
+console.log("====================================");
+// ================== FIM DO DEBUG ==================
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
