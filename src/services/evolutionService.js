@@ -21,7 +21,7 @@ export const criarInstancia = async () => {
   try {
     const response = await apiClient.post('/instance/create', {
       instanceName: INSTANCE_NAME,
-      // integration: "WHATSAPP-MULTI-DEVICE",  // <-- LINHA REMOVIDA
+      integration: "whatsapp",   // <-- OBRIGATÓRIO NA V2
       qrcode: true
     });
 
@@ -30,7 +30,6 @@ export const criarInstancia = async () => {
 
   } catch (error) {
 
-    // Instância já existe → pedir novo QR
     if (error.response && error.response.status === 409) {
       console.warn('Instância já existe, pedindo novo QR...');
       return conectarInstancia();
@@ -40,7 +39,6 @@ export const criarInstancia = async () => {
     throw new Error('Falha ao criar instância.');
   }
 };
-
 /**
  * Conectar instância existente + gerar novo QR Code
  */
