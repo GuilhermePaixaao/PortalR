@@ -75,6 +75,7 @@ export const enviarTexto = async (numero, mensagem) => {
     });
 
     return response.data;
+
   } catch (error) {
     console.error("Erro ao enviar texto:", error.response?.data || error.message);
     throw new Error('Falha ao enviar mensagem.');
