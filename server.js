@@ -31,7 +31,7 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: "*", // Em produção, mude para a URL do seu portal
+    origin: "https://portal.smrosalina.com.br", // <-- CORRIGIDO
     methods: ["GET", "POST"]
   }
 });

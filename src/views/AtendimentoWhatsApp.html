@@ -251,7 +251,7 @@
         let nomesClientes = {}; // Armazena { numero: "Nome Cliente" }
 
         // --- 
-        // *** MUDANÇA 2: Conexão explícita com URL e Polling ***
+        // *** MUDANÇA 2: Conexão explícita com URL (HTTPS CORRETO) e Polling ***
         // ---
         const socket = io("https://portal.smrosalina.com.br", { 
             transports: ['polling'] 
@@ -272,7 +272,8 @@
         });
         socket.on('disconnect', (reason) => {
              console.warn('Socket desconectado:', reason);
-             if (statusConexao.textContent !== "Conectado") {
+             // Só muda o status se a API não estiver conectada
+             if (statusConexao.textContent === "Socket Conectado" || statusConexao.textContent === "Erro de Socket") {
                 statusConexao.textContent = "Desconectado";
                 statusConexao.className = "disconnected";
              }
@@ -401,8 +402,11 @@
                 statusConexao.textContent = "Conectando...";
                 statusConexao.className = "disconnected";
             } else {
-                statusConexao.textContent = "Desconectado";
-                statusConexao.className = "disconnected";
+                // Se o socket ainda estiver OK, mas a API caiu
+                if(socket.connected) {
+                    statusConexao.textContent = "Desconectado";
+                    statusConexao.className = "disconnected";
+                }
                 qrCodeContainer.innerHTML = '<p class="system-message">Desconectado. Clique em "Conectar" para tentar novamente.</p>';
                 qrCodeContainer.style.display = 'block';
                 chatHistory.style.display = 'none';
@@ -417,6 +421,12 @@
          * 💅 Inicia a conexão com o WhatsApp
          */
         async function conectarWhatsApp() {
+            // Só tenta conectar se o socket estiver vivo
+            if (!socket.connected) {
+                alert("Não foi possível conectar ao servidor do portal. Verifique o console (F12) e recarregue a página.");
+                return;
+            }
+
             qrCodeContainer.innerHTML = '<p class="system-message">Pedindo QR Code ao servidor, aguarde...</p>';
             qrCodeContainer.style.display = 'block';
             chatHistory.style.display = 'none';
@@ -609,8 +619,6 @@
         chatInput.disabled = true; 
         chatHistory.style.display = 'none';
         
-        // Removido conectarWhatsApp() automático para esperar o socket conectar primeiro
-        // O usuário clica em "Conectar" quando estiver pronto.
     });
 </script>
 </body>
