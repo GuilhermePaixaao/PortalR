@@ -31,7 +31,7 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: "*", // <-- CORRIGIDO
+    origin: "https://portal.smrosalina.com.br", // <-- CORRIGIDO
     methods: ["GET", "POST"]
   }
 });

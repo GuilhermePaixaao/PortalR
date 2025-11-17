@@ -20,7 +20,7 @@ export const criarInstancia = async () => {
   try {
     const response = await apiClient.post('/instance/create', {
       instanceName: INSTANCE_NAME,
-      token: EVOLUTION_API_KEY, // Pode deixar vazio
+      //token: EVOLUTION_API_KEY, // Pode deixar vazio
       qrcode: true // Pede para gerar o QR Code
     });
     console.log('Resposta da criação da instância:', response.data);
