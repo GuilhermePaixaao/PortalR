@@ -251,14 +251,16 @@
         let nomesClientes = {}; // Armazena { numero: "Nome Cliente" }
 
         // --- 
-        // *** MUDANÇA 2: Conexão explícita com URL (HTTPS CORRETO) e Polling ***
+        // *** ATUALIZAÇÃO: Conexão SEM URL fixa ***
         // ---
-        const socket = io("https://portal.smrosalina.com.br", { 
+        // ANTES: const socket = io("https://portal.smrosalina.com.br", { 
+        // AGORA:
+        const socket = io({ 
             transports: ['polling'] 
         });
 
         // --- 
-        // *** MUDANÇA 3: Debug de Conexão (Verifique o console F12) ***
+        // *** Debug de Conexão (Verifique o console F12) ***
         // ---
         socket.on('connect', () => {
             console.log('Socket CONECTADO com sucesso ao servidor! ID:', socket.id);
