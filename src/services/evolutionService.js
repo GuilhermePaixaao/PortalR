@@ -21,7 +21,7 @@ export const criarInstancia = async () => {
   try {
     const response = await apiClient.post('/instance/create', {
       instanceName: INSTANCE_NAME,
-      integration: "WHATSAPP-MULTI-DEVICE",  // <--- ESSA LINHA É OBRIGATÓRIA
+      // integration: "WHATSAPP-MULTI-DEVICE",  // <-- LINHA REMOVIDA
       qrcode: true
     });
 
