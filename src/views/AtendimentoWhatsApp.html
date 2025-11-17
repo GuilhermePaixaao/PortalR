@@ -250,7 +250,7 @@
         let conversas = {}; // Armazena { numero: [ {msgData}, {msgData} ] }
         let nomesClientes = {}; // Armazena { numero: "Nome Cliente" }
 
-        const socket = io();
+        const socket = io({ transports: ['polling'] });
 
         /**
          * 🔒 (SEGURO) Cria o elemento DOM para um balão de chat.
