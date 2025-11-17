@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Variáveis do ambiente (locais OU do Railway)
-const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL;
+const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL;   // precisa terminar com /v2
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY;
 const INSTANCE_NAME = process.env.EVOLUTION_INSTANCE_NAME || "default";
 
@@ -15,13 +15,13 @@ const apiClient = axios.create({
 });
 
 /**
- * Cria instância + gera QR Code
+ * Criar instância + gerar QR Code
  */
 export const criarInstancia = async () => {
   try {
-    const response = await apiClient.post('/instance/create', {
+    const response = await apiClient.post('/instances/create', {
       instanceName: INSTANCE_NAME,
-      integration: "whatsapp",   // <-- OBRIGATÓRIO NA V2
+      integration: "whatsapp", // obrigatório na v2
       qrcode: true
     });
 
@@ -39,12 +39,13 @@ export const criarInstancia = async () => {
     throw new Error('Falha ao criar instância.');
   }
 };
+
 /**
  * Conectar instância existente + gerar novo QR Code
  */
 export const conectarInstancia = async () => {
   try {
-    const response = await apiClient.get(`/instance/connect/${INSTANCE_NAME}`);
+    const response = await apiClient.get(`/instances/connect/${INSTANCE_NAME}`);
     console.log('Resposta da conexão:', response.data);
     return response.data;
 
@@ -59,7 +60,7 @@ export const conectarInstancia = async () => {
  */
 export const enviarTexto = async (numero, mensagem) => {
   try {
-    const url = `/message/sendText/${INSTANCE_NAME}`;
+    const url = `/messages/sendText/${INSTANCE_NAME}`;
 
     const response = await apiClient.post(url, {
       number: numero,
