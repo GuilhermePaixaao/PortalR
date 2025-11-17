@@ -3,7 +3,7 @@ import axios from 'axios';
 // Essas variáveis VÊM DO SEU .env (do PortalR)
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL; // (Ex: https://evo-api.railway.app)
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY; // (A senha que você criou)
-const INSTANCE_NAME = process.env.EVOLUTION_INSTANCE_NAME || "default"; // Nome da sua instância
+const INSTANCE_NAME = process.env.EVOLUTION_INSTANCE_NAME ||"default"; // Nome da sua instância
 const apiClient = axios.create({
   baseURL: EVOLUTION_API_URL,
   headers: {
