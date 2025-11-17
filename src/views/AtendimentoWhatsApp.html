@@ -208,7 +208,7 @@
         </main>
     </div>
 
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
 
     <script type="module">
     document.addEventListener('DOMContentLoaded', () => {
@@ -250,7 +250,35 @@
         let conversas = {}; // Armazena { numero: [ {msgData}, {msgData} ] }
         let nomesClientes = {}; // Armazena { numero: "Nome Cliente" }
 
-        const socket = io({ transports: ['polling'] });
+        // --- 
+        // *** MUDANÇA 2: Conexão explícita com URL e Polling ***
+        // ---
+        const socket = io("https://portal.smrosalina.com.br", { 
+            transports: ['polling'] 
+        });
+
+        // --- 
+        // *** MUDANÇA 3: Debug de Conexão (Verifique o console F12) ***
+        // ---
+        socket.on('connect', () => {
+            console.log('Socket CONECTADO com sucesso ao servidor! ID:', socket.id);
+            statusConexao.textContent = "Socket Conectado"; // Feedback visual
+            statusConexao.className = "connected";
+        });
+        socket.on('connect_error', (err) => {
+            console.error('Socket FALHOU AO CONECTAR:', err.message);
+            statusConexao.textContent = "Erro de Socket";
+            statusConexao.className = "disconnected";
+        });
+        socket.on('disconnect', (reason) => {
+             console.warn('Socket desconectado:', reason);
+             if (statusConexao.textContent !== "Conectado") {
+                statusConexao.textContent = "Desconectado";
+                statusConexao.className = "disconnected";
+             }
+        });
+        // --- FIM DAS MUDANÇAS ---
+
 
         /**
          * 🔒 (SEGURO) Cria o elemento DOM para um balão de chat.
@@ -342,6 +370,7 @@
         
         // --- Evento: 'qrCodeRecebido' ---
         socket.on('qrCodeRecebido', (data) => {
+            console.log("Socket: QR Code recebido!"); // DEBUG
             if (data.qr) {
                 qrCodeContainer.innerHTML = `<img src="${data.qr}" alt="Escaneie o QR Code com seu WhatsApp">`;
                 statusConexao.textContent = "Escaneie o QR Code";
@@ -353,6 +382,7 @@
         
         // --- Evento: 'statusConexao' ---
         socket.on('statusConexao', (data) => {
+            console.log("Socket: Status da API Evolution:", data.status); // DEBUG
             if (data.status === 'open') {
                 statusConexao.textContent = "Conectado";
                 statusConexao.className = "connected";
@@ -391,7 +421,14 @@
             qrCodeContainer.style.display = 'block';
             chatHistory.style.display = 'none';
             try {
-                await fetch('/api/whatsapp/connect');
+                // A rota da API que você criou
+                const response = await fetch('/api/whatsapp/connect'); 
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.message || "Erro do servidor");
+                }
+                // Agora é só aguardar o evento 'qrCodeRecebido'
+                
             } catch (error) {
                 qrCodeContainer.innerHTML = `<p class="system-message" style="color:red;">Erro ao pedir conexão: ${error.message}</p>`;
             }
@@ -572,7 +609,8 @@
         chatInput.disabled = true; 
         chatHistory.style.display = 'none';
         
-        conectarWhatsApp(); // 💅 Tenta conectar ao carregar
+        // Removido conectarWhatsApp() automático para esperar o socket conectar primeiro
+        // O usuário clica em "Conectar" quando estiver pronto.
     });
 </script>
 </body>
