@@ -1,17 +1,13 @@
 import axios from 'axios';
 
-// IMPORTANTE: No Railway, sua EVOLUTION_API_URL deve terminar sem barra no final, ex:
-// https://api-evolution.railway.app
-// O '/v2' nós adicionamos direto nas chamadas ou na baseURL se preferir.
-// Para facilitar, vou assumir que sua ENV vem limpa e adiciono aqui:
-
-const BASE_URL = process.env.EVOLUTION_API_URL; // Ex: https://sua-api.railway.app
+// Variáveis de Ambiente
+const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL;
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY;
-const INSTANCE_NAME = process.env.EVOLUTION_INSTANCE_NAME || "portal_whatsapp_v1";
+// Usa 'default' se não houver nome definido no .env
+const INSTANCE_NAME = process.env.EVOLUTION_INSTANCE_NAME || "default"; 
 
-// Cria o cliente axios
 const apiClient = axios.create({
-  baseURL: BASE_URL, // A Evolution V2 costuma usar /instance na raiz, ou /v2 dependendo da config
+  baseURL: EVOLUTION_API_URL,
   headers: {
     'apikey': EVOLUTION_API_KEY,
     'Content-Type': 'application/json'
@@ -19,80 +15,69 @@ const apiClient = axios.create({
 });
 
 /**
- * Criar instância + gerar QR Code
+ * Cria a instância e pede o QR Code.
  */
 export const criarInstancia = async () => {
   try {
+    // Tenta criar a instância
     const response = await apiClient.post('/instance/create', {
       instanceName: INSTANCE_NAME,
-      integration: "WHATSAPP-BAILEYS", // <--- AQUI ESTAVA O ERRO (tem que ser assim)
-      qrcode: true
+      token: "", 
+      qrcode: true,
+      integration: "WHATSAPP-BAILEYS" // Importante para evitar erros
     });
-
-    console.log('Instância criada. QR Code deve estar na resposta:', response.data);
+    console.log('Instância criada:', response.data);
     return response.data;
-
   } catch (error) {
-    // Se der erro 409 (Conflict), significa que já existe, então tentamos conectar
-    if (error.response && error.response.status === 403) {
-        // Às vezes retorna 403 ou 409 quando já existe
-        console.warn('Instância já existe. Tentando conectar...');
+    // Se já existe (Erro 409), apenas conecta
+    if (error.response && error.response.status === 409) {
+        console.warn('Instância já existe, conectando...');
         return conectarInstancia();
     }
-    
-    // Tratamento específico para quando já existe (mensagem de erro comum)
-    if (error.response?.data?.error === 'Instance already exists') {
-        console.warn('Instância já existe. Tentando conectar...');
-        return conectarInstancia();
-    }
-
     console.error("Erro ao criar instância:", error.response?.data || error.message);
     throw new Error('Falha ao criar instância.');
   }
 };
 
 /**
- * Conectar instância existente (Puxar novo QR Code)
+ * Pede apenas o QR Code (para instância já existente).
  */
 export const conectarInstancia = async () => {
-  try {
-    // <--- AQUI TINHA UM ERRO: estava //connect
-    // Na v2, para reconectar e pegar o QR Code de uma instância existente:
-    const response = await apiClient.get(`/instance/connect/${INSTANCE_NAME}`);
-    
-    console.log('Solicitação de conexão feita:', response.data);
-    return response.data;
+    try {
+        const response = await apiClient.get(`/instance/connect/${INSTANCE_NAME}`);
+        return response.data;
+    } catch (error) {
+        console.error("Erro ao conectar instância:", error.response?.data || error.message);
+        throw new Error('Falha ao conectar instância.');
+    }
+}
 
+/**
+ * Envia mensagem de texto.
+ */
+export const enviarTexto = async (numero, mensagem) => {
+  try {
+    const response = await apiClient.post(`/message/sendText/${INSTANCE_NAME}`, {
+      number: numero,
+      options: { delay: 1200, presence: 'composing' },
+      textMessage: { text: mensagem }
+    });
+    return response.data;
   } catch (error) {
-    console.error("Erro ao conectar instância:", error.response?.data || error.message);
-    throw new Error('Falha ao conectar instância.');
+    console.error("Erro ao enviar mensagem:", error.response?.data || error.message);
+    throw new Error('Falha ao enviar mensagem.');
   }
 };
 
 /**
- * Enviar texto
+ * (NOVO) Consulta o status da conexão.
  */
-export const enviarTexto = async (numero, mensagem) => {
+export const consultarStatus = async () => {
   try {
-    // Ajuste da rota para o padrão da V2
-    const url = `/message/send/text/${INSTANCE_NAME}`;
-
-    const response = await apiClient.post(url, {
-      number: numero,
-      options: {
-        delay: 1200,
-        presence: 'composing',
-        linkPreview: false
-      },
-      textMessage: {
-        text: mensagem
-      }
-    });
-
+    const response = await apiClient.get(`/instance/connectionState/${INSTANCE_NAME}`);
     return response.data;
-
   } catch (error) {
-    console.error("Erro ao enviar texto:", error.response?.data || error.message);
-    throw new Error('Falha ao enviar mensagem.');
+    // Se der erro (ex: 404 instância não encontrada), retorna 'close'
+    return { instance: { state: 'close' } }; 
   }
 };

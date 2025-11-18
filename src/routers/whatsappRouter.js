@@ -3,13 +3,16 @@ import * as WhatsappController from '../controllers/whatsappController.js';
 
 const router = Router();
 
-// Rota que a EVOLUTION API vai chamar (Webhook)
+// Webhook (Evolution chama isso)
 router.post('/api/evolution/webhook', WhatsappController.handleWebhook);
 
-// Rota que o SEU PORTAL vai chamar para CONECTAR
+// Frontend chama isso para conectar/gerar QR
 router.get('/api/whatsapp/connect', WhatsappController.connectInstance);
 
-// Rota que o SEU PORTAL vai chamar para ENVIAR MENSAGEM
+// Frontend chama isso para enviar msg
 router.post('/api/whatsapp/send', WhatsappController.handleSendMessage);
+
+// (NOVO) Frontend chama isso para ver se já está conectado
+router.get('/api/whatsapp/status', WhatsappController.checarStatus);
 
 export default router;
