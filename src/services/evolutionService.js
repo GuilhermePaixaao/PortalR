@@ -13,9 +13,6 @@ const apiClient = axios.create({
   }
 });
 
-/**
- * Cria a instância e pede o QR Code.
- */
 export const criarInstancia = async () => {
   try {
     const response = await apiClient.post('/instance/create', {
@@ -24,34 +21,26 @@ export const criarInstancia = async () => {
       qrcode: true,
       integration: "WHATSAPP-BAILEYS" 
     });
-    console.log('Instância criada:', response.data);
     return response.data;
   } catch (error) {
     if (error.response && error.response.status === 409) {
-        console.warn('Instância já existe, conectando...');
         return conectarInstancia();
     }
-    console.error("Erro ao criar instância:", error.response?.data || error.message);
+    console.error("Erro ao criar:", error.message);
     throw new Error('Falha ao criar instância.');
   }
 };
 
-/**
- * Pede apenas o QR Code (para instância já existente).
- */
 export const conectarInstancia = async () => {
     try {
         const response = await apiClient.get(`/instance/connect/${INSTANCE_NAME}`);
         return response.data;
     } catch (error) {
-        console.error("Erro ao conectar instância:", error.response?.data || error.message);
+        console.error("Erro ao conectar:", error.message);
         throw new Error('Falha ao conectar instância.');
     }
 }
 
-/**
- * Envia mensagem de texto.
- */
 export const enviarTexto = async (numero, mensagem) => {
   try {
     const response = await apiClient.post(`/message/sendText/${INSTANCE_NAME}`, {
@@ -61,14 +50,10 @@ export const enviarTexto = async (numero, mensagem) => {
     });
     return response.data;
   } catch (error) {
-    console.error("Erro ao enviar mensagem:", error.response?.data || error.message);
     throw new Error('Falha ao enviar mensagem.');
   }
 };
 
-/**
- * Consulta o status da conexão.
- */
 export const consultarStatus = async () => {
   try {
     const response = await apiClient.get(`/instance/connectionState/${INSTANCE_NAME}`);
@@ -79,18 +64,18 @@ export const consultarStatus = async () => {
 };
 
 /**
- * (CORRIGIDO) Busca todas as conversas/chats
- * Mudamos de GET para POST, pois a V2 exige isso para rotas 'find'.
+ * (CORRIGIDO) Busca apenas as conversas recentes para não travar (Fila)
  */
 export const buscarConversas = async () => {
   try {
-    // Na V2, findChats é POST e aceita filtros. Enviamos 'where: {}' para pegar tudo.
+    // Adicionamos 'limit' e 'offset' para pegar apenas as 50 primeiras
     const response = await apiClient.post(`/chat/findChats/${INSTANCE_NAME}`, {
-        where: {} 
+        limit: 50,
+        offset: 0
     });
     return response.data;
   } catch (error) {
-    console.error("Erro ao buscar conversas:", error.response?.status, error.message);
-    return []; // Retorna lista vazia para não quebrar a tela
+    console.error("Erro ao buscar conversas:", error.message);
+    return []; 
   }
 };
