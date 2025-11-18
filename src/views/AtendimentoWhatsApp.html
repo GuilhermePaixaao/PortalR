@@ -28,38 +28,69 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <style>
-        /* --- ESTILOS ESPECÍFICOS PARA FICAR BONITO (WhatsApp Style) --- */
+        /* --- CORES E VARIÁVEIS (Tema Claro Padrão) --- */
         :root {
-            --wa-green: #00a884;
-            --wa-bg: #efeae2;
-            --wa-header: #f0f2f5;
-            --wa-incoming: #ffffff;
-            --wa-outgoing: #d9fdd3;
-            --border-light: #e9edef;
+            --wa-bg-color: #efeae2;
+            --wa-header-bg: #f0f2f5;
+            --wa-sidebar-bg: #ffffff;
+            --wa-border: #e9edef;
+            --wa-msg-in: #ffffff;
+            --wa-msg-out: #d9fdd3;
+            --wa-primary: #00a884;
+            --text-primary: #111b21;
+            --text-secondary: #667781;
+            --input-bg: #ffffff;
+            --hover-bg: #f5f6f6;
+            --active-bg: #f0f2f5;
+            --system-msg-bg: #ffffff; /* Fundo das telas de aviso */
         }
+
+        /* --- TEMA ESCURO (WhatsApp Dark Mode) --- */
+        body.dark-mode {
+            --wa-bg-color: #0b141a; /* Fundo do chat */
+            --wa-header-bg: #202c33; /* Headers e Input Area */
+            --wa-sidebar-bg: #111b21; /* Fundo da barra lateral */
+            --wa-border: #2f3b43; /* Bordas */
+            --wa-msg-in: #202c33; /* Mensagem recebida */
+            --wa-msg-out: #005c4b; /* Mensagem enviada (Verde escuro) */
+            --wa-primary: #00a884; /* Verde destaque (mantido) */
+            --text-primary: #e9edef; /* Texto principal (quase branco) */
+            --text-secondary: #8696a0; /* Texto secundário (cinza) */
+            --input-bg: #2a3942; /* Fundo do input */
+            --hover-bg: #202c33;
+            --active-bg: #2a3942;
+            --system-msg-bg: #202c33; /* Telas de aviso no dark */
+        }
+
+        /* Ajustes globais do Dark Mode para o Portal */
+        body.dark-mode .main-content { background-color: var(--wa-sidebar-bg); }
+        body.dark-mode .header { background-color: var(--wa-header-bg); border-bottom-color: var(--wa-border); }
+        body.dark-mode .logo { color: #e9edef; }
+        body.dark-mode #userNameDisplay { color: #e9edef; }
 
         /* Layout Principal */
         .main-content {
             padding: 0;
-            height: calc(100vh - 60px); /* Tira a altura do header */
-            background-color: #fff;
+            height: calc(100vh - 60px);
+            background-color: var(--wa-sidebar-bg);
             display: flex;
             overflow: hidden;
         }
 
-        /* Barra Lateral (Lista de Contatos) */
+        /* Barra Lateral */
         .sidebar-chat {
             width: 350px;
-            background-color: #fff;
-            border-right: 1px solid var(--border-light);
+            background-color: var(--wa-sidebar-bg);
+            border-right: 1px solid var(--wa-border);
             display: flex;
             flex-direction: column;
+            transition: background-color 0.3s;
         }
 
         .sidebar-header {
             padding: 10px 16px;
-            background-color: var(--wa-header);
-            border-bottom: 1px solid var(--border-light);
+            background-color: var(--wa-header-bg);
+            border-bottom: 1px solid var(--wa-border);
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -69,19 +100,17 @@
         .connection-status {
             font-size: 0.85rem;
             font-weight: 600;
-            color: #54656f;
+            color: var(--text-secondary);
             display: flex;
             align-items: center;
             gap: 8px;
         }
-        .status-dot {
-            width: 10px; height: 10px; border-radius: 50%; background-color: #ccc;
-        }
-        .status-dot.online { background-color: var(--wa-green); }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background-color: #ccc; }
+        .status-dot.online { background-color: var(--wa-primary); }
         .status-dot.offline { background-color: #ea0038; }
 
         .btn-conectar {
-            background-color: var(--wa-green);
+            background-color: var(--wa-primary);
             color: white;
             border: none;
             padding: 6px 12px;
@@ -91,27 +120,27 @@
             font-weight: bold;
         }
 
-        /* Lista de Conversas */
+        /* Lista de Contatos */
         #filaAtendimento {
             flex: 1;
             overflow-y: auto;
-            background-color: #fff;
+            background-color: var(--wa-sidebar-bg);
         }
 
         .contact-item {
             display: flex;
             padding: 12px 15px;
             cursor: pointer;
-            border-bottom: 1px solid #f0f2f5;
+            border-bottom: 1px solid var(--wa-border);
             transition: background 0.2s;
             position: relative;
         }
-        .contact-item:hover { background-color: #f5f6f6; }
-        .contact-item.active { background-color: #f0f2f5; }
+        .contact-item:hover { background-color: var(--hover-bg); }
+        .contact-item.active { background-color: var(--active-bg); }
 
         .avatar-placeholder {
             width: 45px; height: 45px;
-            background-color: #dfe5e7;
+            background-color: #667781;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -121,121 +150,112 @@
             margin-right: 15px;
         }
 
-        .contact-info { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        .contact-name { font-size: 1rem; color: #111b21; font-weight: 500; }
-        .contact-last-msg { font-size: 0.85rem; color: #667781; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+        .contact-info { flex: 1; display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
+        .contact-name { font-size: 1rem; color: var(--text-primary); font-weight: 500; }
+        .contact-last-msg { font-size: 0.85rem; color: var(--text-secondary); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
         .badge-unread {
-            background-color: #25d366;
-            color: white;
-            font-size: 0.75rem;
-            font-weight: bold;
-            min-width: 20px;
-            height: 20px;
+            background-color: #25d366; color: white;
+            font-size: 0.75rem; font-weight: bold;
+            min-width: 20px; height: 20px;
             border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
+            display: flex; align-items: center; justify-content: center;
+            position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
         }
 
-        /* Área Principal (Chat) */
+        /* Área de Chat */
         .chat-area {
             flex: 1;
             display: flex;
             flex-direction: column;
-            background-color: var(--wa-bg);
-            background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png");
+            background-color: var(--wa-bg-color);
+            /* Overlay escuro na imagem de fundo quando em modo dark */
             position: relative;
-        }
-
-        /* Telas de Estado (QR Code / Bem-vindo) */
-        .overlay-screen {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-color: #f0f2f5;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-            text-align: center;
-            border-bottom: 6px solid var(--wa-green);
+            z-index: 0;
         }
         
-        .overlay-screen img { width: 280px; height: 280px; border: 8px solid #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .overlay-screen h2 { margin-top: 30px; color: #41525d; font-weight: 300; font-size: 2rem; }
-        .overlay-screen p { margin-top: 10px; color: #667781; font-size: 0.9rem; max-width: 500px; line-height: 1.5; }
+        /* Imagem de fundo com filtro para o modo escuro */
+        .chat-area::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png");
+            opacity: 0.4; /* Suave no light mode */
+            z-index: -1;
+            pointer-events: none;
+        }
+        body.dark-mode .chat-area::before {
+            opacity: 0.08; /* Muito sutil no dark mode */
+        }
+
+        /* Telas de Aviso */
+        .overlay-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: var(--wa-header-bg); /* Usa a cor do header para dar contraste com a sidebar */
+            border-left: 1px solid var(--wa-border);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            z-index: 10; text-align: center;
+            border-bottom: 6px solid var(--wa-primary);
+        }
+        .overlay-screen img { width: 280px; height: 280px; border: 8px solid #fff; border-radius: 8px; }
+        .overlay-screen h2 { margin-top: 30px; color: var(--text-primary); font-weight: 300; font-size: 2rem; }
+        .overlay-screen p { margin-top: 10px; color: var(--text-secondary); font-size: 0.9rem; max-width: 500px; line-height: 1.5; }
 
         /* Mensagens */
         .messages-container {
-            flex: 1;
-            padding: 20px 60px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
+            flex: 1; padding: 20px 60px; overflow-y: auto;
+            display: flex; flex-direction: column;
         }
 
         .msg {
-            max-width: 65%;
-            padding: 8px 12px;
-            border-radius: 7.5px;
-            margin-bottom: 8px;
-            position: relative;
-            font-size: 0.9rem;
-            line-height: 1.4;
-            box-shadow: 0 1px 0.5px rgba(11,20,26,.13);
+            max-width: 65%; padding: 8px 12px; border-radius: 7.5px;
+            margin-bottom: 8px; position: relative;
+            font-size: 0.9rem; line-height: 1.4;
+            box-shadow: 0 1px 0.5px rgba(0,0,0,0.13);
             word-wrap: break-word;
+            color: var(--text-primary);
         }
-        .msg-in { align-self: flex-start; background-color: var(--wa-incoming); border-top-left-radius: 0; }
-        .msg-out { align-self: flex-end; background-color: var(--wa-outgoing); border-top-right-radius: 0; }
+        .msg-in { align-self: flex-start; background-color: var(--wa-msg-in); border-top-left-radius: 0; }
+        .msg-out { align-self: flex-end; background-color: var(--wa-msg-out); border-top-right-radius: 0; }
         
         .msg-time {
-            font-size: 0.7rem;
-            color: #667781;
-            float: right;
-            margin-top: 5px;
-            margin-left: 10px;
+            font-size: 0.7rem; color: var(--text-secondary);
+            float: right; margin-top: 5px; margin-left: 10px;
         }
         
         .msg-sender {
-            font-size: 0.75rem;
-            font-weight: bold;
-            color: var(--wa-green); /* Cor diferente para diferenciar */
-            display: block;
-            margin-bottom: 4px;
+            font-size: 0.75rem; font-weight: bold;
+            color: var(--wa-primary);
+            display: block; margin-bottom: 4px;
         }
 
         /* Input Area */
         .input-area {
             height: 60px;
-            background-color: var(--wa-header);
+            background-color: var(--wa-header-bg);
             padding: 10px 16px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            z-index: 20; /* Ficar acima da imagem de fundo */
+            display: flex; align-items: center; gap: 15px;
+            z-index: 20;
+            border-top: 1px solid var(--wa-border);
         }
         
         .input-field {
             flex: 1;
-            background-color: #fff;
-            border: none;
-            border-radius: 8px;
-            padding: 12px 15px;
-            font-size: 0.95rem;
-            outline: none;
+            background-color: var(--input-bg);
+            color: var(--text-primary);
+            border: none; border-radius: 8px;
+            padding: 12px 15px; font-size: 0.95rem; outline: none;
         }
         
         .btn-send {
-            background: none; border: none; color: #54656f; font-size: 1.5rem; cursor: pointer;
+            background: none; border: none;
+            color: var(--text-secondary);
+            font-size: 1.5rem; cursor: pointer;
         }
-        .btn-send:hover { color: var(--wa-green); }
+        .btn-send:hover { color: var(--wa-primary); }
 
-        /* CSS do Header original */
+        /* CSS do Header Original para manter consistência */
         .header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 2rem; background-color: #ffffff; border-bottom: 1px solid #dee2e6; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 1030; }
         .logo { display: flex; align-items: center; gap: 10px; font-size: 1.4rem; font-weight: 700; color: #0d6efd; text-transform: uppercase; letter-spacing: 0.5px; margin: 0; white-space: nowrap; }
         .logo-icon { height: 30px; width: auto; }
@@ -245,6 +265,13 @@
         .sidebar nav ul li a { display: flex; align-items: center; text-decoration: none; padding: 10px 15px; width: 100%; height: auto; }
         .sidebar .icon { margin-right: 10px; min-width: 20px; text-align: center; flex-shrink: 0; align-self: center; }
         .sidebar .text { flex-grow: 1; white-space: normal; line-height: 1.2; }
+        
+        /* Botão de Tema */
+        .btn-theme-toggle { background: none; border: 1px solid #ced4da; border-radius: 50%; width: 40px; height: 40px; font-size: 1.2rem; cursor: pointer; color: #495057; display: flex; align-items: center; justify-content: center; padding: 0; }
+        .btn-theme-toggle:hover { background-color: #f1f3f5; }
+        body.dark-mode .btn-theme-toggle { border-color: #555; color: #e9edef; }
+        body.dark-mode .btn-theme-toggle:hover { background-color: #2a3942; }
+
     </style>
 </head>
 
@@ -257,6 +284,7 @@
                 PORTAL SUPERMERCADO ROSALINA
             </div>
             <div class="header-actions">
+                <button id="themeToggle" class="btn-theme-toggle" title="Alternar Tema">🌙</button>
                 <span id="userNameDisplay"></span>
                 <button id="logoutButton" class="btn-logout">Sair</button>
             </div>
@@ -295,13 +323,13 @@
                 <div id="qrCodeScreen" class="overlay-screen" style="display:none;">
                     <div id="qrCodeContainer"></div>
                     <h2>Conectar WhatsApp</h2>
-                    <p>Abra o WhatsApp no seu celular, toque em <strong>Mais opções</strong> ou <strong>Configurações</strong> e selecione <strong>Aparelhos conectados</strong>. Aponte seu celular para esta tela para capturar o código.</p>
+                    <p>Abra o WhatsApp no seu celular, toque em <strong>Mais opções</strong> ou <strong>Configurações</strong> e selecione <strong>Aparelhos conectados</strong>.</p>
                 </div>
 
                 <div id="welcomeScreen" class="overlay-screen">
-                    <img src="https://img.freepik.com/vetores-gratis/ilustracao-do-conceito-de-chat-bot_114360-5522.jpg" alt="Conectado" style="border:none; box-shadow:none; width: 300px;">
+                    <img src="https://img.freepik.com/vetores-gratis/ilustracao-do-conceito-de-chat-bot_114360-5522.jpg" alt="Conectado" style="border:none; box-shadow:none; width: 300px; background: transparent;">
                     <h2>Portal Rosalina Conectado</h2>
-                    <p>Envie e receba mensagens do WhatsApp diretamente por aqui.<br>Selecione um contato na lista à esquerda para iniciar o atendimento.</p>
+                    <p>Envie e receba mensagens do WhatsApp diretamente por aqui.<br>Selecione um contato na lista à esquerda.</p>
                 </div>
 
                 <div id="activeChatScreen" style="display:none; width:100%; height:100%; flex-direction:column;">
@@ -322,16 +350,32 @@
     <script type="module">
     document.addEventListener('DOMContentLoaded', () => {
         
-        // --- LÓGICA DE AUTH E LOGOUT ---
+        // --- TEMA ESCURO E AUTH ---
         function fazerLogout() { localStorage.removeItem("userData"); window.location.href = "Login.html"; }
         const btnLogout = document.getElementById("logoutButton");
         if (btnLogout) btnLogout.addEventListener('click', fazerLogout);
+
+        // Lógica do Tema
+        const btnThemeToggle = document.getElementById("themeToggle");
+        function toggleTheme() { 
+            document.body.classList.toggle("dark-mode"); 
+            let d = document.body.classList.contains("dark-mode"); 
+            localStorage.setItem("theme", d ? "dark" : "light"); 
+            btnThemeToggle.textContent = d ? "☀️" : "🌙"; 
+        }
+        function loadTheme() { 
+            const t = localStorage.getItem("theme"); 
+            if (t === "dark") { document.body.classList.add("dark-mode"); btnThemeToggle.textContent = "☀️"; } 
+            else { document.body.classList.remove("dark-mode"); btnThemeToggle.textContent = "🌙"; } 
+        }
+        if (btnThemeToggle) btnThemeToggle.addEventListener('click', toggleTheme);
+        loadTheme();
         
+        // Menu e Nome do Usuário
         try { 
             const u = JSON.parse(userDataString); 
             const d = document.getElementById('userNameDisplay'); 
             if (d && u?.data?.nomeFuncionario) d.textContent = `Olá, ${u.data.nomeFuncionario.split(' ')[0]}`; 
-            // Ajuste de menu baseado no perfil
             const p = u?.data?.perfil; 
             const l = document.getElementById("menu-link-chamado"); 
             if (l && (p === 'AGENTE' || p === 'ADMIN')) { 
@@ -341,7 +385,7 @@
             } 
         } catch (e) { console.error('Erro auth:', e); }
 
-        // --- VARIÁVEIS ---
+        // --- VARIÁVEIS DE INTERFACE ---
         const qrScreen = document.getElementById('qrCodeScreen');
         const qrContainer = document.getElementById('qrCodeContainer');
         const welcomeScreen = document.getElementById('welcomeScreen');
@@ -355,7 +399,7 @@
         const sendButton = document.getElementById('sendButton');
 
         let activeNumber = null;
-        let conversations = {}; // { "55129...": [ {msg}, {msg} ] }
+        let conversations = {}; 
         let contactNames = {};
 
         // --- SOCKET.IO ---
@@ -363,16 +407,12 @@
 
         socket.on('connect', () => {
             console.log("Socket conectado.");
-            // Ao recarregar, assumimos que pode estar conectado até a API dizer o contrário
-            // Mas por segurança, mostramos a Welcome Screen
             showScreen('welcome');
         });
 
-        // --- RECEBE QR CODE ---
+        // --- QR CODE ---
         socket.on('qrCodeRecebido', (data) => {
-            if (data.qr) {
-                exibirQRCode(data.qr);
-            }
+            if (data.qr) exibirQRCode(data.qr);
         });
 
         function exibirQRCode(base64) {
@@ -382,9 +422,8 @@
             showScreen('qr');
         }
 
-        // --- RECEBE STATUS DA CONEXÃO ---
+        // --- STATUS CONEXÃO ---
         socket.on('statusConexao', (data) => {
-            console.log("Status:", data.status);
             if (data.status === 'open') {
                 setConnectedState();
             } else if (data.status === 'connecting') {
@@ -400,35 +439,31 @@
         function setConnectedState() {
             statusText.textContent = "Online";
             statusDot.className = "status-dot online";
-            btnConectar.style.display = 'none'; // Esconde botão conectar
+            btnConectar.style.display = 'none';
             if (!activeNumber) showScreen('welcome');
         }
 
-        // --- RECEBE MENSAGENS ---
+        // --- RECEBER MENSAGENS ---
         socket.on('novaMensagemWhatsapp', (data) => {
             const number = data.de;
             const name = data.nome || number;
             const text = data.texto;
             const time = new Date();
 
-            // Salva na memória
             if (!conversations[number]) conversations[number] = [];
             conversations[number].push({ fromMe: false, text, time, name });
             contactNames[number] = name;
 
-            // Atualiza a lista lateral
             updateContactList(number, name, text, true);
 
-            // Se for o chat aberto, adiciona na tela
             if (activeNumber === number) {
                 appendMessageToView(text, false, name, time);
-                markAsRead(number); // Remove a bolinha se tiver aberto
+                markAsRead(number);
             }
         });
 
-        // --- ATUALIZAR LISTA LATERAL ---
+        // --- LISTA DE CONTATOS ---
         function updateContactList(number, name, lastMsg, unread = false) {
-            // Remove item existente se houver (para mover pro topo)
             const existingItem = document.querySelector(`.contact-item[data-number="${number}"]`);
             if (existingItem) existingItem.remove();
 
@@ -436,7 +471,6 @@
             div.className = `contact-item ${activeNumber === number ? 'active' : ''}`;
             div.dataset.number = number;
             
-            // Avatar (Iniciais ou Ícone)
             const initial = name ? name.charAt(0).toUpperCase() : '#';
 
             div.innerHTML = `
@@ -449,8 +483,7 @@
             `;
 
             div.addEventListener('click', () => openChat(number));
-            
-            filaAtendimento.prepend(div); // Adiciona no topo
+            filaAtendimento.prepend(div);
         }
 
         // --- ABRIR CHAT ---
@@ -458,17 +491,14 @@
             activeNumber = number;
             showScreen('chat');
             
-            // Ativa visualmente
             document.querySelectorAll('.contact-item').forEach(el => el.classList.remove('active'));
             const item = document.querySelector(`.contact-item[data-number="${number}"]`);
             if(item) {
                 item.classList.add('active');
-                // Remove badge
                 const badge = item.querySelector('.badge-unread');
                 if(badge) badge.remove();
             }
 
-            // Limpa e preenche mensagens
             messagesContainer.innerHTML = '';
             const msgs = conversations[number] || [];
             msgs.forEach(m => appendMessageToView(m.text, m.fromMe, m.name, m.time));
@@ -485,41 +515,31 @@
              }
         }
 
-        // --- RENDERIZAR MENSAGEM NA TELA ---
+        // --- RENDERIZAR MENSAGEM ---
         function appendMessageToView(text, fromMe, senderName, timeObj) {
             const div = document.createElement('div');
             div.className = `msg ${fromMe ? 'msg-out' : 'msg-in'}`;
             
             const timeStr = new Date(timeObj).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            
-            // Se for grupo ou cliente, mostra nome. Se for eu, não precisa.
             const nameHtml = (!fromMe && senderName) ? `<span class="msg-sender">${senderName}</span>` : '';
 
-            div.innerHTML = `
-                ${nameHtml}
-                <div>${text}</div>
-                <span class="msg-time">${timeStr}</span>
-            `;
+            div.innerHTML = `${nameHtml}<div>${text}</div><span class="msg-time">${timeStr}</span>`;
             
             messagesContainer.appendChild(div);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
-        // --- ENVIAR MENSAGEM ---
+        // --- ENVIAR ---
         async function sendMessage() {
             const text = chatInput.value.trim();
             if (!text || !activeNumber) return;
 
-            // Otimista: adiciona na tela logo
             appendMessageToView(text, true, null, new Date());
             
-            // Salva memória
             if (!conversations[activeNumber]) conversations[activeNumber] = [];
             conversations[activeNumber].push({ fromMe: true, text, time: new Date() });
             
-            // Atualiza lateral
             updateContactList(activeNumber, contactNames[activeNumber] || activeNumber, `Você: ${text}`, false);
-
             chatInput.value = '';
 
             try {
@@ -528,36 +548,26 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ numero: activeNumber, mensagem: text })
                 });
-            } catch (error) {
-                console.error("Erro ao enviar:", error);
-                alert("Erro ao enviar mensagem.");
-            }
+            } catch (error) { console.error("Erro envio:", error); }
         }
 
-        // --- BOTÃO CONECTAR ---
         btnConectar.addEventListener('click', async () => {
-            statusText.textContent = "Solicitando QR Code...";
+            statusText.textContent = "Solicitando...";
             showScreen('qr');
             qrContainer.innerHTML = '<p style="padding:20px;">Carregando...</p>';
             
             try {
                 const resp = await fetch('/api/whatsapp/connect');
-                const data = await resp.json();
-                // Se a API já devolver o base64 na resposta, exibe direto
-                if(data.data?.qrcode?.base64 || data.data?.base64) {
-                    exibirQRCode(data.data?.qrcode?.base64 || data.data?.base64);
+                const dados = await resp.json();
+                if(dados.data?.qrcode?.base64 || dados.data?.base64) {
+                    exibirQRCode(dados.data?.qrcode?.base64 || dados.data?.base64);
                 }
-            } catch (e) {
-                qrContainer.innerHTML = '<p style="color:red">Erro ao solicitar conexão.</p>';
-            }
+            } catch (e) { qrContainer.innerHTML = '<p style="color:red">Erro.</p>'; }
         });
 
         sendButton.addEventListener('click', sendMessage);
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') sendMessage();
-        });
+        chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
 
-        // --- GERENCIADOR DE TELAS ---
         function showScreen(screenName) {
             qrScreen.style.display = 'none';
             welcomeScreen.style.display = 'none';
@@ -568,8 +578,7 @@
             if (screenName === 'chat') activeChatScreen.style.display = 'flex';
         }
 
-        // Estado Inicial
-        showScreen('welcome'); // Ou 'qr' se soubermos que está desconectado
+        showScreen('welcome');
     });
     </script>
 </body>
