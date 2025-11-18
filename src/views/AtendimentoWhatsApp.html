@@ -213,8 +213,7 @@
     <script type="module">
     document.addEventListener('DOMContentLoaded', () => {
         
-        // --- FUNÇÕES DE LOGOUT, TEMA E AUTH ---
-        // (Seu código original aqui - está ótimo, não mudei)
+        // --- FUNÇÕES DE LOGOUT, TEMA E AUTH (MANTIDAS) ---
         function fazerLogout() { localStorage.removeItem("userData"); window.location.href = "Login.html"; }
         const btnThemeToggle = document.getElementById("themeToggle");
         function toggleTheme() { document.body.classList.toggle("dark-mode"); let d = document.body.classList.contains("dark-mode"); localStorage.setItem("theme", d ? "dark" : "light"); if (btnThemeToggle) btnThemeToggle.textContent = d ? "☀️" : "🌙"; }
@@ -235,392 +234,229 @@
         const btnLogout = document.getElementById("logoutButton");
         if (btnLogout) btnLogout.addEventListener('click', fazerLogout);
         
-        // --- LÓGICA DO CHAT WHATSAPP (Refatorada) ---
+        // --- LÓGICA DO CHAT WHATSAPP ---
         
         const chatHistory = document.getElementById('chatHistory');
         const chatInput = document.getElementById('chatInput');
         const sendButton = document.getElementById('sendButton');
-        const typingIndicator = document.getElementById('typingIndicator');
         const filaAtendimento = document.getElementById('filaAtendimento');
         const btnConectarWhats = document.getElementById('btnConectarWhats');
         const qrCodeContainer = document.getElementById('qrCodeContainer');
         const statusConexao = document.getElementById('statusConexao');
         
         let conversaAtiva = null; 
-        let conversas = {}; // Armazena { numero: [ {msgData}, {msgData} ] }
-        let nomesClientes = {}; // Armazena { numero: "Nome Cliente" }
+        let conversas = {}; 
+        let nomesClientes = {}; 
 
-        // --- 
-        // *** ATUALIZAÇÃO: Conexão SEM URL fixa ***
-        // ---
-        // ANTES: const socket = io("https://portal.smrosalina.com.br", { 
-        // AGORA:
-        const socket = io({ 
+        // --- CONEXÃO SOCKET.IO ---
+        const socket = io("https://portal.smrosalina.com.br", { 
             transports: ['polling'] 
         });
 
-        // --- 
-        // *** Debug de Conexão (Verifique o console F12) ***
-        // ---
         socket.on('connect', () => {
-            console.log('Socket CONECTADO com sucesso ao servidor! ID:', socket.id);
-            statusConexao.textContent = "Socket Conectado"; // Feedback visual
+            console.log('Socket CONECTADO com sucesso! ID:', socket.id);
+            statusConexao.textContent = "Sistema Online"; // Feedback que o socket está ok
             statusConexao.className = "connected";
         });
-        socket.on('connect_error', (err) => {
-            console.error('Socket FALHOU AO CONECTAR:', err.message);
-            statusConexao.textContent = "Erro de Socket";
+
+        socket.on('connect_error', (err) => console.error('Socket FALHOU:', err.message));
+
+        // --- FUNÇÃO PARA EXIBIR O QR CODE ---
+        function mostrarQRCode(base64) {
+            if (!base64) return;
+            console.log("Exibindo QR Code na tela!");
+            qrCodeContainer.innerHTML = `<img src="${base64}" alt="Escaneie o QR Code">`;
+            statusConexao.textContent = "Escaneie o QR Code";
             statusConexao.className = "disconnected";
+            qrCodeContainer.style.display = 'block';
+            chatHistory.style.display = 'none';
+        }
+
+        // --- EVENTOS DO SOCKET (Backup) ---
+        socket.on('qrCodeRecebido', (data) => {
+            console.log("Socket: QR Code recebido via evento!"); 
+            mostrarQRCode(data.qr);
         });
-        socket.on('disconnect', (reason) => {
-             console.warn('Socket desconectado:', reason);
-             // Só muda o status se a API não estiver conectada
-             if (statusConexao.textContent === "Socket Conectado" || statusConexao.textContent === "Erro de Socket") {
-                statusConexao.textContent = "Desconectado";
+        
+        socket.on('statusConexao', (data) => {
+            if (data.status === 'open') {
+                statusConexao.textContent = "WhatsApp Conectado";
+                statusConexao.className = "connected";
+                qrCodeContainer.innerHTML = '<p class="system-message">WhatsApp Conectado!</p>';
+                chatInput.disabled = false;
+                setTimeout(() => {
+                    if (!conversaAtiva) {
+                        qrCodeContainer.style.display = 'none';
+                        chatHistory.style.display = 'flex';
+                        chatHistory.innerHTML = '<p class="system-message">Selecione uma conversa.</p>';
+                    }
+                }, 1500);
+            } else if (data.status === 'connecting') {
+                statusConexao.textContent = "Conectando...";
+            } else {
+                statusConexao.textContent = "WhatsApp Desconectado";
                 statusConexao.className = "disconnected";
-             }
+            }
         });
-        // --- FIM DAS MUDANÇAS ---
 
-
-        /**
-         * 🔒 (SEGURO) Cria o elemento DOM para um balão de chat.
-         * Usa .textContent para evitar XSS.
-         */
+        // --- EVENTOS DE MENSAGEM ---
         function criarHtmlMensagem(message, sender, nome, dateObj) {
             const msgWrap = document.createElement('div');
             msgWrap.classList.add('chat-message');
-            
             const time = dateObj ? new Date(dateObj) : new Date();
-            const timestamp = time.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
-            // Mensagem de Erro do Sistema
-            if (sender === 'system-error') {
-                msgWrap.classList.add('message-system');
-                const p = document.createElement('p');
-                p.textContent = message;
-                p.style.color = 'red';
-                p.style.fontStyle = 'italic';
-                
-                const bubble = document.createElement('div');
-                bubble.classList.add('message-bubble');
-                bubble.appendChild(p);
-                msgWrap.appendChild(bubble);
-                return msgWrap;
-            }
-
-            // Balão de Chat Padrão
+            
             const msgBubble = document.createElement('div');
             msgBubble.classList.add('message-bubble');
 
-            // INCOMING (Cliente)
             if (sender === 'bot') {
                 msgWrap.classList.add('message-bot');
                 if (nome) {
                     const nomeEl = document.createElement('span');
                     nomeEl.className = 'message-sender-name';
-                    nomeEl.textContent = nome; // <-- SANITIZADO
+                    nomeEl.textContent = nome;
                     msgBubble.appendChild(nomeEl);
                 }
-            } 
-            // OUTGOING (Atendente)
-            else {
+            } else {
                 msgWrap.classList.add('message-user');
             }
 
             const p = document.createElement('p');
-            p.textContent = message; // <-- SANITIZADO (CSS cuida da quebra de linha)
+            p.textContent = message;
             msgBubble.appendChild(p);
 
             const timeEl = document.createElement('span');
             timeEl.className = 'timestamp';
-            timeEl.textContent = timestamp;
+            timeEl.textContent = time.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
             msgBubble.appendChild(timeEl);
 
             msgWrap.appendChild(msgBubble);
-            return msgWrap; // Retorna o Elemento DOM
+            return msgWrap;
         }
-        
-        // --- Evento: 'novaMensagemWhatsapp' ---
+
         socket.on('novaMensagemWhatsapp', (data) => {
-            console.log('Socket: Mensagem recebida:', data);
-
-            // 🗃️ Armazena o dado puro, não o HTML
-            const msgData = { 
-                texto: data.texto, 
-                sender: 'bot', 
-                nome: data.nome, 
-                time: new Date() 
-            };
-            
-            if (!conversas[data.de]) {
-                conversas[data.de] = [];
-            }
-            if (data.nome) {
-                nomesClientes[data.de] = data.nome; // Salva o nome do cliente
-            }
-
+            const msgData = { texto: data.texto, sender: 'bot', nome: data.nome, time: new Date() };
+            if (!conversas[data.de]) conversas[data.de] = [];
+            if (data.nome) nomesClientes[data.de] = data.nome;
             conversas[data.de].push(msgData);
-
             atualizarFila(data.de, data.nome || nomesClientes[data.de] || data.de.split('@')[0], true); 
-            
             if (data.de === conversaAtiva) {
-                const novaMsgEl = criarHtmlMensagem(msgData.texto, msgData.sender, msgData.nome, msgData.time);
-                chatHistory.appendChild(novaMsgEl); // Usa appendChild, não innerHTML
+                chatHistory.appendChild(criarHtmlMensagem(msgData.texto, msgData.sender, msgData.nome, msgData.time));
                 chatHistory.scrollTop = chatHistory.scrollHeight;
             }
         });
-        
-        // --- Evento: 'qrCodeRecebido' ---
-        socket.on('qrCodeRecebido', (data) => {
-            console.log("Socket: QR Code recebido!"); // DEBUG
-            if (data.qr) {
-                qrCodeContainer.innerHTML = `<img src="${data.qr}" alt="Escaneie o QR Code com seu WhatsApp">`;
-                statusConexao.textContent = "Escaneie o QR Code";
-                statusConexao.className = "disconnected";
-                qrCodeContainer.style.display = 'block';
-                chatHistory.style.display = 'none';
-            }
-        });
-        
-        // --- Evento: 'statusConexao' ---
-        socket.on('statusConexao', (data) => {
-            console.log("Socket: Status da API Evolution:", data.status); // DEBUG
-            if (data.status === 'open') {
-                statusConexao.textContent = "Conectado";
-                statusConexao.className = "connected";
-                qrCodeContainer.innerHTML = '<p class="system-message">Conectado com sucesso!</p>';
-                chatInput.disabled = false;
-                
-                // Esconde o QR Code e mostra o chat (se não houver conversa)
-                setTimeout(() => {
-                    if (!conversaAtiva) {
-                        qrCodeContainer.style.display = 'none';
-                        chatHistory.style.display = 'flex';
-                        chatHistory.innerHTML = '<p class="system-message">Selecione uma conversa na fila para começar.</p>';
-                    }
-                }, 1500); // Dá um tempo pro usuário ler "Conectado"
-            } else if (data.status === 'connecting') {
-                statusConexao.textContent = "Conectando...";
-                statusConexao.className = "disconnected";
-            } else {
-                // Se o socket ainda estiver OK, mas a API caiu
-                if(socket.connected) {
-                    statusConexao.textContent = "Desconectado";
-                    statusConexao.className = "disconnected";
-                }
-                qrCodeContainer.innerHTML = '<p class="system-message">Desconectado. Clique em "Conectar" para tentar novamente.</p>';
-                qrCodeContainer.style.display = 'block';
-                chatHistory.style.display = 'none';
-                chatInput.disabled = true;
-                conversaAtiva = null;
-                filaAtendimento.innerHTML = ""; // Limpa a fila
-                conversas = {}; // Limpa o histórico
-            }
-        });
-        
-        /**
-         * 💅 Inicia a conexão com o WhatsApp
-         */
-        async function conectarWhatsApp() {
-            // Só tenta conectar se o socket estiver vivo
-            if (!socket.connected) {
-                alert("Não foi possível conectar ao servidor do portal. Verifique o console (F12) e recarregue a página.");
-                return;
-            }
 
-            qrCodeContainer.innerHTML = '<p class="system-message">Pedindo QR Code ao servidor, aguarde...</p>';
+        // --- CONECTAR (COM TRUQUE DE EXIBIÇÃO IMEDIATA) ---
+        async function conectarWhatsApp() {
+            qrCodeContainer.innerHTML = '<p class="system-message">Gerando QR Code...</p>';
             qrCodeContainer.style.display = 'block';
             chatHistory.style.display = 'none';
+            
             try {
-                // A rota da API que você criou
                 const response = await fetch('/api/whatsapp/connect'); 
-                if (!response.ok) {
-                    const err = await response.json();
-                    throw new Error(err.message || "Erro do servidor");
+                const dados = await response.json();
+
+                if (!response.ok) throw new Error(dados.message || "Erro ao conectar");
+
+                // *** O TRUQUE ESTÁ AQUI ***
+                // A Evolution devolve o QR Code no JSON da resposta também!
+                // Vamos pegá-lo e mostrar NA HORA, sem esperar o socket.
+                const qrCodeDaResposta = dados.data?.qrcode?.base64 || dados.data?.base64;
+                
+                if (qrCodeDaResposta) {
+                    mostrarQRCode(qrCodeDaResposta);
+                } else {
+                    console.log("QR Code não veio na resposta imediata, aguardando socket...");
                 }
-                // Agora é só aguardar o evento 'qrCodeRecebido'
                 
             } catch (error) {
-                qrCodeContainer.innerHTML = `<p class="system-message" style="color:red;">Erro ao pedir conexão: ${error.message}</p>`;
+                qrCodeContainer.innerHTML = `<p class="system-message" style="color:red;">Erro: ${error.message}</p>`;
             }
         }
         
-        // --- Botão "Conectar" ---
         btnConectarWhats.addEventListener('click', conectarWhatsApp);
 
-        // --- Enviar Resposta (Help Desk -> Cliente) ---
-        async function handleSendMessage() {
-            const mensagem = chatInput.value.trim();
-            if (mensagem === '' || !conversaAtiva) {
-                if(!conversaAtiva) alert('Selecione uma conversa na fila primeiro.');
-                return;
-            }
-            
-            // 🗃️ Cria o objeto de dados da mensagem
-            const msgData = { 
-                texto: mensagem, 
-                sender: 'user', 
-                nome: null, // É o atendente, não precisa de nome
-                time: new Date() 
-            };
-
-            // Adiciona optimisticamente ao histórico e à UI
-            const msgEl = criarHtmlMensagem(msgData.texto, msgData.sender, msgData.nome, msgData.time);
-            chatHistory.appendChild(msgEl);
-            chatHistory.scrollTop = chatHistory.scrollHeight;
-            
-            if (!conversas[conversaAtiva]) {
-                conversas[conversaAtiva] = [];
-            }
-            conversas[conversaAtiva].push(msgData);
-            
-            const msgParaEnviar = chatInput.value; // Salva o valor
-            chatInput.value = ''; // Limpa
-            
-            try {
-                const response = await fetch('/api/whatsapp/send', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ numero: conversaAtiva, mensagem: msgParaEnviar })
-                });
-                if (!response.ok) throw new Error('Falha na API do portal');
-                
-                // Sucesso: a mensagem já está na tela e no histórico.
-                
-            } catch (error) {
-                console.error("Erro ao enviar:", error);
-                
-                // 💅 UX: Deu erro! Devolve a msg pro input
-                chatInput.value = msgParaEnviar;
-                chatInput.focus();
-                
-                // Remove a mensagem "otimista" que falhou
-                chatHistory.removeChild(msgEl); 
-                conversas[conversaAtiva].pop(); // Remove do state
-
-                // Adiciona uma mensagem de erro do sistema
-                const errorMsgEl = criarHtmlMensagem(`ERRO AO ENVIAR: "${msgParaEnviar}". Tente novamente.`, 'system-error', null, new Date());
-                chatHistory.appendChild(errorMsgEl);
-                chatHistory.scrollTop = chatHistory.scrollHeight;
-            }
-        }
-        
-        // --- Lógica da Fila ---
+        // --- OUTRAS FUNÇÕES (FILA, ENVIAR) ---
         function atualizarFila(numero, nome, marcarNaoLida = false) {
             let item = document.querySelector(`.fila-item[data-numero="${numero}"]`);
-            
             if (!item) {
                 item = document.createElement('div');
                 item.className = 'fila-item';
                 item.dataset.numero = numero;
                 
-                // 💅 Botão de Fechar
-                const closeBtn = document.createElement('span');
-                closeBtn.className = 'close-chat-btn';
-                closeBtn.innerHTML = '&times;';
-                closeBtn.title = 'Encerrar atendimento';
-                closeBtn.addEventListener('click', (e) => {
-                    e.stopPropagation(); // Impede que o clique ative o 'selecionarConversa'
+                item.innerHTML = `
+                    <span class="close-chat-btn" title="Fechar">&times;</span>
+                    <span class="badge-nao-lido">!</span>
+                    <span class="nome">${nome}</span>
+                    <span class="numero">${numero.split('@')[0]}</span>
+                `;
+                
+                item.querySelector('.close-chat-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
                     encerrarConversa(numero);
                 });
-
-                const badge = document.createElement('span');
-                badge.className = 'badge-nao-lido';
-                badge.textContent = '!';
-
-                const nomeSpan = document.createElement('span');
-                nomeSpan.className = 'nome';
-                nomeSpan.textContent = nome; // <-- SANITIZADO
-
-                const numeroSpan = document.createElement('span');
-                numeroSpan.className = 'numero';
-                numeroSpan.textContent = numero.split('@')[0];
-
-                item.appendChild(closeBtn); // Adiciona o 'X'
-                item.appendChild(badge);
-                item.appendChild(nomeSpan);
-                item.appendChild(numeroSpan);
-
+                
                 item.addEventListener('click', () => selecionarConversa(numero));
                 filaAtendimento.prepend(item);
             }
-            
-            if (marcarNaoLida && conversaAtiva !== numero) {
-                item.classList.add('unread');
-            }
+            if (marcarNaoLida && conversaAtiva !== numero) item.classList.add('unread');
         }
 
-        /**
-         * 💅 (NOVO) Encerra e limpa uma conversa
-         */
         function encerrarConversa(numero) {
             const item = document.querySelector(`.fila-item[data-numero="${numero}"]`);
-            if (item) {
-                filaAtendimento.removeChild(item);
-            }
-            
-            // Limpa os dados
+            if (item) filaAtendimento.removeChild(item);
             delete conversas[numero];
-            delete nomesClientes[numero];
-            
-            // Se o chat encerrado era o ativo, limpa a tela
             if (conversaAtiva === numero) {
                 conversaAtiva = null;
-                chatHistory.innerHTML = '<p class="system-message">Atendimento encerrado. Selecione outra conversa.</p>';
-                chatHistory.style.display = 'flex';
+                chatHistory.innerHTML = '<p class="system-message">Atendimento encerrado.</p>';
                 qrCodeContainer.style.display = 'none';
             }
         }
         
-        /**
-         * 🗃️ (Refatorado) Seleciona e RECONSTRÓI o chat
-         */
         function selecionarConversa(numero) {
-            if (conversaAtiva === numero) return; 
-            
+            if (conversaAtiva === numero) return;
             conversaAtiva = numero;
-            
-            document.querySelectorAll('.fila-item').forEach(item => {
-                item.classList.toggle('active', item.dataset.numero === numero);
-                if (item.dataset.numero === numero) {
-                     item.classList.remove('unread');
-                }
+            document.querySelectorAll('.fila-item').forEach(i => {
+                i.classList.toggle('active', i.dataset.numero === numero);
+                if (i.dataset.numero === numero) i.classList.remove('unread');
             });
-            
             qrCodeContainer.style.display = 'none';
             chatHistory.style.display = 'flex';
-            chatHistory.innerHTML = ""; // Limpa o chat antes de reconstruir
-            
-            const historico = conversas[numero] || [];
-            
-            if (historico.length === 0) {
-                 chatHistory.innerHTML = '<p class="system-message">Selecione uma conversa na fila para começar.</p>';
-            } else {
-                // Reconstrói o chat a partir dos dados
-                historico.forEach(msg => {
-                    const msgEl = criarHtmlMensagem(msg.texto, msg.sender, msg.nome, msg.time);
-                    chatHistory.appendChild(msgEl);
-                });
-            }
-            
+            chatHistory.innerHTML = "";
+            (conversas[numero] || []).forEach(msg => {
+                chatHistory.appendChild(criarHtmlMensagem(msg.texto, msg.sender, msg.nome, msg.time));
+            });
             chatHistory.scrollTop = chatHistory.scrollHeight;
             chatInput.focus();
         }
 
-        // --- Event Listeners ---
+        async function handleSendMessage() {
+            const msg = chatInput.value.trim();
+            if (!msg || !conversaAtiva) return;
+            
+            const msgData = { texto: msg, sender: 'user', nome: null, time: new Date() };
+            chatHistory.appendChild(criarHtmlMensagem(msgData.texto, msgData.sender, msgData.nome, msgData.time));
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+            
+            if (!conversas[conversaAtiva]) conversas[conversaAtiva] = [];
+            conversas[conversaAtiva].push(msgData);
+            
+            chatInput.value = '';
+            try {
+                await fetch('/api/whatsapp/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ numero: conversaAtiva, mensagem: msg })
+                });
+            } catch (e) { console.error(e); }
+        }
+
         sendButton.addEventListener('click', handleSendMessage);
         chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) { // 💅 Shift+Enter quebra linha, Enter envia
-                e.preventDefault(); // Impede a quebra de linha do Enter
-                handleSendMessage();
-            }
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }
         });
         
-        // --- Inicialização ---
         chatInput.disabled = true; 
         chatHistory.style.display = 'none';
-        
     });
 </script>
 </body>
