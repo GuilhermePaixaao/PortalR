@@ -1,13 +1,17 @@
 import axios from 'axios';
 
-// Variáveis do ambiente (locais OU do Railway)
-const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL;   // precisa terminar com /v2
-const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY;
-const INSTANCE_NAME = process.env.EVOLUTION_INSTANCE_NAME || "default";
+// IMPORTANTE: No Railway, sua EVOLUTION_API_URL deve terminar sem barra no final, ex:
+// https://api-evolution.railway.app
+// O '/v2' nós adicionamos direto nas chamadas ou na baseURL se preferir.
+// Para facilitar, vou assumir que sua ENV vem limpa e adiciono aqui:
 
-// Cria o cliente axios configurado
+const BASE_URL = process.env.EVOLUTION_API_URL; // Ex: https://sua-api.railway.app
+const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY;
+const INSTANCE_NAME = process.env.EVOLUTION_INSTANCE_NAME || "HelpDesk";
+
+// Cria o cliente axios
 const apiClient = axios.create({
-  baseURL: EVOLUTION_API_URL,
+  baseURL: BASE_URL, // A Evolution V2 costuma usar /instance na raiz, ou /v2 dependendo da config
   headers: {
     'apikey': EVOLUTION_API_KEY,
     'Content-Type': 'application/json'
@@ -21,18 +25,25 @@ export const criarInstancia = async () => {
   try {
     const response = await apiClient.post('/instance/create', {
       instanceName: INSTANCE_NAME,
-      integration: "whatsapp", // obrigatório na v2
+      integration: "WHATSAPP-BAILEYS", // <--- AQUI ESTAVA O ERRO (tem que ser assim)
       qrcode: true
     });
 
-    console.log('Resposta da criação da instância:', response.data);
+    console.log('Instância criada. QR Code deve estar na resposta:', response.data);
     return response.data;
 
   } catch (error) {
-
-    if (error.response && error.response.status === 409) {
-      console.warn('Instância já existe, pedindo novo QR...');
-      return conectarInstancia();
+    // Se der erro 409 (Conflict), significa que já existe, então tentamos conectar
+    if (error.response && error.response.status === 403) {
+        // Às vezes retorna 403 ou 409 quando já existe
+        console.warn('Instância já existe. Tentando conectar...');
+        return conectarInstancia();
+    }
+    
+    // Tratamento específico para quando já existe (mensagem de erro comum)
+    if (error.response?.data?.error === 'Instance already exists') {
+        console.warn('Instância já existe. Tentando conectar...');
+        return conectarInstancia();
     }
 
     console.error("Erro ao criar instância:", error.response?.data || error.message);
@@ -41,12 +52,15 @@ export const criarInstancia = async () => {
 };
 
 /**
- * Conectar instância existente + gerar novo QR Code
+ * Conectar instância existente (Puxar novo QR Code)
  */
 export const conectarInstancia = async () => {
   try {
-    const response = await apiClient.get(`//connect/${INSTANCE_NAME}`);
-    console.log('Resposta da conexão:', response.data);
+    // <--- AQUI TINHA UM ERRO: estava //connect
+    // Na v2, para reconectar e pegar o QR Code de uma instância existente:
+    const response = await apiClient.get(`/instance/connect/${INSTANCE_NAME}`);
+    
+    console.log('Solicitação de conexão feita:', response.data);
     return response.data;
 
   } catch (error) {
@@ -60,13 +74,15 @@ export const conectarInstancia = async () => {
  */
 export const enviarTexto = async (numero, mensagem) => {
   try {
-    const url = `/messages/sendText/${INSTANCE_NAME}`;
+    // Ajuste da rota para o padrão da V2
+    const url = `/message/send/text/${INSTANCE_NAME}`;
 
     const response = await apiClient.post(url, {
       number: numero,
       options: {
         delay: 1200,
-        presence: 'composing'
+        presence: 'composing',
+        linkPreview: false
       },
       textMessage: {
         text: mensagem
