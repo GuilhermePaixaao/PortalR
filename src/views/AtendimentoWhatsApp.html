@@ -177,6 +177,7 @@
         .sidebar .icon { margin-right: 10px; min-width: 20px; text-align: center; flex-shrink: 0; align-self: center; }
         .sidebar .text { flex-grow: 1; white-space: normal; line-height: 1.2; }
         
+        /* Botão de Tema */
         .btn-theme-toggle { background: none; border: 1px solid #ced4da; border-radius: 50%; width: 40px; height: 40px; font-size: 1.2rem; cursor: pointer; color: #495057; display: flex; align-items: center; justify-content: center; padding: 0; }
         .btn-theme-toggle:hover { background-color: #f1f3f5; }
         body.dark-mode .btn-theme-toggle { border-color: #555; color: #e9edef; }
@@ -305,23 +306,22 @@
 
         socket.on('connect', () => {
             console.log("Socket conectado.");
-            verificarStatusInicial(); // <--- AQUI ESTÁ A MÁGICA
+            verificarStatusInicial();
         });
 
-        // --- VERIFICAÇÃO INICIAL DE STATUS ---
+        // --- VERIFICAÇÃO INICIAL ---
         async function verificarStatusInicial() {
             try {
                 const resp = await fetch('/api/whatsapp/status');
                 const json = await resp.json();
                 
-                // Verifica diferentes formatos de resposta da Evolution
                 const state = json.data?.instance?.state || json.data?.state;
                 console.log("Status inicial:", state);
 
                 if (state === 'open') {
                     setConnectedState();
+                    carregarConversas(); // <--- BUSCA OS CHATS SE ESTIVER ONLINE
                 } else {
-                    // Se não conectado, mostra a tela padrão
                     showScreen('welcome');
                 }
             } catch (e) {
@@ -329,11 +329,36 @@
             }
         }
 
-        // --- EVENTOS ---
+        // --- CARREGAR CONVERSAS ---
+        async function carregarConversas() {
+            console.log("Carregando conversas...");
+            try {
+                const resp = await fetch('/api/whatsapp/chats');
+                const json = await resp.json();
+
+                if (json.success && Array.isArray(json.data)) {
+                    // Inverte para que os mais recentes fiquem no topo quando usamos prepend
+                    const chats = json.data.slice().reverse();
+                    
+                    chats.forEach(chat => {
+                        updateContactList(chat.numero, chat.nome, chat.ultimaMensagem, chat.unread);
+                        contactNames[chat.numero] = chat.nome;
+                        if (!conversations[chat.numero]) conversas[chat.numero] = [];
+                    });
+                }
+            } catch (e) {
+                console.error("Erro ao carregar chats:", e);
+            }
+        }
+
+        // --- EVENTOS SOCKET ---
         socket.on('qrCodeRecebido', (data) => { if (data.qr) exibirQRCode(data.qr); });
         
         socket.on('statusConexao', (data) => {
-            if (data.status === 'open') setConnectedState();
+            if (data.status === 'open') {
+                setConnectedState();
+                carregarConversas(); // Recarrega chats ao conectar
+            }
             else if (data.status === 'connecting') {
                 statusText.textContent = "Conectando..."; statusDot.className = "status-dot offline";
             } else {

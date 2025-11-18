@@ -15,4 +15,10 @@ router.post('/api/whatsapp/send', WhatsappController.handleSendMessage);
 // (NOVO) Frontend chama isso para ver se já está conectado
 router.get('/api/whatsapp/status', WhatsappController.checarStatus);
 
+// ... rotas anteriores ...
+router.get('/api/whatsapp/status', WhatsappController.checarStatus);
+
+// NOVA ROTA DE CHATS
+router.get('/api/whatsapp/chats', WhatsappController.listarConversas);
+
 export default router;

@@ -81,3 +81,16 @@ export const consultarStatus = async () => {
     return { instance: { state: 'close' } }; 
   }
 };
+/**
+ * Busca lista de conversas (Chats)
+ */
+export const buscarConversas = async () => {
+  try {
+    // Na Evolution V2, geralmente é /chat/findChats
+    const response = await apiClient.get(`/chat/findChats/${INSTANCE_NAME}`);
+    return response.data;
+  } catch (error) {
+    console.error("Erro ao buscar conversas:", error.message);
+    return []; // Retorna lista vazia se der erro
+  }
+};
