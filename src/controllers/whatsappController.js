@@ -45,18 +45,12 @@ export const handleWebhook = async (req, res) => {
 };
 
 /**
- * Botão Conectar: Tenta Criar ou Conectar
+ * Botão Conectar
  */
 export const connectInstance = async (req, res) => {
     try {
-        // Usa criarInstancia pois ela trata o erro "já existe" automaticamente
         const resultado = await evolutionService.criarInstancia(); 
-        
-        res.status(200).json({ 
-            success: true, 
-            message: "Solicitação enviada.",
-            data: resultado
-        });
+        res.status(200).json({ success: true, message: "Solicitação enviada.", data: resultado });
     } catch (error) {
         console.error("Erro controller conectar:", error);
         res.status(500).json({ success: false, message: error.message });
@@ -79,7 +73,7 @@ export const handleSendMessage = async (req, res) => {
 };
 
 /**
- * (NOVO) Verifica status ao carregar a página
+ * Verifica status ao carregar a página
  */
 export const checarStatus = async (req, res) => {
   try {
@@ -87,5 +81,29 @@ export const checarStatus = async (req, res) => {
     res.status(200).json({ success: true, data: resultado });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * (A FUNÇÃO QUE ESTAVA FALTANDO)
+ * Lista todas as conversas para o sidebar
+ */
+export const listarConversas = async (req, res) => {
+  try {
+    const chats = await evolutionService.buscarConversas();
+    
+    // Formata os dados para o frontend
+    const conversasFormatadas = chats.map(chat => ({
+      numero: chat.id,
+      nome: chat.pushName || chat.name || chat.id.split('@')[0],
+      ultimaMensagem: chat.conversation || "...",
+      foto: chat.profilePictureUrl || null,
+      unread: chat.unreadCount > 0
+    }));
+
+    res.status(200).json({ success: true, data: conversasFormatadas });
+  } catch (error) {
+    // Se der erro, retorna sucesso com lista vazia para não quebrar o front
+    res.status(200).json({ success: true, data: [] });
   }
 };

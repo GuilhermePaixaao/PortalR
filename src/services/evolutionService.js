@@ -1,13 +1,12 @@
 import axios from 'axios';
 
 // Variáveis de Ambiente
-const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL;
+const BASE_URL = process.env.EVOLUTION_API_URL;
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY;
-// Usa 'default' se não houver nome definido no .env
 const INSTANCE_NAME = process.env.EVOLUTION_INSTANCE_NAME || "default"; 
 
 const apiClient = axios.create({
-  baseURL: EVOLUTION_API_URL,
+  baseURL: BASE_URL,
   headers: {
     'apikey': EVOLUTION_API_KEY,
     'Content-Type': 'application/json'
@@ -19,17 +18,15 @@ const apiClient = axios.create({
  */
 export const criarInstancia = async () => {
   try {
-    // Tenta criar a instância
     const response = await apiClient.post('/instance/create', {
       instanceName: INSTANCE_NAME,
       token: "", 
       qrcode: true,
-      integration: "WHATSAPP-BAILEYS" // Importante para evitar erros
+      integration: "WHATSAPP-BAILEYS" 
     });
     console.log('Instância criada:', response.data);
     return response.data;
   } catch (error) {
-    // Se já existe (Erro 409), apenas conecta
     if (error.response && error.response.status === 409) {
         console.warn('Instância já existe, conectando...');
         return conectarInstancia();
@@ -70,27 +67,30 @@ export const enviarTexto = async (numero, mensagem) => {
 };
 
 /**
- * (NOVO) Consulta o status da conexão.
+ * Consulta o status da conexão.
  */
 export const consultarStatus = async () => {
   try {
     const response = await apiClient.get(`/instance/connectionState/${INSTANCE_NAME}`);
     return response.data;
   } catch (error) {
-    // Se der erro (ex: 404 instância não encontrada), retorna 'close'
     return { instance: { state: 'close' } }; 
   }
 };
+
 /**
- * Busca lista de conversas (Chats)
+ * (CORRIGIDO) Busca todas as conversas/chats
+ * Mudamos de GET para POST, pois a V2 exige isso para rotas 'find'.
  */
 export const buscarConversas = async () => {
   try {
-    // Na Evolution V2, geralmente é /chat/findChats
-    const response = await apiClient.get(`/chat/findChats/${INSTANCE_NAME}`);
+    // Na V2, findChats é POST e aceita filtros. Enviamos 'where: {}' para pegar tudo.
+    const response = await apiClient.post(`/chat/findChats/${INSTANCE_NAME}`, {
+        where: {} 
+    });
     return response.data;
   } catch (error) {
-    console.error("Erro ao buscar conversas:", error.message);
-    return []; // Retorna lista vazia se der erro
+    console.error("Erro ao buscar conversas:", error.response?.status, error.message);
+    return []; // Retorna lista vazia para não quebrar a tela
   }
 };
