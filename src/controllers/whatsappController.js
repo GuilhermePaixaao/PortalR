@@ -66,10 +66,11 @@ export const handleWebhook = async (req, res) => {
  */
 export const connectInstance = async (req, res) => {
     try {
-        // --- MUDANÇA CRUCIAL AQUI ---
-        // Usamos conectarInstancia() em vez de criarInstancia()
-        // Isso evita o erro de "instância já existe" ou "integração inválida"
-        const resultado = await evolutionService.conectarInstancia(); 
+        // VOLTAMOS PARA 'CRIAR'
+        // A função criarInstancia do seu service já é inteligente:
+        // Se não existir -> Cria.
+        // Se já existir -> Apenas conecta.
+        const resultado = await evolutionService.criarInstancia(); 
         
         res.status(200).json({ 
             success: true, 
@@ -78,7 +79,6 @@ export const connectInstance = async (req, res) => {
         });
         
     } catch (error) {
-        // Loga o erro detalhado no console do Railway para facilitar o debug
         console.error("Erro ao conectar:", error);
         res.status(500).json({ success: false, message: error.message || "Erro ao conectar." });
     }
