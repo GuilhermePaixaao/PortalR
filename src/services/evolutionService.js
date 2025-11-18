@@ -7,7 +7,7 @@ import axios from 'axios';
 
 const BASE_URL = process.env.EVOLUTION_API_URL; // Ex: https://sua-api.railway.app
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY;
-const INSTANCE_NAME = process.env.EVOLUTION_INSTANCE_NAME || "HelpDesk";
+const INSTANCE_NAME = process.env.EVOLUTION_INSTANCE_NAME || "portal_whatsapp_v1";
 
 // Cria o cliente axios
 const apiClient = axios.create({

@@ -66,8 +66,10 @@ export const handleWebhook = async (req, res) => {
  */
 export const connectInstance = async (req, res) => {
     try {
-        // Manda o comando para a Evolution API gerar o QR Code
-        const resultado = await evolutionService.criarInstancia(); 
+        // --- MUDANÇA CRUCIAL AQUI ---
+        // Usamos conectarInstancia() em vez de criarInstancia()
+        // Isso evita o erro de "instância já existe" ou "integração inválida"
+        const resultado = await evolutionService.conectarInstancia(); 
         
         res.status(200).json({ 
             success: true, 
@@ -76,7 +78,9 @@ export const connectInstance = async (req, res) => {
         });
         
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        // Loga o erro detalhado no console do Railway para facilitar o debug
+        console.error("Erro ao conectar:", error);
+        res.status(500).json({ success: false, message: error.message || "Erro ao conectar." });
     }
 };
 
