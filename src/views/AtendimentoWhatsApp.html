@@ -15,123 +15,236 @@
         try {
             const userData = JSON.parse(userDataString);
             const userId = userData?.data?.id || userData?.id; 
-            if (!userId) {
-                throw new Error("Dados de usuário inválidos (ID não encontrado).");
-            }
-            const userPerfil = userData?.data?.perfil || userData?.perfil;
-            if (userPerfil === 'REQUISITANTE') {
-                 window.location.replace("Chamado.html"); 
-                 throw new Error("Acesso negado.");
-            }
+            if (!userId) throw new Error("Dados inválidos.");
+            if (userData?.data?.perfil === 'REQUISITANTE') window.location.replace("Chamado.html");
         } catch (error) {
-            console.error("Sessão inválida:", error.message);
-            if (error.message !== "Acesso negado.") {
-                localStorage.removeItem("userData"); 
-                window.location.replace("Login.html"); 
-                throw new Error("Sessão inválida.");
-            }
+            localStorage.removeItem("userData"); 
+            window.location.replace("Login.html"); 
         }
     </script>
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="icon" type="image/png" href="/logo.png">
     
-    <link rel="stylesheet" href="css/whatsapp-style.css"> 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
     <style>
-        /* --- ESTILOS GERAIS (Layout) --- */
+        /* --- ESTILOS ESPECÍFICOS PARA FICAR BONITO (WhatsApp Style) --- */
+        :root {
+            --wa-green: #00a884;
+            --wa-bg: #efeae2;
+            --wa-header: #f0f2f5;
+            --wa-incoming: #ffffff;
+            --wa-outgoing: #d9fdd3;
+            --border-light: #e9edef;
+        }
+
+        /* Layout Principal */
+        .main-content {
+            padding: 0;
+            height: calc(100vh - 60px); /* Tira a altura do header */
+            background-color: #fff;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Barra Lateral (Lista de Contatos) */
+        .sidebar-chat {
+            width: 350px;
+            background-color: #fff;
+            border-right: 1px solid var(--border-light);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 10px 16px;
+            background-color: var(--wa-header);
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 60px;
+        }
+
+        .connection-status {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #54656f;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .status-dot {
+            width: 10px; height: 10px; border-radius: 50%; background-color: #ccc;
+        }
+        .status-dot.online { background-color: var(--wa-green); }
+        .status-dot.offline { background-color: #ea0038; }
+
+        .btn-conectar {
+            background-color: var(--wa-green);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* Lista de Conversas */
+        #filaAtendimento {
+            flex: 1;
+            overflow-y: auto;
+            background-color: #fff;
+        }
+
+        .contact-item {
+            display: flex;
+            padding: 12px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f2f5;
+            transition: background 0.2s;
+            position: relative;
+        }
+        .contact-item:hover { background-color: #f5f6f6; }
+        .contact-item.active { background-color: #f0f2f5; }
+
+        .avatar-placeholder {
+            width: 45px; height: 45px;
+            background-color: #dfe5e7;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: #fff;
+            margin-right: 15px;
+        }
+
+        .contact-info { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        .contact-name { font-size: 1rem; color: #111b21; font-weight: 500; }
+        .contact-last-msg { font-size: 0.85rem; color: #667781; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
+        
+        .badge-unread {
+            background-color: #25d366;
+            color: white;
+            font-size: 0.75rem;
+            font-weight: bold;
+            min-width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        /* Área Principal (Chat) */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--wa-bg);
+            background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png");
+            position: relative;
+        }
+
+        /* Telas de Estado (QR Code / Bem-vindo) */
+        .overlay-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            text-align: center;
+            border-bottom: 6px solid var(--wa-green);
+        }
+        
+        .overlay-screen img { width: 280px; height: 280px; border: 8px solid #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .overlay-screen h2 { margin-top: 30px; color: #41525d; font-weight: 300; font-size: 2rem; }
+        .overlay-screen p { margin-top: 10px; color: #667781; font-size: 0.9rem; max-width: 500px; line-height: 1.5; }
+
+        /* Mensagens */
+        .messages-container {
+            flex: 1;
+            padding: 20px 60px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .msg {
+            max-width: 65%;
+            padding: 8px 12px;
+            border-radius: 7.5px;
+            margin-bottom: 8px;
+            position: relative;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            box-shadow: 0 1px 0.5px rgba(11,20,26,.13);
+            word-wrap: break-word;
+        }
+        .msg-in { align-self: flex-start; background-color: var(--wa-incoming); border-top-left-radius: 0; }
+        .msg-out { align-self: flex-end; background-color: var(--wa-outgoing); border-top-right-radius: 0; }
+        
+        .msg-time {
+            font-size: 0.7rem;
+            color: #667781;
+            float: right;
+            margin-top: 5px;
+            margin-left: 10px;
+        }
+        
+        .msg-sender {
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: var(--wa-green); /* Cor diferente para diferenciar */
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        /* Input Area */
+        .input-area {
+            height: 60px;
+            background-color: var(--wa-header);
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            z-index: 20; /* Ficar acima da imagem de fundo */
+        }
+        
+        .input-field {
+            flex: 1;
+            background-color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 15px;
+            font-size: 0.95rem;
+            outline: none;
+        }
+        
+        .btn-send {
+            background: none; border: none; color: #54656f; font-size: 1.5rem; cursor: pointer;
+        }
+        .btn-send:hover { color: var(--wa-green); }
+
+        /* CSS do Header original */
         .header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 2rem; background-color: #ffffff; border-bottom: 1px solid #dee2e6; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 1030; }
         .logo { display: flex; align-items: center; gap: 10px; font-size: 1.4rem; font-weight: 700; color: #0d6efd; text-transform: uppercase; letter-spacing: 0.5px; margin: 0; white-space: nowrap; }
         .logo-icon { height: 30px; width: auto; }
         .header-actions { display: flex; align-items: center; gap: 1rem; }
         #userNameDisplay { font-weight: 500; color: #495057; white-space: nowrap; }
         .btn-logout { background-color: #dc3545; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500; cursor: pointer; transition: background-color 0.2s ease; }
-        .btn-logout:hover { background-color: #bb2d3b; }
         .sidebar nav ul li a { display: flex; align-items: center; text-decoration: none; padding: 10px 15px; width: 100%; height: auto; }
         .sidebar .icon { margin-right: 10px; min-width: 20px; text-align: center; flex-shrink: 0; align-self: center; }
         .sidebar .text { flex-grow: 1; white-space: normal; line-height: 1.2; }
-        .btn-theme-toggle { background: none; border: 1px solid #ced4da; border-radius: 50%; width: 40px; height: 40px; font-size: 1.2rem; cursor: pointer; color: #495057; display: flex; align-items: center; justify-content: center; padding: 0; }
-        .btn-theme-toggle:hover { background-color: #f1f3f5; }
-
-        /* --- CSS Específico desta página --- */
-        .main-content { padding: 0; display: flex; flex-direction: column; height: calc(100vh - 60px); }
-        .main-content h1 { padding: 1rem 2rem; margin: 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
-        
-        #btnConectarWhats { background-color: #28a745; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500; cursor: pointer; font-size: 0.9rem; }
-        #btnConectarWhats:hover { background-color: #218838; }
-        #statusConexao { font-size: 0.9rem; font-weight: bold; }
-        #statusConexao.connected { color: #198754; }
-        #statusConexao.disconnected { color: #dc3545; }
-
-        .chat-container-flex { display: flex; height: 100%; flex-grow: 1; overflow: hidden; }
-
-        /* Coluna da Fila (Esquerda) */
-        .chat-list-column { flex: 0 0 300px; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; background-color: #fcfcfc; }
-        .chat-list-column h3 { font-size: 1.1rem; font-weight: 600; padding: 1rem; margin: 0; border-bottom: 1px solid var(--border-color); }
-        #filaAtendimento { flex-grow: 1; overflow-y: auto; }
-        .fila-item { padding: 1rem; border-bottom: 1px solid var(--border-color); cursor: pointer; transition: background-color 0.2s; position: relative; }
-        .fila-item:hover { background-color: #f0f0f0; }
-        .fila-item.active { background-color: #e6e6e6; color: inherit; }
-        .fila-item .nome { font-weight: bold; display: block; }
-        .fila-item .numero { font-size: 0.9rem; color: #555; }
-        .fila-item.active .numero { color: #333; }
-        .fila-item .badge-nao-lido { background-color: #dc3545; color: white; font-size: 0.75rem; font-weight: bold; padding: 3px 8px; border-radius: 10px; position: absolute; top: 10px; right: 10px; display: none; }
-        .fila-item.unread .badge-nao-lido { display: block; }
-
-        /* Coluna do Chat (Direita) */
-        .chat-widget-column { flex: 1; display: flex; flex-direction: column; }
-        .chat-widget-column .chat-widget { height: 100%; border-radius: 0; box-shadow: none; border: none; }
-        
-        /* Mensagem do sistema (Carregando, Erro, etc.) */
-        .system-message { font-size: 0.9rem; font-style: italic; text-align: center; color: #6c757d; margin: 10px 0; }
-
-        #qrCodeContainer { padding: 20px; text-align: center; }
-        #qrCodeContainer img { width: 300px; height: 300px; border: 5px solid var(--primary-blue); border-radius: 8px; }
-
-        /* --- CSS MODO ESCURO --- */
-        body.dark-mode .main-content { background-color: #181818; border-color: #383838; }
-        body.dark-mode .main-content h1 { border-color: #383838; }
-        body.dark-mode .chat-list-column { background-color: #2a2a2a; border-color: #383838; }
-        body.dark-mode .fila-item { border-color: #383838; }
-        body.dark-mode .fila-item:hover { background-color: #333; }
-        body.dark-mode .fila-item.active { background-color: #444; }
-        body.dark-mode .fila-item .numero { color: #aaa; }
-        body.dark-mode .fila-item.active .numero { color: #ccc; }
-        body.dark-mode .chat-widget-column .chat-widget { background-color: #2a2a2a; }
-        
-        /* Fundo modo escuro */
-        body.dark-mode .chat-history {
-            background-color: #0d1418; /* Cor escura do WhatsApp */
-            background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png");
-            opacity: 0.6;
-        }
-        
-        /* Balões modo escuro */
-        body.dark-mode .message-bubble {
-            color: #e0e0e0;
-        }
-        body.dark-mode .chat-message.message-bot .message-bubble {
-            background-color: #262d31; /* Cinza escuro */
-        }
-        body.dark-mode .chat-message.message-user .message-bubble {
-            background-color: #005c4b; /* Verde escuro */
-        }
-        body.dark-mode .message-sender-name {
-            color: #339d6f;
-        }
-        body.dark-mode .message-bubble .timestamp {
-            color: #a1a1a1;
-        }
-
-        /* Input modo escuro */
-        body.dark-mode .chat-input-area { background-color: #202c33; border-color: #383838; }
-        body.dark-mode .chat-input-area input[type="text"] {
-            background-color: #2a3942;
-            border-color: #2a3942;
-            color: #e0e0e0;
-        }
-        body.dark-mode .chat-input-area .send-btn {
-            background-color: #008069;
-        }
-
     </style>
 </head>
 
@@ -140,11 +253,10 @@
         
         <header class="header">
             <div class="logo">
-                <img src="/img.png" alt="Logo Portal Supermercado" class="logo-icon">              
+                <img src="/img.png" alt="Logo Portal" class="logo-icon">              
                 PORTAL SUPERMERCADO ROSALINA
             </div>
             <div class="header-actions">
-                <button id="themeToggle" class="btn-theme-toggle" title="Alternar Tema">🌙</button>
                 <span id="userNameDisplay"></span>
                 <button id="logoutButton" class="btn-logout">Sair</button>
             </div>
@@ -165,45 +277,42 @@
         </aside>
         
         <main class="main-content">
-            <h1>
-                <span>Atendimento WhatsApp</span>
-                <div>
-                    <span id="statusConexao" class="disconnected">Desconectado</span>
-                    <button id="btnConectarWhats">Conectar</button>
-                </div>
-            </h1>
             
-            <div class="chat-container-flex">
-                
-                <div class="chat-list-column">
-                    <h3>Fila de Atendimento</h3>
-                    <div id="filaAtendimento">
-                        </div>
+            <div class="sidebar-chat">
+                <div class="sidebar-header">
+                    <div class="connection-status">
+                        <div id="statusDot" class="status-dot offline"></div>
+                        <span id="statusText">Desconectado</span>
+                    </div>
+                    <button id="btnConectarWhats" class="btn-conectar">CONECTAR</button>
                 </div>
+                <div id="filaAtendimento">
+                    </div>
+            </div>
+
+            <div class="chat-area">
                 
-                <div class="chat-widget-column">
-                    <div class="chat-widget widget">
-                        
-                        <div id="qrCodeContainer">
-                            <p class="system-message">Clique em "Conectar" para gerar o QR Code.</p>
+                <div id="qrCodeScreen" class="overlay-screen" style="display:none;">
+                    <div id="qrCodeContainer"></div>
+                    <h2>Conectar WhatsApp</h2>
+                    <p>Abra o WhatsApp no seu celular, toque em <strong>Mais opções</strong> ou <strong>Configurações</strong> e selecione <strong>Aparelhos conectados</strong>. Aponte seu celular para esta tela para capturar o código.</p>
+                </div>
+
+                <div id="welcomeScreen" class="overlay-screen">
+                    <img src="https://img.freepik.com/vetores-gratis/ilustracao-do-conceito-de-chat-bot_114360-5522.jpg" alt="Conectado" style="border:none; box-shadow:none; width: 300px;">
+                    <h2>Portal Rosalina Conectado</h2>
+                    <p>Envie e receba mensagens do WhatsApp diretamente por aqui.<br>Selecione um contato na lista à esquerda para iniciar o atendimento.</p>
+                </div>
+
+                <div id="activeChatScreen" style="display:none; width:100%; height:100%; flex-direction:column;">
+                    <div class="messages-container" id="messagesContainer">
                         </div>
-                        
-                        <div class="chat-history" id="chatHistory">
-                            </div>
-                        
-                        <div class="typing-indicator" id="typingIndicator">
-                            </div>
-                        
-                        <div class="chat-input-area">
-                            <input type="text" id="chatInput" class="form-control" placeholder="Digite sua resposta...">
-                            <button id="sendButton" class="send-btn" title="Enviar">
-                                <span class="icon">➤</span>
-                            </button>
-                        </div>
-                        
+                    <div class="input-area">
+                        <input type="text" id="chatInput" class="input-field" placeholder="Digite uma mensagem" disabled>
+                        <button id="sendButton" class="btn-send"><i class="fas fa-paper-plane"></i></button>
                     </div>
                 </div>
-                
+
             </div>
         </main>
     </div>
@@ -213,251 +322,255 @@
     <script type="module">
     document.addEventListener('DOMContentLoaded', () => {
         
-        // --- FUNÇÕES DE LOGOUT, TEMA E AUTH (MANTIDAS) ---
+        // --- LÓGICA DE AUTH E LOGOUT ---
         function fazerLogout() { localStorage.removeItem("userData"); window.location.href = "Login.html"; }
-        const btnThemeToggle = document.getElementById("themeToggle");
-        function toggleTheme() { document.body.classList.toggle("dark-mode"); let d = document.body.classList.contains("dark-mode"); localStorage.setItem("theme", d ? "dark" : "light"); if (btnThemeToggle) btnThemeToggle.textContent = d ? "☀️" : "🌙"; }
-        function loadTheme() { const t = localStorage.getItem("theme"); if (t === "dark") { document.body.classList.add("dark-mode"); if (btnThemeToggle) btnThemeToggle.textContent = "☀️"; } else { document.body.classList.remove("dark-mode"); if (btnThemeToggle) btnThemeToggle.textContent = "🌙"; } }
-        if (btnThemeToggle) btnThemeToggle.addEventListener('click', toggleTheme);
-        loadTheme();
-        let nomeAtendente = "Atendente"; 
-        try { 
-            const u = JSON.parse(userDataString); 
-            const d = document.getElementById('userNameDisplay'); 
-            if (d && u?.data?.nomeFuncionario) { 
-                const primeiroNome = u.data.nomeFuncionario.split(' ')[0];
-                d.textContent = `Olá, ${primeiroNome}`; 
-                nomeAtendente = primeiroNome; 
-            } 
-            const p = u?.data?.perfil; const l = document.getElementById("menu-link-chamado"); if (l && (p === 'AGENTE' || p === 'ADMIN')) { const a = l.querySelector('a'); const t = a.querySelector('.text'); a.href = "GerenciarChamados.html"; a.title = "Gerenciar Chamados"; a.querySelector('.icon').textContent = "✔️"; t.innerHTML = "Gerenciar<br>Chamados"; } 
-        } catch (e) { console.error('Erro:', e); fazerLogout(); }
         const btnLogout = document.getElementById("logoutButton");
         if (btnLogout) btnLogout.addEventListener('click', fazerLogout);
         
-        // --- LÓGICA DO CHAT WHATSAPP ---
-        
-        const chatHistory = document.getElementById('chatHistory');
+        try { 
+            const u = JSON.parse(userDataString); 
+            const d = document.getElementById('userNameDisplay'); 
+            if (d && u?.data?.nomeFuncionario) d.textContent = `Olá, ${u.data.nomeFuncionario.split(' ')[0]}`; 
+            // Ajuste de menu baseado no perfil
+            const p = u?.data?.perfil; 
+            const l = document.getElementById("menu-link-chamado"); 
+            if (l && (p === 'AGENTE' || p === 'ADMIN')) { 
+                const a = l.querySelector('a'); const t = a.querySelector('.text'); 
+                a.href = "GerenciarChamados.html"; a.title = "Gerenciar Chamados"; 
+                a.querySelector('.icon').textContent = "✔️"; t.innerHTML = "Gerenciar<br>Chamados"; 
+            } 
+        } catch (e) { console.error('Erro auth:', e); }
+
+        // --- VARIÁVEIS ---
+        const qrScreen = document.getElementById('qrCodeScreen');
+        const qrContainer = document.getElementById('qrCodeContainer');
+        const welcomeScreen = document.getElementById('welcomeScreen');
+        const activeChatScreen = document.getElementById('activeChatScreen');
+        const messagesContainer = document.getElementById('messagesContainer');
+        const filaAtendimento = document.getElementById('filaAtendimento');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const btnConectar = document.getElementById('btnConectarWhats');
         const chatInput = document.getElementById('chatInput');
         const sendButton = document.getElementById('sendButton');
-        const filaAtendimento = document.getElementById('filaAtendimento');
-        const btnConectarWhats = document.getElementById('btnConectarWhats');
-        const qrCodeContainer = document.getElementById('qrCodeContainer');
-        const statusConexao = document.getElementById('statusConexao');
-        
-        let conversaAtiva = null; 
-        let conversas = {}; 
-        let nomesClientes = {}; 
 
-        // --- CONEXÃO SOCKET.IO ---
-        const socket = io("https://portal.smrosalina.com.br", { 
-            transports: ['polling'] 
-        });
+        let activeNumber = null;
+        let conversations = {}; // { "55129...": [ {msg}, {msg} ] }
+        let contactNames = {};
+
+        // --- SOCKET.IO ---
+        const socket = io("https://portal.smrosalina.com.br", { transports: ['polling'] });
 
         socket.on('connect', () => {
-            console.log('Socket CONECTADO com sucesso! ID:', socket.id);
-            statusConexao.textContent = "Sistema Online"; // Feedback que o socket está ok
-            statusConexao.className = "connected";
+            console.log("Socket conectado.");
+            // Ao recarregar, assumimos que pode estar conectado até a API dizer o contrário
+            // Mas por segurança, mostramos a Welcome Screen
+            showScreen('welcome');
         });
 
-        socket.on('connect_error', (err) => console.error('Socket FALHOU:', err.message));
-
-        // --- FUNÇÃO PARA EXIBIR O QR CODE ---
-        function mostrarQRCode(base64) {
-            if (!base64) return;
-            console.log("Exibindo QR Code na tela!");
-            qrCodeContainer.innerHTML = `<img src="${base64}" alt="Escaneie o QR Code">`;
-            statusConexao.textContent = "Escaneie o QR Code";
-            statusConexao.className = "disconnected";
-            qrCodeContainer.style.display = 'block';
-            chatHistory.style.display = 'none';
-        }
-
-        // --- EVENTOS DO SOCKET (Backup) ---
+        // --- RECEBE QR CODE ---
         socket.on('qrCodeRecebido', (data) => {
-            console.log("Socket: QR Code recebido via evento!"); 
-            mostrarQRCode(data.qr);
+            if (data.qr) {
+                exibirQRCode(data.qr);
+            }
         });
-        
+
+        function exibirQRCode(base64) {
+            qrContainer.innerHTML = `<img src="${base64}" alt="QR Code">`;
+            statusText.textContent = "Escaneie o QR Code";
+            statusDot.className = "status-dot offline";
+            showScreen('qr');
+        }
+
+        // --- RECEBE STATUS DA CONEXÃO ---
         socket.on('statusConexao', (data) => {
+            console.log("Status:", data.status);
             if (data.status === 'open') {
-                statusConexao.textContent = "WhatsApp Conectado";
-                statusConexao.className = "connected";
-                qrCodeContainer.innerHTML = '<p class="system-message">WhatsApp Conectado!</p>';
-                chatInput.disabled = false;
-                setTimeout(() => {
-                    if (!conversaAtiva) {
-                        qrCodeContainer.style.display = 'none';
-                        chatHistory.style.display = 'flex';
-                        chatHistory.innerHTML = '<p class="system-message">Selecione uma conversa.</p>';
-                    }
-                }, 1500);
+                setConnectedState();
             } else if (data.status === 'connecting') {
-                statusConexao.textContent = "Conectando...";
+                statusText.textContent = "Conectando...";
+                statusDot.className = "status-dot offline";
             } else {
-                statusConexao.textContent = "WhatsApp Desconectado";
-                statusConexao.className = "disconnected";
+                statusText.textContent = "Desconectado";
+                statusDot.className = "status-dot offline";
+                btnConectar.style.display = 'block';
             }
         });
 
-        // --- EVENTOS DE MENSAGEM ---
-        function criarHtmlMensagem(message, sender, nome, dateObj) {
-            const msgWrap = document.createElement('div');
-            msgWrap.classList.add('chat-message');
-            const time = dateObj ? new Date(dateObj) : new Date();
-            
-            const msgBubble = document.createElement('div');
-            msgBubble.classList.add('message-bubble');
-
-            if (sender === 'bot') {
-                msgWrap.classList.add('message-bot');
-                if (nome) {
-                    const nomeEl = document.createElement('span');
-                    nomeEl.className = 'message-sender-name';
-                    nomeEl.textContent = nome;
-                    msgBubble.appendChild(nomeEl);
-                }
-            } else {
-                msgWrap.classList.add('message-user');
-            }
-
-            const p = document.createElement('p');
-            p.textContent = message;
-            msgBubble.appendChild(p);
-
-            const timeEl = document.createElement('span');
-            timeEl.className = 'timestamp';
-            timeEl.textContent = time.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-            msgBubble.appendChild(timeEl);
-
-            msgWrap.appendChild(msgBubble);
-            return msgWrap;
+        function setConnectedState() {
+            statusText.textContent = "Online";
+            statusDot.className = "status-dot online";
+            btnConectar.style.display = 'none'; // Esconde botão conectar
+            if (!activeNumber) showScreen('welcome');
         }
 
+        // --- RECEBE MENSAGENS ---
         socket.on('novaMensagemWhatsapp', (data) => {
-            const msgData = { texto: data.texto, sender: 'bot', nome: data.nome, time: new Date() };
-            if (!conversas[data.de]) conversas[data.de] = [];
-            if (data.nome) nomesClientes[data.de] = data.nome;
-            conversas[data.de].push(msgData);
-            atualizarFila(data.de, data.nome || nomesClientes[data.de] || data.de.split('@')[0], true); 
-            if (data.de === conversaAtiva) {
-                chatHistory.appendChild(criarHtmlMensagem(msgData.texto, msgData.sender, msgData.nome, msgData.time));
-                chatHistory.scrollTop = chatHistory.scrollHeight;
+            const number = data.de;
+            const name = data.nome || number;
+            const text = data.texto;
+            const time = new Date();
+
+            // Salva na memória
+            if (!conversations[number]) conversations[number] = [];
+            conversations[number].push({ fromMe: false, text, time, name });
+            contactNames[number] = name;
+
+            // Atualiza a lista lateral
+            updateContactList(number, name, text, true);
+
+            // Se for o chat aberto, adiciona na tela
+            if (activeNumber === number) {
+                appendMessageToView(text, false, name, time);
+                markAsRead(number); // Remove a bolinha se tiver aberto
             }
         });
 
-        // --- CONECTAR (COM TRUQUE DE EXIBIÇÃO IMEDIATA) ---
-        async function conectarWhatsApp() {
-            qrCodeContainer.innerHTML = '<p class="system-message">Gerando QR Code...</p>';
-            qrCodeContainer.style.display = 'block';
-            chatHistory.style.display = 'none';
+        // --- ATUALIZAR LISTA LATERAL ---
+        function updateContactList(number, name, lastMsg, unread = false) {
+            // Remove item existente se houver (para mover pro topo)
+            const existingItem = document.querySelector(`.contact-item[data-number="${number}"]`);
+            if (existingItem) existingItem.remove();
+
+            const div = document.createElement('div');
+            div.className = `contact-item ${activeNumber === number ? 'active' : ''}`;
+            div.dataset.number = number;
             
-            try {
-                const response = await fetch('/api/whatsapp/connect'); 
-                const dados = await response.json();
+            // Avatar (Iniciais ou Ícone)
+            const initial = name ? name.charAt(0).toUpperCase() : '#';
 
-                if (!response.ok) throw new Error(dados.message || "Erro ao conectar");
+            div.innerHTML = `
+                <div class="avatar-placeholder">${initial}</div>
+                <div class="contact-info">
+                    <div class="contact-name">${name}</div>
+                    <div class="contact-last-msg">${lastMsg}</div>
+                </div>
+                ${unread && activeNumber !== number ? '<div class="badge-unread">!</div>' : ''}
+            `;
 
-                // *** O TRUQUE ESTÁ AQUI ***
-                // A Evolution devolve o QR Code no JSON da resposta também!
-                // Vamos pegá-lo e mostrar NA HORA, sem esperar o socket.
-                const qrCodeDaResposta = dados.data?.qrcode?.base64 || dados.data?.base64;
-                
-                if (qrCodeDaResposta) {
-                    mostrarQRCode(qrCodeDaResposta);
-                } else {
-                    console.log("QR Code não veio na resposta imediata, aguardando socket...");
-                }
-                
-            } catch (error) {
-                qrCodeContainer.innerHTML = `<p class="system-message" style="color:red;">Erro: ${error.message}</p>`;
-            }
-        }
-        
-        btnConectarWhats.addEventListener('click', conectarWhatsApp);
-
-        // --- OUTRAS FUNÇÕES (FILA, ENVIAR) ---
-        function atualizarFila(numero, nome, marcarNaoLida = false) {
-            let item = document.querySelector(`.fila-item[data-numero="${numero}"]`);
-            if (!item) {
-                item = document.createElement('div');
-                item.className = 'fila-item';
-                item.dataset.numero = numero;
-                
-                item.innerHTML = `
-                    <span class="close-chat-btn" title="Fechar">&times;</span>
-                    <span class="badge-nao-lido">!</span>
-                    <span class="nome">${nome}</span>
-                    <span class="numero">${numero.split('@')[0]}</span>
-                `;
-                
-                item.querySelector('.close-chat-btn').addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    encerrarConversa(numero);
-                });
-                
-                item.addEventListener('click', () => selecionarConversa(numero));
-                filaAtendimento.prepend(item);
-            }
-            if (marcarNaoLida && conversaAtiva !== numero) item.classList.add('unread');
+            div.addEventListener('click', () => openChat(number));
+            
+            filaAtendimento.prepend(div); // Adiciona no topo
         }
 
-        function encerrarConversa(numero) {
-            const item = document.querySelector(`.fila-item[data-numero="${numero}"]`);
-            if (item) filaAtendimento.removeChild(item);
-            delete conversas[numero];
-            if (conversaAtiva === numero) {
-                conversaAtiva = null;
-                chatHistory.innerHTML = '<p class="system-message">Atendimento encerrado.</p>';
-                qrCodeContainer.style.display = 'none';
+        // --- ABRIR CHAT ---
+        function openChat(number) {
+            activeNumber = number;
+            showScreen('chat');
+            
+            // Ativa visualmente
+            document.querySelectorAll('.contact-item').forEach(el => el.classList.remove('active'));
+            const item = document.querySelector(`.contact-item[data-number="${number}"]`);
+            if(item) {
+                item.classList.add('active');
+                // Remove badge
+                const badge = item.querySelector('.badge-unread');
+                if(badge) badge.remove();
             }
-        }
-        
-        function selecionarConversa(numero) {
-            if (conversaAtiva === numero) return;
-            conversaAtiva = numero;
-            document.querySelectorAll('.fila-item').forEach(i => {
-                i.classList.toggle('active', i.dataset.numero === numero);
-                if (i.dataset.numero === numero) i.classList.remove('unread');
-            });
-            qrCodeContainer.style.display = 'none';
-            chatHistory.style.display = 'flex';
-            chatHistory.innerHTML = "";
-            (conversas[numero] || []).forEach(msg => {
-                chatHistory.appendChild(criarHtmlMensagem(msg.texto, msg.sender, msg.nome, msg.time));
-            });
-            chatHistory.scrollTop = chatHistory.scrollHeight;
+
+            // Limpa e preenche mensagens
+            messagesContainer.innerHTML = '';
+            const msgs = conversations[number] || [];
+            msgs.forEach(m => appendMessageToView(m.text, m.fromMe, m.name, m.time));
+            
+            chatInput.disabled = false;
             chatInput.focus();
         }
 
-        async function handleSendMessage() {
-            const msg = chatInput.value.trim();
-            if (!msg || !conversaAtiva) return;
+        function markAsRead(number) {
+             const item = document.querySelector(`.contact-item[data-number="${number}"]`);
+             if(item) {
+                const badge = item.querySelector('.badge-unread');
+                if(badge) badge.remove();
+             }
+        }
+
+        // --- RENDERIZAR MENSAGEM NA TELA ---
+        function appendMessageToView(text, fromMe, senderName, timeObj) {
+            const div = document.createElement('div');
+            div.className = `msg ${fromMe ? 'msg-out' : 'msg-in'}`;
             
-            const msgData = { texto: msg, sender: 'user', nome: null, time: new Date() };
-            chatHistory.appendChild(criarHtmlMensagem(msgData.texto, msgData.sender, msgData.nome, msgData.time));
-            chatHistory.scrollTop = chatHistory.scrollHeight;
+            const timeStr = new Date(timeObj).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             
-            if (!conversas[conversaAtiva]) conversas[conversaAtiva] = [];
-            conversas[conversaAtiva].push(msgData);
+            // Se for grupo ou cliente, mostra nome. Se for eu, não precisa.
+            const nameHtml = (!fromMe && senderName) ? `<span class="msg-sender">${senderName}</span>` : '';
+
+            div.innerHTML = `
+                ${nameHtml}
+                <div>${text}</div>
+                <span class="msg-time">${timeStr}</span>
+            `;
             
+            messagesContainer.appendChild(div);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // --- ENVIAR MENSAGEM ---
+        async function sendMessage() {
+            const text = chatInput.value.trim();
+            if (!text || !activeNumber) return;
+
+            // Otimista: adiciona na tela logo
+            appendMessageToView(text, true, null, new Date());
+            
+            // Salva memória
+            if (!conversations[activeNumber]) conversations[activeNumber] = [];
+            conversations[activeNumber].push({ fromMe: true, text, time: new Date() });
+            
+            // Atualiza lateral
+            updateContactList(activeNumber, contactNames[activeNumber] || activeNumber, `Você: ${text}`, false);
+
             chatInput.value = '';
+
             try {
                 await fetch('/api/whatsapp/send', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ numero: conversaAtiva, mensagem: msg })
+                    body: JSON.stringify({ numero: activeNumber, mensagem: text })
                 });
-            } catch (e) { console.error(e); }
+            } catch (error) {
+                console.error("Erro ao enviar:", error);
+                alert("Erro ao enviar mensagem.");
+            }
         }
 
-        sendButton.addEventListener('click', handleSendMessage);
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }
+        // --- BOTÃO CONECTAR ---
+        btnConectar.addEventListener('click', async () => {
+            statusText.textContent = "Solicitando QR Code...";
+            showScreen('qr');
+            qrContainer.innerHTML = '<p style="padding:20px;">Carregando...</p>';
+            
+            try {
+                const resp = await fetch('/api/whatsapp/connect');
+                const data = await resp.json();
+                // Se a API já devolver o base64 na resposta, exibe direto
+                if(data.data?.qrcode?.base64 || data.data?.base64) {
+                    exibirQRCode(data.data?.qrcode?.base64 || data.data?.base64);
+                }
+            } catch (e) {
+                qrContainer.innerHTML = '<p style="color:red">Erro ao solicitar conexão.</p>';
+            }
         });
-        
-        chatInput.disabled = true; 
-        chatHistory.style.display = 'none';
+
+        sendButton.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        // --- GERENCIADOR DE TELAS ---
+        function showScreen(screenName) {
+            qrScreen.style.display = 'none';
+            welcomeScreen.style.display = 'none';
+            activeChatScreen.style.display = 'none';
+
+            if (screenName === 'qr') qrScreen.style.display = 'flex';
+            if (screenName === 'welcome') welcomeScreen.style.display = 'flex';
+            if (screenName === 'chat') activeChatScreen.style.display = 'flex';
+        }
+
+        // Estado Inicial
+        showScreen('welcome'); // Ou 'qr' se soubermos que está desconectado
     });
-</script>
+    </script>
 </body>
 </html>
