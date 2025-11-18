@@ -19,7 +19,7 @@ const apiClient = axios.create({
  */
 export const criarInstancia = async () => {
   try {
-    const response = await apiClient.post('/instances/create', {
+    const response = await apiClient.post('/instance/create', {
       instanceName: INSTANCE_NAME,
       integration: "whatsapp", // obrigatório na v2
       qrcode: true
@@ -45,7 +45,7 @@ export const criarInstancia = async () => {
  */
 export const conectarInstancia = async () => {
   try {
-    const response = await apiClient.get(`/instances/connect/${INSTANCE_NAME}`);
+    const response = await apiClient.get(`//connect/${INSTANCE_NAME}`);
     console.log('Resposta da conexão:', response.data);
     return response.data;
 
