@@ -193,13 +193,10 @@
         const filaHeader = document.getElementById('filaHeader');
 
         let activeNumber = null;
-        // FIX: Renomeado de 'conversas' para uso consistente, mas o erro original era usar 'conversations' sem declarar
-        // Agora vamos usar 'conversas' em todo lugar.
         let conversas = {}; 
         let contactNames = {};
 
-        // Ajuste se necessário para o URL do seu backend, se for diferente da origem
-        const socket = io(); 
+        const socket = io(); // Conecta automaticamente na origem correta
 
         socket.on('connect', () => {
             console.log("Socket conectado.");
@@ -210,7 +207,6 @@
             try {
                 const resp = await fetch('/api/whatsapp/status');
                 const json = await resp.json();
-                // Ajuste conforme a resposta do Evolution API
                 const state = json.data?.instance?.state || json.data?.state;
 
                 if (state === 'open') {
@@ -234,7 +230,7 @@
                     chats.forEach(chat => {
                         updateContactList(chat.numero, chat.nome, chat.ultimaMensagem, chat.unread);
                         contactNames[chat.numero] = chat.nome;
-                        // CORREÇÃO: Usando 'conversas' em vez de 'conversations'
+                        // CORREÇÃO: O problema era 'conversations'
                         if (!conversas[chat.numero]) conversas[chat.numero] = [];
                     });
                     
@@ -260,7 +256,7 @@
             const name = data.nome || number;
             const text = data.texto;
             
-            // CORREÇÃO: Usando 'conversas'
+            // CORREÇÃO: O problema era 'conversations' aqui também
             if (!conversas[number]) conversas[number] = [];
             conversas[number].push({ fromMe: false, text, time: new Date(), name });
             
