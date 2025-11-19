@@ -4,7 +4,7 @@ import axios from 'axios';
 const BASE_URL = process.env.EVOLUTION_API_URL;
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY;
 // ATENÇÃO: O nome aqui deve ser igual ao que aparece nos logs da Evolution
-const INSTANCE_NAME = process.env.EVOLUTION_INSTANCE_NAME || "default"; 
+const INSTANCE_NAME = process.env.EVOLUTION_INSTANCE_NAME || "portal_whatsapp_v1"; 
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -14,7 +14,6 @@ const apiClient = axios.create({
   }
 });
 
-// ... (mantenha criarInstancia e conectarInstancia iguais) ...
 export const criarInstancia = async () => {
   try {
     const response = await apiClient.post('/instance/create', {
@@ -42,7 +41,7 @@ export const conectarInstancia = async () => {
 }
 
 // ======================================================
-// === A CORREÇÃO ESTÁ AQUI (Função Enviar Texto) ===
+// === CORREÇÃO APLICADA AQUI ===
 // ======================================================
 export const enviarTexto = async (numero, mensagem) => {
   try {
@@ -50,20 +49,19 @@ export const enviarTexto = async (numero, mensagem) => {
     console.log(`   > Instância: ${INSTANCE_NAME}`);
     console.log(`   > Número: ${numero}`);
 
+    // MUDANÇA: Trocado 'textMessage: { text: mensagem }' por apenas 'text: mensagem'
     const response = await apiClient.post(`/message/sendText/${INSTANCE_NAME}`, {
       number: numero,
       options: { delay: 1200, presence: 'composing' },
-      textMessage: { text: mensagem }
+      text: mensagem 
     });
     
     return response.data;
 
   } catch (error) {
-    // AQUI ESTÁ O SEGREDO: Logar o erro real que a Evolution devolveu
     const erroDetalhado = error.response?.data || error.message;
     console.error("❌ ERRO CRÍTICO AO ENVIAR MENSAGEM:", JSON.stringify(erroDetalhado, null, 2));
     
-    // Repassa a mensagem de erro real para o frontend
     throw new Error(error.response?.data?.message || 'Falha técnica ao enviar mensagem.');
   }
 };
