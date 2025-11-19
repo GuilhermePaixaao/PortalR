@@ -49,11 +49,11 @@ export const enviarTexto = async (numero, mensagem) => {
     console.log(`   > Instância: ${INSTANCE_NAME}`);
     console.log(`   > Número: ${numero}`);
 
-    // MUDANÇA CRÍTICA: Formato ajustado para a versão nova da Evolution
+    // MUDANÇA: Trocado 'textMessage: { text: mensagem }' por apenas 'text: mensagem'
     const response = await apiClient.post(`/message/sendText/${INSTANCE_NAME}`, {
       number: numero,
       options: { delay: 1200, presence: 'composing' },
-      text: mensagem  // Antes estava dentro de textMessage, agora é direto na raiz
+      text: mensagem 
     });
     
     return response.data;
@@ -62,7 +62,6 @@ export const enviarTexto = async (numero, mensagem) => {
     const erroDetalhado = error.response?.data || error.message;
     console.error("❌ ERRO CRÍTICO AO ENVIAR MENSAGEM:", JSON.stringify(erroDetalhado, null, 2));
     
-    // Não derruba o servidor, apenas loga o erro
     throw new Error(error.response?.data?.message || 'Falha técnica ao enviar mensagem.');
   }
 };
