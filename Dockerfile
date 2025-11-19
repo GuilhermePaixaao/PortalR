@@ -5,7 +5,6 @@ FROM node:18-slim
 WORKDIR /app
 
 # 3. Copie os arquivos de pacote e instale as dependências do npm
-# (O npm install agora vai ser MUITO mais rápido)
 COPY package*.json ./
 RUN npm install
 
