@@ -193,10 +193,13 @@
         const filaHeader = document.getElementById('filaHeader');
 
         let activeNumber = null;
+        // FIX: Renomeado de 'conversas' para uso consistente, mas o erro original era usar 'conversations' sem declarar
+        // Agora vamos usar 'conversas' em todo lugar.
         let conversas = {}; 
         let contactNames = {};
 
-        const socket = io("https://portal.smrosalina.com.br", { transports: ['polling'] });
+        // Ajuste se necessário para o URL do seu backend, se for diferente da origem
+        const socket = io(); 
 
         socket.on('connect', () => {
             console.log("Socket conectado.");
@@ -207,6 +210,7 @@
             try {
                 const resp = await fetch('/api/whatsapp/status');
                 const json = await resp.json();
+                // Ajuste conforme a resposta do Evolution API
                 const state = json.data?.instance?.state || json.data?.state;
 
                 if (state === 'open') {
@@ -225,13 +229,13 @@
                 const json = await resp.json();
 
                 if (json.success && Array.isArray(json.data)) {
-                    // Ordena ou inverte conforme necessidade. O service já limita a 50.
                     const chats = json.data.slice().reverse(); 
                     
                     chats.forEach(chat => {
                         updateContactList(chat.numero, chat.nome, chat.ultimaMensagem, chat.unread);
                         contactNames[chat.numero] = chat.nome;
-                        if (!conversations[chat.numero]) conversas[chat.numero] = [];
+                        // CORREÇÃO: Usando 'conversas' em vez de 'conversations'
+                        if (!conversas[chat.numero]) conversas[chat.numero] = [];
                     });
                     
                     filaHeader.textContent = `Fila de Atendimento (${chats.length})`;
@@ -255,8 +259,11 @@
             const number = data.de;
             const name = data.nome || number;
             const text = data.texto;
-            if (!conversations[number]) conversas[number] = [];
-            conversations[number].push({ fromMe: false, text, time: new Date(), name });
+            
+            // CORREÇÃO: Usando 'conversas'
+            if (!conversas[number]) conversas[number] = [];
+            conversas[number].push({ fromMe: false, text, time: new Date(), name });
+            
             contactNames[number] = name;
             updateContactList(number, name, text, true);
             if (activeNumber === number) {
@@ -304,8 +311,11 @@
             document.querySelectorAll('.contact-item').forEach(el => el.classList.remove('active'));
             const item = document.querySelector(`.contact-item[data-number="${number}"]`);
             if(item) { item.classList.add('active'); markAsRead(number); }
+            
             messagesContainer.innerHTML = '';
+            // CORREÇÃO: Usando 'conversas'
             (conversas[number] || []).forEach(m => appendMessageToView(m.text, m.fromMe, m.name, m.time));
+            
             chatInput.disabled = false; chatInput.focus();
         }
 
@@ -327,9 +337,13 @@
         async function sendMessage() {
             const text = chatInput.value.trim();
             if (!text || !activeNumber) return;
+            
             appendMessageToView(text, true, null, new Date());
-            if (!conversations[activeNumber]) conversas[activeNumber] = [];
-            conversations[activeNumber].push({ fromMe: true, text, time: new Date() });
+            
+            // CORREÇÃO: Usando 'conversas'
+            if (!conversas[activeNumber]) conversas[activeNumber] = [];
+            conversas[activeNumber].push({ fromMe: true, text, time: new Date() });
+            
             updateContactList(activeNumber, contactNames[activeNumber] || activeNumber, `Você: ${text}`, false);
             chatInput.value = '';
             try {
