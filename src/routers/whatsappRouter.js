@@ -19,6 +19,9 @@ router.get('/api/whatsapp/status', WhatsappController.checarStatus);
 router.get('/api/whatsapp/status', WhatsappController.checarStatus);
 
 // NOVA ROTA DE CHATS
-router.get('/api/whatsapp/chats', WhatsappController.listarConversas);
+router.get('/api/whatsapp/chats', WhatsappController.listarConversas)
+
+// Rota para forçar a configuração do Webhook
+router.get('/api/whatsapp/configure-webhook', WhatsappController.configurarUrlWebhook);;
 
 export default router;

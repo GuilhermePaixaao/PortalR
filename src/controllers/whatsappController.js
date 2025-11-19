@@ -1,23 +1,21 @@
 import * as evolutionService from '../services/evolutionService.js';
 
-/**
- * Webhook: Recebe eventos (Mensagem, QR Code)
- */
 export const handleWebhook = async (req, res) => {
   const payload = req.body;
   const io = req.io;
+
+  // LOG DE DEPURAÇÃO: Para confirmar que a Evolution bateu aqui
+  console.log(`[WEBHOOK RECEBIDO] Evento: ${payload.event}`);
 
   try {
     // 1. QR Code
     if (payload.event === 'qrcode.updated' && payload.data?.qrcode?.base64) {
       io.emit('qrCodeRecebido', { qr: payload.data.qrcode.base64 });
-      return res.status(200).json({ message: "QR Code recebido" });
     }
     
     // 2. Status de Conexão
     if (payload.event === 'connection.update') {
       io.emit('statusConexao', { status: payload.data.status });
-      return res.status(200).json({ message: "Status recebido" });
     }
 
     // 3. Mensagens Recebidas
@@ -27,12 +25,12 @@ export const handleWebhook = async (req, res) => {
       const mensagem = payload.data?.message?.conversation || payload.data?.message?.extendedTextMessage?.text;
 
       if (idOrigem && mensagem) {
+        console.log(`[MENSAGEM] De: ${idOrigem} - Texto: ${mensagem}`);
         io.emit('novaMensagemWhatsapp', {
           de: idOrigem,
           nome: nomeAutor || idOrigem,
           texto: mensagem
         });
-        return res.status(200).json({ success: true, message: "Mensagem recebida." });
       }
     }
 
@@ -44,26 +42,17 @@ export const handleWebhook = async (req, res) => {
   }
 };
 
-/**
- * Botão Conectar
- */
 export const connectInstance = async (req, res) => {
     try {
         const resultado = await evolutionService.criarInstancia(); 
         res.status(200).json({ success: true, message: "Solicitação enviada.", data: resultado });
     } catch (error) {
-        console.error("Erro controller conectar:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
 
-/**
- * Enviar Mensagem
- */
 export const handleSendMessage = async (req, res) => {
   const { numero, mensagem } = req.body;
-  if (!numero || !mensagem) return res.status(400).json({ message: 'Dados incompletos.' });
-
   try {
     const resultado = await evolutionService.enviarTexto(numero, mensagem);
     res.status(200).json({ success: true, data: resultado });
@@ -72,9 +61,6 @@ export const handleSendMessage = async (req, res) => {
   }
 };
 
-/**
- * Verifica status ao carregar a página
- */
 export const checarStatus = async (req, res) => {
   try {
     const resultado = await evolutionService.consultarStatus();
@@ -84,26 +70,34 @@ export const checarStatus = async (req, res) => {
   }
 };
 
-/**
- * (A FUNÇÃO QUE ESTAVA FALTANDO)
- * Lista todas as conversas para o sidebar
- */
 export const listarConversas = async (req, res) => {
   try {
     const chats = await evolutionService.buscarConversas();
-    
-    // Formata os dados para o frontend
     const conversasFormatadas = chats.map(chat => ({
       numero: chat.id,
       nome: chat.pushName || chat.name || chat.id.split('@')[0],
       ultimaMensagem: chat.conversation || "...",
-      foto: chat.profilePictureUrl || null,
       unread: chat.unreadCount > 0
     }));
-
     res.status(200).json({ success: true, data: conversasFormatadas });
   } catch (error) {
-    // Se der erro, retorna sucesso com lista vazia para não quebrar o front
     res.status(200).json({ success: true, data: [] });
   }
+};
+
+// --- NOVA FUNÇÃO PARA CONFIGURAR ---
+export const configurarUrlWebhook = async (req, res) => {
+    try {
+        // Pega o domínio atual automaticamente (ex: https://meu-app.railway.app)
+        const protocolo = req.protocol;
+        const host = req.get('host');
+        const fullUrl = `${protocolo}://${host}/api/evolution/webhook`;
+        
+        console.log(`Tentando configurar Webhook para: ${fullUrl}`);
+
+        const resultado = await evolutionService.configurarWebhook(fullUrl);
+        res.status(200).json({ success: true, message: `Webhook configurado para: ${fullUrl}`, data: resultado });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
 };

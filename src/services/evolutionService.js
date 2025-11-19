@@ -13,6 +13,9 @@ const apiClient = axios.create({
   }
 });
 
+// ... (Mantenha as funções criarInstancia, conectarInstancia, enviarTexto, consultarStatus, buscarConversas IGUAIS) ...
+// ... Se não tiver o código delas fácil, copie o arquivo completo abaixo: ...
+
 export const criarInstancia = async () => {
   try {
     const response = await apiClient.post('/instance/create', {
@@ -26,7 +29,6 @@ export const criarInstancia = async () => {
     if (error.response && error.response.status === 409) {
         return conectarInstancia();
     }
-    console.error("Erro ao criar:", error.message);
     throw new Error('Falha ao criar instância.');
   }
 };
@@ -36,7 +38,6 @@ export const conectarInstancia = async () => {
         const response = await apiClient.get(`/instance/connect/${INSTANCE_NAME}`);
         return response.data;
     } catch (error) {
-        console.error("Erro ao conectar:", error.message);
         throw new Error('Falha ao conectar instância.');
     }
 }
@@ -63,24 +64,41 @@ export const consultarStatus = async () => {
   }
 };
 
-/**
- * (CORRIGIDO) Busca conversas usando POST (Padrão da Evolution)
- * Adicionado 'where: {}' para evitar erros em algumas versões.
- */
 export const buscarConversas = async () => {
   try {
     const response = await apiClient.post(`/chat/findChats/${INSTANCE_NAME}`, {
-        where: {}, // Importante para algumas versões
+        where: {},
         limit: 50,
         offset: 0
     });
     return response.data;
   } catch (error) {
-    // Loga o erro mas retorna array vazio para não travar o front
     console.error("Erro ao buscar conversas:", error.message);
-    if (error.response) {
-        console.error("Detalhes do erro API:", error.response.data);
-    }
     return []; 
   }
+};
+
+// --- NOVA FUNÇÃO: CONFIGURAR WEBHOOK ---
+export const configurarWebhook = async (urlWebhook) => {
+    if (!urlWebhook) throw new Error("URL do Webhook é obrigatória");
+    
+    try {
+        // Configuração para Evolution v2
+        const response = await apiClient.post(`/webhook/set/${INSTANCE_NAME}`, {
+            webhook: {
+                enabled: true,
+                url: urlWebhook,
+                events: [
+                    "QRCODE_UPDATED",
+                    "MESSAGES_UPSERT",
+                    "MESSAGES_UPDATE",
+                    "CONNECTION_UPDATE"
+                ]
+            }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Erro ao configurar webhook:", error.response?.data || error.message);
+        throw error;
+    }
 };
