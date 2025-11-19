@@ -4,8 +4,8 @@ export const handleWebhook = async (req, res) => {
   const payload = req.body;
   const io = req.io;
 
-  // LOG DE DEPURAÇÃO: Para confirmar que a Evolution bateu aqui
-  console.log(`[WEBHOOK RECEBIDO] Evento: ${payload.event}`);
+  // LOG DE DEPURAÇÃO
+  // console.log(`[WEBHOOK RECEBIDO] Evento: ${payload.event}`);
 
   try {
     // 1. QR Code
@@ -18,18 +18,34 @@ export const handleWebhook = async (req, res) => {
       io.emit('statusConexao', { status: payload.data.status });
     }
 
-    // 3. Mensagens Recebidas
+    // 3. Mensagens Recebidas (A CORREÇÃO PRINCIPAL É AQUI)
     if (payload.event === 'messages.upsert' && payload.data?.message) {
-      const idOrigem = payload.data?.key?.remoteJid;
-      const nomeAutor = payload.data?.pushName;
-      const mensagem = payload.data?.message?.conversation || payload.data?.message?.extendedTextMessage?.text;
+      const messageData = payload.data;
+      const key = messageData.key;
+      
+      const idRemoto = key.remoteJid; // Quem é o dono da conversa (o número do cliente)
+      const isFromMe = key.fromMe;    // TRUE se fui EU que enviei, FALSE se foi o cliente
+      const nomeAutor = messageData.pushName || messageData.verifiedBizName || idRemoto;
+      
+      // Extrai o texto (suporta texto simples e extended)
+      const mensagem = messageData.message?.conversation || 
+                       messageData.message?.extendedTextMessage?.text;
 
-      if (idOrigem && mensagem) {
-        console.log(`[MENSAGEM] De: ${idOrigem} - Texto: ${mensagem}`);
+      // --- FILTRO: Ignora Status/Stories e mensagens vazias ---
+      if (idRemoto === 'status@broadcast') {
+          // Ignora atualizações de status
+          return res.status(200).json({ success: true });
+      }
+
+      if (idRemoto && mensagem) {
+        console.log(`[MSG] Chat: ${idRemoto} | Enviado por mim? ${isFromMe} | Texto: ${mensagem}`);
+        
+        // Envia para o Frontend com a flag 'fromMe' correta
         io.emit('novaMensagemWhatsapp', {
-          de: idOrigem,
-          nome: nomeAutor || idOrigem,
-          texto: mensagem
+          chatId: idRemoto, // Identificador da conversa
+          nome: nomeAutor,
+          texto: mensagem,
+          fromMe: isFromMe  // <--- IMPORTANTE: Avisa o front quem mandou
         });
       }
     }
@@ -42,6 +58,7 @@ export const handleWebhook = async (req, res) => {
   }
 };
 
+// ... (Mantenha as outras funções: connectInstance, handleSendMessage, etc. iguais)
 export const connectInstance = async (req, res) => {
     try {
         const resultado = await evolutionService.criarInstancia(); 
@@ -85,17 +102,11 @@ export const listarConversas = async (req, res) => {
   }
 };
 
-// --- NOVA FUNÇÃO PARA CONFIGURAR ---
 export const configurarUrlWebhook = async (req, res) => {
     try {
         const host = req.get('host');
-        
-        // --- A CORREÇÃO ESTÁ AQUI ---
-        // Forçamos 'https://' na marra para evitar o 'http' que causa erro
         const fullUrl = `https://${host}/api/evolution/webhook`; 
-        
         console.log(`Tentando configurar Webhook para: ${fullUrl}`);
-
         const resultado = await evolutionService.configurarWebhook(fullUrl);
         res.status(200).json({ success: true, message: `Webhook configurado para: ${fullUrl}`, data: resultado });
     } catch (error) {
