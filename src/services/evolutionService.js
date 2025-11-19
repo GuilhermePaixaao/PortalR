@@ -3,8 +3,7 @@ import axios from 'axios';
 // Variáveis de Ambiente
 const BASE_URL = process.env.EVOLUTION_API_URL;
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY;
-// ATENÇÃO: O nome aqui deve ser igual ao que aparece nos logs da Evolution
-const INSTANCE_NAME = process.env.EVOLUTION_INSTANCE_NAME || "portal_whatsapp_v1"; 
+const INSTANCE_NAME = process.env.EVOLUTION_INSTANCE_NAME || "default"; 
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -13,6 +12,9 @@ const apiClient = axios.create({
     'Content-Type': 'application/json'
   }
 });
+
+// ... (Mantenha as funções criarInstancia, conectarInstancia, enviarTexto, consultarStatus, buscarConversas IGUAIS) ...
+// ... Se não tiver o código delas fácil, copie o arquivo completo abaixo: ...
 
 export const criarInstancia = async () => {
   try {
@@ -40,31 +42,16 @@ export const conectarInstancia = async () => {
     }
 }
 
-// ======================================================
-// === CORREÇÃO FEITA AQUI (FORMATO DE ENVIO) ===
-// ======================================================
 export const enviarTexto = async (numero, mensagem) => {
   try {
-    console.log(`[EVOLUTION] Tentando enviar mensagem...`);
-    console.log(`   > Instância: ${INSTANCE_NAME}`);
-    console.log(`   > Número: ${numero}`);
-
-    // MUDANÇA CRÍTICA: Formato ajustado para a versão nova da Evolution API
     const response = await apiClient.post(`/message/sendText/${INSTANCE_NAME}`, {
       number: numero,
       options: { delay: 1200, presence: 'composing' },
-      text: mensagem  // Antes estava dentro de textMessage, agora é direto na raiz
+      textMessage: { text: mensagem }
     });
-    
     return response.data;
-
   } catch (error) {
-    // Log detalhado para ajudar a debugar se acontecer de novo
-    const erroDetalhado = error.response?.data || error.message;
-    console.error("❌ ERRO CRÍTICO AO ENVIAR MENSAGEM:", JSON.stringify(erroDetalhado, null, 2));
-    
-    // Lança o erro para que o controller saiba que falhou
-    throw new Error(error.response?.data?.message || 'Falha técnica ao enviar mensagem.');
+    throw new Error('Falha ao enviar mensagem.');
   }
 };
 
@@ -91,14 +78,22 @@ export const buscarConversas = async () => {
   }
 };
 
+// --- NOVA FUNÇÃO: CONFIGURAR WEBHOOK ---
 export const configurarWebhook = async (urlWebhook) => {
     if (!urlWebhook) throw new Error("URL do Webhook é obrigatória");
+    
     try {
+        // Configuração para Evolution v2
         const response = await apiClient.post(`/webhook/set/${INSTANCE_NAME}`, {
             webhook: {
                 enabled: true,
                 url: urlWebhook,
-                events: ["QRCODE_UPDATED", "MESSAGES_UPSERT", "MESSAGES_UPDATE", "CONNECTION_UPDATE"]
+                events: [
+                    "QRCODE_UPDATED",
+                    "MESSAGES_UPSERT",
+                    "MESSAGES_UPDATE",
+                    "CONNECTION_UPDATE"
+                ]
             }
         });
         return response.data;
