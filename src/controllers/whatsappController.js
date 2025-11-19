@@ -88,10 +88,11 @@ export const listarConversas = async (req, res) => {
 // --- NOVA FUNÇÃO PARA CONFIGURAR ---
 export const configurarUrlWebhook = async (req, res) => {
     try {
-        // Pega o domínio atual automaticamente (ex: https://meu-app.railway.app)
-        const protocolo = req.protocol;
         const host = req.get('host');
-        const fullUrl = `${protocolo}://${host}/api/evolution/webhook`;
+        
+        // --- A CORREÇÃO ESTÁ AQUI ---
+        // Forçamos 'https://' na marra para evitar o 'http' que causa erro
+        const fullUrl = `https://${host}/api/evolution/webhook`; 
         
         console.log(`Tentando configurar Webhook para: ${fullUrl}`);
 
