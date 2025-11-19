@@ -64,10 +64,7 @@
         .msg-in { align-self: flex-start; background-color: var(--wa-msg-in); border-top-left-radius: 0; }
         .msg-out { align-self: flex-end; background-color: var(--wa-msg-out); border-top-right-radius: 0; }
         .msg-time { font-size: 0.7rem; color: var(--text-secondary); float: right; margin-top: 5px; margin-left: 10px; }
-        
-        /* Ajuste no estilo do nome para diferenciar cores se necessário */
         .msg-sender { font-size: 0.75rem; font-weight: bold; color: var(--wa-primary); display: block; margin-bottom: 4px; }
-        .msg-out .msg-sender { color: #555; /* Cor diferente para o nome do atendente, se quiser */ }
 
         .input-area { height: 60px; background-color: var(--wa-header-bg); padding: 10px 16px; display: flex; align-items: center; gap: 15px; z-index: 20; border-top: 1px solid var(--wa-border); }
         .input-field { flex: 1; background-color: var(--input-bg); color: var(--text-primary); border: none; border-radius: 8px; padding: 12px 15px; font-size: 0.95rem; outline: none; }
@@ -169,9 +166,7 @@
 
     <script type="module">
     document.addEventListener('DOMContentLoaded', () => {
-        // --- Funções de Sistema (Logout, Tema, Usuário) ---
-        let myUserName = "Eu"; // Nome padrão caso não encontre
-        
+        // --- Funções de Sistema (Logout, Tema) ---
         function fazerLogout() { localStorage.removeItem("userData"); window.location.href = "Login.html"; }
         document.getElementById("logoutButton").addEventListener('click', fazerLogout);
 
@@ -184,16 +179,12 @@
         try { 
             const u = JSON.parse(localStorage.getItem("userData")); 
             const d = document.getElementById('userNameDisplay'); 
-            if (d && u?.data?.nomeFuncionario) {
-                d.textContent = `Olá, ${u.data.nomeFuncionario.split(' ')[0]}`;
-                // Salva o nome do funcionário logado para usar no chat
-                myUserName = u.data.nomeFuncionario; 
-            }
+            if (d && u?.data?.nomeFuncionario) d.textContent = `Olá, ${u.data.nomeFuncionario.split(' ')[0]}`; 
             if (u?.data?.perfil === 'AGENTE' || u?.data?.perfil === 'ADMIN') { 
                 const l = document.getElementById("menu-link-chamado"); 
                 if(l) { l.querySelector('a').href = "GerenciarChamados.html"; l.querySelector('.text').innerHTML = "Gerenciar<br>Chamados"; }
             } 
-        } catch (e) { console.error("Erro ao carregar dados do usuário", e); }
+        } catch (e) {}
 
         // --- Elementos ---
         const qrScreen = document.getElementById('qrCodeScreen');
@@ -243,9 +234,11 @@
         }
 
         async function carregarConversas() {
+            // Mostra loader apenas se a lista estiver vazia
             if (filaAtendimento.children.length <= 1) {
                 loadingFila.style.display = 'block';
             }
+            
             try {
                 const resp = await fetch('/api/whatsapp/chats');
                 const json = await resp.json();
@@ -255,7 +248,9 @@
                 else if (json.success && Array.isArray(json.data)) listaDeChats = json.data;
                 else if (Array.isArray(json.data)) listaDeChats = json.data;
 
+                // Processa os chats do histórico
                 listaDeChats.forEach(chat => {
+                    // Ajuste para ler 'numero' em vez de 'id' se o backend enviar assim
                     const numero = chat.numero || chat.id || chat.key?.remoteJid;
                     const nome = chat.nome || chat.pushName || chat.name || chat.verifiedName || numero.split('@')[0];
                     const ultimaMensagem = chat.ultimaMensagem || chat.conversation || chat.lastMessage?.conversation || "...";
@@ -294,48 +289,54 @@
             else { statusText.textContent = "Desconectado"; statusDot.className = "status-dot offline"; btnConectar.style.display = 'block'; }
         });
 
-        // === RECEBIMENTO DE MENSAGENS ===
+        // === LÓGICA CORRIGIDA (MENSAGEM E NOME) ===
         socket.on('novaMensagemWhatsapp', (data) => {
             const chatId = data.chatId; 
             const text = data.texto;
             const isFromMe = data.fromMe; 
 
-            // Lógica de Deduplicação:
-            // Se a mensagem é minha e já está no final do histórico (porque adicionei manualmente ao enviar), ignoro.
+            // 1. DEDUPLICAÇÃO: Se a mensagem é minha e já existe no final da conversa (adicionada manualmente), ignora
             if (isFromMe && conversas[chatId]) {
                 const lastMsg = conversas[chatId][conversas[chatId].length - 1];
-                // Verifica se a última mensagem é igual e foi enviada há pouco tempo (ex: < 10s)
                 if (lastMsg && lastMsg.fromMe && lastMsg.text === text) {
-                    return; // Já mostrei essa mensagem
+                    // Mensagem duplicada (já adicionada via envio manual), apenas marca como enviada se quiséssemos (opcional)
+                    return; 
                 }
             }
 
+            // 2. Determinar qual nome mostrar na lista
             let displayName = contactNames[chatId];
 
             if (!isFromMe) {
+                // Se a mensagem é do CLIENTE, atualizamos o nome com o que veio
                 displayName = data.nome || chatId.split('@')[0];
                 contactNames[chatId] = displayName;
             } else {
+                // Se a mensagem é MINHA, NÃO mudamos o nome.
                 if (!displayName) {
                     displayName = chatId.split('@')[0]; 
                     contactNames[chatId] = displayName;
                 }
             }
 
+            // Histórico Local
             if (!conversas[chatId]) conversas[chatId] = [];
             
             conversas[chatId].push({ 
                 fromMe: isFromMe, 
                 text: text, 
                 time: new Date(), 
-                name: isFromMe ? myUserName : displayName // Usa o nome do usuário logado se for minha
+                name: isFromMe ? "Eu" : displayName 
             });
             
+            // Atualiza a lista lateral com o nome CORRETO
             const previewMsg = isFromMe ? `Você: ${text}` : text;
             updateContactList(chatId, displayName, previewMsg, !isFromMe);
             
+            // Se a conversa estiver aberta, joga o balão na tela
             if (activeNumber === chatId) {
-                appendMessageToView(text, isFromMe, isFromMe ? myUserName : displayName, new Date());
+                // Se for minha mensagem, não passo nome para não ficar "Eu" em cima do balão verde
+                appendMessageToView(text, isFromMe, isFromMe ? null : displayName, new Date());
                 markAsRead(chatId);
             }
         });
@@ -355,15 +356,18 @@
         }
 
         function updateContactList(number, name, lastMsg, unread = false) {
+            // Procura se o item já existe e remove para recolocar no topo
             let item = document.querySelector(`.contact-item[data-number="${number}"]`);
             if (item) item.remove();
 
             const initial = name ? name.charAt(0).toUpperCase() : '#';
             
             item = document.createElement('div');
+            // Mantém a classe active se for o chat atual
             item.className = `contact-item ${activeNumber === number ? 'active' : ''}`;
             item.dataset.number = number;
             
+            // Se for o chat ativo, não mostramos badge de não lido
             const showBadge = unread && activeNumber !== number;
 
             item.innerHTML = `
@@ -376,6 +380,8 @@
             `;
 
             item.addEventListener('click', () => openChat(number));
+
+            // Insere no topo da lista
             filaAtendimento.prepend(item); 
             
             if (filaAtendimento.querySelectorAll('.contact-item').length > 0) {
@@ -416,38 +422,28 @@
             const div = document.createElement('div');
             div.className = `msg ${fromMe ? 'msg-out' : 'msg-in'}`;
             const timeStr = new Date(timeObj).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-            
-            // AGORA SEMPRE MOSTRA O NOME, SE HOUVER (Seja meu ou do cliente)
-            const nameHtml = senderName ? `<span class="msg-sender">${senderName}</span>` : '';
-            
+            const nameHtml = (!fromMe && senderName) ? `<span class="msg-sender">${senderName}</span>` : '';
             div.innerHTML = `${nameHtml}<div>${text}</div><span class="msg-time">${timeStr}</span>`;
             messagesContainer.appendChild(div);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
-        // === ENVIO DE MENSAGEM (ATUALIZADO) ===
+        // === LÓGICA DE ENVIO (CORRIGIDA) ===
         async function sendMessage() {
             const text = chatInput.value.trim();
             if (!text || !activeNumber) return;
             
-            // 1. Exibe visualmente IMEDIATAMENTE (Feedback instantâneo)
-            // Usa myUserName para que apareça o seu nome no balão
-            appendMessageToView(text, true, myUserName, new Date());
+            // 1. Feedback Visual Imediato (Optimistic UI)
+            appendMessageToView(text, true, null, new Date());
             
             // 2. Salva no histórico local
             if (!conversas[activeNumber]) conversas[activeNumber] = [];
-            conversas[activeNumber].push({ 
-                fromMe: true, 
-                text: text, 
-                time: new Date(),
-                name: myUserName // Salva seu nome no histórico
-            });
+            conversas[activeNumber].push({ fromMe: true, text, time: new Date() });
             
-            // 3. Atualiza a lista lateral (topo)
+            // 3. Atualiza a lista lateral
             const displayName = contactNames[activeNumber] || activeNumber;
             updateContactList(activeNumber, displayName, `Você: ${text}`, false);
 
-            // 4. Limpa o input
             chatInput.value = '';
             
             try {
@@ -455,7 +451,6 @@
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ numero: activeNumber, mensagem: text })
                 });
-                // Sucesso no envio
             } catch (e) { 
                 console.error(e); 
                 alert("Erro ao enviar. Verifique a conexão."); 
