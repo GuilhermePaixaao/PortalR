@@ -295,7 +295,16 @@
             const text = data.texto;
             const isFromMe = data.fromMe; 
 
-            // 1. Determinar qual nome mostrar na lista
+            // 1. DEDUPLICAÇÃO: Se a mensagem é minha e já existe no final da conversa (adicionada manualmente), ignora
+            if (isFromMe && conversas[chatId]) {
+                const lastMsg = conversas[chatId][conversas[chatId].length - 1];
+                if (lastMsg && lastMsg.fromMe && lastMsg.text === text) {
+                    // Mensagem duplicada (já adicionada via envio manual), apenas marca como enviada se quiséssemos (opcional)
+                    return; 
+                }
+            }
+
+            // 2. Determinar qual nome mostrar na lista
             let displayName = contactNames[chatId];
 
             if (!isFromMe) {
@@ -303,8 +312,7 @@
                 displayName = data.nome || chatId.split('@')[0];
                 contactNames[chatId] = displayName;
             } else {
-                // Se a mensagem é MINHA (Suporte), NÃO mudamos o nome.
-                // Se não houver nada (conversa nova iniciada por nós), usa o número.
+                // Se a mensagem é MINHA, NÃO mudamos o nome.
                 if (!displayName) {
                     displayName = chatId.split('@')[0]; 
                     contactNames[chatId] = displayName;
@@ -420,20 +428,33 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
+        // === LÓGICA DE ENVIO (CORRIGIDA) ===
         async function sendMessage() {
             const text = chatInput.value.trim();
             if (!text || !activeNumber) return;
             
-            // Feedback visual imediato (opcional, o socket também vai confirmar)
-            // appendMessageToView(text, true, null, new Date());
+            // 1. Feedback Visual Imediato (Optimistic UI)
+            appendMessageToView(text, true, null, new Date());
+            
+            // 2. Salva no histórico local
+            if (!conversas[activeNumber]) conversas[activeNumber] = [];
+            conversas[activeNumber].push({ fromMe: true, text, time: new Date() });
+            
+            // 3. Atualiza a lista lateral
+            const displayName = contactNames[activeNumber] || activeNumber;
+            updateContactList(activeNumber, displayName, `Você: ${text}`, false);
+
+            chatInput.value = '';
             
             try {
                 await fetch('/api/whatsapp/send', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ numero: activeNumber, mensagem: text })
                 });
-                chatInput.value = '';
-            } catch (e) { console.error(e); }
+            } catch (e) { 
+                console.error(e); 
+                alert("Erro ao enviar. Verifique a conexão."); 
+            }
         }
 
         btnConectar.addEventListener('click', async () => {
