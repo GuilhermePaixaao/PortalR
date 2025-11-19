@@ -64,20 +64,23 @@ export const consultarStatus = async () => {
 };
 
 /**
- * (CORRIGIDO) Busca conversas usando GET e params na URL
+ * (CORRIGIDO) Busca conversas usando POST (Padrão da Evolution)
+ * Adicionado 'where: {}' para evitar erros em algumas versões.
  */
 export const buscarConversas = async () => {
   try {
-    // MUDANÇA AQUI: De POST para GET, passando params corretamente
-    const response = await apiClient.get(`/chat/findChats/${INSTANCE_NAME}`, {
-        params: {
-            limit: 50,
-            offset: 0
-        }
+    const response = await apiClient.post(`/chat/findChats/${INSTANCE_NAME}`, {
+        where: {}, // Importante para algumas versões
+        limit: 50,
+        offset: 0
     });
     return response.data;
   } catch (error) {
+    // Loga o erro mas retorna array vazio para não travar o front
     console.error("Erro ao buscar conversas:", error.message);
+    if (error.response) {
+        console.error("Detalhes do erro API:", error.response.data);
+    }
     return []; 
   }
 };
