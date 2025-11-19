@@ -85,7 +85,6 @@
         body.dark-mode .btn-theme-toggle { border-color: #555; color: #e9edef; }
         body.dark-mode .btn-theme-toggle:hover { background-color: #2a3942; }
 
-        /* Botão Conectar e Status */
         .connection-status { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
         .status-dot { width: 10px; height: 10px; border-radius: 50%; background-color: #ccc; }
         .status-dot.online { background-color: var(--wa-primary); }
@@ -196,7 +195,7 @@
         let conversas = {}; 
         let contactNames = {};
 
-        const socket = io(); // Conecta automaticamente na origem correta
+        const socket = io(); // Conecta automaticamente na mesma origem
 
         socket.on('connect', () => {
             console.log("Socket conectado.");
@@ -230,7 +229,7 @@
                     chats.forEach(chat => {
                         updateContactList(chat.numero, chat.nome, chat.ultimaMensagem, chat.unread);
                         contactNames[chat.numero] = chat.nome;
-                        // CORREÇÃO: O problema era 'conversations'
+                        // Inicializa array de mensagens para este número
                         if (!conversas[chat.numero]) conversas[chat.numero] = [];
                     });
                     
@@ -256,7 +255,6 @@
             const name = data.nome || number;
             const text = data.texto;
             
-            // CORREÇÃO: O problema era 'conversations' aqui também
             if (!conversas[number]) conversas[number] = [];
             conversas[number].push({ fromMe: false, text, time: new Date(), name });
             
@@ -309,7 +307,6 @@
             if(item) { item.classList.add('active'); markAsRead(number); }
             
             messagesContainer.innerHTML = '';
-            // CORREÇÃO: Usando 'conversas'
             (conversas[number] || []).forEach(m => appendMessageToView(m.text, m.fromMe, m.name, m.time));
             
             chatInput.disabled = false; chatInput.focus();
@@ -336,7 +333,6 @@
             
             appendMessageToView(text, true, null, new Date());
             
-            // CORREÇÃO: Usando 'conversas'
             if (!conversas[activeNumber]) conversas[activeNumber] = [];
             conversas[activeNumber].push({ fromMe: true, text, time: new Date() });
             

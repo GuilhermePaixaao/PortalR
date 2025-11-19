@@ -64,14 +64,16 @@ export const consultarStatus = async () => {
 };
 
 /**
- * (CORRIGIDO) Busca apenas as conversas recentes para não travar (Fila)
+ * (CORRIGIDO) Busca conversas usando GET e params na URL
  */
 export const buscarConversas = async () => {
   try {
-    // Adicionamos 'limit' e 'offset' para pegar apenas as 50 primeiras
-    const response = await apiClient.post(`/chat/findChats/${INSTANCE_NAME}`, {
-        limit: 50,
-        offset: 0
+    // MUDANÇA AQUI: De POST para GET, passando params corretamente
+    const response = await apiClient.get(`/chat/findChats/${INSTANCE_NAME}`, {
+        params: {
+            limit: 50,
+            offset: 0
+        }
     });
     return response.data;
   } catch (error) {
