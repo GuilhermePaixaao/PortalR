@@ -144,53 +144,73 @@ async function processarMensagemFixa(textoUsuario, idRemoto, nomeUsuario) {
 }
 
 // ==================================================
-// 4. WEBHOOK (CONEXÃO)
+// 4. WEBHOOK (CONEXÃO ATUALIZADA COM LOGS E FIX DE MENSAGENS)
 // ==================================================
 export const handleWebhook = async (req, res) => {
   const payload = req.body;
   const io = req.io;
 
+  // [DEBUG] Confirmação de recebimento
+  console.log("🔔 WEBHOOK CHEGOU! Evento:", payload.event);
+
   try {
-    // Eventos de Sistema
+    // Eventos de Sistema (QRCode e Status)
     if (payload.event === 'qrcode.updated' && payload.data?.qrcode?.base64) {
+      console.log("📸 QR Code recebido");
       io.emit('qrCodeRecebido', { qr: payload.data.qrcode.base64 });
     }
     if (payload.event === 'connection.update') {
+      console.log("🔌 Status da conexão:", payload.data.status);
       io.emit('statusConexao', { status: payload.data.status });
     }
 
-    // Mensagens
+    // Mensagens (Recebidas ou Enviadas pelo celular)
     if (payload.event === 'messages.upsert' && payload.data?.message) {
       const msg = payload.data;
       const idRemoto = msg.key.remoteJid;
       const isFromMe = msg.key.fromMe;
-      const nomeAutor = msg.pushName || idRemoto;
-      const texto = msg.message?.conversation || msg.message?.extendedTextMessage?.text;
+      
+      // Tenta pegar o nome de várias formas
+      const nomeAutor = msg.pushName || msg.key.participant || idRemoto.split('@')[0];
+      
+      // Extrai o texto de forma segura
+      const texto = msg.message?.conversation || 
+                    msg.message?.extendedTextMessage?.text || 
+                    msg.message?.text || "";
 
-      // Ignora Status e Mensagens enviadas por você
-      if (idRemoto !== 'status@broadcast' && !isFromMe && texto) {
+      // Log para você ver no terminal
+      console.log(`📩 Mensagem de ${idRemoto}: ${texto} (Eu: ${isFromMe})`);
+
+      // [CORREÇÃO]
+      // 1. Ignora apenas mensagens de status (broadcast)
+      // 2. PERMITE mensagens enviadas por você (isFromMe = true) para sincronizar o chat
+      if (idRemoto !== 'status@broadcast' && texto) {
         
-        // 1. Mostra no Painel
+        // 1. Envia para o Painel (Frontend) em tempo real
         io.emit('novaMensagemWhatsapp', {
             chatId: idRemoto,
             nome: nomeAutor,
             texto: texto,
-            fromMe: false
+            fromMe: isFromMe // O frontend vai usar isso para pintar o balão
         });
 
-        // 2. Processa a Lógica Fixa
-        const respostaBot = await processarMensagemFixa(texto, idRemoto, nomeAutor);
+        // 2. Processa a Lógica do Robô (APENAS se for mensagem do cliente)
+        if (!isFromMe) {
+            const respostaBot = await processarMensagemFixa(texto, idRemoto, nomeAutor);
 
-        // 3. Envia Resposta (se houver)
-        if (respostaBot) {
-            await evolutionService.enviarTexto(idRemoto, respostaBot);
+            // 3. Se o robô tiver uma resposta, envia
+            if (respostaBot) {
+                console.log("🤖 Robô respondendo:", respostaBot);
+                await evolutionService.enviarTexto(idRemoto, respostaBot);
 
-            io.emit('novaMensagemWhatsapp', {
-                chatId: idRemoto,
-                nome: "Auto-Atendimento",
-                texto: respostaBot,
-                fromMe: true
-            });
+                // Emite a resposta do robô para o frontend também
+                io.emit('novaMensagemWhatsapp', {
+                    chatId: idRemoto,
+                    nome: "Auto-Atendimento",
+                    texto: respostaBot,
+                    fromMe: true
+                });
+            }
         }
       }
     }
@@ -198,7 +218,7 @@ export const handleWebhook = async (req, res) => {
     res.status(200).json({ success: true });
 
   } catch (error) {
-    console.error('Erro no webhook:', error);
+    console.error('❌ Erro no webhook:', error);
     res.status(500).json({ success: false });
   }
 };
@@ -231,7 +251,7 @@ export const notificarFinalizacao = async (numero) => {
     return msg;
 };
 
-// --- MANTÉM AS OUTRAS FUNÇÕES DE CONEXÃO IGUAIS ---
+// --- OUTRAS FUNÇÕES DE CONEXÃO (MANTIDAS) ---
 export const connectInstance = async (req, res) => {
     try { const r = await evolutionService.criarInstancia(); res.status(200).json({ success: true, data: r }); } 
     catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -255,8 +275,15 @@ export const listarConversas = async (req, res) => {
 export const configurarUrlWebhook = async (req, res) => {
     try {
         const host = req.get('host');
-        const fullUrl = `https://${host}/api/evolution/webhook`;
+        const protocol = req.protocol; // http ou https
+        // Força HTTPS se estiver em produção/railway
+        const finalProtocol = host.includes('localhost') ? 'http' : 'https';
+        
+        const fullUrl = `${finalProtocol}://${host}/api/evolution/webhook`;
+        
+        console.log(`Configurando Webhook para: ${fullUrl}`);
+        
         await evolutionService.configurarWebhook(fullUrl);
-        res.status(200).json({ success: true, message: `Webhook: ${fullUrl}` });
+        res.status(200).json({ success: true, message: `Webhook configurado para: ${fullUrl}` });
     } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };
