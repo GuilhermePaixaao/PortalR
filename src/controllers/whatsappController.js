@@ -11,7 +11,7 @@ const groq = new OpenAI({
 
 const MODELO_IA = "llama-3.1-8b-instant"; 
 
-// Prompt do Sistema (Filtro de assuntos aleatórios)
+// Prompt do Sistema
 const SISTEMA_PROMPT = `
 Você é o assistente de triagem do Suporte Técnico (T.I.) do Supermercado Rosalina.
 Sua missão é EXCLUSIVAMENTE tirar dúvidas sobre: uso do sistema interno, problemas com impressoras, internet, computadores e abertura de chamados.
@@ -28,36 +28,26 @@ REGRAS RÍGIDAS DE COMPORTAMENTO:
 const userContext = {};
 
 // ==================================================
-// 2. TEXTOS FIXOS (MENU)
+// 2. TEXTOS FIXOS (MENSAGENS)
 // ==================================================
 const MENSAGENS = {
-    SAUDACAO: (nome) => `Olá ${nome} bem-vindo ao suporte interno do Supermercado Rosalina. Em breve, um de nossos atendentes vai te ajudar. Enquanto isso, fique à vontade para descrever seu problema.
-Escolha uma fila de atendimento para ser atendido:
-1 - Suporte T.I
-* - Consultar um ticket (Ex. *123)`,
+    OPCAO_INVALIDA: `A opção digitada não é válida. Por favor, clique em um dos botões acima ou reinicie com "Oi".`,
 
-    OPCAO_INVALIDA: `A opção digitada não existe, digite uma opção válida!`,
+    FILA_TI: `Certo! Você entrou na fila de atendimento do Suporte T.I. Aguarde um momento, um técnico irá te responder.`,
 
-    FILA_TI: `Você entrou na fila de atendimento. Aguarde um momento.`,
+    AVALIACAO_INICIO: `Obrigado por entrar em contato com o Suporte. Para melhorarmos nosso atendimento, precisamos da sua opinião.
+Por favor, nos conte como foi o seu atendimento:
 
-    AVALIACAO_INICIO: `Obrigado por entrar em contato com o Suporte . Para melhorarmos nosso atendimento, precisamos da sua opinião
-Por favor, nos conte como foi o seu atendimento.
-
-1.😔 Péssimo
-
-2.🙁 Ruim
-
-3.😐 Regular
-
-4.😀 Bom
-
-5.🤩 Excelente
-
-9.❌ Não avaliar`,
+1. 😔 Péssimo
+2. 🙁 Ruim
+3. 😐 Regular
+4. 😀 Bom
+5. 🤩 Excelente
+9. ❌ Não avaliar`,
 
     AVALIACAO_MOTIVO: `Agradecemos a sua avaliação, por favor descreva o motivo que levou você a classificar esse atendimento ou digite 9 para encerrar sem um motivo.`,
 
-    ENCERRAMENTO_FINAL: `Obrigado! Caso queira iniciar uma nova conversa é só escrever o assunto`
+    ENCERRAMENTO_FINAL: `Obrigado! Caso queira iniciar uma nova conversa é só mandar um "Oi".`
 };
 
 // ==================================================
@@ -118,15 +108,26 @@ export const handleWebhook = async (req, res) => {
       const idRemoto = msg.key.remoteJid;
       const isFromMe = msg.key.fromMe;
       const nomeAutor = msg.pushName || idRemoto.split('@')[0];
-      const texto = (msg.message?.conversation || msg.message?.extendedTextMessage?.text || "").trim();
 
-      // --- FILTROS DE SEGURANÇA ---
+      // --- [MODIFICADO] LEITURA ROBUSTA (Texto + Botões) ---
+      // Se for texto normal, pega conversation/extendedTextMessage
+      // Se for clique em botão, pega buttonsResponseMessage.selectedButtonId
+      const texto = (
+          msg.message?.conversation || 
+          msg.message?.extendedTextMessage?.text || 
+          msg.message?.buttonsResponseMessage?.selectedButtonId || 
+          ""
+      ).trim();
+
       const isGroup = idRemoto.includes('@g.us'); 
       const isStatus = idRemoto === 'status@broadcast'; 
 
-      // Só processa se: NÃO for status, NÃO for grupo e TIVER texto
+      // Só processa se: NÃO for status, NÃO for grupo e TIVER texto/clique
       if (!isStatus && !isGroup && texto) {
         
+        // Emite para o frontend (chat em tempo real)
+        // Se for botão, o 'texto' será o ID (ex: '1'), mas para o chat humano pode ficar confuso.
+        // O ideal seria tratar a exibição, mas para simplificar enviamos o ID ou Texto.
         io.emit('novaMensagemWhatsapp', { chatId: idRemoto, nome: nomeAutor, texto: texto, fromMe: isFromMe });
 
         if (!isFromMe) {
@@ -148,12 +149,28 @@ export const handleWebhook = async (req, res) => {
 
             // --- A. REGRAS FIXAS ---
             
-            // Se for saudação (Reiniciar / Menu)
+            // Se for saudação (Reiniciar / Menu) -> AGORA ENVIA BOTÕES
             if (ehSaudacao) {
-                respostaBot = MENSAGENS.SAUDACAO(nomeAutor);
+                
+                await evolutionService.enviarBotoes(
+                    idRemoto, 
+                    `Olá ${nomeAutor}, bem-vindo ao suporte!`, 
+                    "Como podemos te ajudar hoje? Selecione uma opção:",
+                    [
+                        { id: '1', texto: '🖥️ Suporte T.I.' },
+                        { id: '2', texto: '🎫 Consultar Ticket' },
+                        { id: '3', texto: '💬 Falar com Humano' }
+                    ]
+                );
+
                 ctx.etapa = 'MENU';
                 ctx.botPausado = false;
                 ctx.historico = [{ role: "system", content: SISTEMA_PROMPT }];
+                
+                // Avisa o painel que o bot respondeu com menu
+                io.emit('novaMensagemWhatsapp', { chatId: idRemoto, nome: "Bot", texto: "[Menu de Botões Enviado]", fromMe: true });
+                
+                respostaBot = null; // Já enviamos os botões, não enviar texto extra
             }
             
             // Finalizar (#)
@@ -165,18 +182,31 @@ export const handleWebhook = async (req, res) => {
 
             // --- B. LÓGICA POR ETAPAS ---
 
-            // 1. MENU (Restrito)
+            // 1. MENU (Agora responde aos IDs dos botões)
             else if (ctx.etapa === 'MENU') {
                 if (texto === '1') {
+                    // Clicou em "Suporte T.I."
                     respostaBot = MENSAGENS.FILA_TI;
                     ctx.etapa = 'FILA'; 
-                    ctx.botPausado = true; 
+                    ctx.botPausado = true; // Pausa IA, espera humano
                 } 
+                else if (texto === '2') {
+                    // Clicou em "Consultar Ticket"
+                    respostaBot = "Por favor, digite o número do ticket que deseja consultar (ex: *123).";
+                    // Mantém no menu ou cria etapa CONSULTA
+                } 
+                else if (texto === '3') {
+                    // Clicou em "Falar com Humano"
+                    respostaBot = "Entendido. Estou transferindo para um atendente. Aguarde um momento.";
+                    ctx.etapa = 'FILA';
+                    ctx.botPausado = true;
+                }
                 else if (texto.startsWith('*')) {
                     const ticketId = texto.replace('*', '');
-                    respostaBot = `Consultando ticket ${ticketId}... (Simulação)`;
+                    respostaBot = `Consultando ticket ${ticketId}... (Simulação: Ticket Em Aberto)`;
                 } 
                 else {
+                    // Se a pessoa digitou texto em vez de clicar
                     respostaBot = MENSAGENS.OPCAO_INVALIDA;
                 }
             }
@@ -195,7 +225,7 @@ export const handleWebhook = async (req, res) => {
                     respostaBot = MENSAGENS.ENCERRAMENTO_FINAL;
                     delete userContext[idRemoto];
                 } else {
-                    respostaBot = MENSAGENS.OPCAO_INVALIDA;
+                    respostaBot = "Por favor, digite apenas o número da nota (1 a 5) ou 9 para sair.";
                 }
             }
 
@@ -207,13 +237,14 @@ export const handleWebhook = async (req, res) => {
             }
 
             // --- C. IA (GROQ) ---
-            // Só responde se estiver no INÍCIO, não for comando fixo e não for saudação
+            // Só responde se estiver no INÍCIO (não entrou no menu ainda) e não for comando fixo
             else if (!respostaBot && !ctx.botPausado && ctx.etapa === 'INICIO') {
                 console.log("🤔 Consultando Groq AI...");
                 respostaBot = await processarComGroq(idRemoto, texto, nomeAutor);
             }
 
-            // --- ENVIO ---
+            // --- ENVIO FINAL DE TEXTO ---
+            // Se alguma lógica acima definiu uma resposta de TEXTO (respostaBot), enviamos aqui.
             if (respostaBot) {
                 await evolutionService.enviarTexto(idRemoto, respostaBot);
                 io.emit('novaMensagemWhatsapp', { chatId: idRemoto, nome: "Bot", texto: respostaBot, fromMe: true });
