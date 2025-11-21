@@ -9,14 +9,20 @@ const groq = new OpenAI({
     baseURL: "https://api.groq.com/openai/v1"
 });
 
-// --- MUDANÇA AQUI: Modelo atualizado para evitar erro "decommissioned" ---
 const MODELO_IA = "llama-3.1-8b-instant"; 
 
+// --- MUDANÇA AQUI: Prompt BLINDADO para assuntos aleatórios ---
 const SISTEMA_PROMPT = `
-Você é o assistente virtual do Supermercado Rosalina.
-Seu tom é educado, prestativo e breve (respostas curtas para WhatsApp).
-Você ajuda com dúvidas sobre horário de funcionamento, localização e produtos.
-Se não souber algo, peça para o cliente digitar # para falar com um humano.
+Você é o assistente de triagem do Suporte Técnico (T.I.) do Supermercado Rosalina.
+Sua missão é EXCLUSIVAMENTE tirar dúvidas sobre: uso do sistema interno, problemas com impressoras, internet, computadores e abertura de chamados.
+
+REGRAS RÍGIDAS DE COMPORTAMENTO:
+1. Se o usuário perguntar sobre qualquer assunto que NÃO seja T.I. ou funcionamento do mercado (ex: futebol, receitas, política, piadas, clima, conversa fiada), você DEVE responder APENAS:
+"Desculpe, meu sistema é limitado exclusivamente para suporte técnico e dúvidas operacionais do mercado."
+
+2. Não tente ser simpático demais nem render assunto fora do trabalho.
+3. Responda de forma breve e direta (máximo 2 frases).
+4. Se não souber a resposta técnica, peça para ele digitar # para falar com um humano.
 `;
 
 const userContext = {};
@@ -25,29 +31,33 @@ const userContext = {};
 // 2. TEXTOS FIXOS (MENU)
 // ==================================================
 const MENSAGENS = {
-    SAUDACAO: (nome) => `Olá ${nome}, bem-vindo ao suporte do Supermercado Rosalina! 🛒
+    SAUDACAO: (nome) => `Olá ${nome} bem-vindo ao suporte interno do Supermercado Rosalina. Em breve, um de nossos atendentes vai te ajudar. Enquanto isso, fique à vontade para descrever seu problema.
+Escolha uma fila de atendimento para ser atendido:
+1 - Suporte T.I
+* - Consultar um ticket (Ex. *123)`,
 
-Como posso te ajudar hoje?
-1️⃣ - Falar com Suporte T.I
-#️⃣ - Finalizar atendimento
+    OPCAO_INVALIDA: "A opção digitada não existe, digite uma opção válida!",
 
-*Ou pode me fazer uma pergunta diretamente!*`,
+    FILA_TI: `Você entrou na fila do Suporte T.I. Aguarde, logo você será atendido.`,
 
-    FILA_TI: `Certo! Você entrou na fila do Suporte T.I. 💻
-Um técnico irá te atender em breve. 
-(Digite # a qualquer momento para encerrar)`,
+    AVALIACAO_INICIO: `Obrigado por entrar em contato com o Suporte. Para melhorarmos nosso atendimento, precisamos da sua opinião
+Por favor, nos conte como foi o seu atendimento.
 
-    AVALIACAO_INICIO: `Atendimento finalizado! 🏁
-Para nos ajudar, avalie nosso atendimento:
+1.😔 Péssimo
 
-1. 😠 Péssimo
-2. 🙁 Ruim
-3. 😐 Regular
-4. 🙂 Bom
-5. 🤩 Excelente
-9. ❌ Sair`,
+2.🙁 Ruim
 
-    ENCERRAMENTO_FINAL: `Obrigado pela sua avaliação! O Supermercado Rosalina agradece. Até logo! 👋`
+3.😐 Regular
+
+4.😀 Bom
+
+5.🤩 Excelente
+
+9.❌ Não avaliar`,
+
+    AVALIACAO_MOTIVO: `Agradecemos a sua avaliação, por favor descreva o motivo que levou você a classificar esse atendimento ou digite 9 para encerrar sem um motivo.`,
+
+    ENCERRAMENTO_FINAL: `Obrigado! Caso queira iniciar uma nova conversa é só escrever o assunto`
 };
 
 // ==================================================
@@ -59,7 +69,8 @@ async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
     if (!contexto || contexto.botPausado) return null;
 
     try {
-        if (!contexto.historico) {
+        // Garante que o prompt de sistema esteja sempre no topo
+        if (!contexto.historico || contexto.historico.length === 0) {
             contexto.historico = [
                 { role: "system", content: SISTEMA_PROMPT }
             ];
@@ -67,16 +78,15 @@ async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
 
         contexto.historico.push({ role: "user", content: textoUsuario });
 
-        // Mantém apenas as últimas 10 mensagens para economizar memória
         if (contexto.historico.length > 12) {
             contexto.historico = [contexto.historico[0], ...contexto.historico.slice(-10)];
         }
 
         const completion = await groq.chat.completions.create({
             messages: contexto.historico,
-            model: MODELO_IA, // Usa o novo modelo corrigido
-            temperature: 0.5, 
-            max_tokens: 300,  
+            model: MODELO_IA,
+            temperature: 0.3, // Baixei a temperatura para ele ser MENOS criativo e MAIS obediente
+            max_tokens: 150,  // Respostas mais curtas
         });
 
         const respostaIA = completion.choices[0]?.message?.content || "";
@@ -101,11 +111,9 @@ export const handleWebhook = async (req, res) => {
   const io = req.io;
 
   try {
-    // Eventos de Sistema
     if (payload.event === 'qrcode.updated') io.emit('qrCodeRecebido', { qr: payload.data?.qrcode?.base64 });
     if (payload.event === 'connection.update') io.emit('statusConexao', { status: payload.data.state });
 
-    // Processamento de Mensagem
     if (payload.event === 'messages.upsert' && payload.data?.message) {
       const msg = payload.data;
       const idRemoto = msg.key.remoteJid;
@@ -113,16 +121,14 @@ export const handleWebhook = async (req, res) => {
       const nomeAutor = msg.pushName || idRemoto.split('@')[0];
       const texto = (msg.message?.conversation || msg.message?.extendedTextMessage?.text || "").trim();
 
-      // --- FILTROS ---
+      // Filtros
       const isGroup = idRemoto.includes('@g.us'); 
       const isStatus = idRemoto === 'status@broadcast'; 
 
       if (!isStatus && !isGroup && texto) {
         
-        // 1. Atualiza Painel
         io.emit('novaMensagemWhatsapp', { chatId: idRemoto, nome: nomeAutor, texto: texto, fromMe: isFromMe });
 
-        // 2. Se a mensagem é do cliente
         if (!isFromMe) {
             
             if (!userContext[idRemoto]) userContext[idRemoto] = { etapa: 'INICIO', botPausado: false, historico: [] };
@@ -130,43 +136,63 @@ export const handleWebhook = async (req, res) => {
             let respostaBot = null;
 
             // --- A. REGRAS FIXAS ---
+            
             if (['oi', 'ola', 'olá', 'menu'].includes(texto.toLowerCase())) {
                 respostaBot = MENSAGENS.SAUDACAO(nomeAutor);
                 ctx.etapa = 'MENU';
                 ctx.botPausado = false;
+                // Reinicia o histórico com o novo Prompt Blindado
                 ctx.historico = [{ role: "system", content: SISTEMA_PROMPT }];
             }
+            
             else if (texto === '#') {
                 respostaBot = MENSAGENS.AVALIACAO_INICIO;
                 ctx.etapa = 'AVALIACAO_NOTA';
                 ctx.botPausado = true; 
             }
+
             else if (ctx.etapa === 'MENU') {
                 if (texto === '1') {
                     respostaBot = MENSAGENS.FILA_TI;
                     ctx.etapa = 'FILA';
                     ctx.botPausado = true; 
                 } 
-            }
-            else if (ctx.etapa === 'AVALIACAO_NOTA') {
-                if (['1', '2', '3', '4', '5', '9'].includes(texto)) {
-                    respostaBot = MENSAGENS.ENCERRAMENTO_FINAL;
-                    delete userContext[idRemoto]; 
-                } else {
-                    respostaBot = "Por favor, digite apenas o número da nota (1 a 5).";
+                else if (texto.startsWith('*')) {
+                    const ticketId = texto.replace('*', '');
+                    respostaBot = `Consultando ticket ${ticketId}... (Simulação)`;
+                } 
+                else {
+                    respostaBot = MENSAGENS.OPCAO_INVALIDA;
                 }
             }
 
-            // --- B. INTELIGÊNCIA ARTIFICIAL (GROQ) ---
-            if (!respostaBot && !ctx.botPausado) {
-                console.log("🤔 Consultando Groq AI...");
+            else if (ctx.etapa === 'AVALIACAO_NOTA') {
+                if (['1', '2', '3', '4', '5'].includes(texto)) {
+                    respostaBot = MENSAGENS.AVALIACAO_MOTIVO;
+                    ctx.etapa = 'AVALIACAO_MOTIVO';
+                } else if (texto === '9') {
+                    respostaBot = MENSAGENS.ENCERRAMENTO_FINAL;
+                    delete userContext[idRemoto];
+                } else {
+                    respostaBot = "Opção inválida. Digite um número de 1 a 5 ou 9.";
+                }
+            }
+
+            else if (ctx.etapa === 'AVALIACAO_MOTIVO') {
+                respostaBot = MENSAGENS.ENCERRAMENTO_FINAL;
+                delete userContext[idRemoto]; 
+            }
+
+            // --- B. INTELIGÊNCIA ARTIFICIAL (Restrita pelo Prompt) ---
+            else if (!respostaBot && !ctx.botPausado && ctx.etapa === 'INICIO') {
+                console.log("🤔 Consultando Groq AI (Com restrições)...");
                 respostaBot = await processarComGroq(idRemoto, texto, nomeAutor);
             }
 
             // --- C. ENVIO ---
             if (respostaBot) {
                 await evolutionService.enviarTexto(idRemoto, respostaBot);
-                io.emit('novaMensagemWhatsapp', { chatId: idRemoto, nome: "Bot (Groq)", texto: respostaBot, fromMe: true });
+                io.emit('novaMensagemWhatsapp', { chatId: idRemoto, nome: "Bot", texto: respostaBot, fromMe: true });
             }
         }
       }
@@ -190,10 +216,9 @@ export const notificarAtribuicao = async (numero, nomeAgente) => {
 };
 
 export const notificarFinalizacao = async (numero) => {
-    if(userContext[numero]) {
-        userContext[numero].etapa = 'AVALIACAO_NOTA';
-        userContext[numero].botPausado = true; 
-    }
+    if(!userContext[numero]) userContext[numero] = {};
+    userContext[numero].etapa = 'AVALIACAO_NOTA';
+    userContext[numero].botPausado = true;
     const msg = MENSAGENS.AVALIACAO_INICIO;
     await evolutionService.enviarTexto(numero, msg);
     return msg;
