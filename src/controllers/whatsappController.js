@@ -9,7 +9,8 @@ const groq = new OpenAI({
     baseURL: "https://api.groq.com/openai/v1"
 });
 
-const MODELO_IA = "llama3-8b-8192"; 
+// --- MUDANÇA AQUI: Modelo atualizado para evitar erro "decommissioned" ---
+const MODELO_IA = "llama-3.1-8b-instant"; 
 
 const SISTEMA_PROMPT = `
 Você é o assistente virtual do Supermercado Rosalina.
@@ -66,13 +67,14 @@ async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
 
         contexto.historico.push({ role: "user", content: textoUsuario });
 
+        // Mantém apenas as últimas 10 mensagens para economizar memória
         if (contexto.historico.length > 12) {
             contexto.historico = [contexto.historico[0], ...contexto.historico.slice(-10)];
         }
 
         const completion = await groq.chat.completions.create({
             messages: contexto.historico,
-            model: MODELO_IA,
+            model: MODELO_IA, // Usa o novo modelo corrigido
             temperature: 0.5, 
             max_tokens: 300,  
         });
@@ -92,7 +94,7 @@ async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
 }
 
 // ==================================================
-// 4. WEBHOOK (COM FILTRO DE GRUPOS)
+// 4. WEBHOOK
 // ==================================================
 export const handleWebhook = async (req, res) => {
   const payload = req.body;
@@ -111,11 +113,10 @@ export const handleWebhook = async (req, res) => {
       const nomeAutor = msg.pushName || idRemoto.split('@')[0];
       const texto = (msg.message?.conversation || msg.message?.extendedTextMessage?.text || "").trim();
 
-      // --- FILTROS DE SEGURANÇA ---
-      const isGroup = idRemoto.includes('@g.us'); // Verifica se é grupo
-      const isStatus = idRemoto === 'status@broadcast'; // Verifica se é status
+      // --- FILTROS ---
+      const isGroup = idRemoto.includes('@g.us'); 
+      const isStatus = idRemoto === 'status@broadcast'; 
 
-      // Só processa se: NÃO for status, NÃO for grupo e TIVER texto
       if (!isStatus && !isGroup && texto) {
         
         // 1. Atualiza Painel
@@ -124,26 +125,22 @@ export const handleWebhook = async (req, res) => {
         // 2. Se a mensagem é do cliente
         if (!isFromMe) {
             
-            // Inicializa contexto
             if (!userContext[idRemoto]) userContext[idRemoto] = { etapa: 'INICIO', botPausado: false, historico: [] };
             const ctx = userContext[idRemoto];
             let respostaBot = null;
 
             // --- A. REGRAS FIXAS ---
-            
             if (['oi', 'ola', 'olá', 'menu'].includes(texto.toLowerCase())) {
                 respostaBot = MENSAGENS.SAUDACAO(nomeAutor);
                 ctx.etapa = 'MENU';
                 ctx.botPausado = false;
                 ctx.historico = [{ role: "system", content: SISTEMA_PROMPT }];
             }
-            
             else if (texto === '#') {
                 respostaBot = MENSAGENS.AVALIACAO_INICIO;
                 ctx.etapa = 'AVALIACAO_NOTA';
                 ctx.botPausado = true; 
             }
-
             else if (ctx.etapa === 'MENU') {
                 if (texto === '1') {
                     respostaBot = MENSAGENS.FILA_TI;
@@ -151,7 +148,6 @@ export const handleWebhook = async (req, res) => {
                     ctx.botPausado = true; 
                 } 
             }
-
             else if (ctx.etapa === 'AVALIACAO_NOTA') {
                 if (['1', '2', '3', '4', '5', '9'].includes(texto)) {
                     respostaBot = MENSAGENS.ENCERRAMENTO_FINAL;
@@ -183,12 +179,11 @@ export const handleWebhook = async (req, res) => {
 };
 
 // ==================================================
-// 5. CONTROLES DO PAINEL (HUMANO)
+// 5. CONTROLES DO PAINEL
 // ==================================================
 export const notificarAtribuicao = async (numero, nomeAgente) => {
     if(!userContext[numero]) userContext[numero] = { historico: [] };
     userContext[numero].botPausado = true; 
-    
     const msg = `Atendimento assumido por ${nomeAgente}.`;
     await evolutionService.enviarTexto(numero, msg);
     return msg;
@@ -204,7 +199,7 @@ export const notificarFinalizacao = async (numero) => {
     return msg;
 };
 
-// Rotas auxiliares (sem mudanças)
+// Rotas auxiliares
 export const connectInstance = async (req, res) => { try { const r = await evolutionService.criarInstancia(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
 export const handleSendMessage = async (req, res) => { const { numero, mensagem } = req.body; try { const r = await evolutionService.enviarTexto(numero, mensagem); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
 export const checarStatus = async (req, res) => { try { const r = await evolutionService.consultarStatus(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
