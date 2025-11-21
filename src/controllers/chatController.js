@@ -1,11 +1,11 @@
 // src/controllers/chatController.js
 import openai from '../config/openai.js';
-import { v4 as uuidv4 } from 'uuid'; // Se não tiver uuid, usaremos um Math.random simples abaixo
 
 // Memória temporária para as conversas do site
 // Ex: { "thread_123": [ { role: "user", content: "oi" } ] }
 const chatSessions = {};
 
+// Configuração do Modelo
 const MODELO_IA = "llama3-8b-8192";
 
 const SISTEMA_PROMPT = `
@@ -23,8 +23,8 @@ export const handleChat = async (req, res) => {
 
     try {
         // 1. Gerencia o ID da Sessão (Thread)
-        // Se não veio threadId, cria um novo ID aleatório
-        let currentThreadId = threadId || `thread_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        // Se não veio threadId, cria um novo ID usando Data + Número Aleatório (sem precisar de uuid)
+        let currentThreadId = threadId || `thread_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
 
         // 2. Recupera ou Cria o Histórico
         if (!chatSessions[currentThreadId]) {
@@ -38,6 +38,7 @@ export const handleChat = async (req, res) => {
 
         // 4. Limita o histórico (últimas 10 mensagens para não estourar limite)
         if (chatSessions[currentThreadId].length > 12) {
+            // Mantém o system (index 0) e pega as últimas 10
             const systemMsg = chatSessions[currentThreadId][0];
             const ultimas = chatSessions[currentThreadId].slice(-10);
             chatSessions[currentThreadId] = [systemMsg, ...ultimas];
