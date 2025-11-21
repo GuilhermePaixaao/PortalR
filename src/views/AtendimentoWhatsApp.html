@@ -54,6 +54,29 @@
         .chat-area::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png"); opacity: 0.4; z-index: -1; pointer-events: none; }
         body.dark-mode .chat-area::before { opacity: 0.08; }
 
+        /* NOVO HEADER DA CONVERSA */
+        .chat-header-bar {
+            height: 60px;
+            background-color: var(--wa-header-bg);
+            border-bottom: 1px solid var(--wa-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            z-index: 20;
+        }
+        .chat-header-info { display: flex; align-items: center; gap: 15px; }
+        .chat-header-name { font-weight: bold; color: var(--text-primary); font-size: 1.1rem; }
+        .chat-header-actions { display: flex; gap: 10px; }
+        
+        .btn-action-chat {
+            border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 500; display: flex; align-items: center; gap: 5px;
+        }
+        .btn-atender { background-color: #00a884; color: white; }
+        .btn-atender:hover { background-color: #008f6f; }
+        .btn-finalizar { background-color: #dc3545; color: white; }
+        .btn-finalizar:hover { background-color: #bb2d3b; }
+
         .overlay-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--wa-header-bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; text-align: center; border-bottom: 6px solid var(--wa-primary); }
         .overlay-screen img { width: 280px; height: 280px; border: 8px solid #fff; border-radius: 8px; }
         .overlay-screen h2 { margin-top: 30px; color: var(--text-primary); font-weight: 300; font-size: 2rem; }
@@ -152,6 +175,17 @@
                 </div>
 
                 <div id="activeChatScreen" style="display:none; width:100%; height:100%; flex-direction:column;">
+                    <div class="chat-header-bar">
+                        <div class="chat-header-info">
+                            <div class="avatar-placeholder" style="width: 35px; height: 35px; font-size: 1rem;" id="activeAvatar">#</div>
+                            <span class="chat-header-name" id="activeName">Nome do Contato</span>
+                        </div>
+                        <div class="chat-header-actions">
+                            <button id="btnAtender" class="btn-action-chat btn-atender"><i class="fas fa-check"></i> Atender</button>
+                            <button id="btnFinalizar" class="btn-action-chat btn-finalizar"><i class="fas fa-times"></i> Finalizar</button>
+                        </div>
+                    </div>
+
                     <div class="messages-container" id="messagesContainer"></div>
                     <div class="input-area">
                         <input type="text" id="chatInput" class="input-field" placeholder="Digite uma mensagem" disabled>
@@ -166,7 +200,7 @@
 
     <script type="module">
     document.addEventListener('DOMContentLoaded', () => {
-        // --- Funções de Sistema (Logout, Tema) ---
+        // --- Sistema Básico ---
         function fazerLogout() { localStorage.removeItem("userData"); window.location.href = "Login.html"; }
         document.getElementById("logoutButton").addEventListener('click', fazerLogout);
 
@@ -176,10 +210,13 @@
         btnThemeToggle.addEventListener('click', toggleTheme);
         loadTheme();
         
+        let nomeAgenteAtual = "Atendente";
         try { 
             const u = JSON.parse(localStorage.getItem("userData")); 
-            const d = document.getElementById('userNameDisplay'); 
-            if (d && u?.data?.nomeFuncionario) d.textContent = `Olá, ${u.data.nomeFuncionario.split(' ')[0]}`; 
+            if (u?.data?.nomeFuncionario) {
+                nomeAgenteAtual = u.data.nomeFuncionario.split(' ')[0];
+                document.getElementById('userNameDisplay').textContent = `Olá, ${nomeAgenteAtual}`; 
+            }
             if (u?.data?.perfil === 'AGENTE' || u?.data?.perfil === 'ADMIN') { 
                 const l = document.getElementById("menu-link-chamado"); 
                 if(l) { l.querySelector('a').href = "GerenciarChamados.html"; l.querySelector('.text').innerHTML = "Gerenciar<br>Chamados"; }
@@ -200,6 +237,11 @@
         const chatInput = document.getElementById('chatInput');
         const sendButton = document.getElementById('sendButton');
         const filaHeader = document.getElementById('filaHeader');
+        
+        const activeName = document.getElementById('activeName');
+        const activeAvatar = document.getElementById('activeAvatar');
+        const btnAtender = document.getElementById('btnAtender');
+        const btnFinalizar = document.getElementById('btnFinalizar');
 
         // --- Estado ---
         let activeNumber = null;
@@ -208,9 +250,39 @@
 
         const socket = io(); 
 
-        socket.on('connect', () => {
-            console.log("✅ Socket conectado!");
-            verificarStatusInicial();
+        socket.on('connect', () => { verificarStatusInicial(); });
+
+        // --- Botões de Ação ---
+        btnAtender.addEventListener('click', async () => {
+            if(!activeNumber) return;
+            if(!confirm("Deseja assumir este atendimento?")) return;
+
+            try {
+                const r = await fetch('/api/whatsapp/atender', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ numero: activeNumber, nomeAgente: nomeAgenteAtual })
+                });
+                const d = await r.json();
+                if(d.success) alert("Atendimento iniciado! Agora suas mensagens terão seu nome.");
+                else alert("Erro: " + d.error);
+            } catch(e) { alert("Erro ao conectar."); }
+        });
+
+        btnFinalizar.addEventListener('click', async () => {
+            if(!activeNumber) return;
+            if(!confirm("Finalizar atendimento e enviar pesquisa?")) return;
+
+            try {
+                const r = await fetch('/api/whatsapp/finalizar', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ numero: activeNumber })
+                });
+                const d = await r.json();
+                if(d.success) alert("Atendimento finalizado.");
+                else alert("Erro: " + d.error);
+            } catch(e) { alert("Erro ao conectar."); }
         });
 
         // --- Lógica Principal ---
@@ -221,39 +293,22 @@
                 const json = await resp.json();
                 const state = json.data?.instance?.state || json.data?.state || json.instance?.state;
 
-                if (state === 'open') {
-                    setConnectedState();
-                    carregarConversas();
-                } else {
-                    showScreen('welcome');
-                    statusText.textContent = "Desconectado"; 
-                    statusDot.className = "status-dot offline"; 
-                    btnConectar.style.display = 'block';
-                }
+                if (state === 'open') { setConnectedState(); carregarConversas(); } 
+                else { showScreen('welcome'); statusText.textContent = "Desconectado"; statusDot.className = "status-dot offline"; btnConectar.style.display = 'block'; }
             } catch (e) { console.error(e); }
         }
 
         async function carregarConversas() {
-            // Mostra loader apenas se a lista estiver vazia
-            if (filaAtendimento.children.length <= 1) {
-                loadingFila.style.display = 'block';
-            }
-            
+            if (filaAtendimento.children.length <= 1) loadingFila.style.display = 'block';
             try {
                 const resp = await fetch('/api/whatsapp/chats');
                 const json = await resp.json();
-                
-                let listaDeChats = [];
-                if (Array.isArray(json)) listaDeChats = json;
-                else if (json.success && Array.isArray(json.data)) listaDeChats = json.data;
-                else if (Array.isArray(json.data)) listaDeChats = json.data;
+                let listaDeChats = Array.isArray(json) ? json : (json.success && Array.isArray(json.data) ? json.data : (Array.isArray(json.data) ? json.data : []));
 
-                // Processa os chats do histórico
                 listaDeChats.forEach(chat => {
-                    // Ajuste para ler 'numero' em vez de 'id' se o backend enviar assim
                     const numero = chat.numero || chat.id || chat.key?.remoteJid;
-                    const nome = chat.nome || chat.pushName || chat.name || chat.verifiedName || numero.split('@')[0];
-                    const ultimaMensagem = chat.ultimaMensagem || chat.conversation || chat.lastMessage?.conversation || "...";
+                    const nome = chat.nome || chat.pushName || chat.name || numero.split('@')[0];
+                    const ultimaMensagem = chat.ultimaMensagem || chat.conversation || "...";
                     const unread = (chat.unreadCount > 0 || chat.unread === true);
 
                     if (numero) {
@@ -262,14 +317,8 @@
                         updateContactList(numero, nome, ultimaMensagem, unread);
                     }
                 });
-                
                 atualizarContadorFila();
-
-            } catch (e) {
-                console.error("Erro ao carregar chats:", e);
-            } finally {
-                loadingFila.style.display = 'none';
-            }
+            } catch (e) { console.error("Erro chats:", e); } finally { loadingFila.style.display = 'none'; }
         }
 
         function atualizarContadorFila() {
@@ -277,146 +326,78 @@
             filaHeader.textContent = `Fila de Atendimento (${qtd})`;
         }
 
-        // --- Socket Events ---
-
-        socket.on('qrCodeRecebido', (data) => { 
-            if (data.qr) exibirQRCode(data.qr); 
-        });
-        
+        socket.on('qrCodeRecebido', (data) => { if (data.qr) exibirQRCode(data.qr); });
         socket.on('statusConexao', (data) => {
             if (data.status === 'open') { setConnectedState(); carregarConversas(); }
             else if (data.status === 'connecting') { statusText.textContent = "Conectando..."; statusDot.className = "status-dot offline"; }
             else { statusText.textContent = "Desconectado"; statusDot.className = "status-dot offline"; btnConectar.style.display = 'block'; }
         });
 
-        // === LÓGICA CORRIGIDA (MENSAGEM E NOME) ===
         socket.on('novaMensagemWhatsapp', (data) => {
             const chatId = data.chatId; 
             const text = data.texto;
             const isFromMe = data.fromMe; 
 
-            // 1. DEDUPLICAÇÃO: Se a mensagem é minha e já existe no final da conversa (adicionada manualmente), ignora
             if (isFromMe && conversas[chatId]) {
                 const lastMsg = conversas[chatId][conversas[chatId].length - 1];
-                if (lastMsg && lastMsg.fromMe && lastMsg.text === text) {
-                    // Mensagem duplicada (já adicionada via envio manual), apenas marca como enviada se quiséssemos (opcional)
-                    return; 
-                }
+                if (lastMsg && lastMsg.fromMe && lastMsg.text === text) return; 
             }
 
-            // 2. Determinar qual nome mostrar na lista
             let displayName = contactNames[chatId];
+            if (!isFromMe) { displayName = data.nome || chatId.split('@')[0]; contactNames[chatId] = displayName; }
+            else { if (!displayName) { displayName = chatId.split('@')[0]; contactNames[chatId] = displayName; } }
 
-            if (!isFromMe) {
-                // Se a mensagem é do CLIENTE, atualizamos o nome com o que veio
-                displayName = data.nome || chatId.split('@')[0];
-                contactNames[chatId] = displayName;
-            } else {
-                // Se a mensagem é MINHA, NÃO mudamos o nome.
-                if (!displayName) {
-                    displayName = chatId.split('@')[0]; 
-                    contactNames[chatId] = displayName;
-                }
-            }
-
-            // Histórico Local
             if (!conversas[chatId]) conversas[chatId] = [];
+            conversas[chatId].push({ fromMe: isFromMe, text: text, time: new Date(), name: isFromMe ? "Eu" : displayName });
             
-            conversas[chatId].push({ 
-                fromMe: isFromMe, 
-                text: text, 
-                time: new Date(), 
-                name: isFromMe ? "Eu" : displayName 
-            });
-            
-            // Atualiza a lista lateral com o nome CORRETO
             const previewMsg = isFromMe ? `Você: ${text}` : text;
             updateContactList(chatId, displayName, previewMsg, !isFromMe);
             
-            // Se a conversa estiver aberta, joga o balão na tela
             if (activeNumber === chatId) {
-                // Se for minha mensagem, não passo nome para não ficar "Eu" em cima do balão verde
                 appendMessageToView(text, isFromMe, isFromMe ? null : displayName, new Date());
                 markAsRead(chatId);
             }
         });
 
-        // --- UI Helpers ---
-
-        function setConnectedState() {
-            statusText.textContent = "Online"; statusDot.className = "status-dot online";
-            btnConectar.style.display = 'none';
-            if (!activeNumber) showScreen('welcome');
-        }
-
-        function exibirQRCode(base64) {
-            qrContainer.innerHTML = `<img src="${base64}" alt="QR Code">`;
-            statusText.textContent = "Escaneie o QR Code";
-            showScreen('qr');
-        }
+        function setConnectedState() { statusText.textContent = "Online"; statusDot.className = "status-dot online"; btnConectar.style.display = 'none'; if (!activeNumber) showScreen('welcome'); }
+        function exibirQRCode(base64) { qrContainer.innerHTML = `<img src="${base64}" alt="QR Code">`; statusText.textContent = "Escaneie o QR Code"; showScreen('qr'); }
 
         function updateContactList(number, name, lastMsg, unread = false) {
-            // Procura se o item já existe e remove para recolocar no topo
             let item = document.querySelector(`.contact-item[data-number="${number}"]`);
             if (item) item.remove();
 
             const initial = name ? name.charAt(0).toUpperCase() : '#';
-            
             item = document.createElement('div');
-            // Mantém a classe active se for o chat atual
             item.className = `contact-item ${activeNumber === number ? 'active' : ''}`;
             item.dataset.number = number;
-            
-            // Se for o chat ativo, não mostramos badge de não lido
             const showBadge = unread && activeNumber !== number;
 
-            item.innerHTML = `
-                <div class="avatar-placeholder">${initial}</div>
-                <div class="contact-info">
-                    <div class="contact-name">${name}</div>
-                    <div class="contact-last-msg">${lastMsg}</div>
-                </div>
-                ${showBadge ? '<div class="badge-unread">!</div>' : ''}
-            `;
-
-            item.addEventListener('click', () => openChat(number));
-
-            // Insere no topo da lista
+            item.innerHTML = `<div class="avatar-placeholder">${initial}</div><div class="contact-info"><div class="contact-name">${name}</div><div class="contact-last-msg">${lastMsg}</div></div>${showBadge ? '<div class="badge-unread">!</div>' : ''}`;
+            item.addEventListener('click', () => openChat(number, name));
             filaAtendimento.prepend(item); 
-            
-            if (filaAtendimento.querySelectorAll('.contact-item').length > 0) {
-                loadingFila.style.display = 'none';
-            }
+            if (filaAtendimento.querySelectorAll('.contact-item').length > 0) loadingFila.style.display = 'none';
             atualizarContadorFila();
         }
 
-        function openChat(number) {
+        function openChat(number, name) {
             activeNumber = number;
-            showScreen('chat');
+            activeName.textContent = name;
+            activeAvatar.textContent = name.charAt(0).toUpperCase();
             
+            showScreen('chat');
             document.querySelectorAll('.contact-item').forEach(el => el.classList.remove('active'));
             const item = document.querySelector(`.contact-item[data-number="${number}"]`);
-            if(item) { 
-                item.classList.add('active'); 
-                markAsRead(number); 
-            }
+            if(item) { item.classList.add('active'); markAsRead(number); }
             
             messagesContainer.innerHTML = '';
             const msgs = conversas[number] || [];
-            
-            if (msgs.length === 0) {
-                 messagesContainer.innerHTML = '<div style="text-align:center; margin-top:20px; color:#999;">Sem histórico local.<br>Novas mensagens aparecerão aqui.</div>';
-            } else {
-                msgs.forEach(m => appendMessageToView(m.text, m.fromMe, m.name, m.time));
-            }
+            if (msgs.length === 0) messagesContainer.innerHTML = '<div style="text-align:center; margin-top:20px; color:#999;">Sem histórico local.<br>Novas mensagens aparecerão aqui.</div>';
+            else msgs.forEach(m => appendMessageToView(m.text, m.fromMe, m.name, m.time));
             
             chatInput.disabled = false; chatInput.focus();
         }
 
-        function markAsRead(number) {
-            const item = document.querySelector(`.contact-item[data-number="${number}"]`);
-            if(item) { const b = item.querySelector('.badge-unread'); if(b) b.remove(); }
-        }
+        function markAsRead(number) { const item = document.querySelector(`.contact-item[data-number="${number}"]`); if(item) { const b = item.querySelector('.badge-unread'); if(b) b.remove(); } }
 
         function appendMessageToView(text, fromMe, senderName, timeObj) {
             const div = document.createElement('div');
@@ -428,42 +409,29 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
-        // === LÓGICA DE ENVIO (CORRIGIDA) ===
         async function sendMessage() {
             const text = chatInput.value.trim();
             if (!text || !activeNumber) return;
             
-            // 1. Feedback Visual Imediato (Optimistic UI)
             appendMessageToView(text, true, null, new Date());
-            
-            // 2. Salva no histórico local
             if (!conversas[activeNumber]) conversas[activeNumber] = [];
             conversas[activeNumber].push({ fromMe: true, text, time: new Date() });
             
-            // 3. Atualiza a lista lateral
             const displayName = contactNames[activeNumber] || activeNumber;
             updateContactList(activeNumber, displayName, `Você: ${text}`, false);
-
             chatInput.value = '';
             
             try {
                 await fetch('/api/whatsapp/send', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ numero: activeNumber, mensagem: text })
+                    body: JSON.stringify({ numero: activeNumber, mensagem: text, nomeAgenteTemporario: nomeAgenteAtual })
                 });
-            } catch (e) { 
-                console.error(e); 
-                alert("Erro ao enviar. Verifique a conexão."); 
-            }
+            } catch (e) { console.error(e); alert("Erro ao enviar."); }
         }
 
         btnConectar.addEventListener('click', async () => {
             statusText.textContent = "Solicitando..."; showScreen('qr');
-            try {
-                const r = await fetch('/api/whatsapp/connect');
-                const d = await r.json();
-                if(d.data?.qrcode?.base64 || d.data?.base64) exibirQRCode(d.data?.qrcode?.base64 || d.data?.base64);
-            } catch (e) { qrContainer.innerHTML = '<p style="color:red">Erro.</p>'; }
+            try { const r = await fetch('/api/whatsapp/connect'); const d = await r.json(); if(d.data?.qrcode?.base64 || d.data?.base64) exibirQRCode(d.data?.qrcode?.base64 || d.data?.base64); } catch (e) { qrContainer.innerHTML = '<p style="color:red">Erro.</p>'; }
         });
 
         sendButton.addEventListener('click', sendMessage);
