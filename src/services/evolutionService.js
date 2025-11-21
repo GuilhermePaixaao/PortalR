@@ -105,20 +105,3 @@ export const configurarWebhook = async (urlWebhook) => {
         throw error;
     }
 };
-
-// === NOVA FUNÇÃO: BUSCAR MENSAGENS (Caso precise da funcionalidade anterior) ===
-export const buscarMensagens = async (numero) => {
-    try {
-        const response = await apiClient.post(`/chat/findMessages/${INSTANCE_NAME}`, {
-            where: {
-                key: { remoteJid: numero }
-            },
-            limit: 50, // Traz as últimas 50 mensagens
-            offset: 0
-        });
-        return response.data; // Retorna o array de mensagens
-    } catch (error) {
-        console.error(`Erro ao buscar mensagens de ${numero}:`, error.message);
-        return []; 
-    }
-};
