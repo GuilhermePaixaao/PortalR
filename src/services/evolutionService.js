@@ -63,17 +63,16 @@ export const enviarTexto = async (numero, mensagem) => {
 };
 
 // ======================================================
-// === NOVA FUNÇÃO PARA ENVIO DE BOTÕES (Evolution v2) ===
+// === FUNÇÃO CORRIGIDA PARA ENVIO DE BOTÕES ===
 // ======================================================
 export const enviarBotoes = async (numero, titulo, descricao, botoes) => {
   try {
     console.log(`[EVOLUTION] Enviando Botões para ${numero}...`);
 
-    // Formata os botões para o padrão da API v2
-    // Espera receber: [{ id: '1', texto: 'Opção A' }, ...]
+    // Formata os botões para o padrão da API
     const buttonsFormatted = botoes.map(b => ({
         type: "reply",
-        displaytext: b.texto,
+        displayText: b.texto, // CORRIGIDO: 'displayText' com T maiúsculo
         id: b.id
     }));
 
@@ -81,13 +80,13 @@ export const enviarBotoes = async (numero, titulo, descricao, botoes) => {
         number: numero,
         title: titulo,
         description: descricao,
-        footer: "Portal Supermercado", // Você pode alterar esse rodapé fixo
+        footer: "Portal Supermercado", 
         buttons: buttonsFormatted,
         options: { delay: 1200, presence: 'composing' }
     };
 
-    // Endpoint para envio de botões
-    const response = await apiClient.post(`/message/sendButton/${INSTANCE_NAME}`, body);
+    // CORRIGIDO: Endpoint alterado para PLURAL 'sendButtons'
+    const response = await apiClient.post(`/message/sendButtons/${INSTANCE_NAME}`, body);
     
     return response.data;
 
