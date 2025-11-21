@@ -1,12 +1,10 @@
-// config/openai.js
-
-// O seu server.js já deve carregar o 'dotenv',
-// então 'process.env' já estará disponível aqui.
+// src/config/openai.js
 import { OpenAI } from 'openai';
 
+// Configura a instância global para usar a Groq
 const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey: process.env.GROQ_API_KEY, // Certifique-se de ter essa variável no Railway/.env
+    baseURL: "https://api.groq.com/openai/v1"
 });
 
-// Usa 'export default' para exportar o cliente
 export default openai;

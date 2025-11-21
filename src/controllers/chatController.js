@@ -1,32 +1,19 @@
+// src/controllers/chatController.js
 import openai from '../config/openai.js';
+import { v4 as uuidv4 } from 'uuid'; // Se não tiver uuid, usaremos um Math.random simples abaixo
 
-// O ID do seu assistente
-const MEU_ASSISTENTE_ID = process.env.OPENAI_ASSISTENTE_ID || "asst_XypLIE41vk9VgGDtIfkAEpOi";
+// Memória temporária para as conversas do site
+// Ex: { "thread_123": [ { role: "user", content: "oi" } ] }
+const chatSessions = {};
 
-/**
- * Função auxiliar para esperar o assistente terminar de "pensar".
- */
-async function esperarRunCompletar(threadId, runId) {
-    if (!threadId) {
-        throw new Error("threadId está undefined em esperarRunCompletar");
-    }
+const MODELO_IA = "llama3-8b-8192";
 
-    let run = await openai.beta.threads.runs.retrieve(runId, { thread_id: threadId });
+const SISTEMA_PROMPT = `
+Você é o assistente virtual do Portal Supermercado.
+Responda de forma prestativa, breve e profissional.
+Você ajuda funcionários com dúvidas sobre chamados, impressoras e sistema.
+`;
 
-    while (run.status === 'queued' || run.status === 'in_progress') {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        run = await openai.beta.threads.runs.retrieve(runId, { thread_id: threadId });
-    }
-
-    if (run.status !== 'completed') {
-        console.error('Detalhes do Run falho:', run.last_error);
-        throw new Error(`O Run do assistente falhou com status: ${run.status}`);
-    }
-    return run;
-}
-
-
-// --- ESTA É A SUA FUNÇÃO DE CHAT ATUALIZADA ---
 export const handleChat = async (req, res) => {
     const { message, threadId } = req.body;
 
@@ -35,53 +22,48 @@ export const handleChat = async (req, res) => {
     }
 
     try {
-        // Garante que currentThreadId seja sempre string válida
-        let currentThreadId = threadId;
-        if (!currentThreadId) {
-            const createdThread = await openai.beta.threads.create();
-            currentThreadId = createdThread.id; // Pega só o ID, que é string
+        // 1. Gerencia o ID da Sessão (Thread)
+        // Se não veio threadId, cria um novo ID aleatório
+        let currentThreadId = threadId || `thread_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+        // 2. Recupera ou Cria o Histórico
+        if (!chatSessions[currentThreadId]) {
+            chatSessions[currentThreadId] = [
+                { role: "system", content: SISTEMA_PROMPT }
+            ];
         }
 
-        if (!currentThreadId) {
-            throw new Error("Falha ao definir currentThreadId");
+        // 3. Adiciona a mensagem do usuário
+        chatSessions[currentThreadId].push({ role: "user", content: message });
+
+        // 4. Limita o histórico (últimas 10 mensagens para não estourar limite)
+        if (chatSessions[currentThreadId].length > 12) {
+            const systemMsg = chatSessions[currentThreadId][0];
+            const ultimas = chatSessions[currentThreadId].slice(-10);
+            chatSessions[currentThreadId] = [systemMsg, ...ultimas];
         }
 
-        // Adiciona a nova mensagem do usuário na Thread
-        await openai.beta.threads.messages.create(
-            currentThreadId,
-            {
-                role: "user",
-                content: message
-            }
-        );
+        // 5. Chama a Groq
+        const completion = await openai.chat.completions.create({
+            messages: chatSessions[currentThreadId],
+            model: MODELO_IA,
+            temperature: 0.5,
+            max_tokens: 500
+        });
 
-        // Roda o assistente usando o ID dele
-        const run = await openai.beta.threads.runs.create(
-            currentThreadId,
-            {
-                assistant_id: MEU_ASSISTENTE_ID
-            }
-        );
+        const botReply = completion.choices[0]?.message?.content || "Desculpe, não consegui processar sua resposta.";
 
-        // Espera o "run" completar
-        await esperarRunCompletar(currentThreadId, run.id);
+        // 6. Adiciona a resposta ao histórico
+        chatSessions[currentThreadId].push({ role: "assistant", content: botReply });
 
-        // Pega TODAS as mensagens da thread
-        const messages = await openai.beta.threads.messages.list(
-            currentThreadId
-        );
-
-        // Encontra a última resposta do assistente
-        const botReply = messages.data[0]?.content[0]?.text?.value;
-
-        // Envia a resposta E o threadId de volta para o frontend
+        // 7. Responde para o Frontend
         res.json({
-            reply: botReply || "Não obtive resposta do assistente.",
+            reply: botReply,
             threadId: currentThreadId
         });
 
     } catch (error) {
-        console.error('Erro ao chamar API de Assistentes:', error);
-        res.status(500).json({ error: 'Erro no servidor.' });
+        console.error('[CHAT WEB] Erro:', error);
+        res.status(500).json({ error: 'Erro interno no servidor de IA.' });
     }
 };
