@@ -11,7 +11,7 @@ const groq = new OpenAI({
 
 const MODELO_IA = "llama-3.1-8b-instant"; 
 
-// --- MUDANÇA AQUI: Prompt BLINDADO para assuntos aleatórios ---
+// Prompt do Sistema (Filtro de assuntos aleatórios)
 const SISTEMA_PROMPT = `
 Você é o assistente de triagem do Suporte Técnico (T.I.) do Supermercado Rosalina.
 Sua missão é EXCLUSIVAMENTE tirar dúvidas sobre: uso do sistema interno, problemas com impressoras, internet, computadores e abertura de chamados.
@@ -28,7 +28,7 @@ REGRAS RÍGIDAS DE COMPORTAMENTO:
 const userContext = {};
 
 // ==================================================
-// 2. TEXTOS FIXOS (MENU)
+// 2. TEXTOS FIXOS (EXATAMENTE COMO SOLICITADO)
 // ==================================================
 const MENSAGENS = {
     SAUDACAO: (nome) => `Olá ${nome} bem-vindo ao suporte interno do Supermercado Rosalina. Em breve, um de nossos atendentes vai te ajudar. Enquanto isso, fique à vontade para descrever seu problema.
@@ -36,11 +36,12 @@ Escolha uma fila de atendimento para ser atendido:
 1 - Suporte T.I
 * - Consultar um ticket (Ex. *123)`,
 
-    OPCAO_INVALIDA: "A opção digitada não existe, digite uma opção válida!",
+    OPCAO_INVALIDA: `A opção digitada não existe, digite uma opção válida!`,
 
-    FILA_TI: `Você entrou na fila do Suporte T.I. Aguarde, logo você será atendido.`,
+    // Mensagem de confirmação ao entrar na fila (opção 1)
+    FILA_TI: `Você entrou na fila de atendimento. Aguarde um momento.`,
 
-    AVALIACAO_INICIO: `Obrigado por entrar em contato com o Suporte. Para melhorarmos nosso atendimento, precisamos da sua opinião
+    AVALIACAO_INICIO: `Obrigado por entrar em contato com o Suporte . Para melhorarmos nosso atendimento, precisamos da sua opinião
 Por favor, nos conte como foi o seu atendimento.
 
 1.😔 Péssimo
@@ -61,7 +62,7 @@ Por favor, nos conte como foi o seu atendimento.
 };
 
 // ==================================================
-// 3. LÓGICA DA INTELIGÊNCIA ARTIFICIAL (GROQ)
+// 3. LÓGICA DA INTELIGÊNCIA ARTIFICIAL
 // ==================================================
 async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
     const contexto = userContext[numeroUsuario];
@@ -69,7 +70,6 @@ async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
     if (!contexto || contexto.botPausado) return null;
 
     try {
-        // Garante que o prompt de sistema esteja sempre no topo
         if (!contexto.historico || contexto.historico.length === 0) {
             contexto.historico = [
                 { role: "system", content: SISTEMA_PROMPT }
@@ -85,8 +85,8 @@ async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
         const completion = await groq.chat.completions.create({
             messages: contexto.historico,
             model: MODELO_IA,
-            temperature: 0.3, // Baixei a temperatura para ele ser MENOS criativo e MAIS obediente
-            max_tokens: 150,  // Respostas mais curtas
+            temperature: 0.3, 
+            max_tokens: 150,  
         });
 
         const respostaIA = completion.choices[0]?.message?.content || "";
@@ -137,25 +137,29 @@ export const handleWebhook = async (req, res) => {
 
             // --- A. REGRAS FIXAS ---
             
+            // Reiniciar / Menu
             if (['oi', 'ola', 'olá', 'menu'].includes(texto.toLowerCase())) {
                 respostaBot = MENSAGENS.SAUDACAO(nomeAutor);
                 ctx.etapa = 'MENU';
                 ctx.botPausado = false;
-                // Reinicia o histórico com o novo Prompt Blindado
                 ctx.historico = [{ role: "system", content: SISTEMA_PROMPT }];
             }
             
+            // Finalizar (#)
             else if (texto === '#') {
                 respostaBot = MENSAGENS.AVALIACAO_INICIO;
                 ctx.etapa = 'AVALIACAO_NOTA';
                 ctx.botPausado = true; 
             }
 
+            // --- B. LÓGICA POR ETAPAS ---
+
+            // 1. MENU (Restrito)
             else if (ctx.etapa === 'MENU') {
                 if (texto === '1') {
                     respostaBot = MENSAGENS.FILA_TI;
-                    ctx.etapa = 'FILA';
-                    ctx.botPausado = true; 
+                    ctx.etapa = 'FILA'; 
+                    ctx.botPausado = true; // Fica aguardando instruções futuras
                 } 
                 else if (texto.startsWith('*')) {
                     const ticketId = texto.replace('*', '');
@@ -166,6 +170,12 @@ export const handleWebhook = async (req, res) => {
                 }
             }
 
+            // 2. FILA (Bot Mudo)
+            else if (ctx.etapa === 'FILA') {
+                // Silêncio total enquanto aguarda atendimento humano
+            }
+
+            // 3. AVALIAÇÃO - NOTA
             else if (ctx.etapa === 'AVALIACAO_NOTA') {
                 if (['1', '2', '3', '4', '5'].includes(texto)) {
                     respostaBot = MENSAGENS.AVALIACAO_MOTIVO;
@@ -174,22 +184,25 @@ export const handleWebhook = async (req, res) => {
                     respostaBot = MENSAGENS.ENCERRAMENTO_FINAL;
                     delete userContext[idRemoto];
                 } else {
-                    respostaBot = "Opção inválida. Digite um número de 1 a 5 ou 9.";
+                    respostaBot = MENSAGENS.OPCAO_INVALIDA;
                 }
             }
 
+            // 4. AVALIAÇÃO - MOTIVO
             else if (ctx.etapa === 'AVALIACAO_MOTIVO') {
+                // Aceita qualquer texto
                 respostaBot = MENSAGENS.ENCERRAMENTO_FINAL;
                 delete userContext[idRemoto]; 
             }
 
-            // --- B. INTELIGÊNCIA ARTIFICIAL (Restrita pelo Prompt) ---
+            // --- C. IA (GROQ) ---
+            // Só responde se estiver no INÍCIO e não for comando fixo
             else if (!respostaBot && !ctx.botPausado && ctx.etapa === 'INICIO') {
-                console.log("🤔 Consultando Groq AI (Com restrições)...");
+                console.log("🤔 Consultando Groq AI...");
                 respostaBot = await processarComGroq(idRemoto, texto, nomeAutor);
             }
 
-            // --- C. ENVIO ---
+            // --- ENVIO ---
             if (respostaBot) {
                 await evolutionService.enviarTexto(idRemoto, respostaBot);
                 io.emit('novaMensagemWhatsapp', { chatId: idRemoto, nome: "Bot", texto: respostaBot, fromMe: true });
