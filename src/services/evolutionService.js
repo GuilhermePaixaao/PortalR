@@ -69,7 +69,7 @@ export const enviarBotoes = async (numero, titulo, descricao, botoes) => {
   try {
     console.log(`[EVOLUTION] Enviando Botões para ${numero}...`);
 
-    // Formata os botões para o padrão da API
+    // Formata os botões para o padrão da API v2
     // Espera receber: [{ id: '1', texto: 'Opção A' }, ...]
     const buttonsFormatted = botoes.map(b => ({
         type: "reply",

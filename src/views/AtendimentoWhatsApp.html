@@ -289,54 +289,53 @@
             else { statusText.textContent = "Desconectado"; statusDot.className = "status-dot offline"; btnConectar.style.display = 'block'; }
         });
 
-        // === LÓGICA CORRIGIDA (MENSAGEM E NOME) ===
+        // === LÓGICA CORRIGIDA DO SOCKET PARA BOTÕES E EVITAR DUPLICAÇÃO ===
         socket.on('novaMensagemWhatsapp', (data) => {
             const chatId = data.chatId; 
-            const text = data.texto;
+            const text = data.texto || ""; 
             const isFromMe = data.fromMe; 
+            const buttons = data.buttons; // Recebe os botões se houver
 
-            // 1. DEDUPLICAÇÃO: Se a mensagem é minha e já existe no final da conversa (adicionada manualmente), ignora
-            if (isFromMe && conversas[chatId]) {
+            // 1. DEDUPLICAÇÃO SIMPLES
+            // Se já existe mensagem e é exatamente igual, ignora
+            if (conversas[chatId]) {
                 const lastMsg = conversas[chatId][conversas[chatId].length - 1];
-                if (lastMsg && lastMsg.fromMe && lastMsg.text === text) {
-                    // Mensagem duplicada (já adicionada via envio manual), apenas marca como enviada se quiséssemos (opcional)
-                    return; 
+                // Se for a mesma mensagem (texto e origem) e foi recebida há menos de 2 segundos, ignora
+                if (lastMsg && lastMsg.text === text && lastMsg.fromMe === isFromMe) {
+                    const diff = new Date() - new Date(lastMsg.time);
+                    if (diff < 2000) return; 
                 }
             }
 
-            // 2. Determinar qual nome mostrar na lista
+            // 2. Nome de exibição
             let displayName = contactNames[chatId];
-
             if (!isFromMe) {
-                // Se a mensagem é do CLIENTE, atualizamos o nome com o que veio
                 displayName = data.nome || chatId.split('@')[0];
                 contactNames[chatId] = displayName;
-            } else {
-                // Se a mensagem é MINHA, NÃO mudamos o nome.
-                if (!displayName) {
-                    displayName = chatId.split('@')[0]; 
-                    contactNames[chatId] = displayName;
-                }
+            } else if (!displayName) {
+                displayName = "Eu"; 
             }
 
-            // Histórico Local
-            if (!conversas[chatId]) conversas[chatId] = [];
-            
-            conversas[chatId].push({ 
+            // 3. Monta o objeto da mensagem
+            const novaMsg = { 
                 fromMe: isFromMe, 
                 text: text, 
+                buttons: buttons, // Guarda os botões no histórico local
                 time: new Date(), 
                 name: isFromMe ? "Eu" : displayName 
-            });
+            };
+
+            // Salva no histórico local
+            if (!conversas[chatId]) conversas[chatId] = [];
+            conversas[chatId].push(novaMsg);
             
-            // Atualiza a lista lateral com o nome CORRETO
-            const previewMsg = isFromMe ? `Você: ${text}` : text;
+            // Atualiza a lista lateral
+            const previewMsg = buttons ? "[Menu de Opções]" : (isFromMe ? `Você: ${text}` : text);
             updateContactList(chatId, displayName, previewMsg, !isFromMe);
             
-            // Se a conversa estiver aberta, joga o balão na tela
+            // Se o chat estiver aberto, desenha na tela
             if (activeNumber === chatId) {
-                // Se for minha mensagem, não passo nome para não ficar "Eu" em cima do balão verde
-                appendMessageToView(text, isFromMe, isFromMe ? null : displayName, new Date());
+                appendMessageToView(novaMsg); // Passa o objeto completo
                 markAsRead(chatId);
             }
         });
@@ -356,18 +355,15 @@
         }
 
         function updateContactList(number, name, lastMsg, unread = false) {
-            // Procura se o item já existe e remove para recolocar no topo
             let item = document.querySelector(`.contact-item[data-number="${number}"]`);
             if (item) item.remove();
 
             const initial = name ? name.charAt(0).toUpperCase() : '#';
             
             item = document.createElement('div');
-            // Mantém a classe active se for o chat atual
             item.className = `contact-item ${activeNumber === number ? 'active' : ''}`;
             item.dataset.number = number;
             
-            // Se for o chat ativo, não mostramos badge de não lido
             const showBadge = unread && activeNumber !== number;
 
             item.innerHTML = `
@@ -380,8 +376,6 @@
             `;
 
             item.addEventListener('click', () => openChat(number));
-
-            // Insere no topo da lista
             filaAtendimento.prepend(item); 
             
             if (filaAtendimento.querySelectorAll('.contact-item').length > 0) {
@@ -407,7 +401,7 @@
             if (msgs.length === 0) {
                  messagesContainer.innerHTML = '<div style="text-align:center; margin-top:20px; color:#999;">Sem histórico local.<br>Novas mensagens aparecerão aqui.</div>';
             } else {
-                msgs.forEach(m => appendMessageToView(m.text, m.fromMe, m.name, m.time));
+                msgs.forEach(m => appendMessageToView(m));
             }
             
             chatInput.disabled = false; chatInput.focus();
@@ -418,27 +412,66 @@
             if(item) { const b = item.querySelector('.badge-unread'); if(b) b.remove(); }
         }
 
-        function appendMessageToView(text, fromMe, senderName, timeObj) {
+        // === FUNÇÃO DE RENDERIZAÇÃO ATUALIZADA (COM BOTÕES) ===
+        function appendMessageToView(msgObj) {
             const div = document.createElement('div');
-            div.className = `msg ${fromMe ? 'msg-out' : 'msg-in'}`;
-            const timeStr = new Date(timeObj).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-            const nameHtml = (!fromMe && senderName) ? `<span class="msg-sender">${senderName}</span>` : '';
-            div.innerHTML = `${nameHtml}<div>${text}</div><span class="msg-time">${timeStr}</span>`;
+            div.className = `msg ${msgObj.fromMe ? 'msg-out' : 'msg-in'}`;
+            
+            // Trata a data se vier como string ou objeto
+            const dateObj = new Date(msgObj.time);
+            const timeStr = dateObj.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            const nameHtml = (!msgObj.fromMe && msgObj.name) ? `<span class="msg-sender">${msgObj.name}</span>` : '';
+            
+            let contentHtml = `<div>${msgObj.text}</div>`;
+
+            // SE TIVER BOTÕES, DESENHA ELES
+            if (msgObj.buttons && msgObj.buttons.length > 0) {
+                contentHtml += `<div class="msg-buttons" style="display:flex; flex-direction:column; gap:5px; margin-top:10px;">`;
+                msgObj.buttons.forEach(btn => {
+                    // O botão no front é apenas visual para o atendente saber o que foi enviado
+                    // Texto do botão pode vir em diferentes estruturas dependendo da versão da API
+                    const btnText = btn.buttonText?.displayText || btn.displayText || "Opção";
+                    contentHtml += `
+                        <button style="
+                            background: #e9edef; 
+                            border: 1px solid #ccc; 
+                            padding: 5px 10px; 
+                            border-radius: 5px; 
+                            cursor: default; 
+                            font-size: 0.85rem; 
+                            color: #00a884; 
+                            font-weight: bold;
+                            text-align: center;
+                        ">
+                           🔘 ${btnText}
+                        </button>`;
+                });
+                contentHtml += `</div>`;
+            }
+
+            div.innerHTML = `${nameHtml}${contentHtml}<span class="msg-time">${timeStr}</span>`;
             messagesContainer.appendChild(div);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
-        // === LÓGICA DE ENVIO (CORRIGIDA) ===
+        // === LÓGICA DE ENVIO ===
         async function sendMessage() {
             const text = chatInput.value.trim();
             if (!text || !activeNumber) return;
             
-            // 1. Feedback Visual Imediato (Optimistic UI)
-            appendMessageToView(text, true, null, new Date());
+            // 1. Feedback Visual Imediato
+            // Cria objeto de mensagem para exibir
+            const novaMsg = { 
+                fromMe: true, 
+                text: text, 
+                time: new Date(),
+                name: "Eu"
+            };
+            appendMessageToView(novaMsg);
             
             // 2. Salva no histórico local
             if (!conversas[activeNumber]) conversas[activeNumber] = [];
-            conversas[activeNumber].push({ fromMe: true, text, time: new Date() });
+            conversas[activeNumber].push(novaMsg);
             
             // 3. Atualiza a lista lateral
             const displayName = contactNames[activeNumber] || activeNumber;
