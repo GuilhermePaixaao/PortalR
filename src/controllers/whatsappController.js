@@ -11,7 +11,6 @@ const groq = new OpenAI({
 
 const MODELO_IA = "llama-3.1-8b-instant"; 
 
-// Prompt do Sistema (Filtro de assuntos aleatórios)
 const SISTEMA_PROMPT = `
 Você é o assistente de triagem do Suporte Técnico (T.I.) do Supermercado Rosalina.
 Sua missão é EXCLUSIVAMENTE tirar dúvidas sobre: uso do sistema interno, problemas com impressoras, internet, computadores e abertura de chamados.
@@ -28,17 +27,18 @@ REGRAS RÍGIDAS DE COMPORTAMENTO:
 const userContext = {};
 
 // ==================================================
-// 2. TEXTOS FIXOS (MENU)
+// 2. TEXTOS FIXOS (BACKUP E RESPOSTAS DE TEXTO)
 // ==================================================
 const MENSAGENS = {
-    SAUDACAO: (nome) => `Olá ${nome} bem-vindo ao suporte interno do Supermercado Rosalina. Em breve, um de nossos atendentes vai te ajudar. Enquanto isso, fique à vontade para descrever seu problema.
+    // Nota: A SAUDACAO aqui é usada apenas se o envio de botão falhar ou para log
+    SAUDACAO_TEXTO: (nome) => `Olá ${nome} bem-vindo ao suporte interno do Supermercado Rosalina. Em breve, um de nossos atendentes vai te ajudar. Enquanto isso, fique à vontade para descrever seu problema.
 Escolha uma fila de atendimento para ser atendido:
 1 - Suporte T.I
 * - Consultar um ticket (Ex. *123)`,
 
     OPCAO_INVALIDA: `A opção digitada não existe, digite uma opção válida!`,
 
-    FILA_TI: `Você entrou na fila de atendimento. Aguarde um momento.`,
+    FILA_TI: `Você entrou na fila do Suporte T.I. Aguarde, logo você será atendido.`,
 
     AVALIACAO_INICIO: `Obrigado por entrar em contato com o Suporte . Para melhorarmos nosso atendimento, precisamos da sua opinião
 Por favor, nos conte como foi o seu atendimento.
@@ -118,13 +118,20 @@ export const handleWebhook = async (req, res) => {
       const idRemoto = msg.key.remoteJid;
       const isFromMe = msg.key.fromMe;
       const nomeAutor = msg.pushName || idRemoto.split('@')[0];
-      const texto = (msg.message?.conversation || msg.message?.extendedTextMessage?.text || "").trim();
+      
+      // Captura texto digitado OU resposta de botão
+      const texto = (
+          msg.message?.conversation || 
+          msg.message?.extendedTextMessage?.text || 
+          msg.message?.buttonsResponseMessage?.selectedButtonId || // ID do botão
+          msg.message?.listResponseMessage?.singleSelectReply?.selectedRowId || // ID da lista
+          ""
+      ).trim();
 
-      // --- FILTROS DE SEGURANÇA ---
+      // Filtros
       const isGroup = idRemoto.includes('@g.us'); 
       const isStatus = idRemoto === 'status@broadcast'; 
 
-      // Só processa se: NÃO for status, NÃO for grupo e TIVER texto
       if (!isStatus && !isGroup && texto) {
         
         io.emit('novaMensagemWhatsapp', { chatId: idRemoto, nome: nomeAutor, texto: texto, fromMe: isFromMe });
@@ -136,27 +143,37 @@ export const handleWebhook = async (req, res) => {
             let respostaBot = null;
             const textoMin = texto.toLowerCase();
 
-            // --- LISTA DE SAUDAÇÕES ---
+            // Lista de Saudações
             const saudacoes = [
                 'oi', 'ola', 'olá', 'menu', 
                 'bom dia', 'boa tarde', 'boa noite', 
                 'opa', 'e ai', 'hey', 'saudações'
             ];
-
-            // Verifica se começa com alguma saudação
             const ehSaudacao = saudacoes.some(s => textoMin.startsWith(s));
 
             // --- A. REGRAS FIXAS ---
             
-            // Se for saudação (Reiniciar / Menu)
+            // 1. SAUDAÇÃO -> ENVIA BOTÕES
             if (ehSaudacao) {
-                respostaBot = MENSAGENS.SAUDACAO(nomeAutor);
                 ctx.etapa = 'MENU';
                 ctx.botPausado = false;
                 ctx.historico = [{ role: "system", content: SISTEMA_PROMPT }];
+
+                const titulo = `Olá ${nomeAutor} bem-vindo ao suporte interno do Supermercado Rosalina.`;
+                const descricao = `Em breve, um de nossos atendentes vai te ajudar. Enquanto isso, fique à vontade para descrever seu problema.\n\nEscolha uma fila de atendimento para ser atendido:`;
+                
+                const botoes = [
+                    { id: '1', label: 'Suporte T.I' },
+                    { id: 'ticket', label: 'Consultar Ticket' }
+                ];
+
+                await evolutionService.enviarBotoes(idRemoto, titulo, descricao, botoes);
+                
+                // Retorno aqui para não enviar mais nada
+                return res.status(200).json({ success: true });
             }
             
-            // Finalizar (#)
+            // 2. FINALIZAR (#)
             else if (texto === '#') {
                 respostaBot = MENSAGENS.AVALIACAO_INICIO;
                 ctx.etapa = 'AVALIACAO_NOTA';
@@ -165,28 +182,30 @@ export const handleWebhook = async (req, res) => {
 
             // --- B. LÓGICA POR ETAPAS ---
 
-            // 1. MENU (Restrito)
+            // 3. MENU (Verifica se clicou no botão ou digitou)
             else if (ctx.etapa === 'MENU') {
-                if (texto === '1') {
+                // ID do botão '1' ou digitou '1' ou 'Suporte T.I'
+                if (texto === '1' || texto.toLowerCase().includes('suporte t.i')) {
                     respostaBot = MENSAGENS.FILA_TI;
                     ctx.etapa = 'FILA'; 
                     ctx.botPausado = true; 
                 } 
-                else if (texto.startsWith('*')) {
-                    const ticketId = texto.replace('*', '');
-                    respostaBot = `Consultando ticket ${ticketId}... (Simulação)`;
+                // ID do botão 'ticket'
+                else if (texto === 'ticket' || texto.startsWith('*')) {
+                    respostaBot = `Consultando ticket... (Simulação)`;
                 } 
                 else {
+                    // Se digitou algo que não é opção válida no menu
                     respostaBot = MENSAGENS.OPCAO_INVALIDA;
                 }
             }
 
-            // 2. FILA (Bot Mudo)
+            // 4. FILA (Mudo)
             else if (ctx.etapa === 'FILA') {
-                // Silêncio total
+                // Silêncio
             }
 
-            // 3. AVALIAÇÃO - NOTA
+            // 5. AVALIAÇÃO
             else if (ctx.etapa === 'AVALIACAO_NOTA') {
                 if (['1', '2', '3', '4', '5'].includes(texto)) {
                     respostaBot = MENSAGENS.AVALIACAO_MOTIVO;
@@ -199,15 +218,13 @@ export const handleWebhook = async (req, res) => {
                 }
             }
 
-            // 4. AVALIAÇÃO - MOTIVO
             else if (ctx.etapa === 'AVALIACAO_MOTIVO') {
-                // Aceita qualquer texto
                 respostaBot = MENSAGENS.ENCERRAMENTO_FINAL;
                 delete userContext[idRemoto]; 
             }
 
             // --- C. IA (GROQ) ---
-            // Só responde se estiver no INÍCIO, não for comando fixo e não for saudação
+            // Se não for saudação, nem comando, nem menu restrito
             else if (!respostaBot && !ctx.botPausado && ctx.etapa === 'INICIO') {
                 console.log("🤔 Consultando Groq AI...");
                 respostaBot = await processarComGroq(idRemoto, texto, nomeAutor);
@@ -228,9 +245,7 @@ export const handleWebhook = async (req, res) => {
   }
 };
 
-// ==================================================
-// 5. CONTROLES DO PAINEL
-// ==================================================
+// ... Funções de Controle do Painel (Mantenha igual) ...
 export const notificarAtribuicao = async (numero, nomeAgente) => {
     if(!userContext[numero]) userContext[numero] = { historico: [] };
     userContext[numero].botPausado = true; 
@@ -248,7 +263,6 @@ export const notificarFinalizacao = async (numero) => {
     return msg;
 };
 
-// Rotas auxiliares
 export const connectInstance = async (req, res) => { try { const r = await evolutionService.criarInstancia(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
 export const handleSendMessage = async (req, res) => { const { numero, mensagem } = req.body; try { const r = await evolutionService.enviarTexto(numero, mensagem); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
 export const checarStatus = async (req, res) => { try { const r = await evolutionService.consultarStatus(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
