@@ -28,7 +28,7 @@ REGRAS RÍGIDAS DE COMPORTAMENTO:
 const userContext = {};
 
 // ==================================================
-// 2. TEXTOS FIXOS (EXATAMENTE COMO SOLICITADO)
+// 2. TEXTOS FIXOS (MENU)
 // ==================================================
 const MENSAGENS = {
     SAUDACAO: (nome) => `Olá ${nome} bem-vindo ao suporte interno do Supermercado Rosalina. Em breve, um de nossos atendentes vai te ajudar. Enquanto isso, fique à vontade para descrever seu problema.
@@ -38,7 +38,6 @@ Escolha uma fila de atendimento para ser atendido:
 
     OPCAO_INVALIDA: `A opção digitada não existe, digite uma opção válida!`,
 
-    // Mensagem de confirmação ao entrar na fila (opção 1)
     FILA_TI: `Você entrou na fila de atendimento. Aguarde um momento.`,
 
     AVALIACAO_INICIO: `Obrigado por entrar em contato com o Suporte . Para melhorarmos nosso atendimento, precisamos da sua opinião
@@ -62,7 +61,7 @@ Por favor, nos conte como foi o seu atendimento.
 };
 
 // ==================================================
-// 3. LÓGICA DA INTELIGÊNCIA ARTIFICIAL
+// 3. LÓGICA DA INTELIGÊNCIA ARTIFICIAL (GROQ)
 // ==================================================
 async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
     const contexto = userContext[numeroUsuario];
@@ -121,10 +120,11 @@ export const handleWebhook = async (req, res) => {
       const nomeAutor = msg.pushName || idRemoto.split('@')[0];
       const texto = (msg.message?.conversation || msg.message?.extendedTextMessage?.text || "").trim();
 
-      // Filtros
+      // --- FILTROS DE SEGURANÇA ---
       const isGroup = idRemoto.includes('@g.us'); 
       const isStatus = idRemoto === 'status@broadcast'; 
 
+      // Só processa se: NÃO for status, NÃO for grupo e TIVER texto
       if (!isStatus && !isGroup && texto) {
         
         io.emit('novaMensagemWhatsapp', { chatId: idRemoto, nome: nomeAutor, texto: texto, fromMe: isFromMe });
@@ -134,11 +134,22 @@ export const handleWebhook = async (req, res) => {
             if (!userContext[idRemoto]) userContext[idRemoto] = { etapa: 'INICIO', botPausado: false, historico: [] };
             const ctx = userContext[idRemoto];
             let respostaBot = null;
+            const textoMin = texto.toLowerCase();
+
+            // --- LISTA DE SAUDAÇÕES ---
+            const saudacoes = [
+                'oi', 'ola', 'olá', 'menu', 
+                'bom dia', 'boa tarde', 'boa noite', 
+                'opa', 'e ai', 'hey', 'saudações'
+            ];
+
+            // Verifica se começa com alguma saudação
+            const ehSaudacao = saudacoes.some(s => textoMin.startsWith(s));
 
             // --- A. REGRAS FIXAS ---
             
-            // Reiniciar / Menu
-            if (['oi', 'ola', 'olá', 'menu'].includes(texto.toLowerCase())) {
+            // Se for saudação (Reiniciar / Menu)
+            if (ehSaudacao) {
                 respostaBot = MENSAGENS.SAUDACAO(nomeAutor);
                 ctx.etapa = 'MENU';
                 ctx.botPausado = false;
@@ -159,7 +170,7 @@ export const handleWebhook = async (req, res) => {
                 if (texto === '1') {
                     respostaBot = MENSAGENS.FILA_TI;
                     ctx.etapa = 'FILA'; 
-                    ctx.botPausado = true; // Fica aguardando instruções futuras
+                    ctx.botPausado = true; 
                 } 
                 else if (texto.startsWith('*')) {
                     const ticketId = texto.replace('*', '');
@@ -172,7 +183,7 @@ export const handleWebhook = async (req, res) => {
 
             // 2. FILA (Bot Mudo)
             else if (ctx.etapa === 'FILA') {
-                // Silêncio total enquanto aguarda atendimento humano
+                // Silêncio total
             }
 
             // 3. AVALIAÇÃO - NOTA
@@ -196,7 +207,7 @@ export const handleWebhook = async (req, res) => {
             }
 
             // --- C. IA (GROQ) ---
-            // Só responde se estiver no INÍCIO e não for comando fixo
+            // Só responde se estiver no INÍCIO, não for comando fixo e não for saudação
             else if (!respostaBot && !ctx.botPausado && ctx.etapa === 'INICIO') {
                 console.log("🤔 Consultando Groq AI...");
                 respostaBot = await processarComGroq(idRemoto, texto, nomeAutor);
