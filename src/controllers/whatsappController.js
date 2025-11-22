@@ -33,10 +33,12 @@ const userContext = {};
 // ==================================================
 const MENSAGENS = {
     // O MENU JÁ ESTÁ AQUI
-    SAUDACAO: (nome) => `Olá ${nome} bem-vindo ao suporte interno do Supermercado Rosalina. Em breve, um de nossos atendentes vai te ajudar. Enquanto isso, fique à vontade para descrever seu problema.
-Escolha uma fila de atendimento para ser atendido:
-1 - Suporte T.I
-* - Consultar um ticket (Ex. *123)`,
+    SAUDACAO: (nome) => `Olá *${nome}* bem-vindo(a) ao suporte interno do Supermercado Rosalina. 
+    Em breve, um de nossos atendentes vai te ajudar. Enquanto isso, fique à vontade para descrever seu problema.
+        Escolha uma fila de atendimento para ser atendido:
+            1 - Suporte T.I
+            * - Consultar um ticket (Ex. *123)
+            Para encerrar o atendimento a qualquer momento, digite #.`,
 
     OPCAO_INVALIDA: `A opção digitada não existe, digite uma opção válida!`,
 
