@@ -40,12 +40,16 @@ export const conectarInstancia = async () => {
     }
 }
 
+// ======================================================
+// === CORREÇÃO APLICADA AQUI ===
+// ======================================================
 export const enviarTexto = async (numero, mensagem) => {
   try {
     console.log(`[EVOLUTION] Tentando enviar mensagem...`);
     console.log(`   > Instância: ${INSTANCE_NAME}`);
     console.log(`   > Número: ${numero}`);
 
+    // MUDANÇA: Trocado 'textMessage: { text: mensagem }' por apenas 'text: mensagem'
     const response = await apiClient.post(`/message/sendText/${INSTANCE_NAME}`, {
       number: numero,
       options: { delay: 1200, presence: 'composing' },
@@ -59,41 +63,6 @@ export const enviarTexto = async (numero, mensagem) => {
     console.error("❌ ERRO CRÍTICO AO ENVIAR MENSAGEM:", JSON.stringify(erroDetalhado, null, 2));
     
     throw new Error(error.response?.data?.message || 'Falha técnica ao enviar mensagem.');
-  }
-};
-
-// ======================================================
-// === FUNÇÃO CORRIGIDA PARA ENVIO DE BOTÕES ===
-// ======================================================
-export const enviarBotoes = async (numero, titulo, descricao, botoes) => {
-  try {
-    console.log(`[EVOLUTION] Enviando Botões para ${numero}...`);
-
-    // Formata os botões para o padrão da API
-    const buttonsFormatted = botoes.map(b => ({
-        type: "reply",
-        displayText: b.texto, // CORRIGIDO: 'displayText' com T maiúsculo
-        id: b.id
-    }));
-
-    const body = {
-        number: numero,
-        title: titulo,
-        description: descricao,
-        footer: "Portal Supermercado", 
-        buttons: buttonsFormatted,
-        options: { delay: 1200, presence: 'composing' }
-    };
-
-    // CORRIGIDO: Endpoint alterado para PLURAL 'sendButtons'
-    const response = await apiClient.post(`/message/sendButtons/${INSTANCE_NAME}`, body);
-    
-    return response.data;
-
-  } catch (error) {
-    const erroDetalhado = error.response?.data || error.message;
-    console.error("❌ ERRO AO ENVIAR BOTÕES:", JSON.stringify(erroDetalhado, null, 2));
-    throw new Error(error.response?.data?.message || 'Falha ao enviar botões.');
   }
 };
 
