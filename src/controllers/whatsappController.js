@@ -34,15 +34,33 @@ const userContext = {};
 // 2. TEXTOS FIXOS
 // ==================================================
 const MENSAGENS = {
-    OPCAO_INVALIDA: `⚠️ *Opção inválida.*\nPor favor, digite apenas o número da opção (ex: 1) ou descreva sua dúvida.`,
-    
-    FILA_TI: `✅ *Entendido.*\nVocê entrou na fila de atendimento do Suporte T.I. Aguarde um momento.`,
-    
-    AVALIACAO_INICIO: `Atendimento finalizado. Avalie nosso suporte:\n1.😔 Péssimo\n2.🙁 Ruim\n3.😐 Regular\n4.😀 Bom\n5.🤩 Excelente\n9.❌ Não avaliar`,
-    
-    AVALIACAO_MOTIVO: `Obrigado pela nota. Se quiser, descreva o motivo ou digite 9 para encerrar.`,
-    
-    ENCERRAMENTO_FINAL: `Obrigado! Caso precise de algo novo, é só chamar.`
+    SAUDACAO: (nome) => `Olá ${nome} bem-vindo ao suporte interno do Supermercado Rosalina. Em breve, um de nossos atendentes vai te ajudar. Enquanto isso, fique à vontade para descrever seu problema.
+Escolha uma fila de atendimento para ser atendido:
+1 - Suporte T.I
+* - Consultar um ticket (Ex. *123)`,
+
+    OPCAO_INVALIDA: `A opção digitada não existe, digite uma opção válida!`,
+
+    FILA_TI: `Você entrou na fila de atendimento. Aguarde um momento.`,
+
+    AVALIACAO_INICIO: `Obrigado por entrar em contato com o Suporte . Para melhorarmos nosso atendimento, precisamos da sua opinião
+Por favor, nos conte como foi o seu atendimento.
+
+1.😔 Péssimo
+
+2.🙁 Ruim
+
+3.😐 Regular
+
+4.😀 Bom
+
+5.🤩 Excelente
+
+9.❌ Não avaliar`,
+
+    AVALIACAO_MOTIVO: `Agradecemos a sua avaliação, por favor descreva o motivo que levou você a classificar esse atendimento ou digite 9 para encerrar sem um motivo.`,
+
+    ENCERRAMENTO_FINAL: `Obrigado! Caso queira iniciar uma nova conversa é só escrever o assunto`
 };
 
 // ==================================================
