@@ -19,7 +19,7 @@ Você é o assistente de triagem do Suporte Técnico (T.I.) do Supermercado Rosa
 Sua missão é EXCLUSIVAMENTE tirar dúvidas sobre: uso do sistema interno, problemas com impressoras, internet, computadores e abertura de chamados.
 
 REGRAS RÍGIDAS DE COMPORTAMENTO:
-1. Se o usuário perguntar sobre qualquer assunto que NÃO seja T.I. ou funcionamento do mercado (ex: futebol, receitas, política, piadas, clima, conversa fiada), você DEVE responder APENAS:
+1. Se o usuário perguntar sobre qualquer assunto que NÃO seja T.I. ou funcionamento do mercado, você DEVE responder APENAS:
 "Desculpe, meu sistema é limitado exclusivamente para suporte técnico e dúvidas operacionais do mercado."
 
 2. Não tente ser simpático demais nem render assunto fora do trabalho.
@@ -42,7 +42,6 @@ const MENSAGENS = {
             * - Consultar um ticket (Ex. *123)
             Para encerrar o atendimento a qualquer momento, digite #.`,
 
-    // NOVO: TEXTO DO SUBMENU QUANDO APERTA 1
     MENU_TI_COM_FILA: `✅ *Você acessou a Fila de Suporte T.I.*
     
 Para agilizar, escolha uma opção:
@@ -142,7 +141,6 @@ export const handleWebhook = async (req, res) => {
 
       if (!isStatus && !isGroup && texto) {
         
-        // Envia ID para o front evitar duplicação visual
         io.emit('novaMensagemWhatsapp', { id: idMensagem, chatId: idRemoto, nome: nomeAutor, texto: texto, fromMe: isFromMe });
 
         if (!isFromMe) {
@@ -225,7 +223,6 @@ export const handleWebhook = async (req, res) => {
                     ctx.etapa = 'MENU';
                 }
                 else {
-                    // IA tenta ajudar se não for opção válida
                     respostaBot = await processarComGroq(idRemoto, texto, nomeAutor);
                     if(!respostaBot) respostaBot = MENSAGENS.OPCAO_INVALIDA;
                 }
@@ -272,19 +269,23 @@ export const handleWebhook = async (req, res) => {
 };
 
 // ==================================================
-// 5. CONTROLES DO PAINEL
+// 5. CONTROLES DO PAINEL (ATENDIMENTO HUMANO)
 // ==================================================
+
+// Rota chamada quando clica em "ASSUMIR ATENDIMENTO"
 export const atenderAtendimento = async (req, res) => {
     const { numero, nomeAgente } = req.body;
     try {
         if (!userContext[numero]) userContext[numero] = { historico: [] };
         
-        // AQUI O BOT É PAUSADO MANUALMENTE PELO HUMANO (Botão Assumir)
+        // Pausa o bot e salva o nome do agente
         userContext[numero].nomeAgente = nomeAgente;
         userContext[numero].botPausado = true; 
         userContext[numero].etapa = 'ATENDIMENTO_HUMANO';
 
-        const msg = `*👨‍💻 Atendimento Assumido*\nAgora você está falando com *${nomeAgente}*.`;
+        // --- MUDANÇA 1: Frase de início de atendimento ---
+        const msg = `👨‍💻 *${nomeAgente}* atendeu seu pedido e falará com você agora.`;
+        
         await evolutionService.enviarTexto(numero, msg);
         res.status(200).json({ success: true });
     } catch (error) { res.status(500).json({ success: false }); }
@@ -304,18 +305,28 @@ export const finalizarAtendimento = async (req, res) => {
     } catch (error) { res.status(500).json({ success: false }); }
 };
 
+// Rota chamada quando você envia mensagem pelo input do portal
 export const handleSendMessage = async (req, res) => {
   const { numero, mensagem, nomeAgenteTemporario } = req.body;
   try {
       let mensagemFinal = mensagem;
       const contexto = userContext[numero];
-      if (contexto && contexto.nomeAgente) mensagemFinal = `*${contexto.nomeAgente}*:\n${mensagem}`;
-      else if (nomeAgenteTemporario) mensagemFinal = `*${nomeAgenteTemporario}*:\n${mensagem}`;
+      
+      // --- MUDANÇA 2: Formatação da mensagem do agente ---
+      // Formato: *Nome*\n\nMensagem
+      if (contexto && contexto.nomeAgente) {
+          mensagemFinal = `*${contexto.nomeAgente}*\n\n${mensagem}`;
+      } 
+      else if (nomeAgenteTemporario) {
+          mensagemFinal = `*${nomeAgenteTemporario}*\n\n${mensagem}`;
+      }
+
       const r = await evolutionService.enviarTexto(numero, mensagemFinal);
       res.status(200).json({ success: true, data: r });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };
 
+// Rotas auxiliares
 export const connectInstance = async (req, res) => { try { const r = await evolutionService.criarInstancia(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
 export const checarStatus = async (req, res) => { try { const r = await evolutionService.consultarStatus(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
 export const listarConversas = async (req, res) => { try { const c = await evolutionService.buscarConversas(); const m = c.map(x => ({ numero: x.id, nome: x.pushName || x.id.split('@')[0], ultimaMensagem: x.conversation || "...", unread: x.unreadCount > 0 })); res.status(200).json({ success: true, data: m }); } catch (e) { res.status(200).json({ success: true, data: [] }); } };
