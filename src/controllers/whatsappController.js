@@ -50,7 +50,7 @@ Para agilizar, escolha uma opção:
 2️⃣ - Aguardar Atendente Humano
 3️⃣ - Voltar ao Início
 
-_Digite o número da opção._`,
+Digite o número da opção:`,
 
     OPCAO_INVALIDA: `A opção digitada não existe, digite uma opção válida!`,
 
