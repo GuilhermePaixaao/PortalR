@@ -90,6 +90,34 @@
         .status-dot.online { background-color: var(--wa-primary); }
         .status-dot.offline { background-color: #ea0038; }
         .btn-conectar { background-color: var(--wa-primary); color: white; border: none; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; font-weight: bold; }
+
+        /* === NOVO: ESTILO DO PAINEL DE ATENDIMENTO (BOTÃO ASSUMIR) === */
+        #painelAtendimento {
+            display: none; /* Começa escondido */
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            text-align: center;
+            border-bottom: 1px solid #ffeeba;
+            animation: fadeIn 0.5s;
+            width: 100%;
+        }
+        
+        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+        
+        .btn-assumir {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-left: 10px;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+        }
+        .btn-assumir:hover { background-color: #218838; }
     </style>
 </head>
 
@@ -152,6 +180,11 @@
                 </div>
 
                 <div id="activeChatScreen" style="display:none; width:100%; height:100%; flex-direction:column;">
+                    
+                    <div id="painelAtendimento">
+                        <span>🔔 <b>Atenção:</b> Este cliente entrou na fila de T.I.</span>
+                        <button id="btnAssumirChamado" class="btn-assumir">✅ ASSUMIR ATENDIMENTO</button>
+                    </div>
                     <div class="messages-container" id="messagesContainer"></div>
                     <div class="input-area">
                         <input type="text" id="chatInput" class="input-field" placeholder="Digite uma mensagem" disabled>
@@ -200,6 +233,7 @@
         const chatInput = document.getElementById('chatInput');
         const sendButton = document.getElementById('sendButton');
         const filaHeader = document.getElementById('filaHeader');
+        const painelAtendimento = document.getElementById('painelAtendimento'); // Novo
 
         // --- Estado ---
         let activeNumber = null;
@@ -234,11 +268,9 @@
         }
 
         async function carregarConversas() {
-            // Mostra loader apenas se a lista estiver vazia
             if (filaAtendimento.children.length <= 1) {
                 loadingFila.style.display = 'block';
             }
-            
             try {
                 const resp = await fetch('/api/whatsapp/chats');
                 const json = await resp.json();
@@ -248,9 +280,7 @@
                 else if (json.success && Array.isArray(json.data)) listaDeChats = json.data;
                 else if (Array.isArray(json.data)) listaDeChats = json.data;
 
-                // Processa os chats do histórico
                 listaDeChats.forEach(chat => {
-                    // Ajuste para ler 'numero' em vez de 'id' se o backend enviar assim
                     const numero = chat.numero || chat.id || chat.key?.remoteJid;
                     const nome = chat.nome || chat.pushName || chat.name || chat.verifiedName || numero.split('@')[0];
                     const ultimaMensagem = chat.ultimaMensagem || chat.conversation || chat.lastMessage?.conversation || "...";
@@ -264,7 +294,6 @@
                 });
                 
                 atualizarContadorFila();
-
             } catch (e) {
                 console.error("Erro ao carregar chats:", e);
             } finally {
@@ -289,55 +318,95 @@
             else { statusText.textContent = "Desconectado"; statusDot.className = "status-dot offline"; btnConectar.style.display = 'block'; }
         });
 
-        // === LÓGICA CORRIGIDA (MENSAGEM E NOME) ===
+        // === SOCKET: NOTIFICAÇÃO DE CHAMADO (O CLIENTE APERTOU 1) ===
+        socket.on('notificacaoChamado', (data) => {
+            // Se o chat estiver aberto, mostra o painel
+            if (activeNumber === data.chatId) {
+                painelAtendimento.style.display = 'block';
+            }
+            
+            // Marca visualmente na lista lateral (Borda Amarela)
+            const itemLista = document.querySelector(`.contact-item[data-number="${data.chatId}"]`);
+            if (itemLista) {
+                itemLista.style.borderLeft = "5px solid #ffc107";
+                itemLista.dataset.pending = "true"; // Marca flag
+                const lastMsgDiv = itemLista.querySelector('.contact-last-msg');
+                if(lastMsgDiv) lastMsgDiv.innerHTML = "<b>🔔 Aguardando Atendimento...</b>";
+            }
+        });
+
+        // === SOCKET: NOVA MENSAGEM (COM PROTEÇÃO VISUAL) ===
         socket.on('novaMensagemWhatsapp', (data) => {
             const chatId = data.chatId; 
+            const msgId = data.id; 
             const text = data.texto;
-            const isFromMe = data.fromMe; 
+            const isFromMe = data.fromMe;
 
-            // 1. DEDUPLICAÇÃO: Se a mensagem é minha e já existe no final da conversa (adicionada manualmente), ignora
-            if (isFromMe && conversas[chatId]) {
-                const lastMsg = conversas[chatId][conversas[chatId].length - 1];
-                if (lastMsg && lastMsg.fromMe && lastMsg.text === text) {
-                    // Mensagem duplicada (já adicionada via envio manual), apenas marca como enviada se quiséssemos (opcional)
-                    return; 
-                }
-            }
+            // 1. Proteção Visual: Se a mensagem já existe na tela (pelo ID), não faz nada.
+            if (msgId && document.getElementById(`msg-${msgId}`)) return;
 
-            // 2. Determinar qual nome mostrar na lista
-            let displayName = contactNames[chatId];
-
-            if (!isFromMe) {
-                // Se a mensagem é do CLIENTE, atualizamos o nome com o que veio
-                displayName = data.nome || chatId.split('@')[0];
-                contactNames[chatId] = displayName;
-            } else {
-                // Se a mensagem é MINHA, NÃO mudamos o nome.
-                if (!displayName) {
-                    displayName = chatId.split('@')[0]; 
-                    contactNames[chatId] = displayName;
-                }
-            }
-
-            // Histórico Local
+            // 2. Histórico Local
             if (!conversas[chatId]) conversas[chatId] = [];
             
-            conversas[chatId].push({ 
-                fromMe: isFromMe, 
-                text: text, 
-                time: new Date(), 
-                name: isFromMe ? "Eu" : displayName 
-            });
+            // Verificação simples de duplicação no array (caso venha sem ID do backend antigo)
+            const existe = conversas[chatId].some(m => m.text === text && m.time > new Date(Date.now() - 5000));
             
-            // Atualiza a lista lateral com o nome CORRETO
-            const previewMsg = isFromMe ? `Você: ${text}` : text;
-            updateContactList(chatId, displayName, previewMsg, !isFromMe);
-            
-            // Se a conversa estiver aberta, joga o balão na tela
-            if (activeNumber === chatId) {
-                // Se for minha mensagem, não passo nome para não ficar "Eu" em cima do balão verde
-                appendMessageToView(text, isFromMe, isFromMe ? null : displayName, new Date());
-                markAsRead(chatId);
+            if (!existe) {
+                let displayName = contactNames[chatId];
+                if (!isFromMe) {
+                    displayName = data.nome || chatId.split('@')[0];
+                    contactNames[chatId] = displayName;
+                }
+                
+                conversas[chatId].push({ 
+                    id: msgId, 
+                    fromMe: isFromMe, 
+                    text: text, 
+                    time: new Date(), 
+                    name: isFromMe ? "Eu" : displayName 
+                });
+
+                const previewMsg = isFromMe ? `Você: ${text}` : text;
+                updateContactList(chatId, displayName, previewMsg, !isFromMe);
+
+                if (activeNumber === chatId) {
+                    appendMessageToView(text, isFromMe, isFromMe ? null : displayName, new Date(), msgId);
+                    markAsRead(chatId);
+                }
+            }
+        });
+
+        // === BOTÃO: ASSUMIR CHAMADO ===
+        document.getElementById('btnAssumirChamado').addEventListener('click', async () => {
+            if (!activeNumber) return;
+
+            const userData = JSON.parse(localStorage.getItem("userData"));
+            const nomeAgente = userData?.data?.nomeFuncionario || "Suporte T.I";
+
+            try {
+                const response = await fetch('/api/whatsapp/atender', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ numero: activeNumber, nomeAgente: nomeAgente })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Esconde o painel
+                    painelAtendimento.style.display = 'none';
+                    
+                    // Remove borda amarela da lista
+                    const itemLista = document.querySelector(`.contact-item[data-number="${activeNumber}"]`);
+                    if (itemLista) {
+                        itemLista.style.borderLeft = "none";
+                        delete itemLista.dataset.pending;
+                    }
+
+                    appendMessageToView(`✅ Você assumiu este chamado. O Bot foi pausado.`, true, "Sistema", new Date());
+                }
+            } catch (e) {
+                alert("Erro ao assumir chamado.");
             }
         });
 
@@ -356,18 +425,22 @@
         }
 
         function updateContactList(number, name, lastMsg, unread = false) {
-            // Procura se o item já existe e remove para recolocar no topo
-            let item = document.querySelector(`.contact-item[data-number="${number}"]`);
-            if (item) item.remove();
+            // Preserva se estava marcado como pendente
+            let isPending = false;
+            let existingItem = document.querySelector(`.contact-item[data-number="${number}"]`);
+            if (existingItem && existingItem.dataset.pending === "true") isPending = true;
+            if (existingItem) existingItem.remove();
 
             const initial = name ? name.charAt(0).toUpperCase() : '#';
             
-            item = document.createElement('div');
-            // Mantém a classe active se for o chat atual
+            let item = document.createElement('div');
             item.className = `contact-item ${activeNumber === number ? 'active' : ''}`;
             item.dataset.number = number;
+            if (isPending) {
+                item.dataset.pending = "true";
+                item.style.borderLeft = "5px solid #ffc107";
+            }
             
-            // Se for o chat ativo, não mostramos badge de não lido
             const showBadge = unread && activeNumber !== number;
 
             item.innerHTML = `
@@ -380,8 +453,6 @@
             `;
 
             item.addEventListener('click', () => openChat(number));
-
-            // Insere no topo da lista
             filaAtendimento.prepend(item); 
             
             if (filaAtendimento.querySelectorAll('.contact-item').length > 0) {
@@ -396,9 +467,18 @@
             
             document.querySelectorAll('.contact-item').forEach(el => el.classList.remove('active'));
             const item = document.querySelector(`.contact-item[data-number="${number}"]`);
+            
+            // Reseta UI
+            painelAtendimento.style.display = 'none';
+            
             if(item) { 
                 item.classList.add('active'); 
                 markAsRead(number); 
+                
+                // SE O ITEM TIVER A MARCA DE PENDENTE, MOSTRA O BOTÃO ASSUMIR
+                if (item.dataset.pending === "true" || item.style.borderLeft.includes("ffc107")) {
+                    painelAtendimento.style.display = 'block';
+                }
             }
             
             messagesContainer.innerHTML = '';
@@ -407,7 +487,7 @@
             if (msgs.length === 0) {
                  messagesContainer.innerHTML = '<div style="text-align:center; margin-top:20px; color:#999;">Sem histórico local.<br>Novas mensagens aparecerão aqui.</div>';
             } else {
-                msgs.forEach(m => appendMessageToView(m.text, m.fromMe, m.name, m.time));
+                msgs.forEach(m => appendMessageToView(m.text, m.fromMe, m.name, m.time, m.id));
             }
             
             chatInput.disabled = false; chatInput.focus();
@@ -418,29 +498,34 @@
             if(item) { const b = item.querySelector('.badge-unread'); if(b) b.remove(); }
         }
 
-        function appendMessageToView(text, fromMe, senderName, timeObj) {
+        // ATUALIZADO: Aceita msgId para evitar duplicatas
+        function appendMessageToView(text, fromMe, senderName, timeObj, msgId) {
+            if (msgId && document.getElementById(`msg-${msgId}`)) return;
+
             const div = document.createElement('div');
+            if (msgId) div.id = `msg-${msgId}`;
+            
             div.className = `msg ${fromMe ? 'msg-out' : 'msg-in'}`;
             const timeStr = new Date(timeObj).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
             const nameHtml = (!fromMe && senderName) ? `<span class="msg-sender">${senderName}</span>` : '';
             div.innerHTML = `${nameHtml}<div>${text}</div><span class="msg-time">${timeStr}</span>`;
+            
             messagesContainer.appendChild(div);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
-        // === LÓGICA DE ENVIO (CORRIGIDA) ===
         async function sendMessage() {
             const text = chatInput.value.trim();
             if (!text || !activeNumber) return;
             
-            // 1. Feedback Visual Imediato (Optimistic UI)
-            appendMessageToView(text, true, null, new Date());
+            // Cria ID temporário para a mensagem enviada
+            const tempId = 'sent-' + Date.now();
+
+            appendMessageToView(text, true, null, new Date(), tempId);
             
-            // 2. Salva no histórico local
             if (!conversas[activeNumber]) conversas[activeNumber] = [];
-            conversas[activeNumber].push({ fromMe: true, text, time: new Date() });
+            conversas[activeNumber].push({ id: tempId, fromMe: true, text, time: new Date() });
             
-            // 3. Atualiza a lista lateral
             const displayName = contactNames[activeNumber] || activeNumber;
             updateContactList(activeNumber, displayName, `Você: ${text}`, false);
 
