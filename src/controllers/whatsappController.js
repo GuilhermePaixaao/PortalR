@@ -2,7 +2,7 @@ import * as evolutionService from '../services/evolutionService.js';
 import { OpenAI } from 'openai';
 
 // ==================================================
-// 1. CONFIGURAÇÕES GERAIS
+// 1. CONFIGURAÇÕES DA GROQ (GRÁTIS)
 // ==================================================
 const groq = new OpenAI({
     apiKey: process.env.GROQ_API_KEY, 
@@ -11,18 +11,16 @@ const groq = new OpenAI({
 
 const MODELO_IA = "llama-3.1-8b-instant"; 
 
-// --- PROTEÇÃO ANTI-DUPLICAÇÃO (EVITA MENSAGENS REPETIDAS) ---
-const processedMessageIds = new Set();
-
 const SISTEMA_PROMPT = `
-Você é o assistente virtual de triagem do Suporte Técnico (T.I.) do Supermercado Rosalina.
+Você é o assistente de triagem do Suporte Técnico (T.I.) do Supermercado Rosalina.
 Sua missão é EXCLUSIVAMENTE tirar dúvidas sobre: uso do sistema interno, problemas com impressoras, internet, computadores e abertura de chamados.
 
 REGRAS RÍGIDAS DE COMPORTAMENTO:
-1. Se o usuário perguntar sobre qualquer assunto que NÃO seja T.I. ou funcionamento do mercado, responda:
-"Desculpe, meu sistema é limitado exclusivamente para suporte técnico e dúvidas operacionais."
-2. Seja direto, técnico e educado.
-3. Responda de forma breve (máximo 2 frases).
+1. Se o usuário perguntar sobre qualquer assunto que NÃO seja T.I. ou funcionamento do mercado (ex: futebol, receitas, política, piadas, clima, conversa fiada), você DEVE responder APENAS:
+"Desculpe, meu sistema é limitado exclusivamente para suporte técnico e dúvidas operacionais do mercado."
+
+2. Não tente ser simpático demais nem render assunto fora do trabalho.
+3. Responda de forma breve e direta (máximo 2 frases).
 4. Se não souber a resposta técnica, peça para ele digitar # para falar com um humano.
 5. Se receber mensagens curtas como "ata", "ok", "entendi", responda: "Certo. Algo mais?"
 `;
@@ -34,6 +32,7 @@ const userContext = {};
 // 2. TEXTOS FIXOS
 // ==================================================
 const MENSAGENS = {
+    // O MENU JÁ ESTÁ AQUI
     SAUDACAO: (nome) => `Olá ${nome} bem-vindo ao suporte interno do Supermercado Rosalina. Em breve, um de nossos atendentes vai te ajudar. Enquanto isso, fique à vontade para descrever seu problema.
 Escolha uma fila de atendimento para ser atendido:
 1 - Suporte T.I
@@ -64,28 +63,41 @@ Por favor, nos conte como foi o seu atendimento.
 };
 
 // ==================================================
-// 3. IA (GROQ)
+// 3. LÓGICA DA INTELIGÊNCIA ARTIFICIAL (GROQ)
 // ==================================================
 async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
     const contexto = userContext[numeroUsuario];
+    
     if (!contexto || contexto.botPausado) return null;
 
     try {
         if (!contexto.historico || contexto.historico.length === 0) {
-            contexto.historico = [{ role: "system", content: SISTEMA_PROMPT }];
+            contexto.historico = [
+                { role: "system", content: SISTEMA_PROMPT }
+            ];
         }
+
         contexto.historico.push({ role: "user", content: textoUsuario });
+
         if (contexto.historico.length > 12) {
             contexto.historico = [contexto.historico[0], ...contexto.historico.slice(-10)];
         }
 
         const completion = await groq.chat.completions.create({
-            messages: contexto.historico, model: MODELO_IA, temperature: 0.1, max_tokens: 150,
+            messages: contexto.historico,
+            model: MODELO_IA,
+            temperature: 0.1, 
+            max_tokens: 150,  
         });
 
         const respostaIA = completion.choices[0]?.message?.content || "";
-        if (respostaIA) contexto.historico.push({ role: "assistant", content: respostaIA });
+
+        if (respostaIA) {
+            contexto.historico.push({ role: "assistant", content: respostaIA });
+        }
+
         return respostaIA;
+
     } catch (erro) {
         console.error("[GROQ] Erro na IA:", erro);
         return null; 
@@ -93,11 +105,14 @@ async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
 }
 
 // ==================================================
-// 4. WEBHOOK (MENU EM TEXTO)
+// 4. WEBHOOK (COM LOGS DE DEBUG)
 // ==================================================
 export const handleWebhook = async (req, res) => {
   const payload = req.body;
   const io = req.io;
+
+  // [DEBUG] Confirma se a Evolution está batendo aqui
+  // console.log("🔔 Webhook Evento:", payload.event);
 
   try {
     if (payload.event === 'qrcode.updated') io.emit('qrCodeRecebido', { qr: payload.data?.qrcode?.base64 });
@@ -105,74 +120,69 @@ export const handleWebhook = async (req, res) => {
 
     if (payload.event === 'messages.upsert' && payload.data?.message) {
       const msg = payload.data;
-      const idMensagem = msg.key.id; 
       const idRemoto = msg.key.remoteJid;
       const isFromMe = msg.key.fromMe;
-      
-      // --- BLOQUEIO DE DUPLICAÇÃO ---
-      if (processedMessageIds.has(idMensagem)) return res.status(200).json({ success: true });
-      processedMessageIds.add(idMensagem);
-      setTimeout(() => processedMessageIds.delete(idMensagem), 10000);
-
       const nomeAutor = msg.pushName || idRemoto.split('@')[0];
+      
+      // [DEBUG] Mostra o objeto da mensagem para ver se é texto, botão, etc
+      // console.log("📩 Payload da Mensagem:", JSON.stringify(msg.message).substring(0, 100) + "...");
+
+      // Captura texto (Expandido para pegar mais tipos de mensagem)
       const texto = (
           msg.message?.conversation || 
           msg.message?.extendedTextMessage?.text || 
+          msg.message?.buttonsResponseMessage?.selectedButtonId || 
+          msg.message?.listResponseMessage?.singleSelectReply?.selectedRowId || 
+          msg.message?.templateButtonReplyMessage?.selectedId ||
           ""
       ).trim();
 
       const isGroup = idRemoto.includes('@g.us'); 
       const isStatus = idRemoto === 'status@broadcast'; 
 
+      if (texto) {
+          console.log(`📝 Texto extraído: "${texto}" | De: ${nomeAutor} | Grupo? ${isGroup}`);
+      } else {
+          console.log(`⚠️ Mensagem recebida sem texto (pode ser imagem/audio). Ignorando lógica de bot.`);
+      }
+
+      // SÓ ENTRA SE TIVER TEXTO E NÃO FOR GRUPO/STATUS
       if (!isStatus && !isGroup && texto) {
         
-        io.emit('novaMensagemWhatsapp', { id: idMensagem, chatId: idRemoto, nome: nomeAutor, texto: texto, fromMe: isFromMe });
+        // 1. MANDA PRO FRONTEND (Isso faz aparecer na tela)
+        io.emit('novaMensagemWhatsapp', { chatId: idRemoto, nome: nomeAutor, texto: texto, fromMe: isFromMe });
 
+        // 2. LÓGICA DO BOT
         if (!isFromMe) {
+            
             if (!userContext[idRemoto]) userContext[idRemoto] = { etapa: 'INICIO', botPausado: false, historico: [] };
             const ctx = userContext[idRemoto];
             let respostaBot = null;
             const textoMin = texto.toLowerCase();
 
-            const saudacoes = ['oi', 'ola', 'olá', 'menu', 'bom dia', 'boa tarde', 'boa noite', 'opa', 'e ai', 'hey', 'saudações', 'inicio', 'start', 'ata', 'ok', 'entendi', 'teste'];
-            const ehSaudacao = saudacoes.includes(textoMin) || saudacoes.some(s => textoMin.startsWith(s + ' '));
+            const saudacoes = ['oi', 'ola', 'olá', 'menu', 'bom dia', 'boa tarde', 'boa noite', 'opa', 'e ai', 'hey', 'saudações'];
+            const ehSaudacao = saudacoes.some(s => textoMin.startsWith(s));
 
-            // ------------------------------------------------------------------
-            // 1. MENU PRINCIPAL (AGORA EM TEXTO PURO - SEM BOTÕES)
-            // ------------------------------------------------------------------
+            // --- A. REGRAS FIXAS ---
+            
+            // 1. SAUDAÇÃO -> ENVIA O TEXTO DEFINIDO NA CONSTANTE MENSAGENS
             if (ehSaudacao) {
                 ctx.etapa = 'MENU';
                 ctx.botPausado = false;
                 ctx.nomeAgente = null;
                 ctx.historico = [{ role: "system", content: SISTEMA_PROMPT }];
 
-                // MENU FORMATADO COM EMOJIS E NEGRITO
-                const menuTexto = `🤖 *Suporte T.I - Supermercado Rosalina*
-
-Olá *${nomeAutor}*! 👋
-Sou seu assistente virtual. Para prosseguir, digite o número da opção desejada:
-
-1️⃣ - *Suporte T.I* (Computadores, Impressoras, Sistema)
-2️⃣ - *Consultar Ticket*
-*️⃣ - *Encerrar Atendimento*
-
-_Digite apenas o número da opção._`;
-
-                // ENVIA COMO TEXTO NORMAL (Funciona sempre)
-                await evolutionService.enviarTexto(idRemoto, menuTexto);
+                // AJUSTE FEITO: Usa direto o texto que já existe no objeto MENSAGENS
+                const textoSaudacao = MENSAGENS.SAUDACAO(nomeAutor);
                 
-                io.emit('novaMensagemWhatsapp', { 
-                    id: 'menu-' + Date.now(), 
-                    chatId: idRemoto, 
-                    nome: "Bot", 
-                    texto: menuTexto, 
-                    fromMe: true 
-                });
+                // Envia apenas texto
+                await evolutionService.enviarTexto(idRemoto, textoSaudacao);
                 
+                io.emit('novaMensagemWhatsapp', { chatId: idRemoto, nome: "Bot", texto: "[Menu Enviado]", fromMe: true });
                 return res.status(200).json({ success: true });
             }
             
-            // 2. ENCERRAR (#)
+            // 2. FINALIZAR (#)
             else if (texto === '#' || texto.toLowerCase() === 'encerrar') {
                 respostaBot = MENSAGENS.AVALIACAO_INICIO;
                 ctx.etapa = 'AVALIACAO_NOTA';
@@ -180,26 +190,25 @@ _Digite apenas o número da opção._`;
                 ctx.nomeAgente = null;
             }
 
-            // 3. LÓGICA DO MENU (Detecta números ou texto)
+            // --- B. LÓGICA POR ETAPAS ---
+
+            // 3. MENU 
             else if (ctx.etapa === 'MENU') {
                 if (texto === '1' || texto.toLowerCase().includes('suporte')) {
                     respostaBot = MENSAGENS.FILA_TI;
                     ctx.etapa = 'FILA'; 
                     ctx.botPausado = true; 
                 } 
-                else if (texto === '2' || texto.toLowerCase().includes('ticket') || texto.startsWith('*')) {
-                    respostaBot = `🔍 *Consultando ticket...*\n(Funcionalidade em simulação)`;
+                else if (texto === 'ticket' || texto.startsWith('*')) {
+                    respostaBot = `Consultando ticket... (Simulação)`;
                 } 
                 else {
-                    // Se não digitou número, manda pra IA tentar ajudar
-                    console.log("🤔 Texto livre no menu, enviando para IA...");
-                    respostaBot = await processarComGroq(idRemoto, texto, nomeAutor);
-                    if (!respostaBot) respostaBot = MENSAGENS.OPCAO_INVALIDA;
+                    respostaBot = MENSAGENS.OPCAO_INVALIDA;
                 }
             }
 
-            // 4. FILA (Silêncio)
-            else if (ctx.etapa === 'FILA') { /* Espera humano */ }
+            // 4. FILA (Mudo)
+            else if (ctx.etapa === 'FILA') { /* Silêncio */ }
 
             // 5. AVALIAÇÃO
             else if (ctx.etapa === 'AVALIACAO_NOTA') {
@@ -219,15 +228,17 @@ _Digite apenas o número da opção._`;
                 delete userContext[idRemoto]; 
             }
 
-            // 6. FALLBACK DA IA
+            // --- C. IA (GROQ) ---
+            // Se não caiu em nenhuma regra acima e não está pausado
             else if (!respostaBot && !ctx.botPausado && ctx.etapa === 'INICIO') {
+                console.log("🤔 Consultando Groq AI...");
                 respostaBot = await processarComGroq(idRemoto, texto, nomeAutor);
             }
 
-            // ENVIO DA RESPOSTA FINAL
+            // --- ENVIO ---
             if (respostaBot) {
                 await evolutionService.enviarTexto(idRemoto, respostaBot);
-                io.emit('novaMensagemWhatsapp', { id: 'bot-'+Date.now(), chatId: idRemoto, nome: "Bot", texto: respostaBot, fromMe: true });
+                io.emit('novaMensagemWhatsapp', { chatId: idRemoto, nome: "Bot", texto: respostaBot, fromMe: true });
             }
         }
       }
@@ -240,7 +251,7 @@ _Digite apenas o número da opção._`;
 };
 
 // ==================================================
-// 5. FUNÇÕES DO PAINEL
+// 5. CONTROLES DO PAINEL
 // ==================================================
 export const atenderAtendimento = async (req, res) => {
     const { numero, nomeAgente } = req.body;
@@ -249,6 +260,7 @@ export const atenderAtendimento = async (req, res) => {
         userContext[numero].nomeAgente = nomeAgente;
         userContext[numero].botPausado = true; 
         userContext[numero].etapa = 'ATENDIMENTO_HUMANO';
+
         const msg = `*Atendimento iniciado*\nAgora você está falando com *${nomeAgente}*.`;
         await evolutionService.enviarTexto(numero, msg);
         res.status(200).json({ success: true });
@@ -262,6 +274,7 @@ export const finalizarAtendimento = async (req, res) => {
         userContext[numero].etapa = 'AVALIACAO_NOTA';
         userContext[numero].botPausado = true;
         userContext[numero].nomeAgente = null;
+
         const msg = MENSAGENS.AVALIACAO_INICIO;
         await evolutionService.enviarTexto(numero, msg);
         res.status(200).json({ success: true });
@@ -275,11 +288,13 @@ export const handleSendMessage = async (req, res) => {
       const contexto = userContext[numero];
       if (contexto && contexto.nomeAgente) mensagemFinal = `*${contexto.nomeAgente}*:\n${mensagem}`;
       else if (nomeAgenteTemporario) mensagemFinal = `*${nomeAgenteTemporario}*:\n${mensagem}`;
+
       const r = await evolutionService.enviarTexto(numero, mensagemFinal);
       res.status(200).json({ success: true, data: r });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };
 
+// Rotas auxiliares (Mantenha igual)
 export const connectInstance = async (req, res) => { try { const r = await evolutionService.criarInstancia(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
 export const checarStatus = async (req, res) => { try { const r = await evolutionService.consultarStatus(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
 export const listarConversas = async (req, res) => { try { const c = await evolutionService.buscarConversas(); const m = c.map(x => ({ numero: x.id, nome: x.pushName || x.id.split('@')[0], ultimaMensagem: x.conversation || "...", unread: x.unreadCount > 0 })); res.status(200).json({ success: true, data: m }); } catch (e) { res.status(200).json({ success: true, data: [] }); } };
