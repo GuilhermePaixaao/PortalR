@@ -53,6 +53,20 @@ export const criarChamado = async (req, res) => {
         
         const novoChamado = await ChamadoModel.findById(novoId);
         
+        // =================================================
+        // (NOVO) NOTIFICAÇÃO EM TEMPO REAL VIA SOCKET
+        // =================================================
+        // Dispara evento para todos os clientes conectados
+        if (req.io) {
+            req.io.emit('novoChamadoInterno', {
+                id: novoChamado.id,
+                assunto: novoChamado.assunto,
+                requisitante: novoChamado.nomeRequisitante || "Alguém",
+                prioridade: novoChamado.prioridade
+            });
+        }
+        // =================================================
+        
         // (ATUALIZADO) Formata a resposta
         const Funcionario = {
             nomeFuncionario: novoChamado.nomeRequisitante,

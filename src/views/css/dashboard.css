@@ -372,5 +372,94 @@ body.dark-mode {
     color: #f1f1f1;
 }
 
-/* --- FIM DA CORREÇÃO DE TABELA --- */
-/* --- FIM MODO ESCURO --- */
+/* ====================================================== */
+/* --- SISTEMA DE NOTIFICAÇÕES GLOBAIS (TOAST) --- */
+/* ====================================================== */
+#toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 99999; /* Acima de tudo, inclusive modais */
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.global-toast {
+    background-color: #fff;
+    color: #333;
+    width: 320px;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    border-left: 5px solid #0d6efd; /* Azul por padrão (info) */
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    opacity: 0;
+    transform: translateX(50px); /* Começa deslocado para a direita */
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55); /* Efeito elástico */
+    font-family: "Segoe UI", sans-serif;
+    pointer-events: auto; /* Permite clicar no botão fechar */
+}
+
+/* Animação de Entrada */
+.global-toast.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* Cores Específicas por Tipo */
+.global-toast.toast-warning {
+    border-left-color: #ffc107; /* Amarelo (Atenção) */
+}
+.global-toast.toast-success {
+    border-left-color: #198754; /* Verde (Sucesso) */
+}
+
+/* Ícone */
+.toast-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+/* Conteúdo de Texto */
+.toast-content {
+    flex-grow: 1;
+}
+.toast-title {
+    font-weight: bold;
+    font-size: 1rem;
+    margin-bottom: 4px;
+}
+.toast-message {
+    font-size: 0.9rem;
+    line-height: 1.4;
+    color: #555;
+    white-space: pre-wrap; /* Respeita quebra de linha (\n) */
+}
+
+/* Botão Fechar (X) */
+.toast-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: #999;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    align-self: flex-start;
+}
+.toast-close:hover {
+    color: #333;
+}
+
+/* Compatibilidade com Modo Escuro */
+body.dark-mode .global-toast {
+    background-color: #2a2a2a;
+    color: #f1f1f1;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+}
+body.dark-mode .toast-message {
+    color: #ccc;
+}
