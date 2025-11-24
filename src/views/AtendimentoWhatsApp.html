@@ -12,12 +12,12 @@
             const userPerfil = userData?.data?.perfil || userData?.perfil;
 
             // ==========================================================
-            // CHECK DE PERMISSÃO EXPLÍCITO para AGENTE e ADMIN
+            // CHECK DE PERMISSÃO: Inclui AGENTE, SUPERVISOR e ADMIN
             // ==========================================================
-            const allowedProfiles = ['AGENTE', 'ADMIN'];
+            const allowedProfiles = ['AGENTE', 'ADMIN', 'SUPERVISOR'];
             
             if (!allowedProfiles.includes(userPerfil)) {
-                 // Se não for um perfil permitido (como REQUISITANTE), redireciona.
+                 // Se não for um perfil permitido, redireciona.
                  window.location.replace("Chamado.html");
             }
             // ==========================================================
@@ -247,10 +247,10 @@
             if (d && u?.data?.nomeFuncionario) d.textContent = `Olá, ${u.data.nomeFuncionario.split(' ')[0]}`; 
             
             // ==========================================================
-            // CHECK DE PERMISSÃO CLARA para AGENTE e ADMIN
+            // CHECK DE PERMISSÃO CLARA para AGENTE, SUPERVISOR e ADMIN
             // ==========================================================
             const userPerfil = u?.data?.perfil;
-            if (userPerfil === 'AGENTE' || userPerfil === 'ADMIN') { 
+            if (userPerfil === 'AGENTE' || userPerfil === 'ADMIN' || userPerfil === 'SUPERVISOR') { 
                 const l = document.getElementById("menu-link-chamado"); 
                 if(l) { 
                     l.querySelector('a').href = "GerenciarChamados.html"; 
@@ -427,7 +427,7 @@
                 updateContactList(chatId, displayName, previewMsg, !isFromMe);
 
                 if (activeNumber === chatId) {
-                    // new Date(timestamp) funciona perfeitamente
+                    // new Date(timestamp) agora recebe um timestamp numérico
                     appendMessageToView(text, isFromMe, isFromMe ? null : displayName, new Date(novaMensagem.time), msgId);
                     markAsRead(chatId);
                 }
@@ -543,7 +543,7 @@
             if (msgs.length === 0) {
                  messagesContainer.innerHTML = '<div style="text-align:center; margin-top:20px; color:#999;">Sem histórico local.<br>Novas mensagens aparecerão aqui.</div>';
             } else {
-                // CORRIGIDO: new Date(m.time) agora recebe um timestamp numérico, o que é mais confiável.
+                // new Date(m.time) agora recebe um timestamp numérico, o que é mais confiável.
                 msgs.forEach(m => appendMessageToView(m.text, m.fromMe, m.name, new Date(m.time), m.id));
             }
             
@@ -575,7 +575,7 @@
             if (!text || !activeNumber) return;
             
             const tempId = 'sent-' + Date.now();
-            const now = Date.now(); // CORRIGIDO: Salva como TIMESTAMP numérico
+            const now = Date.now(); // Salva como TIMESTAMP numérico
 
             appendMessageToView(text, true, null, new Date(now), tempId);
             
@@ -590,7 +590,7 @@
             chatInput.value = '';
             
             try {
-                // Aqui você deve usar o nome do agente para enviar
+                // Pega o nome do agente para enviar
                 const userData = getLocalData("userData");
                 const nomeAgente = userData?.data?.nomeFuncionario || "Suporte";
 
@@ -599,7 +599,7 @@
                     body: JSON.stringify({ 
                         numero: activeNumber, 
                         mensagem: text,
-                        nomeAgenteTemporario: nomeAgente // Se o atendimento ainda não foi assumido
+                        nomeAgenteTemporario: nomeAgente // Usado se o atendimento ainda não foi assumido
                     })
                 });
             } catch (e) { 
