@@ -239,7 +239,7 @@
         let activeNumber = null;
         let conversas = {}; 
         let contactNames = {};
-        // NOVO: Variável para o estado da lista lateral (para persistência)
+        // Variável para o estado da lista lateral (para persistência)
         let listaChatsParaExibir = []; 
 
         const socket = io(); 
@@ -326,11 +326,19 @@
                  loadingFila.style.display = 'none';
                  // Limpa a lista atual, exceto o header e o loading
                  filaAtendimento.querySelectorAll('.contact-item').forEach(el => el.remove()); 
+                 
+                 // === CORREÇÃO CRÍTICA AQUI: USAR contactNames PARA O NOME ===
                  listaChatsParaExibir.forEach(chat => {
                     const unread = (chat.unreadCount > 0 || chat.unread === true);
-                    // O chat salvo no localStorage pode não ter todas as propriedades de um chat novo, mas tem o suficiente para exibir
-                    updateContactList(chat.numero, chat.nome || chat.numero.split('@')[0], chat.ultimaMensagem, unread);
+                    const chatNumber = chat.numero;
+                    
+                    // Prioriza o nome salvo no contactNames (o mais amigável e persistente)
+                    const chatName = contactNames[chatNumber] || chat.nome || chatNumber.split('@')[0];
+                    
+                    updateContactList(chatNumber, chatName, chat.ultimaMensagem, unread);
                  });
+                 // ==========================================================
+                 
                  atualizarContadorFila();
             } else {
                  loadingFila.style.display = 'block';
@@ -347,12 +355,20 @@
                 else if (Array.isArray(json.data)) listaDeChats = json.data;
 
                 // 3. Processa e salva a lista nova
-                listaChatsParaExibir = listaDeChats.map(chat => ({ // Mapeia para salvar apenas o essencial
-                    numero: chat.numero || chat.id || chat.key?.remoteJid,
-                    nome: chat.nome || chat.pushName || chat.name || chat.verifiedName || chat.numero.split('@')[0],
-                    ultimaMensagem: chat.ultimaMensagem || chat.conversation || chat.lastMessage?.conversation || "...",
-                    unreadCount: chat.unreadCount || (chat.unread === true ? 1 : 0)
-                })); 
+                listaChatsParaExibir = listaDeChats.map(chat => {
+                    const numero = chat.numero || chat.id || chat.key?.remoteJid;
+                    const nome = chat.nome || chat.pushName || chat.name || chat.verifiedName || numero.split('@')[0];
+                    
+                    // Atualiza o mapa de nomes persistente com o nome mais recente
+                    contactNames[numero] = nome; 
+                    
+                    return { // Mapeia para salvar apenas o essencial
+                        numero: numero,
+                        nome: nome,
+                        ultimaMensagem: chat.ultimaMensagem || chat.conversation || chat.lastMessage?.conversation || "...",
+                        unreadCount: chat.unreadCount || (chat.unread === true ? 1 : 0)
+                    }
+                }); 
                 
                 // Limpa a lista DOM para inserir a nova
                 filaAtendimento.querySelectorAll('.contact-item').forEach(el => el.remove()); 
@@ -364,11 +380,9 @@
                     const unread = (chat.unreadCount > 0);
 
                     if (numero) {
-                        if (!conversas[numero]) {
-                             if(!conversas[numero]) conversas[numero] = []; 
-                        }
-                        contactNames[numero] = nome;
-                        updateContactList(numero, nome, ultimaMensagem, unread);
+                        // NOVO: Usa o nome que acabou de ser atualizado/persistido
+                        const nomeExibicao = contactNames[numero]; 
+                        updateContactList(numero, nomeExibicao, ultimaMensagem, unread);
                     }
                 });
                 
@@ -521,7 +535,9 @@
             if (existingItem && existingItem.dataset.pending === "true") isPending = true;
             if (existingItem) existingItem.remove();
 
-            const initial = name ? name.charAt(0).toUpperCase() : '#';
+            // Usa o nome mais amigável
+            const finalName = contactNames[number] || name;
+            const initial = finalName ? finalName.charAt(0).toUpperCase() : '#';
             
             let item = document.createElement('div');
             item.className = `contact-item ${activeNumber === number ? 'active' : ''}`;
@@ -536,7 +552,7 @@
             item.innerHTML = `
                 <div class="avatar-placeholder">${initial}</div>
                 <div class="contact-info">
-                    <div class="contact-name">${name}</div>
+                    <div class="contact-name">${finalName}</div>
                     <div class="contact-last-msg">${lastMsg}</div>
                 </div>
                 ${showBadge ? '<div class="badge-unread">!</div>' : ''}
