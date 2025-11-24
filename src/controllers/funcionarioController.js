@@ -57,7 +57,7 @@ export const login = async (req, res) => {
 };
 
 // =======================================================
-// ===== ROTA DE CADASTRO (POST /usuarios) - LÓGICA DE PERMISSÃO ATUALIZADA =====
+// ===== ROTA DE CADASTRO (POST /usuarios) =====
 // =======================================================
 export const criarUsuario = async (req, res) => {
   try {
@@ -82,26 +82,21 @@ export const criarUsuario = async (req, res) => {
     const cargoId = parseInt(funcionario.cargo.idCargo);
 
     // ==================================================
-    // ===== INÍCIO DA LÓGICA DE PERFIL AUTOMÁTICO (NOVA HIERARQUIA) =====
+    // ===== INÍCIO DA LÓGICA DE PERFIL AUTOMÁTICO =====
     // ==================================================
 
-    const ID_CARGO_ADMIN = 1;     // Cargo Administrador (ID 1)
-    const ID_CARGO_SUPERVISOR = 2; // Cargo Supervisor (ID 2)
-    const ID_CARGO_SUPORTE_TI = 3; // Cargo Suporte TI (ID 3)
-    const ID_CATEGORIA_TI = 1;     // Categoria TI (para atribuição automática)
+    const ID_CARGO_ADMIN = 1;     // Cargo Administrador
+    const ID_CARGO_SUPORTE_TI = 2; // Cargo Suporte TI
+    const ID_CATEGORIA_TI = 1;     // Categoria TI
 
     let perfil = 'REQUISITANTE';
     let categoriaAtendimento = null;
 
     if (cargoId === ID_CARGO_ADMIN) {
       perfil = 'ADMIN';
-      categoriaAtendimento = null; // Admin tem acesso irrestrito
-    } else if (cargoId === ID_CARGO_SUPERVISOR) {
-        perfil = 'SUPERVISOR';
-        categoriaAtendimento = null; // Supervisor tem acesso irrestrito/gerencial
     } else if (cargoId === ID_CARGO_SUPORTE_TI) {
       perfil = 'AGENTE';
-      categoriaAtendimento = ID_CATEGORIA_TI; // Agente de TI focado em sua área
+      categoriaAtendimento = ID_CATEGORIA_TI;
     }
 
     // ================================================
