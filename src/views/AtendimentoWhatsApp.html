@@ -327,15 +327,14 @@
                  // Limpa a lista atual, exceto o header e o loading
                  filaAtendimento.querySelectorAll('.contact-item').forEach(el => el.remove()); 
                  
-                 // Exibe os chats persistidos
+                 // Exibe os chats persistidos com os NOMES CORRETOS
                  listaChatsParaExibir.forEach(chat => {
                     const unread = (chat.unreadCount > 0 || chat.unread === true);
                     const chatNumber = chat.numero;
                     
-                    // Puxa o nome da ÚNICA FONTE DE VERDADE para nomes amigáveis
-                    const chatName = contactNames[chatNumber] || chatNumber.split('@')[0];
+                    // === CORREÇÃO AQUI: PRIORIZA O NOME SALVO ===
+                    const chatName = contactNames[chatNumber] || chat.nome || chatNumber.split('@')[0];
                     
-                    // O `name` é o `chatName` aqui, mas `updateContactList` vai usar o `contactNames`
                     updateContactList(chatNumber, chatName, chat.ultimaMensagem, unread);
                  });
                  
@@ -354,34 +353,49 @@
                 else if (json.success && Array.isArray(json.data)) listaDeChats = json.data;
                 else if (Array.isArray(json.data)) listaDeChats = json.data;
 
-                // 3. Processa e salva a lista nova
+                // 3. Processa e salva a lista nova, MAS PROTEGE OS NOMES
                 listaChatsParaExibir = listaDeChats.map(chat => {
                     const numero = chat.numero || chat.id || chat.key?.remoteJid;
-                    const nomeDoServidor = chat.nome || chat.pushName || chat.name || chat.verifiedName || numero.split('@')[0];
+                    // Tenta pegar nome do servidor
+                    let nomeDoServidor = chat.nome || chat.pushName || chat.name || chat.verifiedName || "";
                     
-                    // Get the name currently saved in local storage (or default to empty string)
-                    const nomeSalvo = contactNames[numero] || "";
+                    // Fallback se vier tudo vazio
+                    if (!nomeDoServidor) nomeDoServidor = numero.split('@')[0];
+
+                    // === LÓGICA DE PROTEÇÃO DE NOME ===
+                    // Se já temos um nome salvo que NÃO é o número/ID, nós O MANTEMOS.
+                    // Só usamos o nome do servidor se não tivermos nada salvo.
                     
-                    // Lógica para preservar o melhor nome: 
-                    // Só atualiza se for um nome novo OU se o nome do servidor for mais longo/descritivo.
-                    if (nomeDoServidor.length > nomeSalvo.length) {
-                        contactNames[numero] = nomeDoServidor; // Atualiza se o nome novo for melhor
-                    } else if (!nomeSalvo) {
-                        contactNames[numero] = nomeDoServidor; // Atualiza se não havia nome salvo ainda
+                    const nomeSalvo = contactNames[numero];
+                    const isNumero = (str) => /^[0-9@.:\-\+]+$/.test(str);
+
+                    if (nomeSalvo && !isNumero(nomeSalvo)) {
+                        // Temos um nome bom salvo (ex: "João"). Mantém ele!
+                        // Não sobrescreve contactNames[numero]
+                    } else {
+                        // Não temos nome salvo, ou o salvo é ruim (é número).
+                        // Se o servidor mandou algo que parece nome, usa ele.
+                        if (nomeDoServidor && !isNumero(nomeDoServidor)) {
+                            contactNames[numero] = nomeDoServidor;
+                        } else {
+                            // Servidor também mandou número. Se não tem nada, salva o número.
+                            if (!contactNames[numero]) {
+                                contactNames[numero] = nomeDoServidor;
+                            }
+                        }
                     }
+
+                    const nomeFinal = contactNames[numero];
                     
-                    const nomeFinal = contactNames[numero]; // O melhor nome encontrado so far
-                    
-                    return { // Mapeia para salvar apenas o essencial
+                    return { 
                         numero: numero,
-                        // IMPORTANTE: Usa o nome FINAL para que o localStorage da lista lateral persista o nome correto.
                         nome: nomeFinal, 
                         ultimaMensagem: chat.ultimaMensagem || chat.conversation || chat.lastMessage?.conversation || "...",
                         unreadCount: chat.unreadCount || (chat.unread === true ? 1 : 0)
                     };
                 }); 
                 
-                // Limpa a lista DOM para inserir a nova
+                // Limpa a lista DOM para inserir a nova (agora com o nome protegido)
                 filaAtendimento.querySelectorAll('.contact-item').forEach(el => el.remove()); 
 
                 listaChatsParaExibir.forEach(chat => {
@@ -391,15 +405,16 @@
                     const unread = (chat.unreadCount > 0);
 
                     if (numero) {
+                        // Inicializa histórico local se necessário
                         if (!conversas[numero]) {
                              if(!conversas[numero]) conversas[numero] = []; 
                         }
-                        // Usa o nome FINAL, que já está em chat.nome (pois foi salvo no map)
+                        // Usa o nome FINAL protegido
                         updateContactList(numero, nome, ultimaMensagem, unread);
                     }
                 });
                 
-                // 4. Salva o estado completo (incluindo a nova lista lateral)
+                // 4. Salva o estado completo
                 saveConversas(); 
                 
                 atualizarContadorFila();
@@ -471,7 +486,8 @@
                 if (!isFromMe) {
                     displayName = data.nome || chatId.split('@')[0];
                     
-                    // ATUALIZA O NOME no mapa de persistência
+                    // ATUALIZA O NOME no mapa de persistência SE for um nome válido
+                    // Isso garante que o nome "João" vindo do webhook seja salvo e não sobrescrito depois
                     if (data.nome && data.nome.length > (contactNames[chatId] || "").length) {
                         contactNames[chatId] = data.nome;
                         displayName = data.nome;
@@ -486,7 +502,7 @@
                     name: isFromMe ? "Eu" : displayName 
                 });
 
-                saveConversas(); // <--- Salva a nova mensagem
+                saveConversas(); // <--- Salva a nova mensagem E O NOVO NOME
 
                 const previewMsg = isFromMe ? `Você: ${text}` : text;
                 updateContactList(chatId, displayName, previewMsg, !isFromMe);
@@ -553,8 +569,8 @@
             if (existingItem && existingItem.dataset.pending === "true") isPending = true;
             if (existingItem) existingItem.remove();
 
-            // CORREÇÃO CRÍTICA AQUI: Usa contactNames[number] como ÚNICA fonte de verdade.
-            const finalName = contactNames[number] || number.split('@')[0];
+            // Usa o nome mais amigável (contactNames[number] já foi atualizado na função carregarConversas)
+            const finalName = contactNames[number] || name || number;
             const initial = finalName ? finalName.charAt(0).toUpperCase() : '#';
             
             let item = document.createElement('div');
