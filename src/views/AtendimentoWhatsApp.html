@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Atendimento WhatsApp - Portal</title>
     <script>
-        // --- PROTETOR DE PÁGINA ---
         const userDataString = localStorage.getItem("userData");
         if (!userDataString) window.location.replace("Login.html");
         try {
@@ -18,7 +17,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <style>
-        /* --- ESTILOS (Mantidos) --- */
         :root {
             --wa-bg-color: #efeae2; --wa-header-bg: #f0f2f5; --wa-sidebar-bg: #ffffff;
             --wa-border: #e9edef; --wa-msg-in: #ffffff; --wa-msg-out: #d9fdd3;
@@ -93,10 +91,7 @@
         .status-dot.offline { background-color: #ea0038; }
         .btn-conectar { background-color: var(--wa-primary); color: white; border: none; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; font-weight: bold; }
 
-        /* === PAINEL DE ATENDIMENTO === */
-        #painelAtendimento {
-            display: none; background-color: #fff3cd; color: #856404; padding: 15px; text-align: center; border-bottom: 1px solid #ffeeba; animation: fadeIn 0.5s; width: 100%;
-        }
+        #painelAtendimento { display: none; background-color: #fff3cd; color: #856404; padding: 15px; text-align: center; border-bottom: 1px solid #ffeeba; animation: fadeIn 0.5s; width: 100%; }
         @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
         .btn-assumir { background-color: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; margin-left: 10px; text-transform: uppercase; font-size: 0.85rem; }
         .btn-assumir:hover { background-color: #218838; }
@@ -180,7 +175,7 @@
 
     <script type="module">
     document.addEventListener('DOMContentLoaded', () => {
-        // --- Helper functions (Logout, Theme) ---
+        // 1. Inicialização Básica
         function fazerLogout() { localStorage.removeItem("userData"); window.location.href = "Login.html"; }
         document.getElementById("logoutButton").addEventListener('click', fazerLogout);
 
@@ -200,7 +195,7 @@
             } 
         } catch (e) {}
 
-        // --- UI Elements ---
+        // 2. Referências DOM
         const qrScreen = document.getElementById('qrCodeScreen');
         const qrContainer = document.getElementById('qrCodeContainer');
         const welcomeScreen = document.getElementById('welcomeScreen');
@@ -216,18 +211,17 @@
         const filaHeader = document.getElementById('filaHeader');
         const painelAtendimento = document.getElementById('painelAtendimento');
 
-        // --- APP STATE (ESTADO DO APLICATIVO) ---
-        // Centralizamos tudo aqui para salvar/carregar de uma vez
+        // 3. ESTADO DA APLICAÇÃO (SINGLE SOURCE OF TRUTH)
         let AppState = {
             activeNumber: null,
-            conversas: {},      // Histórico de msgs: { numero: [msgs] }
-            contactNames: {},   // Nomes salvos: { numero: "Nome" }
-            chatList: []        // Lista da sidebar: [ {numero, nome, ultimaMensagem...} ]
+            conversas: {},      // { numero: [msgs...] }
+            contactNames: {},   // { numero: "Nome Amigável" }
+            chatList: []        // [ {numero, nome, ultimaMensagem...} ]
         };
 
-        const socket = io(); 
+        const socket = io();
 
-        // --- PERSISTÊNCIA (EXTRADA E ADAPTADA DA LÓGICA DE CHATBOT) ---
+        // 4. FUNÇÕES DE PERSISTÊNCIA (SISTEMA DE "NÃO SUMIR")
         function saveState() {
             try {
                 localStorage.setItem('wa_app_state', JSON.stringify(AppState));
@@ -239,28 +233,24 @@
                 const saved = localStorage.getItem('wa_app_state');
                 if (saved) {
                     const parsed = JSON.parse(saved);
-                    // Mescla para evitar perder chaves se a estrutura mudar
+                    // Mescla para garantir que a estrutura não quebre
                     AppState = { ...AppState, ...parsed };
                 }
-            } catch (e) { console.warn("Estado inválido, resetando."); }
+            } catch (e) { console.warn("Estado inválido, iniciando limpo."); }
         }
 
-        // --- RENDERIZAÇÃO ---
+        // 5. RENDERIZAÇÃO DA SIDEBAR (FILA)
         function renderSidebar() {
-            filaAtendimento.innerHTML = ''; // Limpa visualmente
+            // Limpa a lista visual
+            filaAtendimento.innerHTML = ''; 
+            
             AppState.chatList.forEach(chat => {
-                // Garante que usamos o nome salvo no contactNames, se houver
+                // GARANTIA: Usa o nome salvo no dicionário de nomes se existir, senão usa o do chat
                 const displayName = AppState.contactNames[chat.numero] || chat.nome || chat.numero;
                 createSidebarItem(chat.numero, displayName, chat.ultimaMensagem, chat.unreadCount > 0, chat.pending);
             });
             
-            // Se a lista estiver vazia, mostra loading ou vazio
-            if (AppState.chatList.length === 0) {
-                // loadingFila.style.display = 'block'; // Opcional
-            } else {
-                loadingFila.style.display = 'none';
-            }
-            
+            if (AppState.chatList.length > 0) loadingFila.style.display = 'none';
             const qtd = AppState.chatList.length;
             filaHeader.textContent = `Fila de Atendimento (${qtd})`;
         }
@@ -288,22 +278,22 @@
             filaAtendimento.appendChild(div);
         }
 
-        // --- INICIALIZAÇÃO ---
-        loadState();      // 1. Carrega do localStorage
-        renderSidebar();  // 2. Renderiza imediatamente o que tem salvo (nomes corretos)
+        // 6. INICIALIZAÇÃO IMEDIATA (RECUPERA O QUE TEM SALVO)
+        loadState();
+        renderSidebar();
         
         if (AppState.activeNumber) {
-            openChat(AppState.activeNumber); // 3. Reabre chat ativo
+            openChat(AppState.activeNumber);
         } else {
             showScreen('welcome');
         }
 
         socket.on('connect', () => {
             console.log("✅ Conectado ao servidor.");
-            syncChatsWithServer(); // 4. Busca atualizações em segundo plano
+            syncChatsWithServer(); // Tenta atualizar em segundo plano
         });
 
-        // --- SINCRONIZAÇÃO ---
+        // 7. SINCRONIZAÇÃO SEGURA (MERGE)
         async function syncChatsWithServer() {
             try {
                 const rStatus = await fetch('/api/whatsapp/status');
@@ -328,25 +318,25 @@
                 if (Array.isArray(serverChats)) listaServidor = serverChats;
                 else if (serverChats.data && Array.isArray(serverChats.data)) listaServidor = serverChats.data;
 
-                // Mescla Inteligente: Servidor + Local
-                // Se o servidor trouxer só número, mas a gente tem nome, MANTÉM O NOME.
-                
+                // SEGURANÇA: Se servidor vier vazio, NÃO apaga o local (evita "sumir")
+                if (listaServidor.length === 0) return;
+
+                // Mescla Inteligente
                 const novaLista = listaServidor.map(sc => {
                     const num = sc.numero || sc.id || sc.key?.remoteJid;
                     let nomeServidor = sc.nome || sc.pushName || sc.name || sc.verifiedName;
                     
-                    // Validação: Se o nome do servidor for vazio ou igual ao número
+                    // Valida se nomeServidor é útil (não é número nem vazio)
                     const isNum = (s) => !s || s.includes('@') || /^[0-9]+$/.test(s.replace(/\D/g,''));
                     if (isNum(nomeServidor)) nomeServidor = null;
 
-                    // Recupera nome salvo
-                    const nomeSalvo = AppState.contactNames[num];
-
-                    // Lógica de Prioridade: Salvo > Servidor > Número
-                    let nomeFinal = nomeSalvo;
+                    // Lógica de Preservação de Nome:
+                    // 1. Se já temos um nome salvo, usa ele.
+                    // 2. Se não temos e o servidor mandou, salva o do servidor.
+                    let nomeFinal = AppState.contactNames[num];
                     if (!nomeFinal && nomeServidor) {
                         nomeFinal = nomeServidor;
-                        AppState.contactNames[num] = nomeServidor; // Salva o novo nome descoberto
+                        AppState.contactNames[num] = nomeServidor; // Salva para o futuro
                     }
                     if (!nomeFinal) nomeFinal = num.split('@')[0];
 
@@ -355,39 +345,38 @@
                         nome: nomeFinal,
                         ultimaMensagem: sc.ultimaMensagem || sc.conversation || "...",
                         unreadCount: sc.unreadCount,
-                        pending: false // Reset pending no sync full (opcional)
+                        pending: false
                     };
                 });
 
-                // Atualiza estado
+                // Atualiza e Salva
                 AppState.chatList = novaLista;
-                saveState();     // Salva nomes atualizados
-                renderSidebar(); // Re-renderiza com dados mesclados
+                saveState();
+                renderSidebar();
 
             } catch (e) { console.error("Erro no sync:", e); }
         }
 
-        // --- SOCKET EVENTS (ATUALIZAÇÃO EM TEMPO REAL) ---
-        
+        // 8. ATUALIZAÇÃO EM TEMPO REAL (SOCKET)
         socket.on('novaMensagemWhatsapp', (data) => {
             const { chatId, id, texto, fromMe, nome } = data;
             
-            if (id && document.getElementById(`msg-${id}`)) return; // Duplicata visual
+            if (id && document.getElementById(`msg-${id}`)) return;
 
-            // 1. Atualiza Histórico
+            // Histórico
             if (!AppState.conversas[chatId]) AppState.conversas[chatId] = [];
             AppState.conversas[chatId].push({
                 id, fromMe, text: texto, time: new Date(),
                 name: fromMe ? "Eu" : (AppState.contactNames[chatId] || nome || chatId)
             });
 
-            // 2. Atualiza Nome (Se vier melhor)
+            // Nome: Se vier um nome melhor no socket, atualiza
             if (!fromMe && nome && nome.length > (AppState.contactNames[chatId] || "").length) {
                 AppState.contactNames[chatId] = nome;
             }
             const displayName = AppState.contactNames[chatId] || chatId.split('@')[0];
 
-            // 3. Atualiza Lista Lateral (Move pro topo)
+            // Lista Lateral: Move pro topo
             const existingIndex = AppState.chatList.findIndex(c => c.numero === chatId);
             if (existingIndex > -1) AppState.chatList.splice(existingIndex, 1);
             
@@ -400,25 +389,23 @@
             });
 
             saveState();     // SALVA TUDO
-            renderSidebar(); // ATUALIZA TELA
+            renderSidebar(); // ATUALIZA
 
-            // 4. Se for chat ativo, mostra mensagem
             if (AppState.activeNumber === chatId) {
                 appendMessageToView(texto, fromMe, fromMe ? null : displayName, new Date(), id);
-                // Zera contador visualmente
+                // Remove badge visualmente se aberto
                 const item = document.querySelector(`.contact-item[data-number="${chatId}"] .badge-unread`);
                 if(item) item.remove();
             }
         });
 
         socket.on('notificacaoChamado', (data) => {
-            // Marca flag visual no estado
-            const chat = AppState.chatList.find(c => c.numero === data.chatId);
+            // Marca visualmente e salva
+            let chat = AppState.chatList.find(c => c.numero === data.chatId);
             if(chat) { 
                 chat.pending = true; 
                 chat.ultimaMensagem = "🔔 Aguardando Atendimento...";
             } else {
-                // Se não existe, cria
                 AppState.chatList.unshift({
                     numero: data.chatId, nome: data.nome, ultimaMensagem: "🔔 Aguardando Atendimento...", unreadCount: 1, pending: true
                 });
@@ -426,31 +413,25 @@
             }
             saveState();
             renderSidebar();
-            
             if (AppState.activeNumber === data.chatId) painelAtendimento.style.display = 'block';
         });
 
-        // --- AÇÕES DE UI ---
-
+        // 9. FUNÇÕES DE CHAT
         function openChat(number) {
             AppState.activeNumber = number;
-            // Zera unread no estado
             const chat = AppState.chatList.find(c => c.numero === number);
-            if(chat) chat.unreadCount = 0;
+            if(chat) chat.unreadCount = 0; // Zera não lidas
             
             saveState();
-            renderSidebar(); // Para remover badge
+            renderSidebar();
             showScreen('chat');
 
-            // Renderiza Mensagens
             messagesContainer.innerHTML = '';
             const msgs = AppState.conversas[number] || [];
             if (msgs.length === 0) messagesContainer.innerHTML = '<div style="text-align:center;margin-top:20px;color:#999;">Sem histórico local.</div>';
             else msgs.forEach(m => appendMessageToView(m.text, m.fromMe, m.name, new Date(m.time), m.id));
             
-            // Painel de Assumir
             painelAtendimento.style.display = (chat && chat.pending) ? 'block' : 'none';
-            
             chatInput.disabled = false; chatInput.focus();
         }
 
@@ -459,8 +440,6 @@
             if (!text || !AppState.activeNumber) return;
             const tempId = 'sent-' + Date.now();
             
-            // O socket vai devolver o evento de mensagem enviada (fromMe=true) e atualizará o estado lá.
-            // Mas para feedback instantâneo:
             appendMessageToView(text, true, null, new Date(), tempId);
             chatInput.value = '';
 
@@ -493,8 +472,6 @@
                     method: 'POST', headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ numero: AppState.activeNumber, nomeAgente: user?.data?.nomeFuncionario || "Suporte" })
                 });
-                
-                // Atualiza estado local
                 const chat = AppState.chatList.find(c => c.numero === AppState.activeNumber);
                 if(chat) chat.pending = false;
                 painelAtendimento.style.display = 'none';
@@ -504,7 +481,7 @@
             } catch (e) { alert("Erro ao assumir."); }
         });
 
-        // --- HELPER UI ---
+        // 10. HELPERS DE UI
         function setConnectedState() {
             statusText.textContent = "Online"; statusDot.className = "status-dot online";
             btnConectar.style.display = 'none';
