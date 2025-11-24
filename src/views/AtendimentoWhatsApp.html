@@ -9,7 +9,19 @@
         if (!userDataString) window.location.replace("Login.html");
         try {
             const userData = JSON.parse(userDataString);
-            if (userData?.data?.perfil === 'REQUISITANTE') window.location.replace("Chamado.html");
+            const userPerfil = userData?.data?.perfil || userData?.perfil;
+
+            // ==========================================================
+            // (MODIFICADO) CHECK DE PERMISSÃO EXPLÍCITO para AGENTE e ADMIN
+            // ==========================================================
+            const allowedProfiles = ['AGENTE', 'ADMIN'];
+            
+            if (!allowedProfiles.includes(userPerfil)) {
+                 // Se não for um perfil permitido (como REQUISITANTE), redireciona.
+                 window.location.replace("Chamado.html");
+            }
+            // ==========================================================
+            
         } catch (e) { localStorage.removeItem("userData"); window.location.replace("Login.html"); }
     </script>
     <link rel="stylesheet" href="css/dashboard.css">
@@ -213,10 +225,20 @@
             const u = JSON.parse(localStorage.getItem("userData")); 
             const d = document.getElementById('userNameDisplay'); 
             if (d && u?.data?.nomeFuncionario) d.textContent = `Olá, ${u.data.nomeFuncionario.split(' ')[0]}`; 
-            if (u?.data?.perfil === 'AGENTE' || u?.data?.perfil === 'ADMIN') { 
+            
+            // ==========================================================
+            // (MODIFICADO) CHECK DE PERMISSÃO CLARA para AGENTE e ADMIN
+            // ==========================================================
+            const userPerfil = u?.data?.perfil;
+            if (userPerfil === 'AGENTE' || userPerfil === 'ADMIN') { 
                 const l = document.getElementById("menu-link-chamado"); 
-                if(l) { l.querySelector('a').href = "GerenciarChamados.html"; l.querySelector('.text').innerHTML = "Gerenciar<br>Chamados"; }
+                if(l) { 
+                    l.querySelector('a').href = "GerenciarChamados.html"; 
+                    l.querySelector('.text').innerHTML = "Gerenciar<br>Chamados"; 
+                }
             } 
+            // ==========================================================
+            
         } catch (e) {}
 
         // --- Elementos ---
