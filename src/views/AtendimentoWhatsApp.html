@@ -241,9 +241,40 @@
         let contactNames = {};
 
         const socket = io(); 
+        
+        // ====================================================
+        // ======== (NOVO) LÓGICA DE PERSISTÊNCIA (localStorage) ========
+        // ====================================================
+
+        function saveConversas() {
+            try {
+                localStorage.setItem('wa_conversas', JSON.stringify(conversas));
+                localStorage.setItem('wa_contactNames', JSON.stringify(contactNames));
+            } catch (e) {
+                console.error("Falha ao salvar conversas no localStorage:", e);
+            }
+        }
+
+        function loadConversas() {
+            try {
+                const savedConversas = localStorage.getItem('wa_conversas');
+                const savedNames = localStorage.getItem('wa_contactNames');
+                if (savedConversas) conversas = JSON.parse(savedConversas);
+                if (savedNames) contactNames = JSON.parse(savedNames);
+            } catch (e) {
+                console.warn("Nenhum histórico de conversas encontrado ou JSON corrompido.");
+                conversas = {};
+                contactNames = {};
+            }
+        }
+
+        // ====================================================
+        // ======== FIM LÓGICA DE PERSISTÊNCIA ========
+        // ====================================================
 
         socket.on('connect', () => {
             console.log("✅ Socket conectado!");
+            loadConversas(); // <--- CARREGA OS DADOS AO CONECTAR
             verificarStatusInicial();
         });
 
@@ -287,7 +318,10 @@
                     const unread = (chat.unreadCount > 0 || chat.unread === true);
 
                     if (numero) {
-                        if (!conversas[numero]) conversas[numero] = [];
+                        if (!conversas[numero]) {
+                             // Se a conversa for nova, inicializa. Se for antiga, mantém o que veio do loadConversas
+                             if(!conversas[numero]) conversas[numero] = []; 
+                        }
                         contactNames[numero] = nome;
                         updateContactList(numero, nome, ultimaMensagem, unread);
                     }
@@ -365,6 +399,8 @@
                     time: new Date(), 
                     name: isFromMe ? "Eu" : displayName 
                 });
+
+                saveConversas(); // <--- ADICIONADO AQUI: Salva a nova mensagem
 
                 const previewMsg = isFromMe ? `Você: ${text}` : text;
                 updateContactList(chatId, displayName, previewMsg, !isFromMe);
@@ -526,15 +562,25 @@
             if (!conversas[activeNumber]) conversas[activeNumber] = [];
             conversas[activeNumber].push({ id: tempId, fromMe: true, text, time: new Date() });
             
+            saveConversas(); // <--- ADICIONADO AQUI: Salva a mensagem enviada
+
             const displayName = contactNames[activeNumber] || activeNumber;
             updateContactList(activeNumber, displayName, `Você: ${text}`, false);
 
             chatInput.value = '';
             
             try {
+                // Obter o nome do agente para que o backend possa formatar a mensagem
+                const userData = JSON.parse(localStorage.getItem("userData"));
+                const nomeAgente = userData?.data?.nomeFuncionario || "Atendente";
+
                 await fetch('/api/whatsapp/send', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ numero: activeNumber, mensagem: text })
+                    body: JSON.stringify({ 
+                        numero: activeNumber, 
+                        mensagem: text,
+                        nomeAgenteTemporario: nomeAgente // <--- ADICIONADO AQUI
+                    })
                 });
             } catch (e) { 
                 console.error(e); 
