@@ -243,11 +243,14 @@
         const socket = io(); 
         
         // ====================================================
-        // ======== (NOVO) LÓGICA DE PERSISTÊNCIA (localStorage) ========
+        // ======== LÓGICA DE PERSISTÊNCIA (localStorage) ========
         // ====================================================
 
         function saveConversas() {
             try {
+                // Salva o chat ativo
+                localStorage.setItem('wa_activeNumber', activeNumber);
+                // Salva conversas e nomes
                 localStorage.setItem('wa_conversas', JSON.stringify(conversas));
                 localStorage.setItem('wa_contactNames', JSON.stringify(contactNames));
             } catch (e) {
@@ -257,6 +260,9 @@
 
         function loadConversas() {
             try {
+                // Carrega o chat ativo
+                activeNumber = localStorage.getItem('wa_activeNumber');
+
                 const savedConversas = localStorage.getItem('wa_conversas');
                 const savedNames = localStorage.getItem('wa_contactNames');
                 if (savedConversas) conversas = JSON.parse(savedConversas);
@@ -265,6 +271,7 @@
                 console.warn("Nenhum histórico de conversas encontrado ou JSON corrompido.");
                 conversas = {};
                 contactNames = {};
+                activeNumber = null;
             }
         }
 
@@ -288,7 +295,8 @@
 
                 if (state === 'open') {
                     setConnectedState();
-                    carregarConversas();
+                    // Carregar conversas e, se houver um chat ativo salvo, reabri-lo
+                    carregarConversas(true); 
                 } else {
                     showScreen('welcome');
                     statusText.textContent = "Desconectado"; 
@@ -297,8 +305,9 @@
                 }
             } catch (e) { console.error(e); }
         }
-
-        async function carregarConversas() {
+        
+        // ATUALIZADA: Adiciona flag para reabrir chat
+        async function carregarConversas(reopenActiveChat = false) {
             if (filaAtendimento.children.length <= 1) {
                 loadingFila.style.display = 'block';
             }
@@ -319,7 +328,6 @@
 
                     if (numero) {
                         if (!conversas[numero]) {
-                             // Se a conversa for nova, inicializa. Se for antiga, mantém o que veio do loadConversas
                              if(!conversas[numero]) conversas[numero] = []; 
                         }
                         contactNames[numero] = nome;
@@ -328,6 +336,12 @@
                 });
                 
                 atualizarContadorFila();
+                
+                // NOVO: Reabre o chat ativo se a flag estiver ligada
+                if(reopenActiveChat && activeNumber) {
+                    openChat(activeNumber);
+                }
+
             } catch (e) {
                 console.error("Erro ao carregar chats:", e);
             } finally {
@@ -400,7 +414,7 @@
                     name: isFromMe ? "Eu" : displayName 
                 });
 
-                saveConversas(); // <--- ADICIONADO AQUI: Salva a nova mensagem
+                saveConversas(); // <--- Salva a nova mensagem
 
                 const previewMsg = isFromMe ? `Você: ${text}` : text;
                 updateContactList(chatId, displayName, previewMsg, !isFromMe);
@@ -499,6 +513,7 @@
 
         function openChat(number) {
             activeNumber = number;
+            saveConversas(); // Salva o novo chat ativo
             showScreen('chat');
             
             document.querySelectorAll('.contact-item').forEach(el => el.classList.remove('active'));
@@ -523,7 +538,8 @@
             if (msgs.length === 0) {
                  messagesContainer.innerHTML = '<div style="text-align:center; margin-top:20px; color:#999;">Sem histórico local.<br>Novas mensagens aparecerão aqui.</div>';
             } else {
-                msgs.forEach(m => appendMessageToView(m.text, m.fromMe, m.name, m.time, m.id));
+                // Ao carregar do localStorage, timeObj é string, precisa converter para Date
+                msgs.forEach(m => appendMessageToView(m.text, m.fromMe, m.name, new Date(m.time), m.id));
             }
             
             chatInput.disabled = false; chatInput.focus();
@@ -556,13 +572,14 @@
             
             // Cria ID temporário para a mensagem enviada
             const tempId = 'sent-' + Date.now();
+            const now = new Date();
 
-            appendMessageToView(text, true, null, new Date(), tempId);
+            appendMessageToView(text, true, null, now, tempId);
             
             if (!conversas[activeNumber]) conversas[activeNumber] = [];
-            conversas[activeNumber].push({ id: tempId, fromMe: true, text, time: new Date() });
+            conversas[activeNumber].push({ id: tempId, fromMe: true, text, time: now });
             
-            saveConversas(); // <--- ADICIONADO AQUI: Salva a mensagem enviada
+            saveConversas(); // Salva a mensagem enviada
 
             const displayName = contactNames[activeNumber] || activeNumber;
             updateContactList(activeNumber, displayName, `Você: ${text}`, false);
@@ -607,6 +624,6 @@
             if (screenName === 'chat') activeChatScreen.style.display = 'flex';
         }
     });
-    </script>
+</script>
 </body>
 </html>
