@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Atendimento WhatsApp - Portal</title>
     <script>
+        // --- PROTETOR DE PÁGINA ---
         const userDataString = localStorage.getItem("userData");
         if (!userDataString) window.location.replace("Login.html");
         try {
@@ -17,6 +18,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <style>
+        /* --- ESTILOS (Mantidos) --- */
         :root {
             --wa-bg-color: #efeae2; --wa-header-bg: #f0f2f5; --wa-sidebar-bg: #ffffff;
             --wa-border: #e9edef; --wa-msg-in: #ffffff; --wa-msg-out: #d9fdd3;
@@ -91,32 +93,12 @@
         .status-dot.offline { background-color: #ea0038; }
         .btn-conectar { background-color: var(--wa-primary); color: white; border: none; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; font-weight: bold; }
 
-        /* === NOVO: ESTILO DO PAINEL DE ATENDIMENTO (BOTÃO ASSUMIR) === */
+        /* === PAINEL DE ATENDIMENTO === */
         #painelAtendimento {
-            display: none; /* Começa escondido */
-            background-color: #fff3cd;
-            color: #856404;
-            padding: 15px;
-            text-align: center;
-            border-bottom: 1px solid #ffeeba;
-            animation: fadeIn 0.5s;
-            width: 100%;
+            display: none; background-color: #fff3cd; color: #856404; padding: 15px; text-align: center; border-bottom: 1px solid #ffeeba; animation: fadeIn 0.5s; width: 100%;
         }
-        
         @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-        
-        .btn-assumir {
-            background-color: #28a745;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-left: 10px;
-            text-transform: uppercase;
-            font-size: 0.85rem;
-        }
+        .btn-assumir { background-color: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; margin-left: 10px; text-transform: uppercase; font-size: 0.85rem; }
         .btn-assumir:hover { background-color: #218838; }
     </style>
 </head>
@@ -142,7 +124,7 @@
                     <li><a href="Imprimir.html" title="Impressão de Preços"><span class="icon">🖨️</span><span class="text">Imprimir</span></a></li>
                     <li id="menu-link-chamado"><a href="GerenciarChamados.html" title="Gerenciar Chamados"><span class="icon">✔️</span><span class="text">Gerenciar Chamados</span></a></li>
                     <li><a href="Chatbot.html" title="Chatbot"><span class="icon">🤖</span><span class="text">Chatbot</span></a></li>
-<li><a href="Funcionarios.html" title="Funcionários"><span class="icon">💼</span><span class="text">Funcionários</span></a></li>
+                    <li><a href="Funcionarios.html" title="Funcionários"><span class="icon">💼</span><span class="text">Funcionários</span></a></li>
                     <li><a href="Categorias.html" title="Categorias"><span class="icon">🏷️</span><span class="text">Categorias</span></a></li>
                 </ul>
             </nav>
@@ -179,7 +161,6 @@
                 </div>
 
                 <div id="activeChatScreen" style="display:none; width:100%; height:100%; flex-direction:column;">
-                    
                     <div id="painelAtendimento">
                         <span>🔔 <b>Atenção:</b> Este cliente entrou na fila de T.I.</span>
                         <button id="btnAssumirChamado" class="btn-assumir">✅ ASSUMIR ATENDIMENTO</button>
@@ -199,7 +180,7 @@
 
     <script type="module">
     document.addEventListener('DOMContentLoaded', () => {
-        // --- Funções de Sistema (Logout, Tema) ---
+        // --- Helper functions (Logout, Theme) ---
         function fazerLogout() { localStorage.removeItem("userData"); window.location.href = "Login.html"; }
         document.getElementById("logoutButton").addEventListener('click', fazerLogout);
 
@@ -219,7 +200,7 @@
             } 
         } catch (e) {}
 
-        // --- Elementos ---
+        // --- UI Elements ---
         const qrScreen = document.getElementById('qrCodeScreen');
         const qrContainer = document.getElementById('qrCodeContainer');
         const welcomeScreen = document.getElementById('welcomeScreen');
@@ -233,317 +214,263 @@
         const chatInput = document.getElementById('chatInput');
         const sendButton = document.getElementById('sendButton');
         const filaHeader = document.getElementById('filaHeader');
-        const painelAtendimento = document.getElementById('painelAtendimento'); // Novo
+        const painelAtendimento = document.getElementById('painelAtendimento');
 
-        // --- Estado ---
-        let activeNumber = null;
-        let conversas = {}; 
-        let contactNames = {};
-        let listaChatsParaExibir = []; // Cache da lista lateral
+        // --- APP STATE (ESTADO DO APLICATIVO) ---
+        // Centralizamos tudo aqui para salvar/carregar de uma vez
+        let AppState = {
+            activeNumber: null,
+            conversas: {},      // Histórico de msgs: { numero: [msgs] }
+            contactNames: {},   // Nomes salvos: { numero: "Nome" }
+            chatList: []        // Lista da sidebar: [ {numero, nome, ultimaMensagem...} ]
+        };
 
         const socket = io(); 
-        
-        // ====================================================
-        // ======== LÓGICA DE PERSISTÊNCIA (localStorage) ========
-        // ====================================================
 
-        function saveConversas() {
+        // --- PERSISTÊNCIA (EXTRADA E ADAPTADA DA LÓGICA DE CHATBOT) ---
+        function saveState() {
             try {
-                localStorage.setItem('wa_activeNumber', activeNumber);
-                localStorage.setItem('wa_conversas', JSON.stringify(conversas));
-                localStorage.setItem('wa_contactNames', JSON.stringify(contactNames));
-                localStorage.setItem('wa_chats_lateral', JSON.stringify(listaChatsParaExibir));
-            } catch (e) { console.error(e); }
+                localStorage.setItem('wa_app_state', JSON.stringify(AppState));
+            } catch (e) { console.error("Erro ao salvar estado:", e); }
         }
 
-        function loadConversas() {
+        function loadState() {
             try {
-                activeNumber = localStorage.getItem('wa_activeNumber');
-                const sConversas = localStorage.getItem('wa_conversas');
-                const sNames = localStorage.getItem('wa_contactNames');
-                const sChats = localStorage.getItem('wa_chats_lateral');
-                
-                if (sConversas) conversas = JSON.parse(sConversas);
-                if (sNames) contactNames = JSON.parse(sNames);
-                if (sChats) listaChatsParaExibir = JSON.parse(sChats);
-            } catch (e) {
-                console.warn("Erro ao carregar histórico:", e);
-                conversas = {}; contactNames = {}; activeNumber = null;
-            }
-        }
-
-        // ====================================================
-        // ======== INICIALIZAÇÃO ========
-        // ====================================================
-
-        // Carrega dados IMEDIATAMENTE ao abrir a página
-        loadConversas(); 
-        
-        // Se tiver lista salva, exibe IMEDIATAMENTE (sem esperar socket)
-        if (listaChatsParaExibir.length > 0) {
-            loadingFila.style.display = 'none';
-            listaChatsParaExibir.forEach(chat => {
-                // USA O NOME SALVO SE HOUVER
-                const savedName = contactNames[chat.numero] || chat.nome || chat.numero;
-                updateContactList(chat.numero, savedName, chat.ultimaMensagem, chat.unreadCount > 0);
-            });
-            atualizarContadorFila();
-        }
-
-        socket.on('connect', () => {
-            console.log("✅ Socket conectado!");
-            verificarStatusInicial(); // Busca atualizações do servidor
-        });
-
-        // --- Lógica Principal ---
-
-        async function verificarStatusInicial() {
-            try {
-                const resp = await fetch('/api/whatsapp/status');
-                const json = await resp.json();
-                const state = json.data?.instance?.state || json.data?.state || json.instance?.state;
-
-                if (state === 'open') {
-                    setConnectedState();
-                    carregarConversas(true); // Busca chats atualizados
-                } else {
-                    showScreen('welcome');
-                    statusText.textContent = "Desconectado"; 
-                    statusDot.className = "status-dot offline"; 
-                    btnConectar.style.display = 'block';
+                const saved = localStorage.getItem('wa_app_state');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    // Mescla para evitar perder chaves se a estrutura mudar
+                    AppState = { ...AppState, ...parsed };
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) { console.warn("Estado inválido, resetando."); }
         }
-        
-        // ATUALIZADA: Lógica blindada para nomes
-        async function carregarConversas(reopenActiveChat = false) {
-            // Se a lista estava vazia, mostra loading. Se já tinha cache, mantém o cache visível.
-            if (listaChatsParaExibir.length === 0) loadingFila.style.display = 'block';
+
+        // --- RENDERIZAÇÃO ---
+        function renderSidebar() {
+            filaAtendimento.innerHTML = ''; // Limpa visualmente
+            AppState.chatList.forEach(chat => {
+                // Garante que usamos o nome salvo no contactNames, se houver
+                const displayName = AppState.contactNames[chat.numero] || chat.nome || chat.numero;
+                createSidebarItem(chat.numero, displayName, chat.ultimaMensagem, chat.unreadCount > 0, chat.pending);
+            });
             
-            try {
-                const resp = await fetch('/api/whatsapp/chats');
-                const json = await resp.json();
-                
-                let listaDeChats = [];
-                if (Array.isArray(json)) listaDeChats = json;
-                else if (json.success && Array.isArray(json.data)) listaDeChats = json.data;
-                else if (Array.isArray(json.data)) listaDeChats = json.data;
-
-                // Atualiza o cache da lista
-                listaChatsParaExibir = listaDeChats.map(chat => {
-                    const numero = chat.numero || chat.id || chat.key?.remoteJid;
-                    // Nome que veio do servidor (pode ser número ou nome real)
-                    let nomeServidor = chat.nome || chat.pushName || chat.name || chat.verifiedName || "";
-                    
-                    // Se o servidor não mandou nada, usa o número
-                    if(!nomeServidor) nomeServidor = numero.split('@')[0];
-
-                    // === LÓGICA DE PROTEÇÃO DE NOME ===
-                    const nomeSalvoLocalmente = contactNames[numero];
-                    
-                    // Função auxiliar para checar se é "só número"
-                    const isApenasNumero = (str) => /^[0-9@.:\-\+]+$/.test(str);
-
-                    if (nomeSalvoLocalmente && !isApenasNumero(nomeSalvoLocalmente)) {
-                        // Já temos um nome bom (ex: "fran"). MANTÉM O NOSSO!
-                        // Ignora o que veio do servidor se o nosso for melhor.
-                    } else {
-                        // Não temos nome bom salvo. Vamos ver o que veio do servidor.
-                        if (nomeServidor && !isApenasNumero(nomeServidor)) {
-                            // O servidor mandou um nome bom! Salva ele.
-                            contactNames[numero] = nomeServidor;
-                        } else {
-                            // Servidor também mandou número. Se não temos nada, salva o número.
-                            if (!contactNames[numero]) contactNames[numero] = nomeServidor;
-                        }
-                    }
-                    
-                    return { 
-                        numero: numero,
-                        nome: contactNames[numero], // Salva no cache da lista o nome FINAL decidido acima
-                        ultimaMensagem: chat.ultimaMensagem || chat.conversation || chat.lastMessage?.conversation || "...",
-                        unreadCount: chat.unreadCount || (chat.unread === true ? 1 : 0)
-                    };
-                }); 
-                
-                // Renderiza a lista atualizada
-                filaAtendimento.innerHTML = ''; // Limpa tudo
-                listaChatsParaExibir.forEach(chat => {
-                    // Inicializa histórico vazio se precisar
-                    if (!conversas[chat.numero]) conversas[chat.numero] = []; 
-                    
-                    // Exibe usando o nome que garantimos estar em contactNames
-                    updateContactList(chat.numero, contactNames[chat.numero], chat.ultimaMensagem, chat.unreadCount > 0);
-                });
-                
-                saveConversas(); // Salva tudo atualizado no localStorage
-                atualizarContadorFila();
+            // Se a lista estiver vazia, mostra loading ou vazio
+            if (AppState.chatList.length === 0) {
+                // loadingFila.style.display = 'block'; // Opcional
+            } else {
                 loadingFila.style.display = 'none';
-                
-                if(reopenActiveChat && activeNumber) openChat(activeNumber);
-
-            } catch (e) {
-                console.error("Erro ao buscar chats:", e);
-                loadingFila.style.display = 'none';
-            } 
-        }
-
-        function atualizarContadorFila() {
-            const qtd = document.querySelectorAll('.contact-item').length;
+            }
+            
+            const qtd = AppState.chatList.length;
             filaHeader.textContent = `Fila de Atendimento (${qtd})`;
         }
 
-        // --- Socket Events ---
+        function createSidebarItem(number, name, lastMsg, unread, isPending) {
+            const initial = name ? name.charAt(0).toUpperCase() : '#';
+            const div = document.createElement('div');
+            div.className = `contact-item ${AppState.activeNumber === number ? 'active' : ''}`;
+            div.dataset.number = number;
+            
+            if (isPending) {
+                div.style.borderLeft = "5px solid #ffc107";
+                div.dataset.pending = "true";
+            }
 
-        socket.on('qrCodeRecebido', (data) => { if (data.qr) exibirQRCode(data.qr); });
-        socket.on('statusConexao', (data) => {
-            if (data.status === 'open') { setConnectedState(); carregarConversas(true); }
-            else if (data.status === 'connecting') { statusText.textContent = "Conectando..."; statusDot.className = "status-dot offline"; }
-            else { statusText.textContent = "Desconectado"; statusDot.className = "status-dot offline"; btnConectar.style.display = 'block'; }
+            div.innerHTML = `
+                <div class="avatar-placeholder">${initial}</div>
+                <div class="contact-info">
+                    <div class="contact-name">${name}</div>
+                    <div class="contact-last-msg">${lastMsg}</div>
+                </div>
+                ${unread && AppState.activeNumber !== number ? '<div class="badge-unread">!</div>' : ''}
+            `;
+            div.addEventListener('click', () => openChat(number));
+            filaAtendimento.appendChild(div);
+        }
+
+        // --- INICIALIZAÇÃO ---
+        loadState();      // 1. Carrega do localStorage
+        renderSidebar();  // 2. Renderiza imediatamente o que tem salvo (nomes corretos)
+        
+        if (AppState.activeNumber) {
+            openChat(AppState.activeNumber); // 3. Reabre chat ativo
+        } else {
+            showScreen('welcome');
+        }
+
+        socket.on('connect', () => {
+            console.log("✅ Conectado ao servidor.");
+            syncChatsWithServer(); // 4. Busca atualizações em segundo plano
+        });
+
+        // --- SINCRONIZAÇÃO ---
+        async function syncChatsWithServer() {
+            try {
+                const rStatus = await fetch('/api/whatsapp/status');
+                const statusJson = await rStatus.json();
+                const state = statusJson.data?.instance?.state || statusJson.data?.state;
+
+                if (state !== 'open') {
+                    statusText.textContent = "Desconectado";
+                    statusDot.className = "status-dot offline";
+                    btnConectar.style.display = 'block';
+                    if(!AppState.activeNumber) showScreen('welcome');
+                    return;
+                }
+
+                setConnectedState();
+
+                // Busca chats do servidor
+                const rChats = await fetch('/api/whatsapp/chats');
+                const serverChats = await rChats.json();
+                let listaServidor = [];
+                
+                if (Array.isArray(serverChats)) listaServidor = serverChats;
+                else if (serverChats.data && Array.isArray(serverChats.data)) listaServidor = serverChats.data;
+
+                // Mescla Inteligente: Servidor + Local
+                // Se o servidor trouxer só número, mas a gente tem nome, MANTÉM O NOME.
+                
+                const novaLista = listaServidor.map(sc => {
+                    const num = sc.numero || sc.id || sc.key?.remoteJid;
+                    let nomeServidor = sc.nome || sc.pushName || sc.name || sc.verifiedName;
+                    
+                    // Validação: Se o nome do servidor for vazio ou igual ao número
+                    const isNum = (s) => !s || s.includes('@') || /^[0-9]+$/.test(s.replace(/\D/g,''));
+                    if (isNum(nomeServidor)) nomeServidor = null;
+
+                    // Recupera nome salvo
+                    const nomeSalvo = AppState.contactNames[num];
+
+                    // Lógica de Prioridade: Salvo > Servidor > Número
+                    let nomeFinal = nomeSalvo;
+                    if (!nomeFinal && nomeServidor) {
+                        nomeFinal = nomeServidor;
+                        AppState.contactNames[num] = nomeServidor; // Salva o novo nome descoberto
+                    }
+                    if (!nomeFinal) nomeFinal = num.split('@')[0];
+
+                    return {
+                        numero: num,
+                        nome: nomeFinal,
+                        ultimaMensagem: sc.ultimaMensagem || sc.conversation || "...",
+                        unreadCount: sc.unreadCount,
+                        pending: false // Reset pending no sync full (opcional)
+                    };
+                });
+
+                // Atualiza estado
+                AppState.chatList = novaLista;
+                saveState();     // Salva nomes atualizados
+                renderSidebar(); // Re-renderiza com dados mesclados
+
+            } catch (e) { console.error("Erro no sync:", e); }
+        }
+
+        // --- SOCKET EVENTS (ATUALIZAÇÃO EM TEMPO REAL) ---
+        
+        socket.on('novaMensagemWhatsapp', (data) => {
+            const { chatId, id, texto, fromMe, nome } = data;
+            
+            if (id && document.getElementById(`msg-${id}`)) return; // Duplicata visual
+
+            // 1. Atualiza Histórico
+            if (!AppState.conversas[chatId]) AppState.conversas[chatId] = [];
+            AppState.conversas[chatId].push({
+                id, fromMe, text: texto, time: new Date(),
+                name: fromMe ? "Eu" : (AppState.contactNames[chatId] || nome || chatId)
+            });
+
+            // 2. Atualiza Nome (Se vier melhor)
+            if (!fromMe && nome && nome.length > (AppState.contactNames[chatId] || "").length) {
+                AppState.contactNames[chatId] = nome;
+            }
+            const displayName = AppState.contactNames[chatId] || chatId.split('@')[0];
+
+            // 3. Atualiza Lista Lateral (Move pro topo)
+            const existingIndex = AppState.chatList.findIndex(c => c.numero === chatId);
+            if (existingIndex > -1) AppState.chatList.splice(existingIndex, 1);
+            
+            AppState.chatList.unshift({
+                numero: chatId,
+                nome: displayName,
+                ultimaMensagem: fromMe ? `Você: ${texto}` : texto,
+                unreadCount: fromMe ? 0 : 1,
+                pending: false 
+            });
+
+            saveState();     // SALVA TUDO
+            renderSidebar(); // ATUALIZA TELA
+
+            // 4. Se for chat ativo, mostra mensagem
+            if (AppState.activeNumber === chatId) {
+                appendMessageToView(texto, fromMe, fromMe ? null : displayName, new Date(), id);
+                // Zera contador visualmente
+                const item = document.querySelector(`.contact-item[data-number="${chatId}"] .badge-unread`);
+                if(item) item.remove();
+            }
         });
 
         socket.on('notificacaoChamado', (data) => {
-            if (activeNumber === data.chatId) painelAtendimento.style.display = 'block';
-            const item = document.querySelector(`.contact-item[data-number="${data.chatId}"]`);
-            if (item) {
-                item.style.borderLeft = "5px solid #ffc107";
-                item.dataset.pending = "true";
-                const lastMsg = item.querySelector('.contact-last-msg');
-                if(lastMsg) lastMsg.innerHTML = "<b>🔔 Aguardando Atendimento...</b>";
-            }
-        });
-
-        socket.on('novaMensagemWhatsapp', (data) => {
-            const chatId = data.chatId; const msgId = data.id; 
-            const text = data.texto; const isFromMe = data.fromMe;
-
-            if (msgId && document.getElementById(`msg-${msgId}`)) return;
-            if (!conversas[chatId]) conversas[chatId] = [];
-            
-            const existe = conversas[chatId].some(m => m.text === text && m.time > new Date(Date.now() - 5000));
-            
-            if (!existe) {
-                // ATUALIZA O NOME SE VIER UM MELHOR NO SOCKET
-                let displayName = contactNames[chatId];
-                if (!isFromMe && data.nome && data.nome.length > (displayName || "").length) {
-                    contactNames[chatId] = data.nome;
-                    displayName = data.nome;
-                }
-                if (!displayName) displayName = chatId.split('@')[0];
-
-                conversas[chatId].push({ id: msgId, fromMe: isFromMe, text: text, time: new Date(), name: isFromMe ? "Eu" : displayName });
-                saveConversas();
-
-                const previewMsg = isFromMe ? `Você: ${text}` : text;
-                
-                // Atualiza a lista lateral e move pro topo
-                // Remove o antigo para reinserir no topo
-                const oldItem = document.querySelector(`.contact-item[data-number="${chatId}"]`);
-                if(oldItem) oldItem.remove();
-                
-                updateContactList(chatId, displayName, previewMsg, !isFromMe);
-
-                if (activeNumber === chatId) {
-                    appendMessageToView(text, isFromMe, isFromMe ? null : displayName, new Date(), msgId);
-                    markAsRead(chatId);
-                }
-            }
-        });
-
-        document.getElementById('btnAssumirChamado').addEventListener('click', async () => {
-            if (!activeNumber) return;
-            const userData = JSON.parse(localStorage.getItem("userData"));
-            const nomeAgente = userData?.data?.nomeFuncionario || "Suporte T.I";
-            try {
-                await fetch('/api/whatsapp/atender', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ numero: activeNumber, nomeAgente: nomeAgente })
+            // Marca flag visual no estado
+            const chat = AppState.chatList.find(c => c.numero === data.chatId);
+            if(chat) { 
+                chat.pending = true; 
+                chat.ultimaMensagem = "🔔 Aguardando Atendimento...";
+            } else {
+                // Se não existe, cria
+                AppState.chatList.unshift({
+                    numero: data.chatId, nome: data.nome, ultimaMensagem: "🔔 Aguardando Atendimento...", unreadCount: 1, pending: true
                 });
-                painelAtendimento.style.display = 'none';
-                const item = document.querySelector(`.contact-item[data-number="${activeNumber}"]`);
-                if (item) { item.style.borderLeft = "none"; delete item.dataset.pending; }
-                appendMessageToView(`✅ Você assumiu este chamado. O Bot foi pausado.`, true, "Sistema", new Date());
-            } catch (e) { alert("Erro ao assumir."); }
+                AppState.contactNames[data.chatId] = data.nome;
+            }
+            saveState();
+            renderSidebar();
+            
+            if (AppState.activeNumber === data.chatId) painelAtendimento.style.display = 'block';
         });
 
-        // --- UI Helpers ---
-
-        function setConnectedState() {
-            statusText.textContent = "Online"; statusDot.className = "status-dot online";
-            btnConectar.style.display = 'none';
-            if (!activeNumber) showScreen('welcome');
-        }
-
-        function exibirQRCode(base64) {
-            qrContainer.innerHTML = `<img src="${base64}" alt="QR Code">`;
-            statusText.textContent = "Escaneie o QR Code";
-            showScreen('qr');
-        }
-
-        function updateContactList(number, name, lastMsg, unread = false) {
-            // Se já existe (por exemplo, atualizando msg), remove para por no topo
-            // A função carregarConversas limpa tudo antes, então ok.
-            // A função novaMensagem remove antes de chamar.
-            
-            // Verifica de novo se já existe na DOM para evitar duplicidade
-            const existing = document.querySelector(`.contact-item[data-number="${number}"]`);
-            if(existing) existing.remove();
-
-            // Usa SEMPRE o nome do contactNames se existir
-            const finalName = contactNames[number] || name || number;
-            const initial = finalName.charAt(0).toUpperCase();
-            
-            let item = document.createElement('div');
-            item.className = `contact-item ${activeNumber === number ? 'active' : ''}`;
-            item.dataset.number = number;
-            
-            // Verifica flag de pendente no objeto da lista cacheada? 
-            // Simplificação: se for novo, não tem flag. Se for atualização via socket, socket põe flag.
-            
-            item.innerHTML = `
-                <div class="avatar-placeholder">${initial}</div>
-                <div class="contact-info">
-                    <div class="contact-name">${finalName}</div>
-                    <div class="contact-last-msg">${lastMsg}</div>
-                </div>
-                ${unread && activeNumber !== number ? '<div class="badge-unread">!</div>' : ''}
-            `;
-
-            item.addEventListener('click', () => openChat(number));
-            filaAtendimento.prepend(item); // Adiciona no topo
-            atualizarContadorFila();
-        }
+        // --- AÇÕES DE UI ---
 
         function openChat(number) {
-            activeNumber = number;
-            saveConversas();
+            AppState.activeNumber = number;
+            // Zera unread no estado
+            const chat = AppState.chatList.find(c => c.numero === number);
+            if(chat) chat.unreadCount = 0;
+            
+            saveState();
+            renderSidebar(); // Para remover badge
             showScreen('chat');
-            
-            document.querySelectorAll('.contact-item').forEach(el => el.classList.remove('active'));
-            const item = document.querySelector(`.contact-item[data-number="${number}"]`);
-            
-            painelAtendimento.style.display = 'none';
-            if(item) { 
-                item.classList.add('active'); 
-                markAsRead(number);
-                if (item.dataset.pending === "true" || item.style.borderLeft.includes("ffc107")) {
-                    painelAtendimento.style.display = 'block';
-                }
-            }
-            
+
+            // Renderiza Mensagens
             messagesContainer.innerHTML = '';
-            const msgs = conversas[number] || [];
-            if (msgs.length === 0) {
-                 messagesContainer.innerHTML = '<div style="text-align:center; margin-top:20px; color:#999;">Sem histórico local.<br>Novas mensagens aparecerão aqui.</div>';
-            } else {
-                msgs.forEach(m => appendMessageToView(m.text, m.fromMe, m.name, new Date(m.time), m.id));
-            }
+            const msgs = AppState.conversas[number] || [];
+            if (msgs.length === 0) messagesContainer.innerHTML = '<div style="text-align:center;margin-top:20px;color:#999;">Sem histórico local.</div>';
+            else msgs.forEach(m => appendMessageToView(m.text, m.fromMe, m.name, new Date(m.time), m.id));
+            
+            // Painel de Assumir
+            painelAtendimento.style.display = (chat && chat.pending) ? 'block' : 'none';
+            
             chatInput.disabled = false; chatInput.focus();
         }
 
-        function markAsRead(number) {
-            const item = document.querySelector(`.contact-item[data-number="${number}"]`);
-            if(item) { const b = item.querySelector('.badge-unread'); if(b) b.remove(); }
+        async function sendMessage() {
+            const text = chatInput.value.trim();
+            if (!text || !AppState.activeNumber) return;
+            const tempId = 'sent-' + Date.now();
+            
+            // O socket vai devolver o evento de mensagem enviada (fromMe=true) e atualizará o estado lá.
+            // Mas para feedback instantâneo:
+            appendMessageToView(text, true, null, new Date(), tempId);
+            chatInput.value = '';
+
+            try {
+                const user = JSON.parse(localStorage.getItem("userData"));
+                await fetch('/api/whatsapp/send', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ numero: AppState.activeNumber, mensagem: text, nomeAgenteTemporario: user?.data?.nomeFuncionario })
+                });
+            } catch (e) { console.error(e); alert("Erro ao enviar."); }
         }
 
         function appendMessageToView(text, fromMe, senderName, timeObj, msgId) {
@@ -558,51 +485,45 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
-        async function sendMessage() {
-            const text = chatInput.value.trim();
-            if (!text || !activeNumber) return;
-            const tempId = 'sent-' + Date.now();
-            const now = new Date();
-            appendMessageToView(text, true, null, now, tempId);
-            
-            if (!conversas[activeNumber]) conversas[activeNumber] = [];
-            conversas[activeNumber].push({ id: tempId, fromMe: true, text, time: now });
-            saveConversas();
-
-            // Atualiza lateral e move pro topo
-            const oldItem = document.querySelector(`.contact-item[data-number="${activeNumber}"]`);
-            if(oldItem) oldItem.remove();
-            updateContactList(activeNumber, contactNames[activeNumber] || activeNumber, `Você: ${text}`, false);
-
-            chatInput.value = '';
+        document.getElementById('btnAssumirChamado').addEventListener('click', async () => {
+            if (!AppState.activeNumber) return;
             try {
-                const userData = JSON.parse(localStorage.getItem("userData"));
-                const nomeAgente = userData?.data?.nomeFuncionario || "Atendente";
-                await fetch('/api/whatsapp/send', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ numero: activeNumber, mensagem: text, nomeAgenteTemporario: nomeAgente })
+                const user = JSON.parse(localStorage.getItem("userData"));
+                await fetch('/api/whatsapp/atender', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ numero: AppState.activeNumber, nomeAgente: user?.data?.nomeFuncionario || "Suporte" })
                 });
-            } catch (e) { console.error(e); alert("Erro ao enviar."); }
-        }
-
-        btnConectar.addEventListener('click', async () => {
-            statusText.textContent = "Solicitando..."; showScreen('qr');
-            try {
-                const r = await fetch('/api/whatsapp/connect');
-                const d = await r.json();
-                if(d.data?.qrcode?.base64 || d.data?.base64) exibirQRCode(d.data?.qrcode?.base64 || d.data?.base64);
-            } catch (e) { qrContainer.innerHTML = '<p style="color:red">Erro.</p>'; }
+                
+                // Atualiza estado local
+                const chat = AppState.chatList.find(c => c.numero === AppState.activeNumber);
+                if(chat) chat.pending = false;
+                painelAtendimento.style.display = 'none';
+                saveState();
+                renderSidebar();
+                appendMessageToView("✅ Você assumiu este chamado.", true, "Sistema", new Date());
+            } catch (e) { alert("Erro ao assumir."); }
         });
 
-        sendButton.addEventListener('click', sendMessage);
-        chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
-
-        function showScreen(screenName) {
-            qrScreen.style.display = 'none'; welcomeScreen.style.display = 'none'; activeChatScreen.style.display = 'none';
-            if (screenName === 'qr') qrScreen.style.display = 'flex';
-            if (screenName === 'welcome') welcomeScreen.style.display = 'flex';
-            if (screenName === 'chat') activeChatScreen.style.display = 'flex';
+        // --- HELPER UI ---
+        function setConnectedState() {
+            statusText.textContent = "Online"; statusDot.className = "status-dot online";
+            btnConectar.style.display = 'none';
+            if (!AppState.activeNumber) showScreen('welcome');
         }
+        function showScreen(name) {
+            qrScreen.style.display = 'none'; welcomeScreen.style.display = 'none'; activeChatScreen.style.display = 'none';
+            if (name === 'qr') qrScreen.style.display = 'flex';
+            if (name === 'welcome') welcomeScreen.style.display = 'flex';
+            if (name === 'chat') activeChatScreen.style.display = 'flex';
+        }
+        function exibirQRCode(b64) { qrContainer.innerHTML = `<img src="${b64}">`; statusText.textContent="Escaneie"; showScreen('qr'); }
+        
+        btnConectar.addEventListener('click', async () => {
+            statusText.textContent = "Solicitando..."; showScreen('qr');
+            try { await fetch('/api/whatsapp/connect'); } catch(e){}
+        });
+        sendButton.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => { if(e.key==='Enter') sendMessage(); });
     });
     </script>
 </body>
