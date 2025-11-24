@@ -12,7 +12,7 @@
             const userPerfil = userData?.data?.perfil || userData?.perfil;
 
             // ==========================================================
-            // (MODIFICADO) CHECK DE PERMISSÃO EXPLÍCITO para AGENTE e ADMIN
+            // CHECK DE PERMISSÃO EXPLÍCITO para AGENTE e ADMIN
             // ==========================================================
             const allowedProfiles = ['AGENTE', 'ADMIN'];
             
@@ -385,7 +385,7 @@
             }
         });
 
-        // === SOCKET: NOVA MENSAGEM (COM PERSISTÊNCIA) ===
+        // === SOCKET: NOVA MENSAGEM (COM PERSISTÊNCIA E CORREÇÃO DE TIME) ===
         socket.on('novaMensagemWhatsapp', (data) => {
             const chatId = data.chatId; 
             const msgId = data.id; 
@@ -412,7 +412,7 @@
                     id: msgId, 
                     fromMe: isFromMe, 
                     text: text, 
-                    time: new Date(), 
+                    time: Date.now(), // CORRIGIDO: Salva como TIMESTAMP numérico
                     name: isFromMe ? "Eu" : displayName 
                 };
                 
@@ -427,6 +427,7 @@
                 updateContactList(chatId, displayName, previewMsg, !isFromMe);
 
                 if (activeNumber === chatId) {
+                    // new Date(timestamp) funciona perfeitamente
                     appendMessageToView(text, isFromMe, isFromMe ? null : displayName, new Date(novaMensagem.time), msgId);
                     markAsRead(chatId);
                 }
@@ -542,6 +543,7 @@
             if (msgs.length === 0) {
                  messagesContainer.innerHTML = '<div style="text-align:center; margin-top:20px; color:#999;">Sem histórico local.<br>Novas mensagens aparecerão aqui.</div>';
             } else {
+                // CORRIGIDO: new Date(m.time) agora recebe um timestamp numérico, o que é mais confiável.
                 msgs.forEach(m => appendMessageToView(m.text, m.fromMe, m.name, new Date(m.time), m.id));
             }
             
@@ -573,9 +575,9 @@
             if (!text || !activeNumber) return;
             
             const tempId = 'sent-' + Date.now();
-            const now = new Date();
+            const now = Date.now(); // CORRIGIDO: Salva como TIMESTAMP numérico
 
-            appendMessageToView(text, true, null, now, tempId);
+            appendMessageToView(text, true, null, new Date(now), tempId);
             
             // Adiciona e persiste a mensagem enviada
             if (!conversas[activeNumber]) conversas[activeNumber] = [];
@@ -588,9 +590,17 @@
             chatInput.value = '';
             
             try {
+                // Aqui você deve usar o nome do agente para enviar
+                const userData = getLocalData("userData");
+                const nomeAgente = userData?.data?.nomeFuncionario || "Suporte";
+
                 await fetch('/api/whatsapp/send', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ numero: activeNumber, mensagem: text })
+                    body: JSON.stringify({ 
+                        numero: activeNumber, 
+                        mensagem: text,
+                        nomeAgenteTemporario: nomeAgente // Se o atendimento ainda não foi assumido
+                    })
                 });
             } catch (e) { 
                 console.error(e); 
