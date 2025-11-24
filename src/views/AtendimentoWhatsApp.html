@@ -210,6 +210,26 @@
     <script src="js/globalNotification.js"></script>
 
     <script type="module">
+    // Função para buscar dados do localStorage de forma segura
+    const getLocalData = (key) => {
+        try {
+            const data = localStorage.getItem(key);
+            return data ? JSON.parse(data) : null;
+        } catch (e) {
+            console.error(`Erro ao buscar ${key} do localStorage:`, e);
+            return null;
+        }
+    };
+
+    // Função para salvar dados no localStorage
+    const setLocalData = (key, value) => {
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+        } catch (e) {
+            console.error(`Erro ao salvar ${key} no localStorage:`, e);
+        }
+    };
+
     document.addEventListener('DOMContentLoaded', () => {
         // --- Funções de Sistema (Logout, Tema) ---
         function fazerLogout() { localStorage.removeItem("userData"); window.location.href = "Login.html"; }
@@ -222,12 +242,12 @@
         loadTheme();
         
         try { 
-            const u = JSON.parse(localStorage.getItem("userData")); 
+            const u = getLocalData("userData"); 
             const d = document.getElementById('userNameDisplay'); 
             if (d && u?.data?.nomeFuncionario) d.textContent = `Olá, ${u.data.nomeFuncionario.split(' ')[0]}`; 
             
             // ==========================================================
-            // (MODIFICADO) CHECK DE PERMISSÃO CLARA para AGENTE e ADMIN
+            // CHECK DE PERMISSÃO CLARA para AGENTE e ADMIN
             // ==========================================================
             const userPerfil = u?.data?.perfil;
             if (userPerfil === 'AGENTE' || userPerfil === 'ADMIN') { 
@@ -255,12 +275,13 @@
         const chatInput = document.getElementById('chatInput');
         const sendButton = document.getElementById('sendButton');
         const filaHeader = document.getElementById('filaHeader');
-        const painelAtendimento = document.getElementById('painelAtendimento'); // Novo
+        const painelAtendimento = document.getElementById('painelAtendimento');
 
-        // --- Estado ---
-        let activeNumber = null;
-        let conversas = {}; 
-        let contactNames = {};
+        // --- Estado Persistido (MODIFICADO) ---
+        // Inicializa buscando no localStorage ou usa um objeto vazio
+        let activeNumber = getLocalData('activeNumber') || null;
+        let conversas = getLocalData('conversas') || {}; 
+        let contactNames = getLocalData('contactNames') || {};
 
         const socket = io(); 
 
@@ -309,11 +330,18 @@
                     const unread = (chat.unreadCount > 0 || chat.unread === true);
 
                     if (numero) {
+                        // Garante que o nome e a conversa existem no estado persistido
                         if (!conversas[numero]) conversas[numero] = [];
                         contactNames[numero] = nome;
                         updateContactList(numero, nome, ultimaMensagem, unread);
                     }
                 });
+                
+                // Salva o nome dos contatos no localStorage
+                setLocalData('contactNames', contactNames);
+                
+                // Tenta reabrir o chat ativo
+                if(activeNumber) openChat(activeNumber);
                 
                 atualizarContadorFila();
             } catch (e) {
@@ -357,7 +385,7 @@
             }
         });
 
-        // === SOCKET: NOVA MENSAGEM (COM PROTEÇÃO VISUAL) ===
+        // === SOCKET: NOVA MENSAGEM (COM PERSISTÊNCIA) ===
         socket.on('novaMensagemWhatsapp', (data) => {
             const chatId = data.chatId; 
             const msgId = data.id; 
@@ -367,11 +395,11 @@
             // 1. Proteção Visual: Se a mensagem já existe na tela (pelo ID), não faz nada.
             if (msgId && document.getElementById(`msg-${msgId}`)) return;
 
-            // 2. Histórico Local
+            // 2. Histórico Local (Persistido)
             if (!conversas[chatId]) conversas[chatId] = [];
             
-            // Verificação simples de duplicação no array (caso venha sem ID do backend antigo)
-            const existe = conversas[chatId].some(m => m.text === text && m.time > new Date(Date.now() - 5000));
+            // Verifica se a mensagem já existe (prevenção de duplicação)
+            const existe = conversas[chatId].some(m => m.id === msgId);
             
             if (!existe) {
                 let displayName = contactNames[chatId];
@@ -380,19 +408,26 @@
                     contactNames[chatId] = displayName;
                 }
                 
-                conversas[chatId].push({ 
+                const novaMensagem = { 
                     id: msgId, 
                     fromMe: isFromMe, 
                     text: text, 
                     time: new Date(), 
                     name: isFromMe ? "Eu" : displayName 
-                });
+                };
+                
+                conversas[chatId].push(novaMensagem);
+
+                // Salva a conversa atualizada no localStorage
+                setLocalData('conversas', conversas);
+                setLocalData('contactNames', contactNames);
+
 
                 const previewMsg = isFromMe ? `Você: ${text}` : text;
                 updateContactList(chatId, displayName, previewMsg, !isFromMe);
 
                 if (activeNumber === chatId) {
-                    appendMessageToView(text, isFromMe, isFromMe ? null : displayName, new Date(), msgId);
+                    appendMessageToView(text, isFromMe, isFromMe ? null : displayName, new Date(novaMensagem.time), msgId);
                     markAsRead(chatId);
                 }
             }
@@ -402,7 +437,7 @@
         document.getElementById('btnAssumirChamado').addEventListener('click', async () => {
             if (!activeNumber) return;
 
-            const userData = JSON.parse(localStorage.getItem("userData"));
+            const userData = getLocalData("userData");
             const nomeAgente = userData?.data?.nomeFuncionario || "Suporte T.I";
 
             try {
@@ -415,10 +450,7 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Esconde o painel
                     painelAtendimento.style.display = 'none';
-                    
-                    // Remove borda amarela da lista
                     const itemLista = document.querySelector(`.contact-item[data-number="${activeNumber}"]`);
                     if (itemLista) {
                         itemLista.style.borderLeft = "none";
@@ -447,7 +479,6 @@
         }
 
         function updateContactList(number, name, lastMsg, unread = false) {
-            // Preserva se estava marcado como pendente
             let isPending = false;
             let existingItem = document.querySelector(`.contact-item[data-number="${number}"]`);
             if (existingItem && existingItem.dataset.pending === "true") isPending = true;
@@ -484,32 +515,34 @@
         }
 
         function openChat(number) {
+            // Salva o número ativo no localStorage
+            setLocalData('activeNumber', number);
+            
             activeNumber = number;
             showScreen('chat');
             
             document.querySelectorAll('.contact-item').forEach(el => el.classList.remove('active'));
             const item = document.querySelector(`.contact-item[data-number="${number}"]`);
             
-            // Reseta UI
             painelAtendimento.style.display = 'none';
             
             if(item) { 
                 item.classList.add('active'); 
                 markAsRead(number); 
                 
-                // SE O ITEM TIVER A MARCA DE PENDENTE, MOSTRA O BOTÃO ASSUMIR
                 if (item.dataset.pending === "true" || item.style.borderLeft.includes("ffc107")) {
                     painelAtendimento.style.display = 'block';
                 }
             }
             
             messagesContainer.innerHTML = '';
+            // Carrega a lista do estado persistido
             const msgs = conversas[number] || [];
             
             if (msgs.length === 0) {
                  messagesContainer.innerHTML = '<div style="text-align:center; margin-top:20px; color:#999;">Sem histórico local.<br>Novas mensagens aparecerão aqui.</div>';
             } else {
-                msgs.forEach(m => appendMessageToView(m.text, m.fromMe, m.name, m.time, m.id));
+                msgs.forEach(m => appendMessageToView(m.text, m.fromMe, m.name, new Date(m.time), m.id));
             }
             
             chatInput.disabled = false; chatInput.focus();
@@ -520,7 +553,6 @@
             if(item) { const b = item.querySelector('.badge-unread'); if(b) b.remove(); }
         }
 
-        // ATUALIZADO: Aceita msgId para evitar duplicatas
         function appendMessageToView(text, fromMe, senderName, timeObj, msgId) {
             if (msgId && document.getElementById(`msg-${msgId}`)) return;
 
@@ -540,14 +572,16 @@
             const text = chatInput.value.trim();
             if (!text || !activeNumber) return;
             
-            // Cria ID temporário para a mensagem enviada
             const tempId = 'sent-' + Date.now();
+            const now = new Date();
 
-            appendMessageToView(text, true, null, new Date(), tempId);
+            appendMessageToView(text, true, null, now, tempId);
             
+            // Adiciona e persiste a mensagem enviada
             if (!conversas[activeNumber]) conversas[activeNumber] = [];
-            conversas[activeNumber].push({ id: tempId, fromMe: true, text, time: new Date() });
-            
+            conversas[activeNumber].push({ id: tempId, fromMe: true, text, time: now });
+            setLocalData('conversas', conversas); // Salva
+
             const displayName = contactNames[activeNumber] || activeNumber;
             updateContactList(activeNumber, displayName, `Você: ${text}`, false);
 
