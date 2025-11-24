@@ -141,7 +141,7 @@
                     <li><a href="Dashboard.html" title="Início"><span class="icon">🏠</span><span class="text">Início</span></a></li>
                     <li><a href="Imprimir.html" title="Impressão de Preços"><span class="icon">🖨️</span><span class="text">Imprimir</span></a></li>
                     <li id="menu-link-chamado"><a href="GerenciarChamados.html" title="Gerenciar Chamados"><span class="icon">✔️</span><span class="text">Gerenciar Chamados</span></a></li>
-                    <li class="active"><a href="AtendimentoWhatsApp.html" title="Atendimento WhatsApp"><span class="icon">💬</span><span class="text">WhatsApp</span></a></li>
+                    <li><a href="Chatbot.html" title="Chatbot"><span class="icon">🤖</span><span class="text">Chatbot</span></a></li>
 <li><a href="Funcionarios.html" title="Funcionários"><span class="icon">💼</span><span class="text">Funcionários</span></a></li>
                     <li><a href="Categorias.html" title="Categorias"><span class="icon">🏷️</span><span class="text">Categorias</span></a></li>
                 </ul>
@@ -239,6 +239,8 @@
         let activeNumber = null;
         let conversas = {}; 
         let contactNames = {};
+        // NOVO: Variável para o estado da lista lateral (para persistência)
+        let listaChatsParaExibir = []; 
 
         const socket = io(); 
         
@@ -253,6 +255,8 @@
                 // Salva conversas e nomes
                 localStorage.setItem('wa_conversas', JSON.stringify(conversas));
                 localStorage.setItem('wa_contactNames', JSON.stringify(contactNames));
+                // Salva a lista de chats para a lateral
+                localStorage.setItem('wa_chats_lateral', JSON.stringify(listaChatsParaExibir));
             } catch (e) {
                 console.error("Falha ao salvar conversas no localStorage:", e);
             }
@@ -267,6 +271,14 @@
                 const savedNames = localStorage.getItem('wa_contactNames');
                 if (savedConversas) conversas = JSON.parse(savedConversas);
                 if (savedNames) contactNames = JSON.parse(savedNames);
+                
+                // Carrega a lista lateral
+                const savedChats = localStorage.getItem('wa_chats_lateral');
+                if (savedChats) {
+                    listaChatsParaExibir = JSON.parse(savedChats);
+                } else {
+                    listaChatsParaExibir = [];
+                }
             } catch (e) {
                 console.warn("Nenhum histórico de conversas encontrado ou JSON corrompido.");
                 conversas = {};
@@ -306,11 +318,25 @@
             } catch (e) { console.error(e); }
         }
         
-        // ATUALIZADA: Adiciona flag para reabrir chat
+        // ATUALIZADA: Implementa persistência na lista lateral e carregamento imediato
         async function carregarConversas(reopenActiveChat = false) {
-            if (filaAtendimento.children.length <= 1) {
-                loadingFila.style.display = 'block';
+            
+            // 1. Exibe o histórico de lista lateral carregado imediatamente (para evitar tela branca)
+            if (listaChatsParaExibir.length > 0) {
+                 loadingFila.style.display = 'none';
+                 // Limpa a lista atual, exceto o header e o loading
+                 filaAtendimento.querySelectorAll('.contact-item').forEach(el => el.remove()); 
+                 listaChatsParaExibir.forEach(chat => {
+                    const unread = (chat.unreadCount > 0 || chat.unread === true);
+                    // O chat salvo no localStorage pode não ter todas as propriedades de um chat novo, mas tem o suficiente para exibir
+                    updateContactList(chat.numero, chat.nome || chat.numero.split('@')[0], chat.ultimaMensagem, unread);
+                 });
+                 atualizarContadorFila();
+            } else {
+                 loadingFila.style.display = 'block';
             }
+            
+            // 2. Busca a lista atualizada do servidor
             try {
                 const resp = await fetch('/api/whatsapp/chats');
                 const json = await resp.json();
@@ -320,11 +346,22 @@
                 else if (json.success && Array.isArray(json.data)) listaDeChats = json.data;
                 else if (Array.isArray(json.data)) listaDeChats = json.data;
 
-                listaDeChats.forEach(chat => {
-                    const numero = chat.numero || chat.id || chat.key?.remoteJid;
-                    const nome = chat.nome || chat.pushName || chat.name || chat.verifiedName || numero.split('@')[0];
-                    const ultimaMensagem = chat.ultimaMensagem || chat.conversation || chat.lastMessage?.conversation || "...";
-                    const unread = (chat.unreadCount > 0 || chat.unread === true);
+                // 3. Processa e salva a lista nova
+                listaChatsParaExibir = listaDeChats.map(chat => ({ // Mapeia para salvar apenas o essencial
+                    numero: chat.numero || chat.id || chat.key?.remoteJid,
+                    nome: chat.nome || chat.pushName || chat.name || chat.verifiedName || chat.numero.split('@')[0],
+                    ultimaMensagem: chat.ultimaMensagem || chat.conversation || chat.lastMessage?.conversation || "...",
+                    unreadCount: chat.unreadCount || (chat.unread === true ? 1 : 0)
+                })); 
+                
+                // Limpa a lista DOM para inserir a nova
+                filaAtendimento.querySelectorAll('.contact-item').forEach(el => el.remove()); 
+
+                listaChatsParaExibir.forEach(chat => {
+                    const numero = chat.numero;
+                    const nome = chat.nome;
+                    const ultimaMensagem = chat.ultimaMensagem;
+                    const unread = (chat.unreadCount > 0);
 
                     if (numero) {
                         if (!conversas[numero]) {
@@ -335,15 +372,18 @@
                     }
                 });
                 
+                // 4. Salva o estado completo (incluindo a nova lista lateral)
+                saveConversas(); 
+                
                 atualizarContadorFila();
                 
-                // NOVO: Reabre o chat ativo se a flag estiver ligada
                 if(reopenActiveChat && activeNumber) {
                     openChat(activeNumber);
                 }
 
             } catch (e) {
-                console.error("Erro ao carregar chats:", e);
+                console.error("Erro ao buscar e carregar chats:", e);
+                // Se falhar, ao menos a lista lateral antiga persiste!
             } finally {
                 loadingFila.style.display = 'none';
             }
@@ -624,6 +664,6 @@
             if (screenName === 'chat') activeChatScreen.style.display = 'flex';
         }
     });
-</script>
+    </script>
 </body>
 </html>
