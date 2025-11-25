@@ -33,7 +33,8 @@ const MENSAGENS = {
             # - Encerrar`,
     MENU_TI_COM_FILA: `✅ *Você entrou na Fila de Suporte T.I.*
      Aguarde um momento que um humano irá te responder.`,
-    ENCERRAMENTO: `Atendimento encerrado. Obrigado!`
+    ENCERRAMENTO: `Atendimento encerrado. Obrigado!`,
+    AVALIACAO_INICIO: `Obrigado por entrar em contato com o Suporte. Seu atendimento foi finalizado.`
 };
 
 // ==================================================
@@ -160,14 +161,36 @@ export const atenderAtendimento = async (req, res) => {
         userContext[numero].etapa = 'ATENDIMENTO_HUMANO';
         userContext[numero].botPausado = true;
         userContext[numero].nomeAgente = nomeAgente;
-        userContext[numero].mostrarNaFila = true; // Continua aparecendo na fila, mas como "Em atendimento"
+        userContext[numero].mostrarNaFila = true; // Continua aparecendo na fila
 
         await evolutionService.enviarTexto(numero, `👨‍💻 *${nomeAgente}* assumiu seu atendimento.`);
         res.status(200).json({ success: true });
     } catch (error) { res.status(500).json({ success: false }); }
 };
 
-// --- O SEGREDO ESTÁ AQUI: FILTRAR NA LISTAGEM ---
+// === CORREÇÃO: FUNÇÃO QUE FALTAVA ===
+export const finalizarAtendimento = async (req, res) => {
+    const { numero } = req.body;
+    try {
+        if (!userContext[numero]) userContext[numero] = {};
+        
+        // Atualiza status para encerrado
+        userContext[numero].etapa = 'AVALIACAO_NOTA';
+        userContext[numero].botPausado = true;
+        userContext[numero].nomeAgente = null;
+        userContext[numero].mostrarNaFila = false; // <--- REMOVE DA FILA NO FRONTEND
+
+        const msg = MENSAGENS.AVALIACAO_INICIO;
+        await evolutionService.enviarTexto(numero, msg);
+        res.status(200).json({ success: true });
+    } catch (error) { 
+        console.error(error);
+        res.status(500).json({ success: false }); 
+    }
+};
+// ====================================
+
+// --- FILTRAR NA LISTAGEM ---
 export const listarConversas = async (req, res) => { 
     try { 
         const chatsDaEvolution = await evolutionService.buscarConversas(); 
@@ -178,8 +201,7 @@ export const listarConversas = async (req, res) => {
             const ctx = userContext[numero] || {};
             
             // Apenas mostra se estiver marcado como 'mostrarNaFila' (digitou 1) 
-            // OU se tiver mensagens não lidas (opcional, pra não perder msgs perdidas)
-            // No seu caso, pediu só quem digitou 1.
+            // OU se tiver mensagens não lidas E for humano
             const deveAparecer = ctx.mostrarNaFila === true || ctx.etapa === 'ATENDIMENTO_HUMANO';
 
             return { 
@@ -187,13 +209,10 @@ export const listarConversas = async (req, res) => {
                 nome: chat.pushName || chat.id.split('@')[0], 
                 ultimaMensagem: chat.conversation || "...", 
                 unread: chat.unreadCount > 0,
-                // Envia flag pro front filtrar
                 visivel: deveAparecer 
             };
         });
 
-        // Filtra no backend ou envia tudo e o front filtra. 
-        // Vamos enviar tudo com a flag 'visivel' e o front decide, pra ser mais flexível.
         res.status(200).json({ success: true, data: chatsFormatados }); 
     } catch (e) { res.status(200).json({ success: true, data: [] }); } 
 };
@@ -211,6 +230,7 @@ export const handleSendMessage = async (req, res) => {
       res.status(200).json({ success: true, data: r });
   } catch (e) { res.status(500).json({ success: false }); }
 };
+
 export const connectInstance = async (req, res) => { try { const r = await evolutionService.criarInstancia(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false }); } };
 export const checarStatus = async (req, res) => { try { const r = await evolutionService.consultarStatus(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false }); } };
 export const configurarUrlWebhook = async (req, res) => { try { const h = req.get('host'); const p = h.includes('localhost') ? 'http' : 'https'; await evolutionService.configurarWebhook(`${p}://${h}/api/evolution/webhook`); res.status(200).json({ success: true }); } catch (e) { res.status(500).json({ success: false }); } };
