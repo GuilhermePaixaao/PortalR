@@ -17,62 +17,110 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <style>
-        :root { --wa-bg-color: #efeae2; --wa-header-bg: #f0f2f5; --wa-sidebar-bg: #ffffff; --wa-border: #e9edef; --wa-msg-in: #ffffff; --wa-msg-out: #d9fdd3; --wa-primary: #00a884; --text-primary: #111b21; --text-secondary: #667781; --input-bg: #ffffff; }
-        body.dark-mode { --wa-bg-color: #0b141a; --wa-header-bg: #202c33; --wa-sidebar-bg: #111b21; --wa-border: #2f3b43; --wa-msg-in: #202c33; --wa-msg-out: #005c4b; --wa-primary: #00a884; --text-primary: #e9edef; --text-secondary: #8696a0; --input-bg: #2a3942; }
+        :root {
+            --wa-bg-color: #efeae2; --wa-header-bg: #f0f2f5; --wa-sidebar-bg: #ffffff;
+            --wa-border: #e9edef; --wa-msg-in: #ffffff; --wa-msg-out: #d9fdd3;
+            --wa-primary: #00a884; --text-primary: #111b21; --text-secondary: #667781;
+            --input-bg: #ffffff; --hover-bg: #f5f6f6; --active-bg: #f0f2f5;
+        }
+        body.dark-mode {
+            --wa-bg-color: #0b141a; --wa-header-bg: #202c33; --wa-sidebar-bg: #111b21;
+            --wa-border: #2f3b43; --wa-msg-in: #202c33; --wa-msg-out: #005c4b;
+            --wa-primary: #00a884; --text-primary: #e9edef; --text-secondary: #8696a0;
+            --input-bg: #2a3942; --hover-bg: #202c33; --active-bg: #2a3942;
+        }
         body.dark-mode .main-content { background-color: var(--wa-sidebar-bg); }
+        body.dark-mode .header { background-color: var(--wa-header-bg); border-bottom-color: var(--wa-border); }
+        body.dark-mode .logo, body.dark-mode #userNameDisplay { color: #e9edef; }
+        
         .main-content { padding: 0; height: calc(100vh - 60px); background-color: var(--wa-sidebar-bg); display: flex; overflow: hidden; }
         .sidebar-chat { width: 350px; background-color: var(--wa-sidebar-bg); border-right: 1px solid var(--wa-border); display: flex; flex-direction: column; }
         .sidebar-header { padding: 10px 16px; background-color: var(--wa-header-bg); border-bottom: 1px solid var(--wa-border); display: flex; justify-content: space-between; align-items: center; height: 60px; }
+        
         #filaHeader { font-size: 0.9rem; font-weight: bold; color: var(--wa-primary); padding: 10px 15px; border-bottom: 1px solid var(--wa-border); background: var(--wa-sidebar-bg); }
         #filaAtendimento { flex: 1; overflow-y: auto; }
-        .contact-item { display: flex; padding: 12px 15px; cursor: pointer; border-bottom: 1px solid var(--wa-border); }
-        .contact-item:hover { background-color: var(--wa-header-bg); }
-        .contact-item.active { background-color: #f0f2f5; }
-        body.dark-mode .contact-item.active { background-color: #202c33; }
-        .avatar-placeholder { width: 45px; height: 45px; background-color: #667781; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; margin-right: 15px; }
-        .contact-info { flex: 1; overflow: hidden; }
-        .contact-name { font-weight: 500; color: var(--text-primary); }
-        .contact-last-msg { font-size: 0.85rem; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .chat-area { flex: 1; display: flex; flex-direction: column; background-color: var(--wa-bg-color); position: relative; }
-        .chat-area::before { content: ""; position: absolute; width: 100%; height: 100%; background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png"); opacity: 0.4; z-index: 0; pointer-events: none; }
+        .loading-fila { padding: 20px; text-align: center; color: var(--text-secondary); font-style: italic; }
+
+        .contact-item { display: flex; padding: 12px 15px; cursor: pointer; border-bottom: 1px solid var(--wa-border); position: relative; }
+        .contact-item:hover { background-color: var(--hover-bg); }
+        .contact-item.active { background-color: var(--active-bg); }
+        .avatar-placeholder { width: 45px; height: 45px; background-color: #667781; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: #fff; margin-right: 15px; }
+        .contact-info { flex: 1; display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
+        .contact-name { font-size: 1rem; color: var(--text-primary); font-weight: 500; }
+        .contact-last-msg { font-size: 0.85rem; color: var(--text-secondary); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .badge-unread { background-color: #25d366; color: white; font-size: 0.75rem; font-weight: bold; min-width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: absolute; right: 15px; top: 50%; transform: translateY(-50%); }
+
+        .chat-area { flex: 1; display: flex; flex-direction: column; background-color: var(--wa-bg-color); position: relative; z-index: 0; }
+        .chat-area::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png"); opacity: 0.4; z-index: -1; pointer-events: none; }
         body.dark-mode .chat-area::before { opacity: 0.08; }
-        .messages-container { flex: 1; padding: 20px 60px; overflow-y: auto; display: flex; flex-direction: column; z-index: 1; }
-        .msg { max-width: 65%; padding: 8px 12px; border-radius: 7.5px; margin-bottom: 8px; position: relative; font-size: 0.9rem; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); color: var(--text-primary); }
-        .msg-in { align-self: flex-start; background-color: var(--wa-msg-in); }
-        .msg-out { align-self: flex-end; background-color: var(--wa-msg-out); }
-        .msg-sender { font-size: 0.75rem; font-weight: bold; color: var(--wa-primary); display: block; }
+
+        .overlay-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--wa-header-bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; text-align: center; border-bottom: 6px solid var(--wa-primary); }
+        .overlay-screen img { width: 280px; height: 280px; border: 8px solid #fff; border-radius: 8px; }
+        .overlay-screen h2 { margin-top: 30px; color: var(--text-primary); font-weight: 300; font-size: 2rem; }
+        .overlay-screen p { margin-top: 10px; color: var(--text-secondary); font-size: 0.9rem; max-width: 500px; }
+
+        .messages-container { flex: 1; padding: 20px 60px; overflow-y: auto; display: flex; flex-direction: column; }
+        .msg { max-width: 65%; padding: 8px 12px; border-radius: 7.5px; margin-bottom: 8px; position: relative; font-size: 0.9rem; line-height: 1.4; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); word-wrap: break-word; color: var(--text-primary); }
+        .msg-in { align-self: flex-start; background-color: var(--wa-msg-in); border-top-left-radius: 0; }
+        .msg-out { align-self: flex-end; background-color: var(--wa-msg-out); border-top-right-radius: 0; }
+        .msg-time { font-size: 0.7rem; color: var(--text-secondary); float: right; margin-top: 5px; margin-left: 10px; }
+        .msg-sender { font-size: 0.75rem; font-weight: bold; color: var(--wa-primary); display: block; margin-bottom: 4px; }
+
         .input-area { height: 60px; background-color: var(--wa-header-bg); padding: 10px 16px; display: flex; align-items: center; gap: 15px; z-index: 20; border-top: 1px solid var(--wa-border); }
-        .input-field { flex: 1; background-color: var(--input-bg); border: none; border-radius: 8px; padding: 12px; outline: none; color: var(--text-primary); }
-        .btn-send { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-secondary); }
-        #painelAtendimento { display: none; background-color: #fff3cd; color: #856404; padding: 15px; text-align: center; width: 100%; z-index: 5; }
-        .btn-assumir { background-color: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-left: 10px; font-weight: bold; }
-        .overlay-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--wa-header-bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; }
+        .input-field { flex: 1; background-color: var(--input-bg); color: var(--text-primary); border: none; border-radius: 8px; padding: 12px 15px; font-size: 0.95rem; outline: none; }
+        .btn-send { background: none; border: none; color: var(--text-secondary); font-size: 1.5rem; cursor: pointer; }
+        .btn-send:hover { color: var(--wa-primary); }
         
-        /* Badge e Status */
-        .badge-unread { background-color: #25d366; color: white; font-size: 0.75rem; min-width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: absolute; right: 15px; top: 50%; transform: translateY(-50%); }
-        .connection-status { font-size: 0.85rem; font-weight: bold; color: var(--text-secondary); display: flex; gap: 8px; align-items: center; }
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; }
-        .status-dot.online { background-color: #00a884; } .status-dot.offline { background-color: #ea0038; }
+        .header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 2rem; background-color: #ffffff; border-bottom: 1px solid #dee2e6; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 1030; }
+        .logo { display: flex; align-items: center; gap: 10px; font-size: 1.4rem; font-weight: 700; color: #0d6efd; text-transform: uppercase; letter-spacing: 0.5px; margin: 0; white-space: nowrap; }
+        .logo-icon { height: 30px; width: auto; }
+        .header-actions { display: flex; align-items: center; gap: 1rem; }
+        #userNameDisplay { font-weight: 500; color: #495057; white-space: nowrap; }
+        .btn-logout { background-color: #dc3545; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500; cursor: pointer; transition: background-color 0.2s ease; }
+        .sidebar nav ul li a { display: flex; align-items: center; text-decoration: none; padding: 10px 15px; width: 100%; height: auto; }
+        .sidebar .icon { margin-right: 10px; min-width: 20px; text-align: center; flex-shrink: 0; align-self: center; }
+        .sidebar .text { flex-grow: 1; white-space: normal; line-height: 1.2; }
+        .btn-theme-toggle { background: none; border: 1px solid #ced4da; border-radius: 50%; width: 40px; height: 40px; font-size: 1.2rem; cursor: pointer; color: #495057; display: flex; align-items: center; justify-content: center; padding: 0; }
+        .btn-theme-toggle:hover { background-color: #f1f3f5; }
+        body.dark-mode .btn-theme-toggle { border-color: #555; color: #e9edef; }
+        body.dark-mode .btn-theme-toggle:hover { background-color: #2a3942; }
+
+        .connection-status { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background-color: #ccc; }
+        .status-dot.online { background-color: var(--wa-primary); }
+        .status-dot.offline { background-color: #ea0038; }
+        .btn-conectar { background-color: var(--wa-primary); color: white; border: none; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; font-weight: bold; }
+
+        #painelAtendimento { display: none; background-color: #fff3cd; color: #856404; padding: 15px; text-align: center; border-bottom: 1px solid #ffeeba; animation: fadeIn 0.5s; width: 100%; }
+        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+        .btn-assumir { background-color: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; margin-left: 10px; text-transform: uppercase; font-size: 0.85rem; }
+        .btn-assumir:hover { background-color: #218838; }
     </style>
 </head>
 
 <body>
     <div class="dashboard-container">
         <header class="header">
-            <div class="logo"><img src="/img.png" style="height:30px;margin-right:10px;"> PORTAL ROSALINA</div>
+            <div class="logo">
+                <img src="/img.png" alt="Logo Portal" class="logo-icon">              
+                PORTAL SUPERMERCADO ROSALINA
+            </div>
             <div class="header-actions">
-                <button id="themeToggle" style="background:none;border:none;font-size:1.2rem;cursor:pointer;">🌙</button>
+                <button id="themeToggle" class="btn-theme-toggle" title="Alternar Tema">🌙</button>
                 <span id="userNameDisplay"></span>
-                <button id="logoutButton" style="background:#dc3545;color:white;border:none;padding:5px 10px;border-radius:4px;cursor:pointer;">Sair</button>
+                <button id="logoutButton" class="btn-logout">Sair</button>
             </div>
         </header>
         
         <aside class="sidebar">
             <nav>
                 <ul>
-                    <li><a href="Dashboard.html">🏠 Início</a></li>
-                    <li id="menu-link-chamado"><a href="GerenciarChamados.html">✔️ Gerenciar Chamados</a></li>
-                    <li><a href="Chatbot.html">🤖 Chatbot</a></li>
+                    <li><a href="Dashboard.html" title="Início"><span class="icon">🏠</span><span class="text">Início</span></a></li>
+                    <li><a href="Imprimir.html" title="Impressão de Preços"><span class="icon">🖨️</span><span class="text">Imprimir</span></a></li>
+                    <li id="menu-link-chamado"><a href="GerenciarChamados.html" title="Gerenciar Chamados"><span class="icon">✔️</span><span class="text">Gerenciar Chamados</span></a></li>
+                    <li><a href="Chatbot.html" title="Chatbot"><span class="icon">🤖</span><span class="text">Chatbot</span></a></li>
+                    <li><a href="Funcionarios.html" title="Funcionários"><span class="icon">💼</span><span class="text">Funcionários</span></a></li>
+                    <li><a href="Categorias.html" title="Categorias"><span class="icon">🏷️</span><span class="text">Categorias</span></a></li>
                 </ul>
             </nav>
         </aside>
@@ -84,25 +132,33 @@
                         <div id="statusDot" class="status-dot offline"></div>
                         <span id="statusText">Desconectado</span>
                     </div>
-                    <button id="btnConectarWhats" style="display:none;background:#00a884;color:white;border:none;padding:5px 10px;border-radius:15px;">CONECTAR</button>
+                    <button id="btnConectarWhats" class="btn-conectar">CONECTAR</button>
                 </div>
-                <div id="filaHeader">Fila de Atendimento (0)</div>
-                <div id="filaAtendimento"></div>
+                <div id="filaHeader">Fila de Atendimento</div>
+                <div id="filaAtendimento">
+                    <div class="loading-fila" id="loadingFila" style="display:none;">
+                        <i class="fas fa-spinner fa-spin"></i> Carregando conversas...
+                    </div>
+                </div>
             </div>
 
             <div class="chat-area">
                 <div id="qrCodeScreen" class="overlay-screen" style="display:none;">
                     <div id="qrCodeContainer"></div>
                     <h2>Conectar WhatsApp</h2>
+                    <p>Abra o WhatsApp no seu celular e escaneie.</p>
                 </div>
+
                 <div id="welcomeScreen" class="overlay-screen">
+                    <img src="https://img.freepik.com/vetores-gratis/ilustracao-do-conceito-de-chat-bot_114360-5522.jpg" alt="Conectado" style="border:none; box-shadow:none; width: 300px; background:transparent;">
                     <h2>Portal Conectado</h2>
-                    <p>Selecione uma conversa da fila para atender.</p>
+                    <p>Selecione uma conversa ao lado para começar.</p>
                 </div>
+
                 <div id="activeChatScreen" style="display:none; width:100%; height:100%; flex-direction:column;">
                     <div id="painelAtendimento">
-                        <span>🔔 <b>Atenção:</b> Cliente na fila de espera.</span>
-                        <button id="btnAssumirChamado" class="btn-assumir">✅ ASSUMIR</button>
+                        <span>🔔 <b>Atenção:</b> Este cliente entrou na fila de T.I.</span>
+                        <button id="btnAssumirChamado" class="btn-assumir">✅ ASSUMIR ATENDIMENTO</button>
                     </div>
                     <div class="messages-container" id="messagesContainer"></div>
                     <div class="input-area">
@@ -115,213 +171,338 @@
     </div>
 
     <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+    <script src="js/globalNotification.js"></script>
+
     <script type="module">
     document.addEventListener('DOMContentLoaded', () => {
+        // 1. Funções Básicas
         function fazerLogout() { localStorage.removeItem("userData"); window.location.href = "Login.html"; }
         document.getElementById("logoutButton").addEventListener('click', fazerLogout);
+
+        const btnThemeToggle = document.getElementById("themeToggle");
+        function toggleTheme() { document.body.classList.toggle("dark-mode"); let d = document.body.classList.contains("dark-mode"); localStorage.setItem("theme", d ? "dark" : "light"); btnThemeToggle.textContent = d ? "☀️" : "🌙"; }
+        function loadTheme() { const t = localStorage.getItem("theme"); if (t === "dark") { document.body.classList.add("dark-mode"); btnThemeToggle.textContent = "☀️"; } else { document.body.classList.remove("dark-mode"); btnThemeToggle.textContent = "🌙"; } }
+        btnThemeToggle.addEventListener('click', toggleTheme);
+        loadTheme();
         
         try { 
             const u = JSON.parse(localStorage.getItem("userData")); 
-            document.getElementById('userNameDisplay').textContent = `Olá, ${u.data.nomeFuncionario.split(' ')[0]}`;
+            const d = document.getElementById('userNameDisplay'); 
+            if (d && u?.data?.nomeFuncionario) d.textContent = `Olá, ${u.data.nomeFuncionario.split(' ')[0]}`; 
+            if (u?.data?.perfil === 'AGENTE' || u?.data?.perfil === 'ADMIN') { 
+                const l = document.getElementById("menu-link-chamado"); 
+                if(l) { l.querySelector('a').href = "GerenciarChamados.html"; l.querySelector('.text').innerHTML = "Gerenciar<br>Chamados"; }
+            } 
         } catch (e) {}
 
-        // --- ESTADO DO APLICATIVO (SINGLE SOURCE OF TRUTH) ---
+        // 2. Elementos DOM
+        const qrScreen = document.getElementById('qrCodeScreen');
+        const qrContainer = document.getElementById('qrCodeContainer');
+        const welcomeScreen = document.getElementById('welcomeScreen');
+        const activeChatScreen = document.getElementById('activeChatScreen');
+        const messagesContainer = document.getElementById('messagesContainer');
+        const filaAtendimento = document.getElementById('filaAtendimento');
+        const loadingFila = document.getElementById('loadingFila');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const btnConectar = document.getElementById('btnConectarWhats');
+        const chatInput = document.getElementById('chatInput');
+        const sendButton = document.getElementById('sendButton');
+        const filaHeader = document.getElementById('filaHeader');
+        const painelAtendimento = document.getElementById('painelAtendimento');
+
+        // 3. ESTADO (Single Source of Truth)
         let AppState = {
             activeNumber: null,
-            conversas: {},      
-            contactNames: {},   
-            chatList: []        
+            conversas: {},      // Histórico de Mensagens
+            contactNames: {},   // Nomes dos Contatos
+            chatList: []        // Lista de Chats
         };
 
         const socket = io();
-        const filaAtendimento = document.getElementById('filaAtendimento');
-        const messagesContainer = document.getElementById('messagesContainer');
-        const painelAtendimento = document.getElementById('painelAtendimento');
-        const chatInput = document.getElementById('chatInput');
 
-        // --- PERSISTÊNCIA ---
-        function saveState() { localStorage.setItem('wa_app_state', JSON.stringify(AppState)); }
-        function loadState() {
-            const saved = localStorage.getItem('wa_app_state');
-            if (saved) AppState = { ...AppState, ...JSON.parse(saved) };
+        // 4. PERSISTÊNCIA
+        function saveState() {
+            try {
+                localStorage.setItem('wa_app_state', JSON.stringify(AppState));
+            } catch (e) { console.error("Erro ao salvar:", e); }
         }
 
-        // --- RENDERIZAÇÃO DA FILA ---
+        function loadState() {
+            try {
+                const saved = localStorage.getItem('wa_app_state');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    AppState = { ...AppState, ...parsed };
+                }
+            } catch (e) { console.warn("Erro ao carregar:", e); }
+        }
+
+        // 5. RENDERIZAÇÃO DA SIDEBAR (COM FILTRO DE FILA)
         function renderSidebar() {
             filaAtendimento.innerHTML = '';
             
-            // FILTRO CRUCIAL: MOSTRA APENAS QUEM ESTÁ NA FILA (visivel = true)
-            // A propriedade 'visivel' vem do backend ou é setada quando recebe msg com flag
+            // === LÓGICA DE FILTRO: SÓ MOSTRA QUEM ESTÁ NA FILA (visivel) ===
             const chatsFiltrados = AppState.chatList.filter(c => c.visivel === true || c.pending === true);
             
             chatsFiltrados.forEach(chat => {
-                const name = AppState.contactNames[chat.numero] || chat.nome || chat.numero;
-                const div = document.createElement('div');
-                div.className = `contact-item ${AppState.activeNumber === chat.numero ? 'active' : ''}`;
-                div.innerHTML = `
-                    <div class="avatar-placeholder">${name.charAt(0).toUpperCase()}</div>
-                    <div class="contact-info">
-                        <div class="contact-name">${name}</div>
-                        <div class="contact-last-msg">${chat.ultimaMensagem}</div>
-                    </div>
-                    ${chat.unreadCount > 0 ? '<div class="badge-unread">!</div>' : ''}
-                `;
-                if(chat.pending) div.style.borderLeft = "5px solid #ffc107";
-                div.addEventListener('click', () => openChat(chat.numero));
-                filaAtendimento.appendChild(div);
+                const displayName = AppState.contactNames[chat.numero] || chat.nome || chat.numero;
+                createSidebarItem(chat.numero, displayName, chat.ultimaMensagem, chat.unreadCount > 0, chat.pending);
             });
-            document.getElementById('filaHeader').textContent = `Fila de Atendimento (${chatsFiltrados.length})`;
+            
+            loadingFila.style.display = (AppState.chatList.length === 0 && !chatsFiltrados.length) ? 'block' : 'none';
+            filaHeader.textContent = `Fila de Atendimento (${chatsFiltrados.length})`;
         }
 
-        // --- INICIALIZAÇÃO ---
+        function createSidebarItem(number, name, lastMsg, unread, isPending) {
+            const initial = name ? name.charAt(0).toUpperCase() : '#';
+            const div = document.createElement('div');
+            div.className = `contact-item ${AppState.activeNumber === number ? 'active' : ''}`;
+            div.dataset.number = number;
+            
+            if (isPending) {
+                div.style.borderLeft = "5px solid #ffc107";
+                div.dataset.pending = "true";
+            }
+
+            div.innerHTML = `
+                <div class="avatar-placeholder">${initial}</div>
+                <div class="contact-info">
+                    <div class="contact-name">${name}</div>
+                    <div class="contact-last-msg">${lastMsg}</div>
+                </div>
+                ${unread && AppState.activeNumber !== number ? '<div class="badge-unread">!</div>' : ''}
+            `;
+            div.addEventListener('click', () => openChat(number));
+            filaAtendimento.appendChild(div);
+        }
+
+        // 6. INICIALIZAÇÃO
         loadState();
         renderSidebar();
-        if(AppState.activeNumber) openChat(AppState.activeNumber);
-        else document.getElementById('welcomeScreen').style.display = 'flex';
+        
+        if (AppState.activeNumber) openChat(AppState.activeNumber);
+        else showScreen('welcome');
 
         socket.on('connect', () => {
-            console.log("Conectado");
-            document.getElementById('statusText').textContent = "Online";
-            document.getElementById('statusDot').className = "status-dot online";
-            syncChats();
+            console.log("✅ Conectado");
+            syncChatsWithServer();
         });
 
-        // --- SYNC COM SERVIDOR (MESCLAGEM) ---
-        async function syncChats() {
+        async function syncChatsWithServer() {
             try {
-                const r = await fetch('/api/whatsapp/chats');
-                const res = await r.json();
-                if(!res.success || !res.data) return;
+                const rStatus = await fetch('/api/whatsapp/status');
+                const statusJson = await rStatus.json();
+                if ((statusJson.data?.instance?.state || statusJson.data?.state) !== 'open') {
+                    statusText.textContent = "Desconectado"; statusDot.className = "status-dot offline"; btnConectar.style.display = 'block';
+                    return;
+                }
+                setConnectedState();
 
-                const listaServer = res.data; // O backend agora manda com a flag 'visivel'
+                const rChats = await fetch('/api/whatsapp/chats');
+                const json = await rChats.json();
+                if (!json.success || !json.data) return;
 
-                // Atualiza a lista local preservando nomes
-                AppState.chatList = listaServer.map(serverChat => {
-                    const num = serverChat.numero;
-                    // Preserva nome se já tivermos um bom
-                    if (!AppState.contactNames[num] && serverChat.nome && !serverChat.nome.includes('@')) {
-                        AppState.contactNames[num] = serverChat.nome;
+                const listaServer = json.data;
+
+                // MESCLA INTELIGENTE + PRESERVA VISIBILIDADE
+                AppState.chatList = listaServer.map(sc => {
+                    const num = sc.numero;
+                    
+                    // Preserva nome local se melhor
+                    let nomeFinal = AppState.contactNames[num];
+                    if (!nomeFinal && sc.nome && !sc.nome.includes('@')) {
+                        nomeFinal = sc.nome;
+                        AppState.contactNames[num] = sc.nome;
                     }
-                    
-                    // Verifica se estava pendente localmente
+                    if (!nomeFinal) nomeFinal = num;
+
+                    // Recupera estado local para manter pending
                     const localChat = AppState.chatList.find(c => c.numero === num);
-                    
+
                     return {
                         numero: num,
-                        nome: AppState.contactNames[num] || serverChat.nome,
-                        ultimaMensagem: serverChat.ultimaMensagem,
-                        unreadCount: serverChat.unread,
-                        // A flag 'visivel' vem do backend (userContext)
-                        // Se não vier do backend (ex: msg nova antes do sync), mantém local
-                        visivel: serverChat.visivel !== undefined ? serverChat.visivel : (localChat?.visivel || false),
+                        nome: nomeFinal,
+                        ultimaMensagem: sc.ultimaMensagem,
+                        unreadCount: sc.unreadCount,
+                        // O BACKEND ESTÁ MANDANDO 'visivel'. SE NÃO MANDAR, USA O LOCAL.
+                        visivel: (sc.visivel !== undefined) ? sc.visivel : (localChat?.visivel || false),
                         pending: localChat?.pending || false
                     };
                 });
-                
+
                 saveState();
                 renderSidebar();
-            } catch(e) { console.error(e); }
+
+            } catch (e) { console.error(e); }
         }
 
-        // --- SOCKET EVENTS ---
+        // 7. SOCKET EVENTS (ATUALIZAÇÃO REAL-TIME)
         socket.on('novaMensagemWhatsapp', (data) => {
             const { chatId, texto, fromMe, nome, mostrarNaFila } = data;
             
-            // Salva msg
-            if(!AppState.conversas[chatId]) AppState.conversas[chatId] = [];
+            // Salva mensagem
+            if (!AppState.conversas[chatId]) AppState.conversas[chatId] = [];
             AppState.conversas[chatId].push({ fromMe, text: texto, time: new Date(), name: nome || "Eu" });
 
-            // Salva nome
-            if(nome && !fromMe) AppState.contactNames[chatId] = nome;
+            // Atualiza nome
+            if (nome && !fromMe) AppState.contactNames[chatId] = nome;
 
-            // Atualiza lista
+            // Remove da posição antiga
             const idx = AppState.chatList.findIndex(c => c.numero === chatId);
-            if(idx > -1) AppState.chatList.splice(idx, 1);
-            
-            // Lógica de visibilidade:
-            // Se veio 'mostrarNaFila' do socket, usa. Se não, usa o que já tinha.
-            // Se for msg minha (fromMe), e o chat já estava visível, mantém visível.
-            let isVisivel = mostrarNaFila;
-            if (isVisivel === undefined) { // Se o socket não mandou nada sobre isso
-                 // Se já estava na lista, mantém.
-                 isVisivel = (AppState.chatList.find(c => c.numero === chatId)?.visivel) || false;
+            let currentChat = null;
+            if (idx > -1) {
+                currentChat = AppState.chatList[idx];
+                AppState.chatList.splice(idx, 1);
             }
+
+            // Determina visibilidade: 
+            // Se veio do socket 'mostrarNaFila', usa.
+            // Se for msg minha (fromMe), e já estava visível, mantém.
+            // Se não, usa o estado anterior.
+            let isVisivel = false;
+            if (mostrarNaFila !== undefined) isVisivel = mostrarNaFila;
+            else if (currentChat) isVisivel = currentChat.visivel;
             
+            // Se eu mandei msg, geralmente quero ver na lista
+            if(fromMe && currentChat && currentChat.visivel) isVisivel = true;
+
             AppState.chatList.unshift({
                 numero: chatId,
                 nome: AppState.contactNames[chatId] || nome,
                 ultimaMensagem: fromMe ? `Você: ${texto}` : texto,
                 unreadCount: fromMe ? 0 : 1,
                 visivel: isVisivel,
-                pending: isVisivel // Se apareceu na fila agora, pode marcar como pendente visualmente
+                pending: isVisivel // Se apareceu agora, pode marcar como pendente
             });
 
             saveState();
             renderSidebar();
-            if(AppState.activeNumber === chatId) renderMessages(chatId);
+
+            if (AppState.activeNumber === chatId) {
+                appendMessageToView(texto, fromMe, null, new Date());
+                markAsRead(chatId);
+            }
         });
 
         socket.on('notificacaoChamado', (data) => {
-            // Força visibilidade
             const idx = AppState.chatList.findIndex(c => c.numero === data.chatId);
-            if(idx > -1) AppState.chatList[idx].visivel = true;
-            else AppState.chatList.unshift({ numero: data.chatId, nome: data.nome, ultimaMensagem: "🔔 Chamando...", visivel: true, pending: true });
+            if (idx > -1) AppState.chatList.splice(idx, 1);
+
+            AppState.chatList.unshift({
+                numero: data.chatId, nome: data.nome, ultimaMensagem: "🔔 Chamando...", 
+                unreadCount: 1, visivel: true, pending: true 
+            });
+            AppState.contactNames[data.chatId] = data.nome;
             
             saveState();
             renderSidebar();
+            if (AppState.activeNumber === data.chatId) painelAtendimento.style.display = 'block';
         });
 
-        // --- UI ACTIONS ---
+        // 8. UI ACTIONS
         function openChat(number) {
             AppState.activeNumber = number;
-            document.getElementById('welcomeScreen').style.display = 'none';
-            document.getElementById('activeChatScreen').style.display = 'flex';
-            
-            // Verifica se é pendente para mostrar botão assumir
             const chat = AppState.chatList.find(c => c.numero === number);
-            painelAtendimento.style.display = (chat && chat.visivel) ? 'block' : 'none';
+            if(chat) chat.unreadCount = 0;
             
-            renderMessages(number);
             saveState();
-        }
+            renderSidebar(); // tira badge
+            showScreen('chat');
 
-        function renderMessages(number) {
             messagesContainer.innerHTML = '';
             const msgs = AppState.conversas[number] || [];
-            msgs.forEach(m => {
-                const div = document.createElement('div');
-                div.className = `msg ${m.fromMe ? 'msg-out' : 'msg-in'}`;
-                div.innerHTML = `<b>${m.fromMe ? 'Você' : m.name}</b><br>${m.text}<br><small>${new Date(m.time).toLocaleTimeString()}</small>`;
-                messagesContainer.appendChild(div);
-            });
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-            chatInput.disabled = false;
+            msgs.forEach(m => appendMessageToView(m.text, m.fromMe, m.name, new Date(m.time)));
+            
+            painelAtendimento.style.display = (chat && chat.pending) ? 'block' : 'none';
+            chatInput.disabled = false; chatInput.focus();
         }
 
-        document.getElementById('sendButton').addEventListener('click', async () => {
-            const text = chatInput.value;
-            if(!text || !AppState.activeNumber) return;
+        function markAsRead(number) {
+            const chat = AppState.chatList.find(c => c.numero === number);
+            if(chat) chat.unreadCount = 0;
+            // renderSidebar já cuida do visual se chamar dps
+        }
+
+        async function sendMessage() {
+            const text = chatInput.value.trim();
+            if (!text || !AppState.activeNumber) return;
             
             // Otimista
-            if(!AppState.conversas[AppState.activeNumber]) AppState.conversas[AppState.activeNumber] = [];
-            AppState.conversas[AppState.activeNumber].push({ fromMe: true, text, time: new Date(), name: "Eu" });
-            renderMessages(AppState.activeNumber);
+            appendMessageToView(text, true, null, new Date());
             chatInput.value = '';
             
-            await fetch('/api/whatsapp/send', {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ numero: AppState.activeNumber, mensagem: text, nomeAgenteTemporario: "Agente" })
-            });
-        });
-        
+            if (!AppState.conversas[AppState.activeNumber]) AppState.conversas[AppState.activeNumber] = [];
+            AppState.conversas[AppState.activeNumber].push({ fromMe: true, text, time: new Date(), name: "Eu" });
+            
+            // Atualiza lista lateral (mantém visível)
+            const idx = AppState.chatList.findIndex(c => c.numero === AppState.activeNumber);
+            if(idx > -1) {
+                const c = AppState.chatList[idx];
+                c.ultimaMensagem = `Você: ${text}`;
+                c.visivel = true; // Se eu mando msg, fica visível
+                AppState.chatList.splice(idx, 1);
+                AppState.chatList.unshift(c);
+            }
+            
+            saveState();
+            renderSidebar();
+
+            try {
+                const user = JSON.parse(localStorage.getItem("userData"));
+                await fetch('/api/whatsapp/send', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ numero: AppState.activeNumber, mensagem: text, nomeAgenteTemporario: user?.data?.nomeFuncionario })
+                });
+            } catch (e) { console.error(e); }
+        }
+
+        function appendMessageToView(text, fromMe, name, time) {
+            const div = document.createElement('div');
+            div.className = `msg ${fromMe ? 'msg-out' : 'msg-in'}`;
+            div.innerHTML = `<div>${text}</div><span class="msg-time">${time.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>`;
+            messagesContainer.appendChild(div);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
         document.getElementById('btnAssumirChamado').addEventListener('click', async () => {
-             await fetch('/api/whatsapp/atender', {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ numero: AppState.activeNumber, nomeAgente: "Agente" })
-            });
-            painelAtendimento.style.display = 'none';
-            // Mantém visível na lista pois agora é atendimento humano
+            if (!AppState.activeNumber) return;
+            try {
+                const user = JSON.parse(localStorage.getItem("userData"));
+                await fetch('/api/whatsapp/atender', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ numero: AppState.activeNumber, nomeAgente: user?.data?.nomeFuncionario || "Suporte" })
+                });
+                
+                const chat = AppState.chatList.find(c => c.numero === AppState.activeNumber);
+                if(chat) chat.pending = false;
+                painelAtendimento.style.display = 'none';
+                saveState();
+                renderSidebar();
+                appendMessageToView("✅ Você assumiu este chamado.", true, "Sistema", new Date());
+            } catch (e) { alert("Erro ao assumir."); }
         });
+
+        // Helpers
+        function setConnectedState() {
+            statusText.textContent = "Online"; statusDot.className = "status-dot online";
+            btnConectar.style.display = 'none';
+            if (!AppState.activeNumber) showScreen('welcome');
+        }
+        function showScreen(name) {
+            qrScreen.style.display = 'none'; welcomeScreen.style.display = 'none'; activeChatScreen.style.display = 'none';
+            if (name === 'qr') qrScreen.style.display = 'flex';
+            if (name === 'welcome') welcomeScreen.style.display = 'flex';
+            if (name === 'chat') activeChatScreen.style.display = 'flex';
+        }
+        function exibirQRCode(b64) { qrContainer.innerHTML = `<img src="${b64}">`; statusText.textContent="Escaneie"; showScreen('qr'); }
+        
+        btnConectar.addEventListener('click', async () => {
+            statusText.textContent = "Solicitando..."; showScreen('qr');
+            try { await fetch('/api/whatsapp/connect'); } catch(e){}
+        });
+        sendButton.addEventListener('click', sendMessage);
+        chatInput.addEventListener('keypress', (e) => { if(e.key==='Enter') sendMessage(); });
     });
     </script>
 </body>
