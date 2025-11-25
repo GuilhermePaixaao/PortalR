@@ -465,7 +465,6 @@
                 if(d.data?.qrcode?.base64 || d.data?.base64) exibirQRCode(d.data?.qrcode?.base64 || d.data?.base64);
             } catch (e) { qrContainer.innerHTML = '<p style="color:red">Erro.</p>'; }
         });
-
         sendButton.addEventListener('click', sendMessage);
         chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
 
