@@ -93,7 +93,7 @@
 
         /* PAINEL DE ATENDIMENTO */
         #painelAtendimento { display: none; background-color: #fff3cd; color: #856404; padding: 15px; text-align: center; border-bottom: 1px solid #ffeeba; width: 100%; z-index: 5; }
-        .btn-assumir { background-color: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-left: 10px; font-weight: bold; }
+        .btn-assumir { background-color: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; margin-left: 10px; text-transform: uppercase; font-size: 0.85rem; }
         /* PAINEL JÁ ASSUMIDO (NOVO) */
         #painelAssumido { display: none; background-color: #d1e7dd; color: #0f5132; padding: 10px; text-align: center; border-bottom: 1px solid #badbcc; width: 100%; z-index: 5; font-size: 0.9rem; font-weight: 600; }
     </style>
@@ -116,7 +116,7 @@
                     <li><a href="Dashboard.html">🏠 Início</a></li>
                     <li><a href="Imprimir.html">🖨️ Imprimir</a></li>
                     <li id="menu-link-chamado"><a href="GerenciarChamados.html">✔️ Gerenciar Chamados</a></li>
-<li class="active"><a href="AtendimentoWhatsApp.html" title="Atendimento WhatsApp"><span class="icon">💬</span><span class="text">WhatsApp</span></a></li>
+                    <li><a href="Chatbot.html">🤖 Chatbot</a></li>
                     <li><a href="Funcionarios.html">💼 Funcionários</a></li>
                     <li><a href="Categorias.html">🏷️ Categorias</a></li>
                 </ul>
@@ -270,7 +270,8 @@
                     if (!nomeFinal) nomeFinal = num;
 
                     // BLINDAGEM: Se eu já tenho 'visivel' ou 'atendente' localmente, O SERVIDOR NÃO PODE APAGAR.
-                    const isVisivel = (localChat?.visivel) || (sc.visivel === true);
+                    // Mantém visível se estava visível localmente OU se o servidor disse que é visível
+                    const isVisivel = (localChat?.visivel === true) || (sc.visivel === true);
                     const isPending = localChat?.pending || false;
                     const quemAtende = localChat?.atendente || null; // Mantém o atendente salvo
 
