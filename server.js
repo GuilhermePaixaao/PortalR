@@ -14,6 +14,7 @@ import { Server } from 'socket.io'; // O Servidor do Socket.io
 
 import mainRouter from './src/routers/index.js';
 
+
 console.log("====================================");
 console.log("DEBUG: A EVOLUTION_API_URL é:");
 console.log(process.env.EVOLUTION_API_URL);
@@ -21,7 +22,6 @@ console.log("DEBUG: A EVOLUTION_API_KEY é:");
 console.log(process.env.EVOLUTION_API_KEY);
 console.log("====================================");
 // ================== FIM DO DEBUG ==================
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -31,7 +31,7 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: "*", // Permite conexões de qualquer origem (útil para evitar problemas de CORS)
+    origin: "*", // <-- ATUALIZADO (antes era "https://portal.smrosalina.com.br")
     methods: ["GET", "POST"]
   }
 });
@@ -55,6 +55,7 @@ app.use((req, res, next) => {
 // =======================================================
 // ROTAS PARA PÁGINAS HTML
 // =======================================================
+// (Suas rotas de páginas HTML /login, /atendimento, etc. continuam aqui)
 app.get('/login', (req, res) => {
     res.sendFile(path.join(__dirname, 'src', 'views', 'Login.html'));
 });
@@ -75,15 +76,10 @@ app.get('/', (req, res) => {
   res.redirect('/login');
 });
 
-// Rota de Health Check (IMPORTANTE PARA O RAILWAY)
-// Isso diz para a plataforma que o servidor está vivo
-app.get('/health', (req, res) => {
-  res.status(200).send('OK');
-});
-
 // Servir os arquivos estáticos (CSS, JS, Imagens)
 app.use(express.static(path.join(__dirname, 'src', 'views')));
 app.use(express.static(path.join(__dirname, 'public')));
+
 
 // Usar TODAS as suas rotas da API
 app.use(mainRouter); // Gerencia /chamados, /categorias, etc.
@@ -104,8 +100,9 @@ io.on('connection', (socket) => {
 // =======================================================
 const PORT = process.env.PORT || 3000;
 
-// (MUDANÇA) Adicionado '0.0.0.0' para garantir que o Docker exponha a rede corretamente
-httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ Servidor rodando liso na porta ${PORT}`);
-  console.log(`   Health Check: http://localhost:${PORT}/health`);
+// (MUDANÇA) Use 'httpServer.listen' em vez de 'app.listen'
+httpServer.listen(PORT, () => {
+  console.log(`Servidor rodando liso na porta ${PORT}`);
+  console.log(`API disponível em: http://localhost:${PORT}`);
+  console.log(`Página de Login: http://localhost:${PORT}/login`);
 });
