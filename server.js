@@ -71,6 +71,13 @@ app.get('/whatsapp', (req, res) => {
     res.sendFile(path.join(__dirname, 'src', 'views', 'AtendimentoWhatsApp.html'));
 });
 
+// === (CORREÇÃO) PADRONIZAÇÃO DE ROTA: Redireciona o acesso direto ao arquivo para a rota limpa ===
+app.get('/AtendimentoWhatsApp.html', (req, res) => {
+    // Redirecionamento permanente (301)
+    res.redirect(301, '/whatsapp'); 
+});
+// =================================================================================================
+
 // Redirecionamento da raiz (/)
 app.get('/', (req, res) => {
   res.redirect('/login');
