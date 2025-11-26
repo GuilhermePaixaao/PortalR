@@ -40,16 +40,23 @@ export const conectarInstancia = async () => {
     }
 }
 
-// ======================================================
-// === CORREÇÃO APLICADA AQUI ===
-// ======================================================
+// === FUNÇÃO DE DESCONEXÃO IMPLEMENTADA ===
+export const desconectarInstancia = async () => {
+    try {
+        // Usa POST, que é mais seguro para esta ação na Evolution API
+        const response = await apiClient.post(`/instance/disconnect/${INSTANCE_NAME}`, {});
+        return response.data;
+    } catch (error) {
+        throw new Error(`Falha ao desconectar instância: ${error.response?.data?.message || error.message}`);
+    }
+};
+
 export const enviarTexto = async (numero, mensagem) => {
   try {
     console.log(`[EVOLUTION] Tentando enviar mensagem...`);
     console.log(`   > Instância: ${INSTANCE_NAME}`);
     console.log(`   > Número: ${numero}`);
 
-    // MUDANÇA: Trocado 'textMessage: { text: mensagem }' por apenas 'text: mensagem'
     const response = await apiClient.post(`/message/sendText/${INSTANCE_NAME}`, {
       number: numero,
       options: { delay: 1200, presence: 'composing' },
@@ -71,6 +78,7 @@ export const consultarStatus = async () => {
     const response = await apiClient.get(`/instance/connectionState/${INSTANCE_NAME}`);
     return response.data;
   } catch (error) {
+    // Retorna um estado 'close' em caso de erro para que o frontend saiba que está offline
     return { instance: { state: 'close' } }; 
   }
 };
@@ -103,14 +111,5 @@ export const configurarWebhook = async (urlWebhook) => {
     } catch (error) {
         console.error("Erro ao configurar webhook:", error.response?.data || error.message);
         throw error;
-    }
-};
-
-export const desconectarInstancia = async () => {
-    try {
-        const response = await apiClient.delete(`/instance/disconnect/${INSTANCE_NAME}`);
-        return response.data;
-    } catch (error) {
-        throw new Error('Falha ao desconectar instância.');
     }
 };
