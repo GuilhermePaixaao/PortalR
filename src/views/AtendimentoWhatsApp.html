@@ -35,8 +35,22 @@
         
         .main-content { padding: 0; height: calc(100vh - 60px); background-color: var(--wa-sidebar-bg); display: flex; overflow: hidden; }
         .sidebar-chat { width: 350px; background-color: var(--wa-sidebar-bg); border-right: 1px solid var(--wa-border); display: flex; flex-direction: column; }
-        .sidebar-header { padding: 10px 16px; background-color: var(--wa-header-bg); border-bottom: 1px solid var(--wa-border); display: flex; justify-content: space-between; align-items: center; height: 60px; }
         
+        /* Ajuste do cabeçalho da sidebar para comportar dois botões */
+        .sidebar-header { 
+            padding: 10px 16px; 
+            background-color: var(--wa-header-bg); 
+            border-bottom: 1px solid var(--wa-border); 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            height: 60px; 
+            gap: 10px; /* Espaçamento entre status e botões */
+        }
+        .connection-status { flex-shrink: 0; } /* Impede que o status encolha */
+        #connectionActions { display: flex; gap: 5px; } /* Novo container para os botões */
+
+
         #filaHeader { font-size: 0.9rem; font-weight: bold; color: var(--wa-primary); padding: 10px 15px; border-bottom: 1px solid var(--wa-border); background: var(--wa-sidebar-bg); }
         #filaAtendimento { flex: 1; overflow-y: auto; }
         .loading-fila { padding: 20px; text-align: center; color: var(--text-secondary); font-style: italic; }
@@ -90,6 +104,42 @@
         .status-dot.online { background-color: var(--wa-primary); }
         .status-dot.offline { background-color: #ea0038; }
         .btn-conectar { background-color: var(--wa-primary); color: white; border: none; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; font-weight: bold; }
+        
+        /* NOVO: Estilo para o botão de desconectar */
+        .btn-desconectar { background-color: #ffc107; color: #333; border: none; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; font-weight: bold; }
+        .btn-desconectar:hover { background-color: #e0a800; }
+        
+        /* Novo estilo para o container de chat (header) */
+        .chat-header {
+            padding: 10px 16px; 
+            background-color: var(--wa-header-bg); 
+            border-bottom: 1px solid var(--wa-border); 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            height: 60px;
+        }
+
+        #chatTitle {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .chat-actions button {
+            background-color: #dc3545; /* Vermelho para encerrar */
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        .chat-actions button:hover {
+            background-color: #bb2d3b;
+        }
 
         #painelAtendimento { display: none; background-color: #fff3cd; color: #856404; padding: 15px; text-align: center; border-bottom: 1px solid #ffeeba; animation: fadeIn 0.5s; width: 100%; }
         @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
@@ -132,7 +182,10 @@
                         <div id="statusDot" class="status-dot offline"></div>
                         <span id="statusText">Desconectado</span>
                     </div>
-                    <button id="btnConectarWhats" class="btn-conectar">CONECTAR</button>
+                    <div id="connectionActions">
+                        <button id="btnConectarWhats" class="btn-conectar">CONECTAR</button>
+                        <button id="btnDesconectarWhats" class="btn-desconectar" style="display: none;">DESCONECTAR</button>
+                    </div>
                 </div>
                 <div id="filaHeader">Fila de Atendimento</div>
                 <div id="filaAtendimento">
@@ -156,11 +209,20 @@
                 </div>
 
                 <div id="activeChatScreen" style="display:none; width:100%; height:100%; flex-direction:column;">
+                    
+                    <div class="chat-header">
+                        <span id="chatTitle"></span>
+                        <div class="chat-actions">
+                            <button id="btnFinalizarAtendimento">❌ Encerrar Atendimento</button>
+                        </div>
+                    </div>
                     <div id="painelAtendimento">
                         <span>🔔 <b>Atenção:</b> Este cliente entrou na fila de T.I.</span>
                         <button id="btnAssumirChamado" class="btn-assumir">✅ ASSUMIR ATENDIMENTO</button>
                     </div>
+                    
                     <div class="messages-container" id="messagesContainer"></div>
+                    
                     <div class="input-area">
                         <input type="text" id="chatInput" class="input-field" placeholder="Digite uma mensagem" disabled>
                         <button id="sendButton" class="btn-send"><i class="fas fa-paper-plane"></i></button>
@@ -206,12 +268,15 @@
         const statusDot = document.getElementById('statusDot');
         const statusText = document.getElementById('statusText');
         const btnConectar = document.getElementById('btnConectarWhats');
+        const btnDesconectarWhats = document.getElementById('btnDesconectarWhats'); // NOVO: Elemento Desconectar
         const chatInput = document.getElementById('chatInput');
         const sendButton = document.getElementById('sendButton');
         const filaHeader = document.getElementById('filaHeader');
         const painelAtendimento = document.getElementById('painelAtendimento');
+        const chatTitle = document.getElementById('chatTitle'); 
+        const btnFinalizar = document.getElementById('btnFinalizarAtendimento'); 
 
-        // 3. ESTADO
+        // 3. ESTADO (Single Source of Truth)
         let AppState = {
             activeNumber: null,
             conversas: {},      
@@ -221,90 +286,7 @@
 
         const socket = io();
 
-        // 4. SOCKET EVENTS
-        // ==========================================
-        socket.on('connect', () => {
-            console.log("✅ Conectado ao Socket");
-            syncChatsWithServer();
-        });
-
-        socket.on('qrCodeRecebido', (data) => {
-            console.log("📷 QR Code Recebido via Socket!");
-            if (data && data.qr) {
-                exibirQRCode(data.qr);
-            }
-        });
-
-        socket.on('statusConexao', (data) => {
-            console.log("📡 Status WhatsApp:", data.status);
-            if (data.status === 'open' || data.status === 'connecting') {
-                setConnectedState();
-            } else {
-                statusText.textContent = "Desconectado";
-                statusDot.className = "status-dot offline";
-                btnConectar.style.display = 'block';
-            }
-        });
-        // ==========================================
-        
-        socket.on('novaMensagemWhatsapp', (data) => {
-            const { chatId, texto, fromMe, nome, mostrarNaFila } = data;
-            
-            // Salva mensagem
-            if (!AppState.conversas[chatId]) AppState.conversas[chatId] = [];
-            AppState.conversas[chatId].push({ fromMe, text: texto, time: new Date(), name: nome || "Eu" });
-
-            // Atualiza nome
-            if (nome && !fromMe) AppState.contactNames[chatId] = nome;
-
-            // Remove da posição antiga
-            const idx = AppState.chatList.findIndex(c => c.numero === chatId);
-            let currentChat = null;
-            if (idx > -1) {
-                currentChat = AppState.chatList[idx];
-                AppState.chatList.splice(idx, 1);
-            }
-
-            // Determina visibilidade
-            let isVisivel = false;
-            if (mostrarNaFila !== undefined) isVisivel = mostrarNaFila;
-            else if (currentChat) isVisivel = currentChat.visivel;
-            if(fromMe && currentChat && currentChat.visivel) isVisivel = true;
-
-            AppState.chatList.unshift({
-                numero: chatId,
-                nome: AppState.contactNames[chatId] || nome,
-                ultimaMensagem: fromMe ? `Você: ${texto}` : texto,
-                unreadCount: fromMe ? 0 : 1,
-                visivel: isVisivel,
-                pending: isVisivel // Se apareceu agora, pode marcar como pendente
-            });
-
-            saveState();
-            renderSidebar();
-
-            if (AppState.activeNumber === chatId) {
-                appendMessageToView(texto, fromMe, null, new Date());
-                markAsRead(chatId);
-            }
-        });
-
-        socket.on('notificacaoChamado', (data) => {
-            const idx = AppState.chatList.findIndex(c => c.numero === data.chatId);
-            if (idx > -1) AppState.chatList.splice(idx, 1);
-
-            AppState.chatList.unshift({
-                numero: data.chatId, nome: data.nome, ultimaMensagem: "🔔 Chamando...", 
-                unreadCount: 1, visivel: true, pending: true 
-            });
-            AppState.contactNames[data.chatId] = data.nome;
-            
-            saveState();
-            renderSidebar();
-            if (AppState.activeNumber === data.chatId) painelAtendimento.style.display = 'block';
-        });
-
-        // 5. PERSISTÊNCIA
+        // 4. PERSISTÊNCIA
         function saveState() {
             try {
                 localStorage.setItem('wa_app_state', JSON.stringify(AppState));
@@ -321,7 +303,7 @@
             } catch (e) { console.warn("Erro ao carregar:", e); }
         }
 
-        // 6. RENDERIZAÇÃO
+        // 5. RENDERIZAÇÃO DA SIDEBAR (COM FILTRO DE FILA)
         function renderSidebar() {
             filaAtendimento.innerHTML = '';
             
@@ -359,12 +341,18 @@
             filaAtendimento.appendChild(div);
         }
 
-        // 7. INICIALIZAÇÃO E SYNC
+        // 6. INICIALIZAÇÃO
         loadState();
         renderSidebar();
         
         if (AppState.activeNumber) openChat(AppState.activeNumber);
         else showScreen('welcome');
+
+        // 7. SOCKET EVENTS (ATUALIZAÇÃO REAL-TIME)
+        socket.on('connect', () => {
+            console.log("✅ Conectado");
+            syncChatsWithServer();
+        });
 
         async function syncChatsWithServer() {
             try {
@@ -373,16 +361,14 @@
                 const statusJson = await rStatus.json();
                 
                 const state = statusJson.data?.instance?.state || statusJson.data?.state;
-                if (state === 'open' || state === 'connecting') {
-                    setConnectedState();
-                } else {
-                    statusText.textContent = "Desconectado"; 
-                    statusDot.className = "status-dot offline"; 
-                    btnConectar.style.display = 'block';
+                if (state !== 'open') {
+                    // Se não estiver aberto, reseta o estado da UI para Desconectado
+                    resetConnectionState();
                     return;
                 }
+                setConnectedState();
 
-                // 2. Busca da Lista no Servidor
+                // 2. Busca da Lista no Servidor (Continua a mesma lógica)
                 const rChats = await fetch('/api/whatsapp/chats');
                 const json = await rChats.json();
                 
@@ -393,39 +379,31 @@
 
                 const listaServer = json.data;
                 const novosChats = [];
-                
                 const mapaLocal = new Map(AppState.chatList.map(c => [c.numero, c]));
 
-                // 3. Processo de Mesclagem (Merge)
                 listaServer.forEach(serverChat => {
                     const num = serverChat.numero;
                     
                     if (mapaLocal.has(num)) {
                         const localChat = mapaLocal.get(num);
-                        
                         localChat.ultimaMensagem = serverChat.ultimaMensagem;
                         localChat.unreadCount = serverChat.unreadCount;
-                        
                         if (serverChat.nome && serverChat.nome !== num) {
                             localChat.nome = serverChat.nome;
                             AppState.contactNames[num] = serverChat.nome;
                         }
-
                         if (localChat.pending === undefined) {
                             localChat.pending = serverChat.pending || false;
                         }
-                        
                         if (serverChat.visivel !== undefined) {
                              localChat.visivel = serverChat.visivel;
                         }
-
                     } else {
                         let nomeFinal = AppState.contactNames[num];
                         if (!nomeFinal && serverChat.nome && !serverChat.nome.includes('@')) {
                             nomeFinal = serverChat.nome;
                             AppState.contactNames[num] = serverChat.nome;
                         }
-                        
                         novosChats.push({
                             numero: num,
                             nome: nomeFinal || num,
@@ -449,6 +427,72 @@
             }
         }
 
+        socket.on('qrCodeRecebido', (data) => {
+            console.log("📷 QR Code Recebido via Socket!");
+            if (data && data.qr) {
+                exibirQRCode(data.qr);
+            }
+        });
+
+        socket.on('statusConexao', (data) => {
+            console.log("📡 Status WhatsApp:", data.status);
+            if (data.status === 'open' || data.status === 'connecting') {
+                setConnectedState();
+            } else {
+                // Usa a nova função de reset
+                resetConnectionState();
+            }
+        });
+        
+        socket.on('novaMensagemWhatsapp', (data) => {
+            const { chatId, texto, fromMe, nome, mostrarNaFila } = data;
+            
+            // ... (lógica de atualização de estado)
+            if (!AppState.conversas[chatId]) AppState.conversas[chatId] = [];
+            AppState.conversas[chatId].push({ fromMe, text: texto, time: new Date(), name: nome || "Eu" });
+            if (nome && !fromMe) AppState.contactNames[chatId] = nome;
+
+            const idx = AppState.chatList.findIndex(c => c.numero === chatId);
+            let currentChat = null;
+            if (idx > -1) { currentChat = AppState.chatList[idx]; AppState.chatList.splice(idx, 1); }
+
+            let isVisivel = false;
+            if (mostrarNaFila !== undefined) isVisivel = mostrarNaFila;
+            else if (currentChat) isVisivel = currentChat.visivel;
+            if(fromMe && currentChat && currentChat.visivel) isVisivel = true;
+
+            AppState.chatList.unshift({
+                numero: chatId,
+                nome: AppState.contactNames[chatId] || nome,
+                ultimaMensagem: fromMe ? `Você: ${texto}` : texto,
+                unreadCount: fromMe ? 0 : 1,
+                visivel: isVisivel,
+                pending: isVisivel 
+            });
+
+            saveState();
+            renderSidebar();
+
+            if (AppState.activeNumber === chatId) {
+                appendMessageToView(texto, fromMe, null, new Date());
+                markAsRead(chatId);
+            }
+        });
+
+        socket.on('notificacaoChamado', (data) => {
+            const idx = AppState.chatList.findIndex(c => c.numero === data.chatId);
+            if (idx > -1) AppState.chatList.splice(idx, 1);
+
+            AppState.chatList.unshift({
+                numero: data.chatId, nome: data.nome, ultimaMensagem: "🔔 Chamando...", 
+                unreadCount: 1, visivel: true, pending: true 
+            });
+            AppState.contactNames[data.chatId] = data.nome;
+            
+            saveState();
+            renderSidebar();
+            if (AppState.activeNumber === data.chatId) painelAtendimento.style.display = 'block';
+        });
 
         // 8. UI ACTIONS
         function openChat(number) {
@@ -464,6 +508,7 @@
             const msgs = AppState.conversas[number] || [];
             msgs.forEach(m => appendMessageToView(m.text, m.fromMe, m.name, new Date(m.time)));
             
+            chatTitle.textContent = chat.nome; 
             painelAtendimento.style.display = (chat && chat.pending) ? 'block' : 'none';
             chatInput.disabled = false; chatInput.focus();
         }
@@ -477,14 +522,12 @@
             const text = chatInput.value.trim();
             if (!text || !AppState.activeNumber) return;
             
-            // Otimista
             appendMessageToView(text, true, null, new Date());
             chatInput.value = '';
             
             if (!AppState.conversas[AppState.activeNumber]) AppState.conversas[AppState.activeNumber] = [];
             AppState.conversas[AppState.activeNumber].push({ fromMe: true, text, time: new Date(), name: "Eu" });
             
-            // Atualiza lista lateral (mantém visível)
             const idx = AppState.chatList.findIndex(c => c.numero === AppState.activeNumber);
             if(idx > -1) {
                 const c = AppState.chatList[idx];
@@ -505,6 +548,63 @@
                 });
             } catch (e) { console.error(e); }
         }
+
+        async function finalizarChat() {
+            if (!AppState.activeNumber) return;
+            if (!confirm(`Tem certeza que deseja encerrar o atendimento com ${chatTitle.textContent}? Isso enviará a pesquisa de satisfação ao cliente.`)) {
+                return;
+            }
+
+            try {
+                const numero = AppState.activeNumber;
+                
+                const response = await fetch('/api/whatsapp/finalizar', {
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ numero: numero })
+                });
+
+                if (!response.ok) throw new Error("Falha ao finalizar na API.");
+                
+                const chat = AppState.chatList.find(c => c.numero === numero);
+                if (chat) chat.visivel = false;
+                
+                AppState.activeNumber = null;
+                saveState();
+                renderSidebar();
+                showScreen('welcome');
+                
+                alert("Atendimento finalizado com sucesso! Pesquisa de satisfação enviada ao cliente.");
+
+            } catch (e) { 
+                console.error("Erro ao finalizar:", e); 
+                alert(`Erro ao finalizar atendimento: ${e.message}`);
+            }
+        }
+        
+        // NOVO: Função para desconectar totalmente
+        async function desconectarWhats() {
+            if (!confirm("Atenção! Desconectar a instância irá encerrar o WhatsApp Web e exigir um novo escaneamento de QR Code para retomar o atendimento. Continuar?")) {
+                return;
+            }
+
+            try {
+                // Chame a rota de desconexão (DELETE ou POST)
+                const response = await fetch('/api/whatsapp/disconnect', { method: 'POST' }); 
+                
+                if (!response.ok) {
+                    throw new Error("O servidor não conseguiu enviar o comando de desconexão para a API.");
+                }
+
+                alert("Comando de desconexão enviado. A instância será desativada em breve.");
+                resetConnectionState();
+                
+            } catch (e) {
+                console.error("Erro ao tentar desconectar:", e);
+                alert(`Erro ao tentar desconectar: ${e.message}. Tente novamente.`);
+            }
+        }
+
 
         function appendMessageToView(text, fromMe, name, time) {
             const div = document.createElement('div');
@@ -532,12 +632,22 @@
             } catch (e) { alert("Erro ao assumir."); }
         });
 
-        // Helpers
+        // Helpers de estado
+        function resetConnectionState() {
+            statusText.textContent = "Desconectado";
+            statusDot.className = "status-dot offline";
+            btnConectar.style.display = 'block';
+            btnDesconectarWhats.style.display = 'none';
+            showScreen('welcome');
+        }
+
         function setConnectedState() {
             statusText.textContent = "Online"; statusDot.className = "status-dot online";
             btnConectar.style.display = 'none';
+            btnDesconectarWhats.style.display = 'block';
             if (!AppState.activeNumber) showScreen('welcome');
         }
+
         function showScreen(name) {
             qrScreen.style.display = 'none'; welcomeScreen.style.display = 'none'; activeChatScreen.style.display = 'none';
             if (name === 'qr') qrScreen.style.display = 'flex';
@@ -545,14 +655,8 @@
             if (name === 'chat') activeChatScreen.style.display = 'flex';
         }
         
-        // ===============================================
-        // === FUNÇÃO CORRIGIDA PARA O BUG DE DUPLICAÇÃO ===
-        // ===============================================
         function exibirQRCode(b64) { 
-            // 1. Remove qualquer prefixo Base64 que a API possa ter incluído (evita duplicação)
             const cleanedB64 = b64.replace(/^data:image\/[a-z]+;base64,/, '');
-
-            // 2. Monta a tag <img> com o prefixo Base64 correto
             qrContainer.innerHTML = `<img src="data:image/png;base64,${cleanedB64}">`; 
             statusText.textContent="Escaneie"; 
             showScreen('qr'); 
@@ -560,21 +664,24 @@
 
         btnConectar.addEventListener('click', async () => {
             statusText.textContent = "Solicitando..."; showScreen('qr');
-            
-            // 1. Tenta conectar/gerar QR - SEM AWAIT (Fire-and-forget)
-            // Permite que o navegador continue processando eventos do Socket.io.
             fetch('/api/whatsapp/connect').catch(e => { 
                  console.error("Erro no connect", e); 
             });
             
-            // 2. Força o Webhook de novo IMEDIATAMENTE - SEM AWAIT (Fire-and-forget)
-            // Essencial para receber o QR Code rapidamente.
             fetch('/api/whatsapp/configure-webhook').catch(e => {
                  console.error("Erro webhook", e);
             });
         });
-        // ===============================================
+        
+        if (btnFinalizar) {
+            btnFinalizar.addEventListener('click', finalizarChat);
+        }
 
+        // NOVO LISTENER: Botão Desconectar
+        if (btnDesconectarWhats) {
+            btnDesconectarWhats.addEventListener('click', desconectarWhats);
+        }
+        
         sendButton.addEventListener('click', sendMessage);
         chatInput.addEventListener('keypress', (e) => { if(e.key==='Enter') sendMessage(); });
     });

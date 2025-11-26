@@ -105,3 +105,12 @@ export const configurarWebhook = async (urlWebhook) => {
         throw error;
     }
 };
+
+export const desconectarInstancia = async () => {
+    try {
+        const response = await apiClient.delete(`/instance/disconnect/${INSTANCE_NAME}`);
+        return response.data;
+    } catch (error) {
+        throw new Error('Falha ao desconectar instância.');
+    }
+};

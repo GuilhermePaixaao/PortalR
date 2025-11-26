@@ -29,4 +29,5 @@ router.post('/api/whatsapp/finalizar', WhatsappController.finalizarAtendimento);
 // Rota para forçar a configuração do Webhook
 router.get('/api/whatsapp/configure-webhook', WhatsappController.configurarUrlWebhook);
 
+router.post('/api/whatsapp/disconnect', WhatsappController.handleDisconnect);
 export default router;

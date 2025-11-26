@@ -1,4 +1,5 @@
 import * as evolutionService from '../services/evolutionService.js';
+import * as chamadoModel from '../models/chamadoModel.js'; // <-- Importa o modelo de chamado
 import { OpenAI } from 'openai';
 
 // ==================================================
@@ -58,7 +59,7 @@ Digite o número da opção:`,
     FILA_TI: `🔔 Entendido. Já notifiquei a equipe. Aguarde um momento que um humano irá te responder.`,
 
     AVALIACAO_INICIO: `Obrigado por entrar em contato com o Suporte. Para melhorarmos nosso atendimento, precisamos da sua opinião.
-Por favor, nos conte como foi o seu atendimento.
+Por favor, nos avalie de 1 a 5 e conte como foi o seu atendimento.
 1.😔 Péssimo
 2.🙁 Ruim
 3.😐 Regular
@@ -143,7 +144,6 @@ export const handleWebhook = async (req, res) => {
       if (!isStatus && !isGroup && texto) {
         
         // --- NOTIFICA O FRONTEND (SOCKET) ---
-        // Envia a flag 'mostrarNaFila' para o front decidir se exibe ou não
         const ctxAtual = userContext[idRemoto] || {};
         io.emit('novaMensagemWhatsapp', { 
             id: idMensagem, 
@@ -182,7 +182,7 @@ export const handleWebhook = async (req, res) => {
                 ctx.etapa = 'MENU';
                 ctx.botPausado = false;
                 ctx.nomeAgente = null;
-                ctx.mostrarNaFila = false; // Reseta: não mostra na fila ainda (está só no bot)
+                ctx.mostrarNaFila = false;
                 ctx.historico = [{ role: "system", content: SISTEMA_PROMPT }];
 
                 const textoSaudacao = MENSAGENS.SAUDACAO(nomeAutor);
@@ -198,11 +198,10 @@ export const handleWebhook = async (req, res) => {
                 ctx.etapa = 'AVALIACAO_NOTA';
                 ctx.botPausado = true; 
                 ctx.nomeAgente = null;
-                // ctx.mostrarNaFila = false; // Pode remover da fila aqui se quiser, ou manter até a nota
             }
 
             // ------------------------------------------------
-            // 3. ETAPA: MENU -> SUBMENU T.I (COM ALERTA NO PAINEL)
+            // 3. ETAPA: MENU -> SUBMENU T.I (COM ALERTA NO PAINEL) OU CONSULTA TICKET
             // ------------------------------------------------
             else if (ctx.etapa === 'MENU') {
                 if (texto === '1' || textoMin.includes('suporte')) {
@@ -211,21 +210,77 @@ export const handleWebhook = async (req, res) => {
                     ctx.etapa = 'SUBMENU_TI'; 
                     ctx.botPausado = false; 
                     
-                    // *** O CLIENTE ENTROU NA FILA AGORA ***
                     ctx.mostrarNaFila = true; 
 
-                    // *** AVISA O FRONT QUE TEM GENTE NA FILA ***
                     io.emit('notificacaoChamado', { 
                         chatId: idRemoto, 
                         nome: nomeAutor,
                         status: 'PENDENTE_TI' 
                     });
                 } 
-                else if (texto === 'ticket' || texto.startsWith('*')) {
-                    respostaBot = `Consultando ticket... (Simulação)`;
+                // === INÍCIO DA CORREÇÃO: LÓGICA DE CONSULTA DE TICKET ===
+                else if (texto.startsWith('*') || textoMin === 'ticket') {
+                    
+                    let ticketNumeroStr = '';
+                    
+                    if (texto.startsWith('*')) {
+                        // Se começou com *, tenta pegar o número que vem depois
+                        ticketNumeroStr = texto.substring(1).trim();
+                    } else if (textoMin === 'ticket') {
+                        // Se o usuário digitou APENAS a palavra 'ticket'
+                        // Pedir o número, mantendo na etapa MENU e pausando o bot.
+                        respostaBot = "Por favor, digite o *número do ticket* após o asterisco. Exemplo: *123";
+                        
+                        // Pausa o bot temporariamente para o usuário digitar o número
+                        ctx.etapa = 'MENU'; 
+                        ctx.botPausado = true;
+                        setTimeout(() => { ctx.botPausado = false; }, 30000); 
+
+                        // Envia a resposta e sai do processamento
+                        await evolutionService.enviarTexto(idRemoto, respostaBot);
+                        io.emit('novaMensagemWhatsapp', { 
+                            id: 'bot-'+Date.now(), chatId: idRemoto, nome: "Bot", texto: respostaBot, fromMe: true, mostrarNaFila: ctx.mostrarNaFila
+                        });
+                        return res.status(200).json({ success: true });
+                    }
+                    
+                    // Se houver número (após o * ou se a lógica acima não se aplicou)
+                    const ticketId = parseInt(ticketNumeroStr);
+                    
+                    if (isNaN(ticketId) || ticketId <= 0) {
+                        // Se a string era "* " ou "*abc"
+                        respostaBot = "⚠️ Por favor, digite um número de ticket válido após o asterisco. Exemplo: *123";
+                    } else {
+                        // Faz a consulta no banco de dados
+                        const ticket = await chamadoModel.findById(ticketId); 
+                        
+                        if (ticket) {
+                            // Encontrado: Formata a resposta com detalhes
+                            const categoriaNome = ticket.nomeCategoriaPai ? `${ticket.nomeCategoriaPai} / ${ticket.nomeCategoria}` : ticket.nomeCategoria;
+                            
+                            respostaBot = `🎫 *Detalhes do Ticket #${ticket.id}*\n`;
+                            respostaBot += `*Assunto:* ${ticket.assunto}\n`;
+                            respostaBot += `*Status:* ${ticket.status}\n`;
+                            respostaBot += `*Categoria:* ${categoriaNome || 'Não Atribuída'}\n`;
+                            
+                            if (ticket.atendente_id) {
+                                respostaBot += `*Atendente:* ${ticket.nomeAtendente || 'Em Atribuição'}\n`;
+                            }
+                            
+                            respostaBot += `*Prioridade:* ${ticket.prioridade}`;
+
+                            ctx.etapa = 'MENU';
+                            ctx.botPausado = true;
+                            setTimeout(() => { ctx.botPausado = false; }, 30000); 
+                        } else {
+                            // Não encontrado
+                            respostaBot = `❌ O Ticket #${ticketId} não foi encontrado. Verifique o número digitado.`;
+                        }
+                    }
                 } 
+                // === FIM DA CORREÇÃO DE CONSULTA DE TICKET ===
                 else {
-                    // Se não for número, manda pra IA
+                    // Se não for opção de menu ou ticket, manda pra IA
                     respostaBot = await processarComGroq(idRemoto, texto, nomeAutor);
                     if(!respostaBot) respostaBot = MENSAGENS.OPCAO_INVALIDA;
                 }
@@ -400,6 +455,17 @@ export const listarConversas = async (req, res) => {
     } catch (e) { res.status(200).json({ success: true, data: [] }); } 
 };
 
+// Dentro de src/controllers/whatsappController.js
+export const handleDisconnect = async (req, res) => {
+    try {
+        // Supondo que o evolutionService tenha a função correta
+        await evolutionService.desconectarInstancia(); 
+        res.status(200).json({ success: true, message: 'Instância desconectada.' });
+    } catch (e) { 
+        // A Evolution API geralmente usa a rota /instance/disconnect/{instanceName}
+        res.status(500).json({ success: false, message: e.message }); 
+    }
+};
 export const connectInstance = async (req, res) => { try { const r = await evolutionService.criarInstancia(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
 export const checarStatus = async (req, res) => { try { const r = await evolutionService.consultarStatus(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
 export const configurarUrlWebhook = async (req, res) => { try { const h = req.get('host'); const p = h.includes('localhost') ? 'http' : 'https'; await evolutionService.configurarWebhook(`${p}://${h}/api/evolution/webhook`); res.status(200).json({ success: true }); } catch (e) { res.status(500).json({ success: false }); } };
