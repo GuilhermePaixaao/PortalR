@@ -546,13 +546,13 @@
         }
         
         // ===============================================
-        // === FUNÇÃO CORRIGIDA PARA O BUG DE DUPLICAÇÃO E AGORA PARA O ATRASO ===
+        // === FUNÇÃO CORRIGIDA PARA O BUG DE DUPLICAÇÃO ===
         // ===============================================
         function exibirQRCode(b64) { 
-            // 1. Remove qualquer prefixo Base64 que a API possa ter incluído (ex: "data:image/png;base64,")
+            // 1. Remove qualquer prefixo Base64 que a API possa ter incluído (evita duplicação)
             const cleanedB64 = b64.replace(/^data:image\/[a-z]+;base64,/, '');
 
-            // 2. Monta a tag <img> com o prefixo correto, garantindo que ele não esteja duplicado
+            // 2. Monta a tag <img> com o prefixo Base64 correto
             qrContainer.innerHTML = `<img src="data:image/png;base64,${cleanedB64}">`; 
             statusText.textContent="Escaneie"; 
             showScreen('qr'); 
@@ -561,17 +561,17 @@
         btnConectar.addEventListener('click', async () => {
             statusText.textContent = "Solicitando..."; showScreen('qr');
             
-            // 1. Tenta conectar/gerar QR
-            // O QR Code deve vir logo após esta chamada via SOCKET.
-            try { await fetch('/api/whatsapp/connect'); } catch(e){ console.error("Erro no connect", e); }
+            // 1. Tenta conectar/gerar QR - SEM AWAIT (Fire-and-forget)
+            // Permite que o navegador continue processando eventos do Socket.io.
+            fetch('/api/whatsapp/connect').catch(e => { 
+                 console.error("Erro no connect", e); 
+            });
             
-            // 2. (CORREÇÃO) Força o Webhook de novo IMEDIATAMENTE (SEM SETTIMEOUT).
-            // Isto resolve a demora do QR Code, pois o Webhook é configurado o mais rápido possível
-            // para que a Evolution comece a enviar os eventos do QR Code e Status.
-            try { 
-                console.log("Forçando configuração de Webhook...");
-                await fetch('/api/whatsapp/configure-webhook'); 
-            } catch(e){ console.error("Erro webhook", e); }
+            // 2. Força o Webhook de novo IMEDIATAMENTE - SEM AWAIT (Fire-and-forget)
+            // Essencial para receber o QR Code rapidamente.
+            fetch('/api/whatsapp/configure-webhook').catch(e => {
+                 console.error("Erro webhook", e);
+            });
         });
         // ===============================================
 
