@@ -268,7 +268,7 @@
         const statusDot = document.getElementById('statusDot');
         const statusText = document.getElementById('statusText');
         const btnConectar = document.getElementById('btnConectarWhats');
-        const btnDesconectarWhats = document.getElementById('btnDesconectarWhats'); // NOVO: Elemento Desconectar
+        const btnDesconectarWhats = document.getElementById('btnDesconectarWhats'); // Elemento Desconectar
         const chatInput = document.getElementById('chatInput');
         const sendButton = document.getElementById('sendButton');
         const filaHeader = document.getElementById('filaHeader');
@@ -362,7 +362,6 @@
                 
                 const state = statusJson.data?.instance?.state || statusJson.data?.state;
                 if (state !== 'open') {
-                    // Se não estiver aberto, reseta o estado da UI para Desconectado
                     resetConnectionState();
                     return;
                 }
@@ -439,7 +438,6 @@
             if (data.status === 'open' || data.status === 'connecting') {
                 setConnectedState();
             } else {
-                // Usa a nova função de reset
                 resetConnectionState();
             }
         });
@@ -447,7 +445,6 @@
         socket.on('novaMensagemWhatsapp', (data) => {
             const { chatId, texto, fromMe, nome, mostrarNaFila } = data;
             
-            // ... (lógica de atualização de estado)
             if (!AppState.conversas[chatId]) AppState.conversas[chatId] = [];
             AppState.conversas[chatId].push({ fromMe, text: texto, time: new Date(), name: nome || "Eu" });
             if (nome && !fromMe) AppState.contactNames[chatId] = nome;
@@ -459,6 +456,7 @@
             let isVisivel = false;
             if (mostrarNaFila !== undefined) isVisivel = mostrarNaFila;
             else if (currentChat) isVisivel = currentChat.visivel;
+            
             if(fromMe && currentChat && currentChat.visivel) isVisivel = true;
 
             AppState.chatList.unshift({
@@ -549,6 +547,7 @@
             } catch (e) { console.error(e); }
         }
 
+        // NOVO: Função para finalizar o chat
         async function finalizarChat() {
             if (!AppState.activeNumber) return;
             if (!confirm(`Tem certeza que deseja encerrar o atendimento com ${chatTitle.textContent}? Isso enviará a pesquisa de satisfação ao cliente.`)) {
@@ -564,7 +563,10 @@
                     body: JSON.stringify({ numero: numero })
                 });
 
-                if (!response.ok) throw new Error("Falha ao finalizar na API.");
+                if (!response.ok) {
+                    const errorBody = await response.json().catch(() => ({ message: 'Erro desconhecido ao finalizar (API do Servidor).' }));
+                    throw new Error(errorBody.message || 'O servidor retornou um status de erro.');
+                }
                 
                 const chat = AppState.chatList.find(c => c.numero === numero);
                 if (chat) chat.visivel = false;
@@ -578,7 +580,7 @@
 
             } catch (e) { 
                 console.error("Erro ao finalizar:", e); 
-                alert(`Erro ao finalizar atendimento: ${e.message}`);
+                alert(`Erro ao finalizar atendimento: ${e.message}.`);
             }
         }
         
@@ -589,11 +591,13 @@
             }
 
             try {
-                // Chame a rota de desconexão (DELETE ou POST)
+                // Chame a rota de desconexão (POST)
                 const response = await fetch('/api/whatsapp/disconnect', { method: 'POST' }); 
                 
                 if (!response.ok) {
-                    throw new Error("O servidor não conseguiu enviar o comando de desconexão para a API.");
+                    // Tenta ler o corpo do erro para dar feedback útil
+                    const errorBody = await response.json().catch(() => ({ message: 'Erro desconhecido do servidor.' }));
+                    throw new Error(errorBody.message || 'O servidor retornou um status de erro.');
                 }
 
                 alert("Comando de desconexão enviado. A instância será desativada em breve.");
@@ -601,7 +605,7 @@
                 
             } catch (e) {
                 console.error("Erro ao tentar desconectar:", e);
-                alert(`Erro ao tentar desconectar: ${e.message}. Tente novamente.`);
+                alert(`Erro ao tentar desconectar: ${e.message}. Por favor, verifique os logs do seu servidor.`);
             }
         }
 
