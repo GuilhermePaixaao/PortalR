@@ -40,15 +40,17 @@ export const conectarInstancia = async () => {
     }
 }
 
-// === FUNÇÃO DE DESCONEXÃO CORRIGIDA COM TRATAMENTO DE ERRO ROBUSTO ===
+// === CORREÇÃO: Trocado 'disconnect' por 'logout' (Mais estável para desconexão) ===
 export const desconectarInstancia = async () => {
     try {
-        // Usa POST, que é o método correto para esta ação na Evolution API
-        const response = await apiClient.post(`/instance/disconnect/${INSTANCE_NAME}`, {});
+        console.log(`[EVOLUTION] Tentando LOGOUT/DESCONECTAR instância: ${INSTANCE_NAME}`);
+        // MUDANÇA: Usando o endpoint /instance/logout/ (mais comum)
+        const response = await apiClient.post(`/instance/logout/${INSTANCE_NAME}`, {});
         return response.data;
     } catch (error) {
         // Lógica robusta para capturar a mensagem de erro da API ou de rede
         const evolutionMessage = error.response?.data?.message || error.message || "Erro desconhecido de rede/API ao desconectar.";
+        // Retorna a mensagem de erro detalhada da Evolution para o frontend
         throw new Error(`Falha Evolution API ao Desconectar: ${evolutionMessage}`);
     }
 };
