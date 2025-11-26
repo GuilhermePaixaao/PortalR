@@ -40,12 +40,12 @@ export const conectarInstancia = async () => {
     }
 }
 
-// === CORREÇÃO FINAL: Tenta o endpoint /instance/disconnect/ ===
+// === CORREÇÃO: Usando DELETE /instance/delete/ para forçar a desconexão/remoção ===
 export const desconectarInstancia = async () => {
     try {
-        console.log(`[EVOLUTION] Tentando DESCONECTAR (POST /instance/disconnect/) instância: ${INSTANCE_NAME}`);
-        // Tenta o endpoint /instance/disconnect/{instanceName}
-        const response = await apiClient.post(`/instance/disconnect/${INSTANCE_NAME}`, {});
+        console.log(`[EVOLUTION] Tentando DELETAR/DESCONECTAR (DELETE /instance/delete/) instância: ${INSTANCE_NAME}`);
+        // MUDANÇA: DELETE é o método HTTP correto para a rota de exclusão de instância
+        const response = await apiClient.delete(`/instance/delete/${INSTANCE_NAME}`);
         return response.data;
     } catch (error) {
         // Lógica robusta para capturar a mensagem de erro da API ou de rede
