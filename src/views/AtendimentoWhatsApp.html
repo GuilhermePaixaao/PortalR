@@ -221,14 +221,13 @@
 
         const socket = io();
 
-        // 4. SOCKET EVENTS (AQUI ESTÁ A CORREÇÃO!)
+        // 4. SOCKET EVENTS
         // ==========================================
         socket.on('connect', () => {
             console.log("✅ Conectado ao Socket");
             syncChatsWithServer();
         });
 
-        // === ESCUTAR O QR CODE ===
         socket.on('qrCodeRecebido', (data) => {
             console.log("📷 QR Code Recebido via Socket!");
             if (data && data.qr) {
@@ -236,7 +235,6 @@
             }
         });
 
-        // === ESCUTAR STATUS DE CONEXÃO ===
         socket.on('statusConexao', (data) => {
             console.log("📡 Status WhatsApp:", data.status);
             if (data.status === 'open' || data.status === 'connecting') {
@@ -546,21 +544,29 @@
             if (name === 'welcome') welcomeScreen.style.display = 'flex';
             if (name === 'chat') activeChatScreen.style.display = 'flex';
         }
-        // Corrija a função para incluir o prefixo Base64 (data URI)
+        
+        // ===============================================
+        // === FUNÇÃO CORRIGIDA PARA O BUG DE DUPLICAÇÃO ===
+        // ===============================================
         function exibirQRCode(b64) { 
-            // Garante que o Base64 é uma URL de imagem válida para o navegador
-            qrContainer.innerHTML = `<img src="data:image/png;base64,${b64}">`; 
+            // 1. Remove qualquer prefixo Base64 que a API possa ter incluído (ex: "data:image/png;base64,")
+            // A regex remove o prefixo e garante que o restante da string seja a Base64 pura.
+            const cleanedB64 = b64.replace(/^data:image\/[a-z]+;base64,/, '');
+
+            // 2. Monta a tag <img> com o prefixo correto, garantindo que ele não esteja duplicado
+            qrContainer.innerHTML = `<img src="data:image/png;base64,${cleanedB64}">`; 
             statusText.textContent="Escaneie"; 
             showScreen('qr'); 
         }
-        
+        // ===============================================
+
         btnConectar.addEventListener('click', async () => {
             statusText.textContent = "Solicitando..."; showScreen('qr');
             
-            // 1. Primeiro tenta conectar/gerar QR
+            // 1. Tenta conectar/gerar QR
             try { await fetch('/api/whatsapp/connect'); } catch(e){ console.error("Erro no connect", e); }
             
-            // 2. (IMPORTANTE) Força o Webhook de novo!
+            // 2. Força o Webhook de novo!
             setTimeout(async () => {
                 try { 
                     console.log("Forçando configuração de Webhook...");
