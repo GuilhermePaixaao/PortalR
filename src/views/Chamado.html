@@ -347,6 +347,8 @@
                 console.error(error);
                 exibirMensagem(modal.open ? modalResposta : divRespostaGeral, error.message, false);
                 cascataWrapper.innerHTML = '<p class="text-danger">Erro ao carregar categorias.</p>';
+                // Propagar o erro para o init()
+                throw error;
             }
         }
         
@@ -680,9 +682,13 @@
         // (NOVO) Event Listener para o dropdown de Categoria Pai
         cascataWrapper.addEventListener('change', handleCascataChange);
         
-        // --- Inicialização ---
+        // --- Inicialização (CORRIGIDA) ---
         async function init() {
-            await carregarDadosIniciais(); 
+            // Adiciona .catch() para que o erro na categoria não bloqueie a listagem de chamados.
+            await carregarDadosIniciais().catch(error => {
+                console.error("Falha ao carregar categorias. Prosseguindo para listagem de chamados.", error);
+            }); 
+            
             await listarChamados(); 
         }
         init();
