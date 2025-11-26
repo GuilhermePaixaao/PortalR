@@ -40,14 +40,16 @@ export const conectarInstancia = async () => {
     }
 }
 
-// === FUNÇÃO DE DESCONEXÃO IMPLEMENTADA ===
+// === FUNÇÃO DE DESCONEXÃO CORRIGIDA COM TRATAMENTO DE ERRO ROBUSTO ===
 export const desconectarInstancia = async () => {
     try {
-        // Usa POST, que é mais seguro para esta ação na Evolution API
+        // Usa POST, que é o método correto para esta ação na Evolution API
         const response = await apiClient.post(`/instance/disconnect/${INSTANCE_NAME}`, {});
         return response.data;
     } catch (error) {
-        throw new Error(`Falha ao desconectar instância: ${error.response?.data?.message || error.message}`);
+        // Lógica robusta para capturar a mensagem de erro da API ou de rede
+        const evolutionMessage = error.response?.data?.message || error.message || "Erro desconhecido de rede/API ao desconectar.";
+        throw new Error(`Falha Evolution API ao Desconectar: ${evolutionMessage}`);
     }
 };
 
@@ -78,7 +80,6 @@ export const consultarStatus = async () => {
     const response = await apiClient.get(`/instance/connectionState/${INSTANCE_NAME}`);
     return response.data;
   } catch (error) {
-    // Retorna um estado 'close' em caso de erro para que o frontend saiba que está offline
     return { instance: { state: 'close' } }; 
   }
 };
