@@ -87,6 +87,37 @@
         #categoriaCascataWrapper .grupo-form {
             margin-bottom: 0; /* Remove a margem de baixo dentro da cascata */
         }
+
+        /* --- Estilos da Paginação --- */
+        .pagination-controls {
+            display: flex;
+            justify-content: flex-end; /* Alinha à direita */
+            align-items: center;
+            gap: 5px;
+            margin-top: 20px;
+        }
+
+        .pagination-controls button {
+            background-color: #fff;
+            color: #0d6efd;
+            border: 1px solid #0d6efd;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .pagination-controls button.active {
+            background-color: #0d6efd;
+            color: white;
+        }
+
+        .pagination-controls button:disabled {
+            color: #adb5bd;
+            border-color: #adb5bd;
+            cursor: not-allowed;
+            background-color: #f8f9fa;
+        }
     </style>
 </head>
 <body>
@@ -243,7 +274,10 @@
                         </div>
                         <div id="loadingIndicator"><p>Carregando chamados...</p></div>
                     </div>
-                </div>
+                    
+                    <div id="paginationControls" class="pagination-controls">
+                        </div>
+                    </div>
             </div>
         </main>
 
@@ -270,6 +304,12 @@
             console.error("Erro ao ler localStorage. Usando ID=1 padrão.", e);
         }
 
+        // --- Variáveis Globais de Paginação ---
+        let allTickets = []; // Armazena todos os tickets carregados (simulação de frontend)
+        const ITEMS_PER_PAGE = 5;
+        let currentPage = 1;
+        // ------------------------------------
+
         // Armazenamento local de categorias para a cascata
         let allCategories = [];
 
@@ -290,6 +330,7 @@
         const btnFiltrar = document.getElementById("btnFiltrar");
         const inputTelefone = document.getElementById("telefoneRequisitante");
         const listaComentariosContainer = document.getElementById("listaComentariosContainer");
+        const paginationControls = document.getElementById("paginationControls"); // NOVO
 
         // (NOVO) Referência para o container da cascata
         const cascataWrapper = document.getElementById("categoriaCascataWrapper");
@@ -331,74 +372,56 @@
             input.value = valor;
         }
 
-        // --- (ATUALIZADO) Carregar Categorias (em Cascata) ---
+        // --- Carregar Categorias (Mantém a propagação do erro) ---
         async function carregarDadosIniciais() {
             try {
                 const response = await fetch(`${API_URL}/categorias`);
                 if (!response.ok) throw new Error("Erro ao carregar categorias.");
 
-                allCategories = await response.json(); // Salva na variável global
+                allCategories = await response.json(); 
                 
-                // Limpa o wrapper e cria o primeiro dropdown
                 cascataWrapper.innerHTML = ''; 
-                criarProximoDropdown(null, 0); // null = "pai de todos" (root)
+                criarProximoDropdown(null, 0); 
 
             } catch (error) {
                 console.error(error);
                 exibirMensagem(modal.open ? modalResposta : divRespostaGeral, error.message, false);
                 cascataWrapper.innerHTML = '<p class="text-danger">Erro ao carregar categorias.</p>';
-                // Propagar o erro para o init()
                 throw error;
             }
         }
         
-        // (NOVO) Função recursiva para criar dropdowns
         function criarProximoDropdown(parentId, level) {
-            // parentId = null (para level 0), ou "5" (para level 1), etc.
-            
-            // Encontra as categorias filhas
             const children = allCategories.filter(c => c.parent_id == parentId);
-            
-            // Se não houver filhas, não faz nada
             if (children.length === 0) return;
 
-            // Cria os elementos HTML
             const div = document.createElement('div');
             div.className = 'grupo-form';
-            
             const label = document.createElement('label');
             label.textContent = level === 0 ? 'Categoria' : 'Subcategoria';
-            
             const select = document.createElement('select');
             select.className = 'form-select';
-            select.dataset.level = level; // Salva o nível (0, 1, 2...)
+            select.dataset.level = level; 
             
-            // Adiciona a opção padrão
             const placeholder = level === 0 ? '-- Selecione uma Categoria --' : '-- Selecione uma Subcategoria --';
             select.add(new Option(placeholder, ""));
 
-            // Adiciona as categorias filhas
             children.forEach(cat => {
                 select.add(new Option(cat.nome, cat.id));
             });
             
-            // Monta o bloco
             div.appendChild(label);
             div.appendChild(select);
             cascataWrapper.appendChild(div);
         }
         
-        // (NOVO) Listener de evento para a cascata
         function handleCascataChange(event) {
             const select = event.target;
-            
-            // Verifica se o clique foi em um <select>
             if (select.tagName !== 'SELECT') return;
 
             const selectedId = select.value;
             const level = parseInt(select.dataset.level);
 
-            // 1. Remove todos os dropdowns *depois* deste
             const allDropdowns = cascataWrapper.querySelectorAll('.grupo-form');
             allDropdowns.forEach(div => {
                 const sel = div.querySelector('select');
@@ -407,14 +430,73 @@
                 }
             });
 
-            // 2. Se um valor foi selecionado, tenta criar o próximo nível
             if (selectedId) {
                 criarProximoDropdown(selectedId, level + 1);
             }
         }
 
 
-        // --- Renderizar Lista de Chamados (sem mudanças) ---
+        // --- NOVO: Lógica de Paginação no Frontend ---
+        function renderPaginationControls(totalItems, currentPage) {
+            paginationControls.innerHTML = '';
+            const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+
+            if (totalPages <= 1) return;
+
+            // Botão << (Primeira)
+            const btnFirst = document.createElement('button');
+            btnFirst.textContent = '«';
+            btnFirst.disabled = currentPage === 1;
+            btnFirst.addEventListener('click', () => setPage(1));
+            paginationControls.appendChild(btnFirst);
+
+            // Botão < (Anterior)
+            const btnPrev = document.createElement('button');
+            btnPrev.textContent = '<';
+            btnPrev.disabled = currentPage === 1;
+            btnPrev.addEventListener('click', () => setPage(currentPage - 1));
+            paginationControls.appendChild(btnPrev);
+
+            // Botões Numéricos
+            for (let i = 1; i <= totalPages; i++) {
+                const btnPage = document.createElement('button');
+                btnPage.textContent = i;
+                btnPage.classList.add('page-number');
+                if (i === currentPage) {
+                    btnPage.classList.add('active');
+                }
+                btnPage.addEventListener('click', () => setPage(i));
+                paginationControls.appendChild(btnPage);
+            }
+
+            // Botão > (Próxima)
+            const btnNext = document.createElement('button');
+            btnNext.textContent = '>';
+            btnNext.disabled = currentPage === totalPages;
+            btnNext.addEventListener('click', () => setPage(currentPage + 1));
+            paginationControls.appendChild(btnNext);
+
+            // Botão >> (Última)
+            const btnLast = document.createElement('button');
+            btnLast.textContent = '»';
+            btnLast.disabled = currentPage === totalPages;
+            btnLast.addEventListener('click', () => setPage(totalPages));
+            paginationControls.appendChild(btnLast);
+        }
+
+        function setPage(page) {
+            currentPage = page;
+            const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+            const endIndex = startIndex + ITEMS_PER_PAGE;
+            const ticketsToRender = allTickets.slice(startIndex, endIndex);
+            
+            renderizarChamados(ticketsToRender);
+            renderPaginationControls(allTickets.length, currentPage);
+        }
+        // --- FIM NOVO ---
+
+
+        // --- Renderizar Lista de Chamados (Adaptado para Paginação) ---
         function renderizarChamados(chamados) {
             if (loadingIndicator) loadingIndicator.style.display = 'none';
             ticketList.querySelectorAll('.data-row').forEach(row => row.remove());
@@ -424,6 +506,7 @@
                 noDataRow.className = 'ticket-row data-row';
                 noDataRow.innerHTML = `<div class="ticket-cell" style="grid-column: 1 / -1; text-align: center; padding: 1rem;">Nenhum chamado encontrado.</div>`;
                 ticketList.appendChild(noDataRow);
+                paginationControls.innerHTML = '';
                 return;
             }
 
@@ -484,7 +567,8 @@
             });
         }
 
-        // --- Listar Chamados (sem mudanças) ---
+
+        // --- Listar Chamados (Modificado para Salvar Todos) ---
         async function listarChamados() {
             limparMensagem(divRespostaGeral);
             ticketList.querySelectorAll('.data-row').forEach(row => row.remove());
@@ -501,15 +585,24 @@
             try {
                 const response = await fetch(url);
                 if (!response.ok) throw new Error("Erro ao buscar chamados.");
-                const chamados = await response.json();
-                renderizarChamados(chamados);
+                
+                // 1. Salva TODOS os tickets na variável global
+                allTickets = await response.json();
+                
+                // 2. Reseta e renderiza apenas a primeira página
+                currentPage = 1;
+                const initialTickets = allTickets.slice(0, ITEMS_PER_PAGE);
+
+                renderizarChamados(initialTickets);
+                renderPaginationControls(allTickets.length, currentPage);
+                
             } catch (error) {
                 exibirMensagem(divRespostaGeral, error.message, false);
                 if (loadingIndicator) loadingIndicator.innerHTML = '<p style="color:red;">Falha ao carregar.</p>';
             }
         }
 
-        // --- (ATUALIZADO) Criar Novo Chamado ---
+        // --- (ATUALIZADO) Criar Novo Chamado (Mantém o fluxo) ---
         async function criarChamado(event) {
             event.preventDefault();
             limparMensagem(modalResposta);
@@ -521,16 +614,13 @@
             const descricao = ticketForm.descricao.value.trim();
             const prioridade = ticketForm.prioridade.value || 'Média';
             
-            // (NOVA LÓGICA DE CAPTURA DE ID)
             const allSelects = cascataWrapper.querySelectorAll('select');
             let categoriaUnificadaId = null;
             
-            // Pega o valor do ÚLTIMO dropdown que tenha um valor selecionado
             for (const select of allSelects) {
                 if (select.value) {
                     categoriaUnificadaId = select.value;
                 } else {
-                    // Se um dropdown no meio não foi selecionado, para.
                     break;
                 }
             }
@@ -545,7 +635,6 @@
                 return;
             }
 
-            // ... (lógica de anexo permanece a mesma)
             const anexoInput = document.getElementById('anexo');
             const files = anexoInput.files;
             let totalSize = 0;
@@ -639,7 +728,6 @@
         function resetarModalForm() {
             ticketForm.reset();
             limparMensagem(modalResposta);
-            // Limpa a cascata e recria o primeiro dropdown
             cascataWrapper.innerHTML = '';
             criarProximoDropdown(null, 0); 
         }
@@ -674,7 +762,8 @@
 
         // --- Event Listeners ---
         ticketForm.addEventListener('submit', criarChamado);
-        btnFiltrar.addEventListener('click', listarChamados);
+        // Ao filtrar, voltamos para a primeira página
+        btnFiltrar.addEventListener('click', () => listarChamados(1)); 
         if(inputTelefone) {
             inputTelefone.addEventListener('input', () => aplicarMascaraTelefone(inputTelefone));
         }
