@@ -296,9 +296,8 @@ export const handleWebhook = async (req, res) => {
                 } 
                 // === FIM DA CORREÇÃO DE CONSULTA DE TICKET ===
                 else {
-                    // Se não for opção de menu ou ticket, manda pra IA
-                    respostaBot = await processarComGroq(idRemoto, texto, nomeAutor);
-                    if(!respostaBot) respostaBot = MENSAGENS.OPCAO_INVALIDA;
+                    // === ALTERAÇÃO AQUI: Removemos a IA e retornamos Opção Inválida ===
+                    respostaBot = MENSAGENS.OPCAO_INVALIDA;
                 }
             }
 
@@ -323,8 +322,8 @@ export const handleWebhook = async (req, res) => {
                     ctx.mostrarNaFila = false; // Saiu da fila
                 }
                 else {
-                    respostaBot = await processarComGroq(idRemoto, texto, nomeAutor);
-                    if(!respostaBot) respostaBot = MENSAGENS.OPCAO_INVALIDA;
+                    // === ALTERAÇÃO AQUI: Removemos a IA e retornamos Opção Inválida ===
+                    respostaBot = MENSAGENS.OPCAO_INVALIDA;
                 }
             }
 
@@ -350,7 +349,7 @@ export const handleWebhook = async (req, res) => {
                 delete userContext[idRemoto]; 
             }
 
-            // FALLBACK IA (Início)
+            // FALLBACK IA (Início - Mantemos IA apenas se o usuário nunca entrou no menu)
             else if (!respostaBot && !ctx.botPausado && ctx.etapa === 'INICIO') {
                 respostaBot = await processarComGroq(idRemoto, texto, nomeAutor);
             }
