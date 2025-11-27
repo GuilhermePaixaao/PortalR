@@ -383,6 +383,13 @@
                 listaServer.forEach(serverChat => {
                     const num = serverChat.numero;
                     
+                    // === CORREÇÃO F5: Lógica para determinar se é pendente ===
+                    const isAtendimentoHumano = serverChat.etapa === 'ATENDIMENTO_HUMANO';
+                    const temAgente = !!serverChat.nomeAgente;
+                    // Se estiver em atendimento ou tiver agente, NÃO é pendente (mesmo que seja visível).
+                    // Se for visível (fila) e não estiver em atendimento, é pendente.
+                    const serverPendingStatus = (serverChat.visivel && !isAtendimentoHumano && !temAgente);
+
                     if (mapaLocal.has(num)) {
                         const localChat = mapaLocal.get(num);
                         localChat.ultimaMensagem = serverChat.ultimaMensagem;
@@ -391,9 +398,10 @@
                             localChat.nome = serverChat.nome;
                             AppState.contactNames[num] = serverChat.nome;
                         }
-                        if (localChat.pending === undefined) {
-                            localChat.pending = serverChat.pending || false;
-                        }
+                        
+                        // Atualiza 'pending' com a verdade do servidor para corrigir F5
+                        localChat.pending = serverPendingStatus; 
+
                         if (serverChat.visivel !== undefined) {
                              localChat.visivel = serverChat.visivel;
                         }
@@ -409,7 +417,7 @@
                             ultimaMensagem: serverChat.ultimaMensagem,
                             unreadCount: serverChat.unreadCount,
                             visivel: (serverChat.visivel !== undefined) ? serverChat.visivel : true,
-                            pending: (serverChat.pending !== undefined) ? serverChat.pending : false
+                            pending: serverPendingStatus // Usa o status calculado
                         });
                     }
                 });
@@ -420,6 +428,12 @@
                 
                 saveState();
                 renderSidebar();
+                
+                // Se o chat ativo tiver mudado de status (ex: não é mais pendente), atualiza a tela
+                if (AppState.activeNumber) {
+                    // Reabre o chat para atualizar os botões
+                    openChat(AppState.activeNumber);
+                }
 
             } catch (e) { 
                 console.error("Erro na sincronização inteligente:", e); 
@@ -459,13 +473,20 @@
             
             if(fromMe && currentChat && currentChat.visivel) isVisivel = true;
 
+            // Se for nova mensagem e mostrarNaFila for true, é pendente, 
+            // A MENOS que já estivesse em atendimento (mas o socket simples não sabe 'etapa' aqui, 
+            // confiar no estado local ou no próximo sync)
+            let isPending = (mostrarNaFila === true);
+            // Se já não era pendente antes (estava sendo atendido), mantém false para evitar flicker
+            if (currentChat && !currentChat.pending && isVisivel) isPending = false;
+
             AppState.chatList.unshift({
                 numero: chatId,
                 nome: AppState.contactNames[chatId] || nome,
                 ultimaMensagem: fromMe ? `Você: ${texto}` : texto,
                 unreadCount: fromMe ? 0 : 1,
                 visivel: isVisivel,
-                pending: isVisivel 
+                pending: isPending 
             });
 
             saveState();
@@ -507,7 +528,10 @@
             msgs.forEach(m => appendMessageToView(m.text, m.fromMe, m.name, new Date(m.time)));
             
             chatTitle.textContent = chat.nome; 
+            
+            // CORREÇÃO: Usa o status 'pending' que agora está sincronizado corretamente com o servidor
             painelAtendimento.style.display = (chat && chat.pending) ? 'block' : 'none';
+            
             chatInput.disabled = false; chatInput.focus();
         }
 

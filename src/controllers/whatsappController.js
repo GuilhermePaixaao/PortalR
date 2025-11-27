@@ -179,17 +179,33 @@ export const handleWebhook = async (req, res) => {
             // 1. MENU PRINCIPAL
             // ------------------------------------------------
             if (ehSaudacao) {
-                ctx.etapa = 'MENU';
-                ctx.botPausado = false;
-                ctx.nomeAgente = null;
-                ctx.mostrarNaFila = false;
-                ctx.historico = [{ role: "system", content: SISTEMA_PROMPT }];
+                // CORREÇÃO DO BUG: Impede que a saudação se repita se já estiver no menu
+                if (ctx.etapa === 'MENU' && textoMin !== 'menu' && textoMin !== 'inicio') {
+                    // Se for repetição de saudação na etapa MENU, força a resposta de OPÇÃO INVÁLIDA e retorna (evita IA).
+                    respostaBot = MENSAGENS.OPCAO_INVALIDA;
+                    await evolutionService.enviarTexto(idRemoto, respostaBot);
+                    
+                    io.emit('novaMensagemWhatsapp', { 
+                        id: 'opt_invalida-'+Date.now(), 
+                        chatId: idRemoto, 
+                        nome: "Bot", 
+                        texto: respostaBot, 
+                        fromMe: true 
+                    });
+                    return res.status(200).json({ success: true });
+                } else {
+                    ctx.etapa = 'MENU';
+                    ctx.botPausado = false;
+                    ctx.nomeAgente = null;
+                    ctx.mostrarNaFila = false;
+                    ctx.historico = [{ role: "system", content: SISTEMA_PROMPT }];
 
-                const textoSaudacao = MENSAGENS.SAUDACAO(nomeAutor);
-                await evolutionService.enviarTexto(idRemoto, textoSaudacao);
-                
-                io.emit('novaMensagemWhatsapp', { id: 'menu-'+Date.now(), chatId: idRemoto, nome: "Bot", texto: textoSaudacao, fromMe: true });
-                return res.status(200).json({ success: true });
+                    const textoSaudacao = MENSAGENS.SAUDACAO(nomeAutor);
+                    await evolutionService.enviarTexto(idRemoto, textoSaudacao);
+                    
+                    io.emit('novaMensagemWhatsapp', { id: 'menu-'+Date.now(), chatId: idRemoto, nome: "Bot", texto: textoSaudacao, fromMe: true });
+                    return res.status(200).json({ success: true });
+                }
             }
             
             // 2. FINALIZAR (#)
@@ -218,7 +234,7 @@ export const handleWebhook = async (req, res) => {
                         status: 'PENDENTE_TI' 
                     });
                 } 
-                // === INÍCIO DA CORREÇÃO: LÓGICA DE CONSULTA DE TICKET ===
+                // === LÓGICA DE CONSULTA DE TICKET ===
                 else if (texto.startsWith('*') || textoMin === 'ticket') {
                     
                     let ticketNumeroStr = '';
@@ -447,7 +463,10 @@ export const listarConversas = async (req, res) => {
                 nome: x.pushName || x.id.split('@')[0], 
                 ultimaMensagem: x.conversation || "...", 
                 unread: x.unreadCount > 0,
-                visivel: deveAparecer // <--- Frontend usa isso para filtrar
+                visivel: deveAparecer, // <--- Frontend usa isso para filtrar
+                // === CORREÇÃO: Enviando dados de estado para o front ===
+                etapa: ctx.etapa || 'INICIO', // Envia a etapa atual
+                nomeAgente: ctx.nomeAgente || null // Envia se tem agente
             };
         }); 
         
