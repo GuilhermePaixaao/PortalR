@@ -1,5 +1,5 @@
 import * as evolutionService from '../services/evolutionService.js';
-import * as chamadoModel from '../models/chamadoModel.js'; // <-- Importa o modelo de chamado
+import * as chamadoModel from '../models/chamadoModel.js'; 
 import { OpenAI } from 'openai';
 
 // ==================================================
@@ -12,25 +12,14 @@ const groq = new OpenAI({
 
 const MODELO_IA = "llama-3.1-8b-instant"; 
 
-// --- CACHE ANTI-DUPLICAÇÃO (Impede mensagens repetidas) ---
+// --- CACHE ANTI-DUPLICAÇÃO ---
 const processedMessageIds = new Set();
 
 const SISTEMA_PROMPT = `
 Você é o assistente de triagem do Suporte Técnico (T.I.) do Supermercado Rosalina.
 Sua missão é EXCLUSIVAMENTE tirar dúvidas sobre: uso do sistema interno, problemas com impressoras, internet, computadores e abertura de chamados.
-
-REGRAS RÍGIDAS DE COMPORTAMENTO:
-1. Se o usuário perguntar sobre qualquer assunto que NÃO seja T.I. ou funcionamento do mercado, você DEVE responder APENAS:
-"Desculpe, meu sistema é limitado exclusivamente para suporte técnico e dúvidas operacionais do mercado."
-
-2. Não tente ser simpático demais nem render assunto fora do trabalho.
-3. Responda de forma breve e direta (máximo 2 frases).
-4. Se não souber a resposta técnica, peça para ele digitar # para falar com um humano.
-5. Se receber mensagens curtas como "ata", "ok", "entendi", responda: "Certo. Algo mais?"
 `;
 
-// Memória local
-// Estrutura: { '5512...': { etapa: '...', botPausado: false, mostrarNaFila: false, ... } }
 const userContext = {};
 
 // ==================================================
@@ -54,7 +43,7 @@ Para agilizar, escolha uma opção:
 
 Digite o número da opção:`,
 
-    OPCAO_INVALIDA: `A opção digitada não existe, digite uma opção válida!`,
+    OPCAO_INVALIDA: `⚠️ A opção digitada não existe. Por favor, digite apenas o número da opção desejada!`,
 
     FILA_TI: `🔔 Entendido. Já notifiquei a equipe. Aguarde um momento que um humano irá te responder.`,
 
@@ -73,22 +62,17 @@ Por favor, nos avalie de 1 a 5 e conte como foi o seu atendimento.
 };
 
 // ==================================================
-// 3. LÓGICA DA INTELIGÊNCIA ARTIFICIAL (GROQ)
+// 3. LÓGICA DA INTELIGÊNCIA ARTIFICIAL (Mantida apenas para Início)
 // ==================================================
 async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
     const contexto = userContext[numeroUsuario];
-    
     if (!contexto || contexto.botPausado) return null;
 
     try {
         if (!contexto.historico || contexto.historico.length === 0) {
-            contexto.historico = [
-                { role: "system", content: SISTEMA_PROMPT }
-            ];
+            contexto.historico = [{ role: "system", content: SISTEMA_PROMPT }];
         }
-
         contexto.historico.push({ role: "user", content: textoUsuario });
-
         if (contexto.historico.length > 12) {
             contexto.historico = [contexto.historico[0], ...contexto.historico.slice(-10)];
         }
@@ -101,11 +85,9 @@ async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
         });
 
         const respostaIA = completion.choices[0]?.message?.content || "";
-
         if (respostaIA) {
             contexto.historico.push({ role: "assistant", content: respostaIA });
         }
-
         return respostaIA;
 
     } catch (erro) {
@@ -131,7 +113,6 @@ export const handleWebhook = async (req, res) => {
       const idRemoto = msg.key.remoteJid;
       const isFromMe = msg.key.fromMe;
       
-      // --- 1. ANTI-DUPLICAÇÃO ---
       if (processedMessageIds.has(idMensagem)) return res.status(200).json({ success: true });
       processedMessageIds.add(idMensagem);
       setTimeout(() => processedMessageIds.delete(idMensagem), 10000);
@@ -143,7 +124,6 @@ export const handleWebhook = async (req, res) => {
 
       if (!isStatus && !isGroup && texto) {
         
-        // --- NOTIFICA O FRONTEND (SOCKET) ---
         const ctxAtual = userContext[idRemoto] || {};
         io.emit('novaMensagemWhatsapp', { 
             id: idMensagem, 
@@ -161,7 +141,6 @@ export const handleWebhook = async (req, res) => {
             
             const textoMin = texto.toLowerCase();
 
-            // Saudação robusta
             const saudacoes = [
                 'oi', 'olá', 'ola', 'oie', 'menu', 'inicio', 'start', 
                 'bom dia', 'boa tarde', 'boa noite', 'opa', 'e ai', 'eai', 'hey', 
@@ -179,12 +158,9 @@ export const handleWebhook = async (req, res) => {
             // 1. MENU PRINCIPAL
             // ------------------------------------------------
             if (ehSaudacao) {
-                // CORREÇÃO DO BUG: Impede que a saudação se repita se já estiver no menu
                 if (ctx.etapa === 'MENU' && textoMin !== 'menu' && textoMin !== 'inicio') {
-                    // Se for repetição de saudação na etapa MENU, força a resposta de OPÇÃO INVÁLIDA e retorna (evita IA).
                     respostaBot = MENSAGENS.OPCAO_INVALIDA;
                     await evolutionService.enviarTexto(idRemoto, respostaBot);
-                    
                     io.emit('novaMensagemWhatsapp', { 
                         id: 'opt_invalida-'+Date.now(), 
                         chatId: idRemoto, 
@@ -202,7 +178,6 @@ export const handleWebhook = async (req, res) => {
 
                     const textoSaudacao = MENSAGENS.SAUDACAO(nomeAutor);
                     await evolutionService.enviarTexto(idRemoto, textoSaudacao);
-                    
                     io.emit('novaMensagemWhatsapp', { id: 'menu-'+Date.now(), chatId: idRemoto, nome: "Bot", texto: textoSaudacao, fromMe: true });
                     return res.status(200).json({ success: true });
                 }
@@ -217,15 +192,15 @@ export const handleWebhook = async (req, res) => {
             }
 
             // ------------------------------------------------
-            // 3. ETAPA: MENU -> SUBMENU T.I (COM ALERTA NO PAINEL) OU CONSULTA TICKET
+            // 3. ETAPA: MENU -> SUBMENU T.I
             // ------------------------------------------------
             else if (ctx.etapa === 'MENU') {
                 if (texto === '1' || textoMin.includes('suporte')) {
-                    // Manda o Submenu
                     respostaBot = MENSAGENS.MENU_TI_COM_FILA;
                     ctx.etapa = 'SUBMENU_TI'; 
                     ctx.botPausado = false; 
                     
+                    // IMPORTANTE: Marca como visível na fila
                     ctx.mostrarNaFila = true; 
 
                     io.emit('notificacaoChamado', { 
@@ -234,67 +209,36 @@ export const handleWebhook = async (req, res) => {
                         status: 'PENDENTE_TI' 
                     });
                 } 
-                // === LÓGICA DE CONSULTA DE TICKET ===
                 else if (texto.startsWith('*') || textoMin === 'ticket') {
-                    
                     let ticketNumeroStr = '';
-                    
-                    if (texto.startsWith('*')) {
-                        // Se começou com *, tenta pegar o número que vem depois
-                        ticketNumeroStr = texto.substring(1).trim();
-                    } else if (textoMin === 'ticket') {
-                        // Se o usuário digitou APENAS a palavra 'ticket'
-                        // Pedir o número, mantendo na etapa MENU e pausando o bot.
+                    if (texto.startsWith('*')) ticketNumeroStr = texto.substring(1).trim();
+                    else if (textoMin === 'ticket') {
                         respostaBot = "Por favor, digite o *número do ticket* após o asterisco. Exemplo: *123";
-                        
-                        // Pausa o bot temporariamente para o usuário digitar o número
                         ctx.etapa = 'MENU'; 
                         ctx.botPausado = true;
                         setTimeout(() => { ctx.botPausado = false; }, 30000); 
-
-                        // Envia a resposta e sai do processamento
                         await evolutionService.enviarTexto(idRemoto, respostaBot);
-                        io.emit('novaMensagemWhatsapp', { 
-                            id: 'bot-'+Date.now(), chatId: idRemoto, nome: "Bot", texto: respostaBot, fromMe: true, mostrarNaFila: ctx.mostrarNaFila
-                        });
+                        io.emit('novaMensagemWhatsapp', { id: 'bot-'+Date.now(), chatId: idRemoto, nome: "Bot", texto: respostaBot, fromMe: true, mostrarNaFila: ctx.mostrarNaFila });
                         return res.status(200).json({ success: true });
                     }
-                    
-                    // Se houver número (após o * ou se a lógica acima não se aplicou)
                     const ticketId = parseInt(ticketNumeroStr);
-                    
                     if (isNaN(ticketId) || ticketId <= 0) {
-                        // Se a string era "* " ou "*abc"
                         respostaBot = "⚠️ Por favor, digite um número de ticket válido após o asterisco. Exemplo: *123";
                     } else {
-                        // Faz a consulta no banco de dados
                         const ticket = await chamadoModel.findById(ticketId); 
-                        
                         if (ticket) {
-                            // Encontrado: Formata a resposta com detalhes
                             const categoriaNome = ticket.nomeCategoriaPai ? `${ticket.nomeCategoriaPai} / ${ticket.nomeCategoria}` : ticket.nomeCategoria;
-                            
-                            respostaBot = `🎫 *Detalhes do Ticket #${ticket.id}*\n`;
-                            respostaBot += `*Assunto:* ${ticket.assunto}\n`;
-                            respostaBot += `*Status:* ${ticket.status}\n`;
-                            respostaBot += `*Categoria:* ${categoriaNome || 'Não Atribuída'}\n`;
-                            
-                            if (ticket.atendente_id) {
-                                respostaBot += `*Atendente:* ${ticket.nomeAtendente || 'Em Atribuição'}\n`;
-                            }
-                            
+                            respostaBot = `🎫 *Detalhes do Ticket #${ticket.id}*\n*Assunto:* ${ticket.assunto}\n*Status:* ${ticket.status}\n*Categoria:* ${categoriaNome || 'Não Atribuída'}\n`;
+                            if (ticket.atendente_id) respostaBot += `*Atendente:* ${ticket.nomeAtendente || 'Em Atribuição'}\n`;
                             respostaBot += `*Prioridade:* ${ticket.prioridade}`;
-
                             ctx.etapa = 'MENU';
                             ctx.botPausado = true;
                             setTimeout(() => { ctx.botPausado = false; }, 30000); 
                         } else {
-                            // Não encontrado
-                            respostaBot = `❌ O Ticket #${ticketId} não foi encontrado. Verifique o número digitado.`;
+                            respostaBot = `❌ O Ticket #${ticketId} não foi encontrado.`;
                         }
                     }
                 } 
-                // === FIM DA CORREÇÃO DE CONSULTA DE TICKET ===
                 else {
                     // === ALTERAÇÃO AQUI: Removemos a IA e retornamos Opção Inválida ===
                     respostaBot = MENSAGENS.OPCAO_INVALIDA;
@@ -302,7 +246,7 @@ export const handleWebhook = async (req, res) => {
             }
 
             // ------------------------------------------------
-            // 4. ETAPA: SUBMENU T.I (DENTRO DA FILA)
+            // 4. ETAPA: SUBMENU T.I
             // ------------------------------------------------
             else if (ctx.etapa === 'SUBMENU_TI') {
                 if (texto === '1') {
@@ -310,7 +254,6 @@ export const handleWebhook = async (req, res) => {
                     ctx.etapa = 'REGISTRAR_CHAMADO';
                 }
                 else if (texto === '2') {
-                    // Agora sim pausa e avisa que vai chamar humano
                     respostaBot = MENSAGENS.FILA_TI;
                     ctx.etapa = 'FILA';
                     ctx.botPausado = true; 
@@ -319,7 +262,7 @@ export const handleWebhook = async (req, res) => {
                 else if (texto === '3') {
                     respostaBot = MENSAGENS.SAUDACAO(nomeAutor);
                     ctx.etapa = 'MENU';
-                    ctx.mostrarNaFila = false; // Saiu da fila
+                    ctx.mostrarNaFila = false; 
                 }
                 else {
                     // === ALTERAÇÃO AQUI: Removemos a IA e retornamos Opção Inválida ===
@@ -337,7 +280,7 @@ export const handleWebhook = async (req, res) => {
                     ctx.etapa = 'AVALIACAO_MOTIVO';
                 } else if (texto === '9') {
                     respostaBot = MENSAGENS.ENCERRAMENTO_FINAL;
-                    ctx.mostrarNaFila = false; // Remove da fila
+                    ctx.mostrarNaFila = false; 
                     delete userContext[idRemoto];
                 } else {
                     respostaBot = MENSAGENS.OPCAO_INVALIDA;
@@ -345,11 +288,11 @@ export const handleWebhook = async (req, res) => {
             }
             else if (ctx.etapa === 'AVALIACAO_MOTIVO') {
                 respostaBot = MENSAGENS.ENCERRAMENTO_FINAL;
-                ctx.mostrarNaFila = false; // Remove da fila
+                ctx.mostrarNaFila = false; 
                 delete userContext[idRemoto]; 
             }
 
-            // FALLBACK IA (Início - Mantemos IA apenas se o usuário nunca entrou no menu)
+            // FALLBACK IA (Início)
             else if (!respostaBot && !ctx.botPausado && ctx.etapa === 'INICIO') {
                 respostaBot = await processarComGroq(idRemoto, texto, nomeAutor);
             }
@@ -386,14 +329,12 @@ export const atenderAtendimento = async (req, res) => {
     try {
         if (!userContext[numero]) userContext[numero] = { historico: [] };
         
-        // Pausa o bot e salva o nome do agente
         userContext[numero].nomeAgente = nomeAgente;
         userContext[numero].botPausado = true; 
         userContext[numero].etapa = 'ATENDIMENTO_HUMANO';
-        userContext[numero].mostrarNaFila = true; // Continua na fila pois é um atendimento ativo
+        userContext[numero].mostrarNaFila = true; 
 
         const msg = `👨‍💻 *${nomeAgente}* atendeu seu pedido e falará com você agora.`;
-        
         await evolutionService.enviarTexto(numero, msg);
         res.status(200).json({ success: true });
     } catch (error) { res.status(500).json({ success: false }); }
@@ -406,7 +347,7 @@ export const finalizarAtendimento = async (req, res) => {
         userContext[numero].etapa = 'AVALIACAO_NOTA';
         userContext[numero].botPausado = true;
         userContext[numero].nomeAgente = null;
-        userContext[numero].mostrarNaFila = false; // <--- AGORA SAI DA LISTA DO AGENTE
+        userContext[numero].mostrarNaFila = false; 
 
         const msg = MENSAGENS.AVALIACAO_INICIO;
         await evolutionService.enviarTexto(numero, msg);
@@ -414,17 +355,14 @@ export const finalizarAtendimento = async (req, res) => {
     } catch (error) { res.status(500).json({ success: false }); }
 };
 
-// Rota chamada quando você envia mensagem pelo input do portal
 export const handleSendMessage = async (req, res) => {
   const { numero, mensagem, nomeAgenteTemporario } = req.body;
   try {
       let mensagemFinal = mensagem;
       const contexto = userContext[numero];
       
-      // Se o agente enviou mensagem, garante que aparece na fila
       if(contexto) contexto.mostrarNaFila = true;
       else if (!contexto) {
-          // Cria contexto básico se agente iniciou conversa
           userContext[numero] = { etapa: 'ATENDIMENTO_HUMANO', botPausado: true, mostrarNaFila: true };
       }
 
@@ -441,31 +379,33 @@ export const handleSendMessage = async (req, res) => {
 };
 
 // ==================================================
-// 6. ROTA DE LISTAGEM COM FILTRO
+// 6. ROTA DE LISTAGEM COM FILTRO (CORRIGIDA)
 // ==================================================
 export const listarConversas = async (req, res) => { 
     try { 
         const c = await evolutionService.buscarConversas(); 
         
-        // Mapeia e adiciona a flag 'visivel' baseada no estado do Bot
         const m = c.map(x => {
             const ctx = userContext[x.id] || {};
             
-            // Lógica de Exibição:
-            // Mostra se: 
-            // 1. Está marcado explicitamente como 'mostrarNaFila' (Digitou 1)
-            // 2. OU Está em atendimento humano
-            const deveAparecer = ctx.mostrarNaFila === true || ctx.etapa === 'ATENDIMENTO_HUMANO';
+            // CORREÇÃO ROBUSTA DE VISIBILIDADE:
+            // O chat DEVE aparecer se:
+            // 1. A flag mostrarNaFila for true
+            // 2. OU se a etapa for de Fila, Submenu TI ou Atendimento
+            const deveAparecer = 
+                ctx.mostrarNaFila === true || 
+                ctx.etapa === 'ATENDIMENTO_HUMANO' ||
+                ctx.etapa === 'SUBMENU_TI' ||
+                ctx.etapa === 'FILA';
 
             return { 
                 numero: x.id, 
                 nome: x.pushName || x.id.split('@')[0], 
                 ultimaMensagem: x.conversation || "...", 
                 unread: x.unreadCount > 0,
-                visivel: deveAparecer, // <--- Frontend usa isso para filtrar
-                // === CORREÇÃO: Enviando dados de estado para o front ===
-                etapa: ctx.etapa || 'INICIO', // Envia a etapa atual
-                nomeAgente: ctx.nomeAgente || null // Envia se tem agente
+                visivel: deveAparecer, 
+                etapa: ctx.etapa || 'INICIO', 
+                nomeAgente: ctx.nomeAgente || null
             };
         }); 
         
@@ -473,16 +413,11 @@ export const listarConversas = async (req, res) => {
     } catch (e) { res.status(200).json({ success: true, data: [] }); } 
 };
 
-// Dentro de src/controllers/whatsappController.js
 export const handleDisconnect = async (req, res) => {
     try {
-        // Supondo que o evolutionService tenha a função correta
         await evolutionService.desconectarInstancia(); 
         res.status(200).json({ success: true, message: 'Instância desconectada.' });
-    } catch (e) { 
-        // A Evolution API geralmente usa a rota /instance/disconnect/{instanceName}
-        res.status(500).json({ success: false, message: e.message }); 
-    }
+    } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };
 export const connectInstance = async (req, res) => { try { const r = await evolutionService.criarInstancia(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
 export const checarStatus = async (req, res) => { try { const r = await evolutionService.consultarStatus(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
