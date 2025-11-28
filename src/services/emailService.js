@@ -5,8 +5,8 @@ import nodemailer from 'nodemailer';
 const transporter = nodemailer.createTransport({
     // REMOVEMOS "service: 'gmail'" para ter controle total
     host: 'smtp.gmail.com', 
-    port: 587, 
-    secure: false, // false para porta 587 (STARTTLS)
+    port: 465, 
+    secure: true, 
     auth: {
         user: process.env.EMAIL_USER, 
         pass: process.env.EMAIL_PASS  
