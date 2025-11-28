@@ -1,40 +1,22 @@
 // src/services/emailService.js
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
-// --- CONFIGURAÇÃO CORRIGIDA PARA RAILWAY ---
-const transporter = nodemailer.createTransport({
-    // REMOVEMOS "service: 'gmail'" para ter controle total
-    host: 'smtp.gmail.com', 
-    port: 465, 
-    secure: true, 
-    auth: {
-        user: process.env.EMAIL_USER, 
-        pass: process.env.EMAIL_PASS  
-    },
-    // --- AS CORREÇÕES VITAIS ABAIXO ---
-    family: 4, // <--- OBRIGATÓRIO: Força o uso de IPv4 (evita o timeout)
-    connectionTimeout: 10000, // 10s para desistir se não conectar
-    greetingTimeout: 5000,    // 5s para esperar o "olá" do servidor
-    tls: {
-        rejectUnauthorized: false // Ajuda a evitar erros de certificado em container
-    },
-    logger: true,
-    debug: true
-});
+// Inicializa com a chave que você colocou nas variáveis do Railway
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const enviarNotificacaoCriacao = async (destinatario, chamado) => {
     try {
-        console.log(`[Email] Iniciando envio para: ${destinatario}`);
+        console.log(`[Email] Iniciando envio via API Resend para: ${destinatario}`);
         
-        const info = await transporter.sendMail({
-            from: process.env.EMAIL_FROM || process.env.EMAIL_USER, // Fallback se EMAIL_FROM não existir
-            to: destinatario,
+        const { data, error } = await resend.emails.send({
+            // MANTENHA 'onboarding@resend.dev' se você não configurou domínio próprio (DNS)
+            from: 'Portal Rosalina <onboarding@resend.dev>', 
+            to: [destinatario],
             subject: `[Portal Rosalina] Chamado #${chamado.id} Criado`,
-            text: `Olá ${chamado.nomeRequisitante}, seu chamado #${chamado.id} (${chamado.assunto}) foi criado com sucesso.`,
             html: `
                 <div style="font-family: Arial, color: #333;">
                     <h2 style="color: #0056b3;">Olá, ${chamado.nomeRequisitante}!</h2>
-                    <p>Seu chamado foi registrado.</p>
+                    <p>Seu chamado foi registrado com sucesso.</p>
                     <p><strong>Ticket:</strong> #${chamado.id}</p>
                     <p><strong>Assunto:</strong> ${chamado.assunto}</p>
                     <hr>
@@ -42,21 +24,27 @@ export const enviarNotificacaoCriacao = async (destinatario, chamado) => {
                 </div>
             `
         });
-        console.log(`[Email] SUCESSO! ID da mensagem: ${info.messageId}`);
-        return info; // É boa prática retornar o info
-    } catch (error) {
-        console.error("[Email] ERRO DETALHADO:", error);
-        throw error; // Lança o erro para quem chamou a função saber que falhou
+
+        if (error) {
+            console.error('[Email] Erro retornado pela API:', error);
+            throw new Error(error.message);
+        }
+
+        console.log(`[Email] SUCESSO! ID Resend: ${data.id}`);
+        return data;
+    } catch (err) {
+        console.error("[Email] FALHA AO ENVIAR:", err);
+        // Não vamos travar a aplicação, apenas logar o erro
     }
 };
 
 export const enviarNotificacaoStatus = async (destinatario, chamado, novoStatus) => {
     try {
-        console.log(`[Email] Enviando atualização de status para: ${destinatario}`);
+        console.log(`[Email] Atualizando status via API Resend para: ${destinatario}`);
         
-        const info = await transporter.sendMail({
-            from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-            to: destinatario,
+        const { data, error } = await resend.emails.send({
+            from: 'Portal Rosalina <onboarding@resend.dev>',
+            to: [destinatario],
             subject: `[Atualização] Chamado #${chamado.id}: ${novoStatus}`,
             html: `
                 <div style="font-family: Arial, color: #333;">
@@ -67,10 +55,15 @@ export const enviarNotificacaoStatus = async (destinatario, chamado, novoStatus)
                 </div>
             `
         });
-        console.log(`[Email] SUCESSO! Status enviado: ${info.messageId}`);
-        return info;
-    } catch (error) {
-        console.error("[Email] ERRO STATUS:", error);
-        throw error;
+
+        if (error) {
+            console.error('[Email] Erro retornado pela API:', error);
+            throw new Error(error.message);
+        }
+
+        console.log(`[Email] SUCESSO! ID Resend: ${data.id}`);
+        return data;
+    } catch (err) {
+        console.error("[Email] FALHA AO ENVIAR:", err);
     }
 };
