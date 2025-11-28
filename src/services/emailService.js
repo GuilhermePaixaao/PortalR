@@ -5,15 +5,17 @@ import nodemailer from 'nodemailer';
 const transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
     port: process.env.EMAIL_PORT,
-    secure: false, // true para 465, false para outras portas
+    secure: false, // Geralmente false para porta 587
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     }
 });
 
-// Função para notificar criação do chamado
-export const notificarCriacaoChamado = async (destinatario, chamado) => {
+// =====================================================================
+// NOME CORRIGIDO: enviarNotificacaoCriacao (Para bater com o Controller)
+// =====================================================================
+export const enviarNotificacaoCriacao = async (destinatario, chamado) => {
     try {
         const info = await transporter.sendMail({
             from: process.env.EMAIL_FROM,
@@ -28,19 +30,24 @@ export const notificarCriacaoChamado = async (destinatario, chamado) => {
                     <p><strong>Assunto:</strong> ${chamado.assunto}</p>
                     <p><strong>Status:</strong> ${chamado.status}</p>
                     <p><strong>Prioridade:</strong> ${chamado.prioridade}</p>
+                    <p><strong>Descrição:</strong> ${chamado.descricao}</p>
                     <br>
                     <p>Você será notificado a cada atualização de status.</p>
+                    <p><em>Portal Supermercado Rosalina</em></p>
                 </div>
             `
         });
         console.log(`[Email] Notificação de criação enviada para ${destinatario}: ${info.messageId}`);
     } catch (error) {
         console.error("[Email] Erro ao enviar notificação de criação:", error);
+        // Não lançamos o erro novamente para não travar o fluxo do chamado
     }
 };
 
-// Função para notificar atualização de status
-export const notificarMudancaStatus = async (destinatario, chamado, novoStatus) => {
+// =====================================================================
+// NOME CORRIGIDO: enviarNotificacaoStatus (Para bater com o Controller)
+// =====================================================================
+export const enviarNotificacaoStatus = async (destinatario, chamado, novoStatus) => {
     try {
         let corStatus = '#333';
         if (novoStatus === 'Concluído') corStatus = 'green';
@@ -61,6 +68,7 @@ export const notificarMudancaStatus = async (destinatario, chamado, novoStatus) 
                     </div>
                     <br>
                     <p>Acesse o Portal para ver mais detalhes.</p>
+                    <p><em>Portal Supermercado Rosalina</em></p>
                 </div>
             `
         });
