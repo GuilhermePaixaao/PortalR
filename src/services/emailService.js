@@ -1,22 +1,23 @@
 // src/services/emailService.js
 import nodemailer from 'nodemailer';
 
-// Cria o transportador usando as variáveis do Railway
+// --- CONFIGURAÇÃO ATUALIZADA PARA PORTA 465 (SSL) ---
 const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: process.env.EMAIL_PORT,
-    secure: false, // Geralmente false para porta 587
+    host: process.env.EMAIL_HOST, // smtp.gmail.com
+    port: process.env.EMAIL_PORT, // Deve ser 465 no Railway
+    secure: true, // <--- MUDANÇA IMPORTANTE: true para a porta 465
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
-    }
+    },
+    // Adiciona timeout para não ficar travado para sempre se falhar
+    connectionTimeout: 10000, // 10 segundos
+    greetingTimeout: 10000
 });
 
-// =====================================================================
-// NOME CORRIGIDO: enviarNotificacaoCriacao (Para bater com o Controller)
-// =====================================================================
 export const enviarNotificacaoCriacao = async (destinatario, chamado) => {
     try {
+        console.log(`[Email] Tentando conectar ao Gmail para enviar criação...`);
         const info = await transporter.sendMail({
             from: process.env.EMAIL_FROM,
             to: destinatario,
@@ -37,18 +38,15 @@ export const enviarNotificacaoCriacao = async (destinatario, chamado) => {
                 </div>
             `
         });
-        console.log(`[Email] Notificação de criação enviada para ${destinatario}: ${info.messageId}`);
+        console.log(`[Email] Sucesso! Criação enviada: ${info.messageId}`);
     } catch (error) {
-        console.error("[Email] Erro ao enviar notificação de criação:", error);
-        // Não lançamos o erro novamente para não travar o fluxo do chamado
+        console.error("[Email] Erro CRÍTICO ao enviar notificação de criação:", error.message);
     }
 };
 
-// =====================================================================
-// NOME CORRIGIDO: enviarNotificacaoStatus (Para bater com o Controller)
-// =====================================================================
 export const enviarNotificacaoStatus = async (destinatario, chamado, novoStatus) => {
     try {
+        console.log(`[Email] Tentando conectar ao Gmail para enviar status...`);
         let corStatus = '#333';
         if (novoStatus === 'Concluído') corStatus = 'green';
         if (novoStatus === 'Em Andamento') corStatus = 'blue';
@@ -72,8 +70,8 @@ export const enviarNotificacaoStatus = async (destinatario, chamado, novoStatus)
                 </div>
             `
         });
-        console.log(`[Email] Notificação de status enviada para ${destinatario}: ${info.messageId}`);
+        console.log(`[Email] Sucesso! Status enviado: ${info.messageId}`);
     } catch (error) {
-        console.error("[Email] Erro ao enviar notificação de status:", error);
+        console.error("[Email] Erro CRÍTICO ao enviar notificação de status:", error.message);
     }
 };
