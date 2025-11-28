@@ -71,11 +71,7 @@ export const enviarNotificacaoCriacao = async (destinatario, chamado) => {
                                             </tr>
                                         </table>
 
-                                        <div style="text-align: center; margin-top: 35px;">
-                                            <a href="https://seusite.com/meus-chamados" style="background-color: ${CORES.primaria}; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 14px; display: inline-block;">
-                                                Acompanhar no Portal
-                                            </a>
-                                        </div>
+                                       
                                     </td>
                                 </tr>
                                 
