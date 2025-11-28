@@ -43,7 +43,7 @@ function showToast(titulo, mensagem, tipo = 'info') {
     // Nota: Alguns navegadores bloqueiam áudio sem interação do usuário.
     try {
         const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
-        audio.volume = 15;
+        audio.volume = 1.0;
         audio.play().catch(e => console.log("Áudio de notificação bloqueado pelo navegador (falta interação)."));
     } catch(e) {
         console.error("Erro ao tentar tocar som:", e);
