@@ -516,7 +516,7 @@
         });
 
         // 8. UI ACTIONS
-        function openChat(number) {
+        async function openChat(number) {
             AppState.activeNumber = number;
             const chat = AppState.chatList.find(c => c.numero === number);
             if(chat) chat.unreadCount = 0;
@@ -525,24 +525,59 @@
             renderSidebar(); 
             showScreen('chat');
 
+            chatTitle.textContent = chat ? chat.nome : number; 
+            
+            // 1. Limpa e exibe o que tem na memória local (Instantâneo)
             messagesContainer.innerHTML = '';
-            const msgs = AppState.conversas[number] || [];
-            msgs.forEach(m => appendMessageToView(m.text, m.fromMe, m.name, new Date(m.time)));
+            const localMsgs = AppState.conversas[number] || [];
+            localMsgs.forEach(m => appendMessageToView(m.text, m.fromMe, m.name, new Date(m.time)));
             
-            chatTitle.textContent = chat.nome; 
-            
-            // CORREÇÃO: Usa o status 'pending' sincronizado
+            // 2. BUSCA DO SERVIDOR (Corrige o bug da aba em segundo plano)
+            // Adiciona um indicador visual de carregamento discreto
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'msg-time';
+            loadingDiv.style.textAlign = 'center';
+            loadingDiv.style.padding = '10px';
+            loadingDiv.innerText = 'Sincronizando mensagens...';
+            messagesContainer.appendChild(loadingDiv);
+
+            try {
+                const response = await fetch('/api/whatsapp/messages', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ numero: number })
+                });
+                
+                const json = await response.json();
+                
+                if (json.success && json.data.length > 0) {
+                    // Atualiza o AppState com a verdade do servidor
+                    AppState.conversas[number] = json.data;
+                    saveState();
+
+                    // Re-renderiza a tela com os dados completos
+                    messagesContainer.innerHTML = '';
+                    json.data.forEach(m => appendMessageToView(m.text, m.fromMe, m.name, new Date(m.time)));
+                } else {
+                    loadingDiv.remove();
+                }
+            } catch (e) {
+                console.error("Erro ao sincronizar mensagens:", e);
+                loadingDiv.remove();
+            }
+
+            // Lógica dos botões (Painel)
             painelAtendimento.style.display = (chat && chat.pending) ? 'block' : 'none';
             
-            // CORREÇÃO: Controle do botão de Encerrar
             const btnFinalizar = document.getElementById('btnFinalizarAtendimento');
             if(btnFinalizar) {
-                // Só mostra o botão se estiver realmente em atendimento humano
                 const emAtendimento = chat && chat.etapa === 'ATENDIMENTO_HUMANO';
                 btnFinalizar.style.display = emAtendimento ? 'block' : 'none';
             }
             
-            chatInput.disabled = false; chatInput.focus();
+            chatInput.disabled = false; 
+            chatInput.focus();
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
         function markAsRead(number) {
@@ -724,6 +759,24 @@
         
         sendButton.addEventListener('click', sendMessage);
         chatInput.addEventListener('keypress', (e) => { if(e.key==='Enter') sendMessage(); });
+
+        // Listener de Visibilidade da Aba
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === 'visible') {
+                console.log("Aba focada: Sincronizando...");
+                
+                // 1. Reconecta o socket se tiver caído
+                if (!socket.connected) socket.connect();
+                
+                // 2. Atualiza a lista lateral
+                syncChatsWithServer();
+                
+                // 3. Se tiver um chat aberto, atualiza as mensagens dele
+                if (AppState.activeNumber) {
+                    openChat(AppState.activeNumber);
+                }
+            }
+        });
     });
     </script>
 </body>

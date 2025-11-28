@@ -473,6 +473,46 @@ export const listarConversas = async (req, res) => {
     } catch (e) { res.status(200).json({ success: true, data: [] }); } 
 };
 
+// [NOVO] Controlador para listar mensagens do chat
+export const listarMensagensChat = async (req, res) => {
+    const { numero } = req.body;
+    
+    if (!numero) return res.status(400).json({ success: false, message: 'Número obrigatório' });
+
+    try {
+        const rawMessages = await evolutionService.buscarMensagensHistorico(numero);
+        
+        // Formata as mensagens para o padrão que seu HTML espera
+        const formattedMessages = rawMessages.map(msg => {
+            const content = msg.message?.conversation || 
+                            msg.message?.extendedTextMessage?.text || 
+                            msg.message?.imageMessage?.caption ||
+                            (msg.message?.imageMessage ? "📷 [Imagem]" : null) ||
+                            (msg.message?.audioMessage ? "🎤 [Áudio]" : null) ||
+                            "Conteúdo não suportado";
+
+            const timestamp = msg.messageTimestamp 
+                ? (typeof msg.messageTimestamp === 'number' ? msg.messageTimestamp * 1000 : msg.messageTimestamp)
+                : Date.now();
+
+            return {
+                fromMe: msg.key.fromMe,
+                text: content,
+                time: timestamp, 
+                name: msg.pushName || (msg.key.fromMe ? "Eu" : "Cliente")
+            };
+        });
+
+        // Ordena por data
+        formattedMessages.sort((a, b) => new Date(a.time) - new Date(b.time));
+
+        res.status(200).json({ success: true, data: formattedMessages });
+    } catch (e) {
+        console.error("Erro ao listar mensagens:", e);
+        res.status(500).json({ success: false, data: [] });
+    }
+};
+
 // Dentro de src/controllers/whatsappController.js
 export const handleDisconnect = async (req, res) => {
     try {

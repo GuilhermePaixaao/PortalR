@@ -116,3 +116,19 @@ export const configurarWebhook = async (urlWebhook) => {
         throw error;
     }
 };
+
+// [NOVO] Função para buscar histórico de mensagens
+export const buscarMensagensHistorico = async (numero, quantidade = 50) => {
+  try {
+    const response = await apiClient.post(`/chat/findMessages/${INSTANCE_NAME}`, {
+        where: {
+            key: { remoteJid: numero }
+        },
+        limit: quantidade
+    });
+    return response.data; 
+  } catch (error) {
+    console.error("Erro ao buscar histórico de mensagens:", error.message);
+    return []; 
+  }
+};
