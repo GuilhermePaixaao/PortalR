@@ -153,6 +153,17 @@ export const enviarNotificacaoStatus = async (destinatario, chamado, novoStatus)
     try {
         console.log(`[Email] Preparando envio de STATUS para: ${destinatario}`);
 
+        // --- LÓGICA DO OPERADOR (NOVO) ---
+        // Verifica se o status é "Em Andamento" e se existe um nome de atendente
+        let mensagemAtendente = '';
+        if (novoStatus === 'Em Andamento' && chamado.nomeAtendente) {
+            mensagemAtendente = `
+                <p style="color: ${CORES.texto}; font-size: 15px; margin-top: 15px; background-color: #f0fdf4; padding: 10px; border-radius: 4px; border: 1px solid #dcfce7;">
+                    👨‍💻 O operador <strong>${chamado.nomeAtendente}</strong> assumiu seu chamado e já está trabalhando nele.
+                </p>
+            `;
+        }
+
         // Monta o HTML específico
         const miolo = `
             <p style="color: ${CORES.texto}; font-size: 16px; margin-bottom: 20px;">
@@ -162,6 +173,7 @@ export const enviarNotificacaoStatus = async (destinatario, chamado, novoStatus)
                     ${novoStatus}
                 </strong>
             </p>
+            ${mensagemAtendente}
             ${renderDetalhesChamado(chamado)}
             <div style="text-align: center; margin-top: 30px;">
                  <p style="color: #999; font-size: 12px;">Acesse o portal para mais detalhes.</p>
