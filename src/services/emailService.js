@@ -21,7 +21,7 @@ export const enviarNotificacaoCriacao = async (destinatario, chamado) => {
         console.log(`[Email] Enviando Template Rosalina para: ${destinatario}`);
         
         const { data, error } = await resend.emails.send({
-            from: 'Portal Rosalina <onboarding@resend.dev>',
+           from: 'Suporte Rosalina <nao-responda@supermercadorosalina.com.br>',
             to: [destinatario],
             subject: `🎫 Chamado #${chamado.id} Recebido`,
             html: `
