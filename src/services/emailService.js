@@ -1,77 +1,63 @@
 // src/services/emailService.js
 import nodemailer from 'nodemailer';
 
-// --- CONFIGURAÇÃO ATUALIZADA PARA PORTA 465 (SSL) ---
+// --- CONFIGURAÇÃO "HARDCODED" PARA TESTE ---
+// Estamos colocando os valores direto aqui para garantir que não é erro de variável
 const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST, // smtp.gmail.com
-    port: process.env.EMAIL_PORT, // Deve ser 465 no Railway
-    secure: true, // <--- MUDANÇA IMPORTANTE: true para a porta 465
+    service: 'gmail', // O Nodemailer tem uma predefinição otimizada para Gmail
     auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
+        user: process.env.EMAIL_USER, // Seu e-mail
+        pass: process.env.EMAIL_PASS  // Sua senha de app (sem espaços!)
     },
-    // Adiciona timeout para não ficar travado para sempre se falhar
-    connectionTimeout: 10000, // 10 segundos
-    greetingTimeout: 10000
+    // Configurações de Debug para vermos tudo no log
+    logger: true,
+    debug: true
 });
 
 export const enviarNotificacaoCriacao = async (destinatario, chamado) => {
     try {
-        console.log(`[Email] Tentando conectar ao Gmail para enviar criação...`);
+        console.log(`[Email] Iniciando envio para: ${destinatario}`);
+        
         const info = await transporter.sendMail({
             from: process.env.EMAIL_FROM,
             to: destinatario,
-            subject: `[Portal Rosalina] Chamado #${chamado.id} Criado - ${chamado.assunto}`,
+            subject: `[Portal Rosalina] Chamado #${chamado.id} Criado`,
+            text: `Olá ${chamado.nomeRequisitante}, seu chamado #${chamado.id} (${chamado.assunto}) foi criado com sucesso.`,
             html: `
-                <div style="font-family: Arial, sans-serif; color: #333;">
-                    <h2 style="color: #0d6efd;">Olá, ${chamado.nomeRequisitante}!</h2>
-                    <p>Recebemos seu chamado com sucesso.</p>
-                    <hr>
+                <div style="font-family: Arial, color: #333;">
+                    <h2 style="color: #0056b3;">Olá, ${chamado.nomeRequisitante}!</h2>
+                    <p>Seu chamado foi registrado.</p>
                     <p><strong>Ticket:</strong> #${chamado.id}</p>
                     <p><strong>Assunto:</strong> ${chamado.assunto}</p>
-                    <p><strong>Status:</strong> ${chamado.status}</p>
-                    <p><strong>Prioridade:</strong> ${chamado.prioridade}</p>
-                    <p><strong>Descrição:</strong> ${chamado.descricao}</p>
-                    <br>
-                    <p>Você será notificado a cada atualização de status.</p>
+                    <hr>
                     <p><em>Portal Supermercado Rosalina</em></p>
                 </div>
             `
         });
-        console.log(`[Email] Sucesso! Criação enviada: ${info.messageId}`);
+        console.log(`[Email] SUCESSO! ID da mensagem: ${info.messageId}`);
     } catch (error) {
-        console.error("[Email] Erro CRÍTICO ao enviar notificação de criação:", error.message);
+        // Log detalhado do erro
+        console.error("[Email] ERRO DETALHADO:", error);
     }
 };
 
 export const enviarNotificacaoStatus = async (destinatario, chamado, novoStatus) => {
     try {
-        console.log(`[Email] Tentando conectar ao Gmail para enviar status...`);
-        let corStatus = '#333';
-        if (novoStatus === 'Concluído') corStatus = 'green';
-        if (novoStatus === 'Em Andamento') corStatus = 'blue';
-        if (novoStatus === 'Pausado') corStatus = 'orange';
-
+        console.log(`[Email] Enviando atualização de status para: ${destinatario}`);
+        
         const info = await transporter.sendMail({
             from: process.env.EMAIL_FROM,
             to: destinatario,
-            subject: `[Atualização] Chamado #${chamado.id} mudou para: ${novoStatus}`,
+            subject: `[Atualização] Chamado #${chamado.id}: ${novoStatus}`,
             html: `
-                <div style="font-family: Arial, sans-serif; color: #333;">
-                    <h2>Atualização de Chamado</h2>
-                    <p>O status do seu chamado <strong>#${chamado.id}</strong> foi alterado.</p>
-                    <div style="padding: 15px; background-color: #f8f9fa; border-left: 5px solid ${corStatus};">
-                        <p><strong>Novo Status:</strong> <span style="color: ${corStatus}; font-weight: bold;">${novoStatus}</span></p>
-                        <p><strong>Assunto:</strong> ${chamado.assunto}</p>
-                    </div>
-                    <br>
-                    <p>Acesse o Portal para ver mais detalhes.</p>
-                    <p><em>Portal Supermercado Rosalina</em></p>
+                <div style="font-family: Arial, color: #333;">
+                    <h2>Status Atualizado</h2>
+                    <p>O chamado <strong>#${chamado.id}</strong> agora está: <strong>${novoStatus}</strong></p>
                 </div>
             `
         });
-        console.log(`[Email] Sucesso! Status enviado: ${info.messageId}`);
+        console.log(`[Email] SUCESSO! Status enviado: ${info.messageId}`);
     } catch (error) {
-        console.error("[Email] Erro CRÍTICO ao enviar notificação de status:", error.message);
+        console.error("[Email] ERRO STATUS:", error);
     }
 };
