@@ -156,13 +156,33 @@
                     <div class="col-md-6">
                         <div class="grupo-form">
                             <label for="loja">Loja</label>
-                            <input type="text" id="loja" name="loja" placeholder="Ex: Loja 01, Matriz...">
+                            <select id="loja" name="loja" class="form-select">
+                                <option value="">-- Selecione a Loja --</option>
+                                <option value="Matriz">Matriz</option>
+                                <option value="Loja 01">Loja 01</option>
+                                <option value="Loja 02">Loja 02</option>
+                                <option value="Loja 03">Loja 03</option>
+                                <option value="Loja 04">Loja 04</option>
+                                <option value="CD">Centro de Distribuição</option>
+                            </select>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="grupo-form">
                             <label for="departamento">Departamento</label>
-                            <input type="text" id="departamento" name="departamento" placeholder="Ex: Açougue, Frente de Caixa...">
+                            <select id="departamento" name="departamento" class="form-select">
+                                <option value="">-- Selecione o Departamento --</option>
+                                <option value="TI">T.I.</option>
+                                <option value="RH">Recursos Humanos</option>
+                                <option value="Financeiro">Financeiro</option>
+                                <option value="Comercial">Comercial</option>
+                                <option value="Frente de Caixa">Frente de Caixa</option>
+                                <option value="Açougue">Açougue</option>
+                                <option value="Padaria">Padaria</option>
+                                <option value="Hortifruti">Hortifruti</option>
+                                <option value="Depósito">Depósito</option>
+                                <option value="Prevenção">Prevenção</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -192,8 +212,7 @@
                     </div>
                     
                     <div class="col-md-6">
-                        <div id="categoriaCascataWrapper">
-                            </div>
+                        <div id="categoriaCascataWrapper"></div>
                     </div>
                 </div>
                 <div class="grupo-form">
@@ -232,6 +251,7 @@
                     <div class="detalhe-grupo"><span class="detalhe-label">Departamento</span><div id="detalheDepartamento" class="detalhe-valor">...</div></div>
                 </div>
             </div>
+
             <div class="row">
                 <div class="col-md-3">
                     <div class="detalhe-grupo"><span class="detalhe-label">Contato</span><span id="detalheRequisitante" class="detalhe-valor">...</span></div>
@@ -296,9 +316,8 @@
                         <div id="loadingIndicator"><p>Carregando chamados...</p></div>
                     </div>
                     
-                    <div id="paginationControls" class="pagination-controls">
-                        </div>
-                    </div>
+                    <div id="paginationControls" class="pagination-controls"></div>
+                </div>
             </div>
         </main>
 
@@ -325,16 +344,11 @@
             console.error("Erro ao ler localStorage. Usando ID=1 padrão.", e);
         }
 
-        // --- Variáveis Globais de Paginação ---
-        let allTickets = []; // Armazena todos os tickets carregados (simulação de frontend)
+        let allTickets = [];
         const ITEMS_PER_PAGE = 5;
         let currentPage = 1;
-        // ------------------------------------
-
-        // Armazenamento local de categorias para a cascata
         let allCategories = [];
 
-        // --- Referências ---
         const modal = document.getElementById("modalTicket");
         const btnAbrir = document.getElementById("newTicketButton");
         const btnFechar = document.getElementById("fecharModal");
@@ -351,13 +365,10 @@
         const btnFiltrar = document.getElementById("btnFiltrar");
         const inputTelefone = document.getElementById("telefoneRequisitante");
         const listaComentariosContainer = document.getElementById("listaComentariosContainer");
-        const paginationControls = document.getElementById("paginationControls"); // NOVO
-        const selectPrioridade = document.getElementById("prioridade"); // NOVO: Referência para o select de prioridade
-
-        // (NOVO) Referência para o container da cascata
+        const paginationControls = document.getElementById("paginationControls");
+        const selectPrioridade = document.getElementById("prioridade");
         const cascataWrapper = document.getElementById("categoriaCascataWrapper");
 
-        // --- Funções Auxiliares (sem mudanças) ---
         function exibirMensagem(elemento, mensagem, sucesso = true) {
             elemento.textContent = mensagem;
             elemento.className = sucesso ? 'alert alert-success' : 'alert alert-danger';
@@ -378,33 +389,23 @@
                 const data = dt.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
                 const hora = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
                 return `${data} ${hora}`;
-            } catch (e) {
-                return 'Data inválida';
-            }
+            } catch (e) { return 'Data inválida'; }
         }
         function aplicarMascaraTelefone(input) {
             let valor = input.value.replace(/\D/g, "").substring(0, 11);
-            if (valor.length > 6) {
-                valor = valor.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, '($1) $2-$3');
-            } else if (valor.length > 2) {
-                valor = valor.replace(/^(\d{2})(\d{0,5}).*/, '($1) $2');
-            } else if (valor.length > 0) {
-                valor = valor.replace(/^(\d{0,2}).*/, '($1');
-            }
+            if (valor.length > 6) valor = valor.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, '($1) $2-$3');
+            else if (valor.length > 2) valor = valor.replace(/^(\d{2})(\d{0,5}).*/, '($1) $2');
+            else if (valor.length > 0) valor = valor.replace(/^(\d{0,2}).*/, '($1');
             input.value = valor;
         }
 
-        // --- Carregar Categorias (Mantém a propagação do erro) ---
         async function carregarDadosIniciais() {
             try {
                 const response = await fetch(`${API_URL}/categorias`);
                 if (!response.ok) throw new Error("Erro ao carregar categorias.");
-
                 allCategories = await response.json(); 
-                
                 cascataWrapper.innerHTML = ''; 
                 criarProximoDropdown(null, 0); 
-
             } catch (error) {
                 console.error(error);
                 exibirMensagem(modal.open ? modalResposta : divRespostaGeral, error.message, false);
@@ -416,7 +417,6 @@
         function criarProximoDropdown(parentId, level) {
             const children = allCategories.filter(c => c.parent_id == parentId);
             if (children.length === 0) return;
-
             const div = document.createElement('div');
             div.className = 'grupo-form';
             const label = document.createElement('label');
@@ -424,61 +424,36 @@
             const select = document.createElement('select');
             select.className = 'form-select';
             select.dataset.level = level; 
-            
             const placeholder = level === 0 ? '-- Selecione uma Categoria --' : '-- Selecione uma Subcategoria --';
             select.add(new Option(placeholder, ""));
-
-            children.forEach(cat => {
-                select.add(new Option(cat.nome, cat.id));
-            });
-            
+            children.forEach(cat => { select.add(new Option(cat.nome, cat.id)); });
             div.appendChild(label);
             div.appendChild(select);
             cascataWrapper.appendChild(div);
         }
         
-        // --- (ATUALIZADO) Lógica de Cascata com Prioridade Automática ---
         function handleCascataChange(event) {
             const select = event.target;
             if (select.tagName !== 'SELECT') return;
-
             const selectedId = select.value;
             const level = parseInt(select.dataset.level);
-
-            // 1. Remove subcategorias filhas se mudou a seleção
             const allDropdowns = cascataWrapper.querySelectorAll('.grupo-form');
             allDropdowns.forEach(div => {
                 const sel = div.querySelector('select');
-                if (parseInt(sel.dataset.level) > level) {
-                    div.remove();
-                }
+                if (parseInt(sel.dataset.level) > level) div.remove();
             });
-
             if (selectedId) {
-                // 2. Cria o próximo nível (se houver)
                 criarProximoDropdown(selectedId, level + 1);
-
-                // 3. (NOVO) Busca a categoria e aplica a prioridade
                 const categoriaSelecionada = allCategories.find(c => c.id == selectedId);
-                
                 if (categoriaSelecionada && categoriaSelecionada.prioridade_padrao) {
                     let p = categoriaSelecionada.prioridade_padrao;
-                    
-                    // Normalização de texto (Banco x HTML)
-                    // Banco: BAIXA, MEDIA, ALTA, URGENTE
-                    // HTML: Baixa, Média, Alta, Planejado
-                    
                     if (p === 'URGENTE') p = 'Alta'; 
                     if (p === 'MEDIA') p = 'Média';
                     if (p === 'BAIXA') p = 'Baixa';
                     if (p === 'ALTA') p = 'Alta';
-
-                    // Percorre as opções do select de prioridade e seleciona a correta
                     for (let i = 0; i < selectPrioridade.options.length; i++) {
                         if (selectPrioridade.options[i].value.toLowerCase() === p.toLowerCase()) {
                             selectPrioridade.selectedIndex = i;
-                            
-                            // Feedback visual (piscar em amarelo)
                             selectPrioridade.style.backgroundColor = "#fff3cd";
                             setTimeout(() => selectPrioridade.style.backgroundColor = "", 500);
                             break;
@@ -488,48 +463,33 @@
             }
         }
 
-
-        // --- NOVO: Lógica de Paginação no Frontend ---
         function renderPaginationControls(totalItems, currentPage) {
             paginationControls.innerHTML = '';
             const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
-
             if (totalPages <= 1) return;
-
-            // Botão << (Primeira)
             const btnFirst = document.createElement('button');
             btnFirst.textContent = '«';
             btnFirst.disabled = currentPage === 1;
             btnFirst.addEventListener('click', () => setPage(1));
             paginationControls.appendChild(btnFirst);
-
-            // Botão < (Anterior)
             const btnPrev = document.createElement('button');
             btnPrev.textContent = '<';
             btnPrev.disabled = currentPage === 1;
             btnPrev.addEventListener('click', () => setPage(currentPage - 1));
             paginationControls.appendChild(btnPrev);
-
-            // Botões Numéricos
             for (let i = 1; i <= totalPages; i++) {
                 const btnPage = document.createElement('button');
                 btnPage.textContent = i;
                 btnPage.classList.add('page-number');
-                if (i === currentPage) {
-                    btnPage.classList.add('active');
-                }
+                if (i === currentPage) btnPage.classList.add('active');
                 btnPage.addEventListener('click', () => setPage(i));
                 paginationControls.appendChild(btnPage);
             }
-
-            // Botão > (Próxima)
             const btnNext = document.createElement('button');
             btnNext.textContent = '>';
             btnNext.disabled = currentPage === totalPages;
             btnNext.addEventListener('click', () => setPage(currentPage + 1));
             paginationControls.appendChild(btnNext);
-
-            // Botão >> (Última)
             const btnLast = document.createElement('button');
             btnLast.textContent = '»';
             btnLast.disabled = currentPage === totalPages;
@@ -542,18 +502,13 @@
             const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
             const endIndex = startIndex + ITEMS_PER_PAGE;
             const ticketsToRender = allTickets.slice(startIndex, endIndex);
-            
             renderizarChamados(ticketsToRender);
             renderPaginationControls(allTickets.length, currentPage);
         }
-        // --- FIM NOVO ---
 
-
-        // --- Renderizar Lista de Chamados (Adaptado para Paginação) ---
         function renderizarChamados(chamados) {
             if (loadingIndicator) loadingIndicator.style.display = 'none';
             ticketList.querySelectorAll('.data-row').forEach(row => row.remove());
-
             if (!chamados || chamados.length === 0) {
                 const noDataRow = document.createElement('div');
                 noDataRow.className = 'ticket-row data-row';
@@ -562,42 +517,28 @@
                 paginationControls.innerHTML = '';
                 return;
             }
-
             chamados.forEach(chamado => {
                 const row = document.createElement('div');
                 row.className = 'ticket-row data-row';
                 row.setAttribute('data-ticket-id', chamado.id);
-
                 const prioridadeClass = (chamado.prioridade || 'Média').toLowerCase().replace('é', 'e');
                 const statusClass = (chamado.status || 'Aberto').toLowerCase().replace(/\s+/g, '-');
-
                 let nomeExibicao = 'N/A';
                 if (chamado.Categorias) {
-                    if (chamado.Categorias.nomePai) {
-                        nomeExibicao = `${chamado.Categorias.nomePai} / ${chamado.Categorias.nome}`;
-                    } else {
-                        nomeExibicao = chamado.Categorias.nome;
-                    }
+                    if (chamado.Categorias.nomePai) nomeExibicao = `${chamado.Categorias.nomePai} / ${chamado.Categorias.nome}`;
+                    else nomeExibicao = chamado.Categorias.nome;
                 }
-                
                 row.innerHTML = `
                     <div class="ticket-cell ticket-id">#${chamado.id}</div>
-                    <div class="ticket-cell ticket-priority">
-                        <span class="priority-badge ${prioridadeClass}">${escapeHtml(chamado.prioridade)}</span>
-                    </div>
+                    <div class="ticket-cell ticket-priority"><span class="priority-badge ${prioridadeClass}">${escapeHtml(chamado.prioridade)}</span></div>
                     <div class="ticket-cell ticket-subject">${escapeHtml(chamado.assunto)}</div>
                     <div class="ticket-cell ticket-category">${escapeHtml(nomeExibicao)}</div>
-                    <div class="ticket-cell ticket-status">
-                        <span class="status-badge ${statusClass}">${escapeHtml(chamado.status)}</span>
-                    </div>
+                    <div class="ticket-cell ticket-status"><span class="status-badge ${statusClass}">${escapeHtml(chamado.status)}</span></div>
                     <div class="ticket-cell ticket-requisitante">${escapeHtml(chamado.Funcionario?.nomeFuncionario || 'Desconhecido')}</div>
                     <div class="ticket-cell ticket-operator">${escapeHtml(chamado.Atendente?.nomeFuncionario || 'N/A')}</div>
                     <div class="ticket-cell ticket-created">${formatarData(chamado.created_at)}</div>
-                    <div class="ticket-cell ticket-actions">
-                        <span class="view-icon" title="Visualizar">👁️</span>
-                    </div>
+                    <div class="ticket-cell ticket-actions"><span class="view-icon" title="Visualizar">👁️</span></div>
                 `;
-
                 row.querySelector('.view-icon').addEventListener('click', (e) => {
                     e.stopPropagation();
                     const ticketId = chamado.id; 
@@ -620,51 +561,37 @@
                     carregarComentarios(ticketId); 
                     modalDetalhes.showModal();
                 });
-
                 ticketList.appendChild(row);
             });
         }
 
-
-        // --- Listar Chamados (Modificado para Salvar Todos) ---
         async function listarChamados() {
             limparMensagem(divRespostaGeral);
             ticketList.querySelectorAll('.data-row').forEach(row => row.remove());
             if (loadingIndicator) loadingIndicator.style.display = 'block';
-
             const params = new URLSearchParams();
             if (filtroAssunto.value.trim()) params.append('assunto', filtroAssunto.value.trim());
             if (filtroPrioridade.value) params.append('prioridade', filtroPrioridade.value);
             if (filtroStatus.value) params.append('status', filtroStatus.value);
             if (userId) params.append('requisitante_id', userId); 
-
             const url = `${API_URL}/chamados?${params.toString()}`;
-
             try {
                 const response = await fetch(url);
                 if (!response.ok) throw new Error("Erro ao buscar chamados.");
-                
-                // 1. Salva TODOS os tickets na variável global
                 allTickets = await response.json();
-                
-                // 2. Reseta e renderiza apenas a primeira página
                 currentPage = 1;
                 const initialTickets = allTickets.slice(0, ITEMS_PER_PAGE);
-
                 renderizarChamados(initialTickets);
                 renderPaginationControls(allTickets.length, currentPage);
-                
             } catch (error) {
                 exibirMensagem(divRespostaGeral, error.message, false);
                 if (loadingIndicator) loadingIndicator.innerHTML = '<p style="color:red;">Falha ao carregar.</p>';
             }
         }
 
-        // --- (ATUALIZADO) Criar Novo Chamado (Mantém o fluxo) ---
         async function criarChamado(event) {
             event.preventDefault();
             limparMensagem(modalResposta);
-
             const nomeRequisitante = ticketForm.nomeRequisitante.value.trim();
             const emailRequisitante = ticketForm.emailRequisitante.value.trim();
             const telefoneRequisitante = ticketForm.telefoneRequisitante.value.trim();
@@ -678,20 +605,15 @@
 
             const allSelects = cascataWrapper.querySelectorAll('select');
             let categoriaUnificadaId = null;
-            
             for (const select of allSelects) {
-                if (select.value) {
-                    categoriaUnificadaId = select.value;
-                } else {
-                    break;
-                }
+                if (select.value) categoriaUnificadaId = select.value;
+                else break;
             }
             
             if (!nomeRequisitante || !emailRequisitante || !assunto || !descricao) {
                 exibirMensagem(modalResposta, 'Nome, Email, Assunto e Descrição são obrigatórios.', false);
                 return;
             }
-            
             if (!categoriaUnificadaId) {
                 exibirMensagem(modalResposta, 'Por favor, selecione uma Categoria.', false);
                 return;
@@ -700,7 +622,7 @@
             const anexoInput = document.getElementById('anexo');
             const files = anexoInput.files;
             let totalSize = 0;
-            const maxSize = 20 * 1024 * 1024; // 20 MB
+            const maxSize = 20 * 1024 * 1024; 
             for (let i = 0; i < files.length; i++) { totalSize += files[i].size; }
             if (totalSize > maxSize) {
                 exibirMensagem(modalResposta, `Erro: O tamanho total dos arquivos (${(totalSize / 1024 / 1024).toFixed(2)} MB) excede o limite de 20 MB.`, false);
@@ -722,32 +644,19 @@
                     departamento: departamento // <-- ENVIA
                 }
             };
-            
             formData.append('chamado', JSON.stringify(dadosChamado.chamado));
-            for (let i = 0; i < files.length; i++) {
-                formData.append('anexos', files[i]);
-            }
+            for (let i = 0; i < files.length; i++) { formData.append('anexos', files[i]); }
 
             try {
-                const response = await fetch(`${API_URL}/chamados`, {
-                    method: 'POST',
-                    body: formData 
-                });
-                
+                const response = await fetch(`${API_URL}/chamados`, { method: 'POST', body: formData });
                 const respostaAPI = await response.json();
-                if (!response.ok) {
-                    throw new Error(respostaAPI.message || "Erro ao criar chamado.");
-                }
-
+                if (!response.ok) throw new Error(respostaAPI.message || "Erro ao criar chamado.");
                 exibirMensagem(divRespostaGeral, "Chamado criado com sucesso!", true);
                 modal.close();
                 await listarChamados(); 
-            } catch (error) {
-                exibirMensagem(modalResposta, error.message, false);
-            }
+            } catch (error) { exibirMensagem(modalResposta, error.message, false); }
         }
         
-        // --- Funções de Comentários (sem mudanças) ---
         function renderizarComentarios(comentarios) {
             listaComentariosContainer.innerHTML = ''; 
             listaComentariosContainer.classList.remove('comment-empty-state');
@@ -760,17 +669,7 @@
                 const nome = comentario.nomeFuncionario || 'Usuário desconhecido'; 
                 const data = formatarData(comentario.created_at);
                 const texto = escapeHtml(comentario.texto);
-                const commentHtml = `
-                    <div class="comment-item">
-                        <div class="comment-header">
-                            ${escapeHtml(nome)}
-                            <span class="comment-date">em ${data}</span>
-                        </div>
-                        <div class="comment-body">
-                            ${texto}
-                        </div>
-                    </div>
-                `;
+                const commentHtml = `<div class="comment-item"><div class="comment-header">${escapeHtml(nome)}<span class="comment-date">em ${data}</span></div><div class="comment-body">${texto}</div></div>`;
                 listaComentariosContainer.insertAdjacentHTML('beforeend', commentHtml);
             });
         }
@@ -783,12 +682,9 @@
                 }
                 const comentarios = await response.json();
                 renderizarComentarios(comentarios);
-            } catch (error) {
-                 listaComentariosContainer.innerHTML = `<span class="comment-empty-state" style="color: red;">${error.message}</span>`;
-            }
+            } catch (error) { listaComentariosContainer.innerHTML = `<span class="comment-empty-state" style="color: red;">${error.message}</span>`; }
         }
         
-        // --- (ATUALIZADO) Lógica do Modal "Novo Chamado" ---
         function resetarModalForm() {
             ticketForm.reset();
             limparMensagem(modalResposta);
@@ -798,7 +694,6 @@
 
         btnAbrir.addEventListener('click', () => {
             resetarModalForm();
-            
             try {
                 const userDataString = localStorage.getItem("userData");
                 const userData = JSON.parse(userDataString);
@@ -809,7 +704,6 @@
                 document.getElementById('nomeRequisitante').value = ''; 
                 document.getElementById('emailRequisitante').value = ''; 
             }
-
             if (typeof modal.showModal === 'function') modal.showModal();
             else modal.setAttribute('open', '');
             document.getElementById('assunto').focus();
@@ -817,31 +711,19 @@
         
         btnFechar.addEventListener('click', () => { modal.close(); });
         modal.addEventListener('close', () => { resetarModalForm(); }); 
-        
         btnFecharModalDetalhes.addEventListener('click', () => {
             listaComentariosContainer.innerHTML = '';
             modalDetalhes.removeAttribute('data-current-ticket-id');
             modalDetalhes.close();
         });
 
-        // --- Event Listeners ---
         ticketForm.addEventListener('submit', criarChamado);
-        // Ao filtrar, voltamos para a primeira página
         btnFiltrar.addEventListener('click', () => listarChamados(1)); 
-        if(inputTelefone) {
-            inputTelefone.addEventListener('input', () => aplicarMascaraTelefone(inputTelefone));
-        }
-        
-        // (NOVO) Event Listener para o dropdown de Categoria Pai
+        if(inputTelefone) inputTelefone.addEventListener('input', () => aplicarMascaraTelefone(inputTelefone));
         cascataWrapper.addEventListener('change', handleCascataChange);
         
-        // --- Inicialização (CORRIGIDA) ---
         async function init() {
-            // Adiciona .catch() para que o erro na categoria não bloqueie a listagem de chamados.
-            await carregarDadosIniciais().catch(error => {
-                console.error("Falha ao carregar categorias. Prosseguindo para listagem de chamados.", error);
-            }); 
-            
+            await carregarDadosIniciais().catch(error => { console.error("Falha ao carregar categorias.", error); }); 
             await listarChamados(); 
         }
         init();

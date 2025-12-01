@@ -1,25 +1,22 @@
 import pool from '../config/database.js';
 
 /**
- * (ATUALIZADO)
- * Cria um novo chamado usando a 'categoria_unificada_id' e agora inclui Loja/Departamento.
+ * Cria um novo chamado salvando 'loja_id' e 'departamento_id'.
  */
 export const create = async (chamado) => {
     const { 
         assunto, descricao, prioridade, status, requisitanteIdNum, 
         categoriaUnificadaIdNum,
         nomeRequisitanteManual, emailRequisitanteManual, telefoneRequisitanteManual,
-        loja, departamento // <-- (NOVO) Recebe os novos campos
+        loja_id, departamento_id // <-- AGORA RECEBE IDs
     } = chamado; 
 
-    // Removemos 'categoria_id' e 'subcategoria_id' do SQL
-    // Adicionamos 'loja' e 'departamento'
     const sql = `
         INSERT INTO Chamados 
             (assunto, descricao, prioridade, status, requisitante_id, 
              categoria_unificada_id,
              nome_requisitante_manual, email_requisitante_manual, telefone_requisitante_manual,
-             loja, departamento)
+             loja_id, departamento_id)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     
@@ -33,8 +30,8 @@ export const create = async (chamado) => {
         nomeRequisitanteManual, 
         emailRequisitanteManual, 
         telefoneRequisitanteManual,
-        loja,          // <-- (NOVO) Valor da loja
-        departamento   // <-- (NOVO) Valor do departamento
+        loja_id || null,          // <-- SALVA O ID
+        departamento_id || null   // <-- SALVA O ID
     ];
     
     const [result] = await pool.query(sql, values);
@@ -42,39 +39,27 @@ export const create = async (chamado) => {
 };
 
 /**
- * (ATUALIZADO)
- * Busca um chamado por ID e faz o JOIN com a categoria (e sua categoria-pai).
+ * Busca um chamado por ID e faz os JOINs para trazer os nomes de Loja e Departamento.
  */
 export const findById = async (id) => {
-    // Trocamos os JOINS de categoria/subcategoria
     const sql = `
         SELECT 
             ch.*, 
-            
-            -- Dados do Requisitante
             COALESCE(ch.nome_requisitante_manual, f_req.nomeFuncionario) AS nomeRequisitante,
             ch.email_requisitante_manual AS emailRequisitante,
             ch.telefone_requisitante_manual AS telefoneRequisitante,
-            
-            -- Dados do Atendente (Operador)
             f_atend.nomeFuncionario AS nomeAtendente, 
-            
-            -- (NOVO) Dados da Categoria Unificada
             cat.nome AS nomeCategoria,
-            pai.nome AS nomeCategoriaPai
-            
+            pai.nome AS nomeCategoriaPai,
+            l.nome AS loja,              -- Traz o NOME da loja
+            d.nome AS departamento       -- Traz o NOME do departamento
         FROM Chamados ch
-        
-        -- Join para Requisitante
         LEFT JOIN Funcionario f_req ON ch.requisitante_id = f_req.id
-        
-        -- Join para Atendente
         LEFT JOIN Funcionario f_atend ON ch.atendente_id = f_atend.id 
-        
-        -- (NOVO) Joins para Categoria Unificada
         LEFT JOIN Categorias cat ON ch.categoria_unificada_id = cat.id
         LEFT JOIN Categorias pai ON cat.parent_id = pai.id 
-        
+        LEFT JOIN Loja l ON ch.loja_id = l.id             -- Join Loja
+        LEFT JOIN Departamento d ON ch.departamento_id = d.id -- Join Departamento
         WHERE ch.id = ?
     `;
     const [rows] = await pool.query(sql, [id]);
@@ -82,37 +67,27 @@ export const findById = async (id) => {
 };
 
 /**
- * (ATUALIZADO)
- * Busca todos os chamados com a nova lógica de JOIN e Filtro.
+ * Busca todos os chamados com os nomes de Loja e Departamento.
  */
 export const findAll = async (filtros = {}) => {
     let sql = `
         SELECT 
             ch.*, 
-            
-            -- Dados do Requisitante
             COALESCE(ch.nome_requisitante_manual, f_req.nomeFuncionario) AS nomeRequisitante,
             ch.email_requisitante_manual AS emailRequisitante,
             ch.telefone_requisitante_manual AS telefoneRequisitante,
-            
-            -- Dados do Atendente (Operador)
             f_atend.nomeFuncionario AS nomeAtendente, 
-
-            -- (NOVO) Dados da Categoria Unificada
             cat.nome AS nomeCategoria,
-            pai.nome AS nomeCategoriaPai
-            
+            pai.nome AS nomeCategoriaPai,
+            l.nome AS loja,
+            d.nome AS departamento
         FROM Chamados ch
-
-        -- Join para Requisitante
         LEFT JOIN Funcionario f_req ON ch.requisitante_id = f_req.id
-        
-        -- Join para Atendente
         LEFT JOIN Funcionario f_atend ON ch.atendente_id = f_atend.id 
-
-        -- (NOVO) Joins para Categoria Unificada
         LEFT JOIN Categorias cat ON ch.categoria_unificada_id = cat.id
         LEFT JOIN Categorias pai ON cat.parent_id = pai.id
+        LEFT JOIN Loja l ON ch.loja_id = l.id
+        LEFT JOIN Departamento d ON ch.departamento_id = d.id
     `;
 
     const values = [];
@@ -123,15 +98,11 @@ export const findAll = async (filtros = {}) => {
         values.push(parseInt(filtros.requisitante_id));
     }
     
-    // (MODIFICADO) Lógica do filtro de categoria
     if (filtros.categoria_id) {
-        // Esta query filtra PELA CATEGORIA PAI ou PELA PRÓPRIA CATEGORIA
-        // (Ex: se filtrar por "TI", pega chamados de "TI" e "Redes")
         whereConditions.push("(cat.id = ? OR cat.parent_id = ?)");
         values.push(parseInt(filtros.categoria_id));
         values.push(parseInt(filtros.categoria_id));
     }
-    // (REMOVIDO) Filtro de subcategoria_id
     
     if (filtros.status) {
         whereConditions.push("ch.status = ?");
@@ -156,67 +127,41 @@ export const findAll = async (filtros = {}) => {
     return chamados;
 };
 
-// --- Funções restantes (sem mudanças) ---
-
-// Deleta um chamado
+// --- Demais funções (Delete, Update) permanecem iguais ---
 export const deleteById = async (id) => {
-    // (NOVO) Deleta comentários primeiro para evitar erro de FK
     await pool.query('DELETE FROM Comentarios WHERE chamado_id = ?', [id]);
-    // (NOVO) Deleta anexos (se existirem)
-    // await pool.query('DELETE FROM Anexos WHERE chamado_id = ?', [id]);
-    
-    // Deleta o chamado
     const [result] = await pool.query('DELETE FROM Chamados WHERE id = ?', [id]);
     return result;
 };
 
-// ATUALIZAR STATUS
 export const updateStatus = async (id, status, atendenteId) => {
     let sql;
     let values;
-
     if (atendenteId) {
         sql = "UPDATE Chamados SET status = ?, atendente_id = ? WHERE id = ?";
         values = [status, atendenteId, id];
     } else {
-        // Se o atendenteId for nulo/undefined, NÃO atualiza o atendente
         sql = "UPDATE Chamados SET status = ? WHERE id = ?";
         values = [status, id];
     }
-    
-    // (ATUALIZAÇÃO) Se o status for "Em Andamento" e o atendente_id for passado,
-    // o controller vai garantir que o chamado seja atribuído.
-    // Esta lógica foi movida para o CONTROLLER.
-    
     const [result] = await pool.query(sql, values);
     return result;
 };
 
-// Atualiza prioridade
 export const updatePrioridade = async (id, prioridade) => {
     const sql = "UPDATE Chamados SET prioridade = ? WHERE id = ?";
     const [result] = await pool.query(sql, [prioridade, id]);
     return result;
 };
 
-// ATUALIZAR SÓ O ATENDENTE
 export const updateAtendente = async (id, atendenteId) => {
     const sql = "UPDATE Chamados SET atendente_id = ? WHERE id = ?";
     const [result] = await pool.query(sql, [atendenteId, id]);
     return result;
 };
 
-// CONTAR POR STATUS
 export const countByStatus = async () => {
-    const sql = `
-        SELECT 
-            status, 
-            COUNT(id) as count
-        FROM 
-            Chamados
-        GROUP BY 
-            status;
-    `;
+    const sql = `SELECT status, COUNT(id) as count FROM Chamados GROUP BY status;`;
     const [rows] = await pool.query(sql);
     return rows; 
 };

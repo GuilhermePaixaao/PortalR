@@ -1,5 +1,4 @@
 import * as ChamadoModel from '../models/chamadoModel.js';
-// Importa o serviço de e-mail que criamos
 import * as EmailService from '../services/emailService.js'; 
 
 // ====================================================
@@ -17,23 +16,23 @@ export const criarChamado = async (req, res) => {
         const chamado = JSON.parse(req.body.chamado);
         const arquivos = req.files; 
 
-        // [ALTERAÇÃO] Extraindo 'loja' e 'departamento' do corpo da requisição
+        // Extrai os campos do corpo da requisição
         const {
             assunto, descricao, prioridade, requisitante_id,
             categoria_unificada_id, 
             nome_requisitante_manual, email_requisitante_manual, telefone_requisitante_manual,
-            loja, departamento 
+            loja, departamento // <-- Recebe os IDs como string ou número do frontend
         } = chamado;
 
         if (!assunto || !descricao || !requisitante_id ||
-            !nome_requisitante_manual || !email_requisitante_manual || !telefone_requisitante_manual) {
+            !nome_requisitante_manual || !email_requisitante_manual) {
             return res.status(400).json({
                 success: false,
                 message: 'Assunto, Descrição, ID do Requisitante e todos os dados de Contato são obrigatórios.'
             });
         }
 
-        // [ALTERAÇÃO] Adicionando 'loja' e 'departamento' ao objeto enviado ao Model
+        // Monta o objeto para o Model
         const dadosParaCriar = {
             assunto: assunto,
             descricao: descricao,
@@ -44,8 +43,11 @@ export const criarChamado = async (req, res) => {
             nomeRequisitanteManual: nome_requisitante_manual,
             emailRequisitanteManual: email_requisitante_manual,
             telefoneRequisitanteManual: telefone_requisitante_manual,
-            loja: loja || null,                 // <-- CAMPO NOVO
-            departamento: departamento || null  // <-- CAMPO NOVO
+            
+            // CONVERSÃO IMPORTANTE: Transforma o valor do select (string) em Inteiro (ID)
+            // Se vier vazio ou nulo, salva como null no banco
+            loja_id: loja ? parseInt(loja) : null,                 
+            departamento_id: departamento ? parseInt(departamento) : null 
         };
 
         const novoId = await ChamadoModel.create(dadosParaCriar);
@@ -71,10 +73,9 @@ export const criarChamado = async (req, res) => {
         }
 
         // =================================================
-        // [NOVO] ENVIO DE E-MAIL DE CRIAÇÃO
+        // ENVIO DE E-MAIL DE CRIAÇÃO
         // =================================================
         if (novoChamado.emailRequisitante) {
-            // Envia o e-mail sem 'await' para não travar a resposta da API
             EmailService.enviarNotificacaoCriacao(novoChamado.emailRequisitante, novoChamado)
                 .catch(err => console.error("Falha silenciosa ao enviar e-mail de criação:", err));
         }
@@ -92,13 +93,14 @@ export const criarChamado = async (req, res) => {
             nomePai: novoChamado.nomeCategoriaPai
         } : null;
 
-        // Limpa campos duplicados
+        // Limpa campos duplicados do objeto de resposta
         delete novoChamado.nomeRequisitante;
         delete novoChamado.emailRequisitante;
         delete novoChamado.telefoneRequisitante;
-        delete novoChamado.nomeCategoria;
-        delete novoChamado.nomeCategoriaPai;
+        delete chamado.nomeCategoria;
+        delete chamado.nomeCategoriaPai;
 
+        // O 'novoChamado' já tem os campos 'loja' e 'departamento' (nomes) vindos do Model
         const chamadoFormatado = { ...novoChamado, Funcionario, Categorias };
 
         res.status(201).json({ success: true, data: chamadoFormatado });
@@ -108,8 +110,7 @@ export const criarChamado = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Erro ao processar dados: JSON do chamado mal formatado.' });
         }
         if (error.code === 'ER_NO_REFERENCED_ROW_2') {
-            const field = error.message.includes('fk_Chamados_Funcionario') ? 'Requisitante' : 'Categoria';
-            return res.status(400).json({ success: false, message: `Erro: ${field} não encontrado.` });
+            return res.status(400).json({ success: false, message: 'Erro de integridade: ID de Loja, Departamento ou Categoria inválido.' });
         }
         console.error('Erro ao criar chamado:', error);
         res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
@@ -150,7 +151,7 @@ export const listarChamados = async (req, res) => {
             delete chamado.nomeAtendente;
             delete chamado.emailAtendente;
 
-            // Os campos 'loja' e 'departamento' já vêm no objeto 'chamado' e são passados automaticamente no spread
+            // Os campos 'loja' e 'departamento' (nomes) já vêm no objeto 'chamado' e são passados automaticamente no spread
             return { ...chamado, Funcionario, Categorias, Atendente };
         });
 
@@ -202,7 +203,6 @@ export const buscarChamadoPorId = async (req, res) => {
         delete chamado.nomeAtendente;
         delete chamado.emailAtendente;
 
-        // Os campos 'loja' e 'departamento' já vêm no objeto 'chamado' e são passados automaticamente no spread
         res.status(200).json({ ...chamado, Funcionario, Categorias, Atendente });
 
     } catch (error) {
@@ -232,10 +232,9 @@ export const deletarChamado = async (req, res) => {
 };
 
 // ====================================================
-// ======== ATUALIZAR STATUS (COM ENVIO DE E-MAIL) ========
+// ======== ATUALIZAR STATUS ========
 // ====================================================
 export const atualizarStatus = async (req, res) => {
-    console.log("[BACKEND] Corpo da requisição recebido:", req.body);
     try {
         const idNum = parseInt(req.params.id);
         const { status, atendenteId } = req.body; 
@@ -243,19 +242,14 @@ export const atualizarStatus = async (req, res) => {
             return res.status(400).json({ success: false, message: 'ID e Status são obrigatórios.' });
         }
         
-        console.log(`[BACKEND] Tentando salvar: ID=${idNum}, Status=${status}, AtendenteID=${atendenteId}`);
         const result = await ChamadoModel.updateStatus(idNum, status, atendenteId ? parseInt(atendenteId) : null);
         
         if (result.affectedRows === 0) {
             return res.status(404).json({ success: false, message: 'Erro: Chamado não encontrado.' });
         }
 
-        // =================================================
-        // [NOVO] ENVIO DE E-MAIL DE ATUALIZAÇÃO
-        // =================================================
-        // Precisamos buscar o chamado atualizado para pegar o e-mail do requisitante e o assunto
+        // Envia notificação por e-mail se possível
         const chamadoAtualizado = await ChamadoModel.findById(idNum);
-        
         if (chamadoAtualizado && chamadoAtualizado.emailRequisitante) {
             EmailService.enviarNotificacaoStatus(
                 chamadoAtualizado.emailRequisitante, 
@@ -300,7 +294,7 @@ export const atualizarAtendente = async (req, res) => {
         const idNum = parseInt(req.params.id);
         const { atendenteId } = req.body; 
         const novoAtendenteId = (atendenteId && parseInt(atendenteId) > 0) ? parseInt(atendenteId) : null;
-        console.log(`[BACKEND] Trocando atendente: ID=${idNum}, Novo AtendenteID=${novoAtendenteId}`);
+        
         const result = await ChamadoModel.updateAtendente(idNum, novoAtendenteId);
         if (result.affectedRows === 0) {
             return res.status(404).json({ success: false, message: 'Erro: Chamado não encontrado.' });
