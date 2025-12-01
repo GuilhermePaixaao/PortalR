@@ -154,12 +154,6 @@
                     ❓ FAQ
                 </a>
             </div>
-            
-            <div class="header-actions">
-                <button id="themeToggle" class="btn-theme-toggle" title="Alternar Tema">🌙</button>
-                <span id="userNameDisplay"></span>
-                <button id="logoutButton" class="btn-logout">Sair</button>
-            </div>
         </header>
 
         <dialog id="modalTicket" aria-labelledby="modalTitle">
@@ -372,16 +366,6 @@
 
     <script type="module">
         const API_URL = ""; 
-        let userId = 1; 
-        try {
-            const userDataString = localStorage.getItem("userData");
-            const userData = JSON.parse(userDataString);
-            const idLogado = userData?.data?.id || userData?.id;
-            if (idLogado) userId = idLogado;
-        } catch (e) {
-            console.error("Erro ao ler localStorage. Usando ID=1 padrão.", e);
-        }
-
         let allTickets = [];
         const ITEMS_PER_PAGE = 5;
         let currentPage = 1;
@@ -413,7 +397,7 @@
         const selectDepartamento = document.getElementById("departamento");
 
         // --- (NOVO) Lógica do Tema Escuro ---
-        const btnThemeToggle = document.getElementById("themeToggle");
+        
         
         function toggleTheme() {
             document.body.classList.toggle("dark-mode");
