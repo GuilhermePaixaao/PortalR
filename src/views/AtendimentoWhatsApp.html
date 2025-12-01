@@ -36,7 +36,6 @@
         .main-content { padding: 0; height: calc(100vh - 60px); background-color: var(--wa-sidebar-bg); display: flex; overflow: hidden; }
         .sidebar-chat { width: 350px; background-color: var(--wa-sidebar-bg); border-right: 1px solid var(--wa-border); display: flex; flex-direction: column; }
         
-        /* Ajuste do cabeçalho da sidebar para comportar dois botões */
         .sidebar-header { 
             padding: 10px 16px; 
             background-color: var(--wa-header-bg); 
@@ -45,11 +44,10 @@
             justify-content: space-between; 
             align-items: center; 
             height: 60px; 
-            gap: 10px; /* Espaçamento entre status e botões */
+            gap: 10px; 
         }
-        .connection-status { flex-shrink: 0; } /* Impede que o status encolha */
-        #connectionActions { display: flex; gap: 5px; } /* Novo container para os botões */
-
+        .connection-status { flex-shrink: 0; } 
+        #connectionActions { display: flex; gap: 5px; } 
 
         #filaHeader { font-size: 0.9rem; font-weight: bold; color: var(--wa-primary); padding: 10px 15px; border-bottom: 1px solid var(--wa-border); background: var(--wa-sidebar-bg); }
         #filaAtendimento { flex: 1; overflow-y: auto; }
@@ -105,19 +103,23 @@
         .status-dot.offline { background-color: #ea0038; }
         .btn-conectar { background-color: var(--wa-primary); color: white; border: none; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; font-weight: bold; }
         
-        /* NOVO: Estilo para o botão de desconectar */
         .btn-desconectar { background-color: #ffc107; color: #333; border: none; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; font-weight: bold; }
         .btn-desconectar:hover { background-color: #e0a800; }
         
-        /* Novo estilo para o container de chat (header) */
+        /* --- ESTILOS DA TOOLBAR DO CHAT (NOVO) --- */
         .chat-header {
-            padding: 10px 16px; 
+            padding: 8px 16px; 
             background-color: var(--wa-header-bg); 
             border-bottom: 1px solid var(--wa-border); 
             display: flex; 
             justify-content: space-between; 
             align-items: center; 
-            height: 60px;
+            height: 65px;
+        }
+
+        .header-user-info {
+            display: flex;
+            flex-direction: column;
         }
 
         #chatTitle {
@@ -125,26 +127,54 @@
             font-weight: 600;
             color: var(--text-primary);
         }
-        
-        .chat-actions button {
-            background-color: #dc3545; /* Vermelho para encerrar */
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.2s ease;
+
+        .chat-actions-toolbar {
+            display: flex;
+            gap: 10px; /* Espaço entre as bolinhas */
         }
-        .chat-actions button:hover {
-            background-color: #bb2d3b;
+
+        /* Estilo Base do Botão Redondo */
+        .action-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid #ccc;
+            background-color: transparent;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            transition: all 0.2s ease;
+            color: #555;
+        }
+
+        .action-btn:hover {
+            transform: scale(1.1);
+            background-color: rgba(0,0,0,0.05);
+        }
+
+        /* --- Cores Específicas por Função --- */
+        .btn-history { border-color: #6c757d; color: #6c757d; } /* Histórico */
+        .btn-assumir { border-color: #ffc107; color: #ffc107; } /* Assumir (Amarelo) */
+        .btn-assumir:hover { background-color: #fff3cd; }
+        .btn-transfer { border-color: #0d6efd; color: #0d6efd; } /* Transferir */
+        .btn-close { border-color: #dc3545; color: #dc3545; } /* Encerrar */
+        .btn-close:hover { background-color: #f8d7da; }
+
+        /* --- Estado DESABILITADO (Apagado) --- */
+        .action-btn:disabled,
+        .action-btn.disabled {
+            opacity: 0.3;       
+            cursor: not-allowed;
+            transform: none !important;
+            filter: grayscale(100%); 
+            border-color: #ccc !important;
         }
 
         #painelAtendimento { display: none; background-color: #fff3cd; color: #856404; padding: 15px; text-align: center; border-bottom: 1px solid #ffeeba; animation: fadeIn 0.5s; width: 100%; }
         @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-        .btn-assumir { background-color: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; margin-left: 10px; text-transform: uppercase; font-size: 0.85rem; }
-        .btn-assumir:hover { background-color: #218838; }
+        .btn-assumir-painel { background-color: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; margin-left: 10px; text-transform: uppercase; font-size: 0.85rem; }
     </style>
 </head>
 
@@ -212,15 +242,33 @@
                 <div id="activeChatScreen" style="display:none; width:100%; height:100%; flex-direction:column;">
                     
                     <div class="chat-header">
-                        <span id="chatTitle"></span>
-                        <div class="chat-actions">
-                            <button id="btnFinalizarAtendimento">❌ Encerrar Atendimento</button>
+                        <div class="header-user-info">
+                            <span id="chatTitle">Nome do Cliente</span>
+                            <small id="chatStatusText" style="display:block; font-size:0.75rem; color:#666;">Carregando...</small>
+                        </div>
+                        
+                        <div class="chat-actions-toolbar">
+                            <button id="btnHistorico" class="action-btn btn-history" title="Ver Histórico">
+                                <i class="fas fa-history"></i>
+                            </button>
+
+                            <button id="btnAssumir" class="action-btn btn-assumir" title="Assumir Atendimento">
+                                <i class="fas fa-user-plus"></i>
+                            </button>
+
+                            <button id="btnTransferir" class="action-btn btn-transfer" title="Transferir">
+                                <i class="fas fa-share-square"></i>
+                            </button>
+
+                            <button id="btnFinalizar" class="action-btn btn-close" title="Encerrar Atendimento">
+                                <i class="fas fa-times"></i>
+                            </button>
                         </div>
                     </div>
+
                     <div id="painelAtendimento">
                         <span>🔔 <b>Atenção:</b> Este cliente entrou na fila de T.I.</span>
-                        <button id="btnAssumirChamado" class="btn-assumir">✅ ASSUMIR ATENDIMENTO</button>
-                    </div>
+                        </div>
                     
                     <div class="messages-container" id="messagesContainer"></div>
                     
@@ -273,7 +321,12 @@
         const filaHeader = document.getElementById('filaHeader');
         const painelAtendimento = document.getElementById('painelAtendimento');
         const chatTitle = document.getElementById('chatTitle'); 
-        const btnFinalizar = document.getElementById('btnFinalizarAtendimento'); 
+        
+        // Referências aos novos botões
+        const btnAssumir = document.getElementById('btnAssumir');
+        const btnFinalizar = document.getElementById('btnFinalizar');
+        const btnTransferir = document.getElementById('btnTransferir');
+        const btnHistorico = document.getElementById('btnHistorico');
 
         let AppState = {
             activeNumber: null,
@@ -310,6 +363,62 @@
             
             loadingFila.style.display = (AppState.chatList.length === 0 && !chatsFiltrados.length) ? 'block' : 'none';
             filaHeader.textContent = `Fila de Atendimento (${chatsFiltrados.length})`;
+        }
+
+        // --- LÓGICA DE CONTROLE DA TOOLBAR ---
+        function atualizarBotoesToolbar(chat) {
+            const chatStatusText = document.getElementById('chatStatusText');
+
+            // Reset inicial: Tudo desabilitado
+            btnAssumir.disabled = true;
+            btnFinalizar.disabled = true;
+            btnTransferir.disabled = true;
+            chatStatusText.textContent = "";
+
+            if (!chat) return;
+
+            // Dados do Estado
+            const emAtendimentoHumano = chat.etapa === 'ATENDIMENTO_HUMANO';
+            const temAgente = !!chat.nomeAgente;
+            
+            // Verifica quem é o usuário logado
+            let usuarioLogado = "";
+            try {
+                const u = JSON.parse(localStorage.getItem("userData"));
+                usuarioLogado = u?.data?.nomeFuncionario || "";
+            } catch(e){}
+
+            const souOAgente = (chat.nomeAgente === usuarioLogado);
+
+            // 1. Lógica do botão ASSUMIR
+            if (!temAgente) {
+                // Ninguém assumiu -> HABILITADO
+                btnAssumir.disabled = false;
+                btnAssumir.title = "Assumir este chamado";
+                chatStatusText.textContent = "Aguardando atendimento...";
+                chatStatusText.style.color = "#ffc107"; // Amarelo
+            } else {
+                // Já tem agente -> DESABILITADO
+                btnAssumir.disabled = true;
+                chatStatusText.textContent = `Em atendimento por: ${chat.nomeAgente}`;
+                chatStatusText.style.color = "#28a745"; // Verde
+            }
+
+            // 2. Lógica dos botões de AÇÃO (Encerrar/Transferir)
+            // Habilitado se EU sou o agente OU (ninguém é e está na fase humana/fila)
+            if (souOAgente || (!temAgente && emAtendimentoHumano)) {
+                btnFinalizar.disabled = false;
+                btnTransferir.disabled = false;
+            } 
+            // Se outra pessoa assumiu, desabilita
+            else if (temAgente && !souOAgente) {
+                btnFinalizar.disabled = true;
+                btnTransferir.disabled = true;
+            } 
+            // Exceção: Permitir encerrar conversa presa no robô (Menu/Inicio)
+            if (chat.etapa === 'MENU' || chat.etapa === 'INICIO') {
+                 btnFinalizar.disabled = false; 
+            }
         }
 
         function createSidebarItem(number, name, lastMsg, unread, isPending) {
@@ -497,7 +606,11 @@
             
             saveState();
             renderSidebar();
-            if (AppState.activeNumber === data.chatId) painelAtendimento.style.display = 'block';
+            // Se estiver aberto, atualiza a toolbar
+            if (AppState.activeNumber === data.chatId) {
+                const chat = AppState.chatList.find(c => c.numero === data.chatId);
+                atualizarBotoesToolbar(chat);
+            }
         });
 
         async function openChat(number) {
@@ -510,6 +623,9 @@
             showScreen('chat');
 
             chatTitle.textContent = chat ? chat.nome : number; 
+            
+            // --- ATUALIZA OS BOTÕES DA TOOLBAR ---
+            atualizarBotoesToolbar(chat);
             
             messagesContainer.innerHTML = '';
             const localMsgs = AppState.conversas[number] || [];
@@ -545,13 +661,8 @@
                 loadingDiv.remove();
             }
 
-            painelAtendimento.style.display = (chat && chat.pending) ? 'block' : 'none';
-            
-            const btnFinalizar = document.getElementById('btnFinalizarAtendimento');
-            if(btnFinalizar) {
-                const emAtendimento = chat && chat.etapa === 'ATENDIMENTO_HUMANO';
-                btnFinalizar.style.display = emAtendimento ? 'block' : 'none';
-            }
+            // Oculta painel antigo, pois agora usamos a toolbar
+            painelAtendimento.style.display = 'none';
             
             chatInput.disabled = false; 
             chatInput.focus();
@@ -594,8 +705,13 @@
             } catch (e) { console.error(e); }
         }
 
+        // --- FUNÇÕES DE AÇÃO DOS BOTÕES ---
+
         async function finalizarChat() {
             if (!AppState.activeNumber) return;
+            // Verifica se está desabilitado
+            if (document.getElementById('btnFinalizar').disabled) return;
+
             if (!confirm(`Tem certeza que deseja encerrar o atendimento?`)) return;
 
             try {
@@ -638,29 +754,49 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
-        document.getElementById('btnAssumirChamado').addEventListener('click', async () => {
+        // LISTENER BOTÃO ASSUMIR
+        btnAssumir.addEventListener('click', async () => {
             if (!AppState.activeNumber) return;
+            if (btnAssumir.disabled) return;
+
             try {
                 const user = JSON.parse(localStorage.getItem("userData"));
+                const nomeAgente = user?.data?.nomeFuncionario || "Suporte";
+
                 await fetch('/api/whatsapp/atender', {
                     method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ numero: AppState.activeNumber, nomeAgente: user?.data?.nomeFuncionario || "Suporte" })
+                    body: JSON.stringify({ numero: AppState.activeNumber, nomeAgente: nomeAgente })
                 });
                 
                 const chat = AppState.chatList.find(c => c.numero === AppState.activeNumber);
                 if(chat) {
                     chat.pending = false;
                     chat.etapa = 'ATENDIMENTO_HUMANO'; 
+                    chat.nomeAgente = nomeAgente; // Marca localmente
                 }
-                painelAtendimento.style.display = 'none';
                 
-                const btnFinalizar = document.getElementById('btnFinalizarAtendimento');
-                if(btnFinalizar) btnFinalizar.style.display = 'block';
-
                 saveState();
                 renderSidebar();
+                
+                // Atualiza a toolbar para refletir a mudança
+                atualizarBotoesToolbar(chat);
+
                 appendMessageToView("✅ Você assumiu este chamado.", true, "Sistema", new Date());
             } catch (e) { alert("Erro ao assumir."); }
+        });
+
+        // LISTENER BOTÃO FINALIZAR
+        btnFinalizar.addEventListener('click', finalizarChat);
+
+        // LISTENER BOTÃO TRANSFERIR
+        btnTransferir.addEventListener('click', () => {
+            if (btnTransferir.disabled) return;
+            alert("Funcionalidade de transferência em desenvolvimento.");
+        });
+
+        // LISTENER BOTÃO HISTÓRICO
+        btnHistorico.addEventListener('click', () => {
+            alert("Visualização de histórico completo em breve.");
         });
 
         function resetConnectionState() {
@@ -692,22 +828,16 @@
             showScreen('qr'); 
         }
 
-        // ======================================================
-        // CORREÇÃO APLICADA: CAPTURA IMEDIATA DO QRCODE
-        // ======================================================
         btnConectar.addEventListener('click', async () => {
             statusText.textContent = "Solicitando..."; 
-            showScreen('qr'); // Já mostra a tela de carregamento
+            showScreen('qr'); 
             
             try {
-                // 1. Chama a conexão e ESPERA a resposta (await)
                 const response = await fetch('/api/whatsapp/connect');
                 const json = await response.json();
                 
                 console.log("Resposta do Connect:", json);
 
-                // 2. Se a API já devolveu o QR Code (comum na Evolution), exibe agora!
-                // Verifica data.qrcode.base64 ou data.qrcode
                 if (json.data && json.data.qrcode) {
                     const qrRaw = json.data.qrcode.base64 || json.data.qrcode;
                     if (qrRaw) {
@@ -720,14 +850,9 @@
                 statusText.textContent = "Erro ao conectar.";
             }
 
-            // 3. Configura o webhook em paralelo (para atualizações futuras)
             fetch('/api/whatsapp/configure-webhook').catch(e => { console.error("Erro webhook", e); });
         });
         
-        if (btnFinalizar) {
-            btnFinalizar.addEventListener('click', finalizarChat);
-        }
-
         if (btnDesconectarWhats) {
             btnDesconectarWhats.addEventListener('click', desconectarWhats);
         }
