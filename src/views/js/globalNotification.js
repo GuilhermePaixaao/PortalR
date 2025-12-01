@@ -1,16 +1,47 @@
 // src/views/js/globalNotification.js
 
-// Conecta ao Socket.io (A biblioteca socket.io.min.js deve ser carregada antes deste script no HTML)
+// Conecta ao Socket.io
+// (A biblioteca socket.io.min.js já deve ter sido carregada no HTML antes deste script)
 const socket = io();
 
+// =================================================================
+// 1. FUNÇÕES AUXILIARES DE ESTADO (Para salvar no LocalStorage)
+// =================================================================
+
 /**
- * Função para exibir o TOAST (Notificação Flutuante)
- * @param {string} titulo - Título da notificação (ex: "Novo Chamado")
- * @param {string} mensagem - Corpo da mensagem
- * @param {string} tipo - 'info', 'warning', 'success' (para cores)
+ * Lê o estado atual do WhatsApp salvo no navegador
  */
+function getWhatsAppState() {
+    try {
+        const saved = localStorage.getItem('wa_app_state');
+        return saved ? JSON.parse(saved) : {
+            activeNumber: null,
+            conversas: {},
+            contactNames: {},
+            chatList: []
+        };
+    } catch (e) {
+        console.error("Erro ao ler estado:", e);
+        return { activeNumber: null, conversas: {}, contactNames: {}, chatList: [] };
+    }
+}
+
+/**
+ * Salva o estado atualizado de volta no navegador
+ */
+function saveWhatsAppState(state) {
+    try {
+        localStorage.setItem('wa_app_state', JSON.stringify(state));
+    } catch (e) {
+        console.error("Erro ao salvar estado:", e);
+    }
+}
+
+// =================================================================
+// 2. SISTEMA DE NOTIFICAÇÃO (TOAST)
+// =================================================================
+
 function showToast(titulo, mensagem, tipo = 'info') {
-    // 1. Cria o container de notificações se ele ainda não existir no DOM
     let container = document.getElementById('toast-container');
     if (!container) {
         container = document.createElement('div');
@@ -18,14 +49,13 @@ function showToast(titulo, mensagem, tipo = 'info') {
         document.body.appendChild(container);
     }
 
-    // 2. Cria a estrutura HTML da notificação (Toast)
     const toast = document.createElement('div');
     toast.className = `global-toast toast-${tipo}`;
     
-    // Define o ícone com base no tipo de alerta
     let icon = '🔔'; 
     if(tipo === 'warning') icon = '⚠️';
     if(tipo === 'success') icon = '✅';
+    if(tipo === 'whatsapp') icon = '💬'; // Ícone especial para Zap
 
     toast.innerHTML = `
         <div class="toast-icon">${icon}</div>
@@ -36,70 +66,139 @@ function showToast(titulo, mensagem, tipo = 'info') {
         <button class="toast-close">&times;</button>
     `;
 
-    // Adiciona o toast ao container
     container.appendChild(toast);
 
-    // 3. Tocar Som (Opcional - curto bip)
-    // Nota: Alguns navegadores bloqueiam áudio sem interação do usuário.
+    // Tocar som suave
     try {
         const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
-        audio.volume = 1.0;
-        audio.play().catch(e => console.log("Áudio de notificação bloqueado pelo navegador (falta interação)."));
-    } catch(e) {
-        console.error("Erro ao tentar tocar som:", e);
-    }
+        audio.volume = 0.5;
+        audio.play().catch(() => {}); // Ignora erro se navegador bloquear
+    } catch(e) {}
 
-    // 4. Animação de Entrada (Deslizar)
-    requestAnimationFrame(() => {
-        toast.classList.add('show');
-    });
+    requestAnimationFrame(() => toast.classList.add('show'));
 
-    // 5. Auto-remover após 8 segundos
     const duration = 8000; 
-    const timer = setTimeout(() => {
-        removeToast(toast);
-    }, duration);
+    const timer = setTimeout(() => removeToast(toast), duration);
 
-    // Listener para o botão de fechar manual (X)
     toast.querySelector('.toast-close').addEventListener('click', () => {
         clearTimeout(timer);
         removeToast(toast);
     });
 }
 
-/**
- * Remove o toast com uma animação de saída suave
- */
 function removeToast(toast) {
     toast.classList.remove('show');
-    // Espera a animação CSS (0.3s) terminar antes de remover o elemento do HTML
-    setTimeout(() => {
-        if(toast.parentElement) toast.remove();
-    }, 300);
+    setTimeout(() => { if(toast.parentElement) toast.remove(); }, 300);
 }
 
-// =============================================
-// LISTENERS DO SOCKET (Os ouvidos do sistema)
-// =============================================
+// =================================================================
+// 3. LISTENERS DO SOCKET (PROCESSAMENTO EM SEGUNDO PLANO)
+// =================================================================
 
-// 1. Listener: Novo Chamado (Vindo do Formulário do Site)
+// A. Novo Chamado Interno (Ticket)
 socket.on('novoChamadoInterno', (data) => {
-    // Formata a mensagem para mostrar ID, Assunto e Quem pediu
     const msg = `Ticket #${data.id}: ${data.assunto}\nPor: ${data.requisitante}`;
     showToast('Novo Chamado Aberto!', msg, 'info');
 });
 
-// 2. Listener: Novo Cliente no WhatsApp (Fila T.I.)
-// Este evento 'notificacaoChamado' já é emitido pelo seu whatsappController.js
+// B. Cliente na Fila de T.I. (WhatsApp)
 socket.on('notificacaoChamado', (data) => {
-    const msg = `Cliente: ${data.nome}\nEstá aguardando na fila de T.I.`;
-    showToast('📞 WhatsApp: Fila de Atendimento', msg, 'warning');
+    // 1. Notifica na tela
+    const msg = `Cliente: ${data.nome}\nEntrou na fila de suporte.`;
+    showToast('📞 Fila de Atendimento', msg, 'warning');
+
+    // 2. Salva no Storage (mesmo se não estiver na página do Zap)
+    // Só salva se NÃO estivermos na página do WhatsApp (para evitar conflito de gravação dupla)
+    if (!window.location.href.includes('AtendimentoWhatsApp') && !window.location.href.includes('whatsapp')) {
+        const state = getWhatsAppState();
+        
+        // Remove se já existir na lista para mover pro topo
+        const idx = state.chatList.findIndex(c => c.numero === data.chatId);
+        if (idx > -1) state.chatList.splice(idx, 1);
+
+        state.chatList.unshift({
+            numero: data.chatId, 
+            nome: data.nome, 
+            ultimaMensagem: "🔔 Chamando...", 
+            unreadCount: 1, 
+            visivel: true, 
+            pending: true, 
+            etapa: 'SUBMENU_TI'
+        });
+        
+        if (data.nome) state.contactNames[data.chatId] = data.nome;
+        
+        saveWhatsAppState(state);
+    }
 });
 
-// 3. (Opcional) Listener: Status Atualizado
-// Você pode expandir o sistema no futuro para ouvir este evento
-socket.on('statusAtualizado', (data) => {
-    // Exemplo: showToast('Status Mudou', `O chamado #${data.id} agora está ${data.status}`, 'success');
+// C. Nova Mensagem de Chat (A MÁGICA ACONTECE AQUI)
+socket.on('novaMensagemWhatsapp', (data) => {
+    // Se a mensagem for minha (enviada pelo bot ou por mim), ignora notificação
+    if (!data.fromMe) {
+        showToast(`💬 Mensagem de ${data.nome}`, data.texto, 'whatsapp');
+    }
+
+    // LÓGICA DE SALVAMENTO EM SEGUNDO PLANO
+    // Verifica se NÃO estamos na página do WhatsApp.
+    // Se estivermos lá, o script da própria página já cuida de tudo em tempo real.
+    // Se estivermos no Dashboard/Outros, este script assume a responsabilidade de salvar.
+    if (!window.location.href.includes('AtendimentoWhatsApp') && !window.location.href.includes('whatsapp')) {
+        console.log("[Global] Salvando mensagem em background...");
+        
+        const state = getWhatsAppState();
+        const { chatId, texto, fromMe, nome, mostrarNaFila } = data;
+
+        // 1. Atualiza o histórico da conversa
+        if (!state.conversas[chatId]) state.conversas[chatId] = [];
+        state.conversas[chatId].push({
+            fromMe,
+            text: texto,
+            time: new Date(),
+            name: nome || "Eu"
+        });
+
+        // 2. Atualiza nome do contato se disponível
+        if (nome && !fromMe) state.contactNames[chatId] = nome;
+
+        // 3. Atualiza a Lista Lateral (ChatList)
+        const idx = state.chatList.findIndex(c => c.numero === chatId);
+        let currentChat = null;
+        
+        if (idx > -1) {
+            currentChat = state.chatList[idx];
+            state.chatList.splice(idx, 1); // Remove para readicionar no topo
+        }
+
+        // Determina visibilidade
+        let isVisivel = false;
+        if (mostrarNaFila !== undefined) isVisivel = mostrarNaFila;
+        else if (currentChat) isVisivel = currentChat.visivel;
+        if (fromMe && currentChat && currentChat.visivel) isVisivel = true;
+
+        // Determina pendência
+        let isPending = (mostrarNaFila === true);
+        if (currentChat && !currentChat.pending && isVisivel) isPending = false;
+
+        // Calcula contagem de não lidas
+        // Se a mensagem não é minha, incrementa. Se for minha, zera ou mantém? Normalmente mantém o do outro.
+        // Aqui vamos somar 1 se não for minha.
+        let newUnread = (currentChat ? currentChat.unreadCount : 0);
+        if (!fromMe) newUnread++;
+
+        state.chatList.unshift({
+            numero: chatId,
+            nome: state.contactNames[chatId] || nome,
+            ultimaMensagem: fromMe ? `Você: ${texto}` : texto,
+            unreadCount: newUnread,
+            visivel: isVisivel,
+            pending: isPending,
+            etapa: currentChat ? currentChat.etapa : 'INICIO'
+        });
+
+        // 4. Salva no disco
+        saveWhatsAppState(state);
+    }
 });
 
-console.log("✅ Sistema de Notificações Globais Ativo (globalNotification.js carregado)");
+console.log("✅ Sistema Global de Notificações Ativo (Background Save)");
