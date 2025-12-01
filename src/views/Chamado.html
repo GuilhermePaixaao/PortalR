@@ -151,6 +151,21 @@
                     <label for="telefoneRequisitante">Seu Telefone (Opcional)</label>
                     <input type="tel" id="telefoneRequisitante" name="telefoneRequisitante" placeholder="(XX) XXXXX-XXXX">
                 </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="grupo-form">
+                            <label for="loja">Loja</label>
+                            <input type="text" id="loja" name="loja" placeholder="Ex: Loja 01, Matriz...">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="grupo-form">
+                            <label for="departamento">Departamento</label>
+                            <input type="text" id="departamento" name="departamento" placeholder="Ex: Açougue, Frente de Caixa...">
+                        </div>
+                    </div>
+                </div>
                 <hr>
 
                 <div class="grupo-form">
@@ -207,6 +222,15 @@
             <div class="detalhe-grupo">
                 <span class="detalhe-label">Descrição</span>
                 <div id="detalheDescricao" class="detalhe-descricao">...</div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="detalhe-grupo"><span class="detalhe-label">Loja</span><div id="detalheLoja" class="detalhe-valor">...</div></div>
+                </div>
+                <div class="col-md-6">
+                    <div class="detalhe-grupo"><span class="detalhe-label">Departamento</span><div id="detalheDepartamento" class="detalhe-valor">...</div></div>
+                </div>
             </div>
             <div class="row">
                 <div class="col-md-3">
@@ -584,6 +608,11 @@
                     document.getElementById('detalhePrioridade').textContent = chamado.prioridade;
                     document.getElementById('detalheAssunto').textContent = chamado.assunto;
                     document.getElementById('detalheDescricao').textContent = chamado.descricao;
+                    
+                    // PREENCHE LOJA E DEPARTAMENTO
+                    document.getElementById('detalheLoja').textContent = chamado.loja || 'N/A';
+                    document.getElementById('detalheDepartamento').textContent = chamado.departamento || 'N/A';
+
                     document.getElementById('detalheRequisitante').textContent = chamado.Funcionario?.nomeFuncionario || 'Desconhecido';
                     document.getElementById('detalheCategoria').textContent = nomeExibicao; 
                     document.getElementById('detalheData').textContent = formatarData(chamado.created_at);
@@ -643,6 +672,10 @@
             const descricao = ticketForm.descricao.value.trim();
             const prioridade = ticketForm.prioridade.value || 'Média';
             
+            // CAPTURA LOJA E DEPARTAMENTO
+            const loja = ticketForm.loja.value.trim();
+            const departamento = ticketForm.departamento.value.trim();
+
             const allSelects = cascataWrapper.querySelectorAll('select');
             let categoriaUnificadaId = null;
             
@@ -684,7 +717,9 @@
                     descricao: descricao,
                     prioridade: prioridade,
                     requisitante_id: userId,
-                    categoria_unificada_id: parseInt(categoriaUnificadaId)
+                    categoria_unificada_id: parseInt(categoriaUnificadaId),
+                    loja: loja,               // <-- ENVIA
+                    departamento: departamento // <-- ENVIA
                 }
             };
             

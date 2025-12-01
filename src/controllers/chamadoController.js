@@ -17,10 +17,12 @@ export const criarChamado = async (req, res) => {
         const chamado = JSON.parse(req.body.chamado);
         const arquivos = req.files; 
 
+        // [ALTERAÇÃO] Extraindo 'loja' e 'departamento' do corpo da requisição
         const {
             assunto, descricao, prioridade, requisitante_id,
             categoria_unificada_id, 
-            nome_requisitante_manual, email_requisitante_manual, telefone_requisitante_manual
+            nome_requisitante_manual, email_requisitante_manual, telefone_requisitante_manual,
+            loja, departamento 
         } = chamado;
 
         if (!assunto || !descricao || !requisitante_id ||
@@ -31,6 +33,7 @@ export const criarChamado = async (req, res) => {
             });
         }
 
+        // [ALTERAÇÃO] Adicionando 'loja' e 'departamento' ao objeto enviado ao Model
         const dadosParaCriar = {
             assunto: assunto,
             descricao: descricao,
@@ -40,7 +43,9 @@ export const criarChamado = async (req, res) => {
             categoriaUnificadaIdNum: categoria_unificada_id ? parseInt(categoria_unificada_id) : null,
             nomeRequisitanteManual: nome_requisitante_manual,
             emailRequisitanteManual: email_requisitante_manual,
-            telefoneRequisitanteManual: telefone_requisitante_manual
+            telefoneRequisitanteManual: telefone_requisitante_manual,
+            loja: loja || null,                 // <-- CAMPO NOVO
+            departamento: departamento || null  // <-- CAMPO NOVO
         };
 
         const novoId = await ChamadoModel.create(dadosParaCriar);
@@ -145,6 +150,7 @@ export const listarChamados = async (req, res) => {
             delete chamado.nomeAtendente;
             delete chamado.emailAtendente;
 
+            // Os campos 'loja' e 'departamento' já vêm no objeto 'chamado' e são passados automaticamente no spread
             return { ...chamado, Funcionario, Categorias, Atendente };
         });
 
@@ -196,6 +202,7 @@ export const buscarChamadoPorId = async (req, res) => {
         delete chamado.nomeAtendente;
         delete chamado.emailAtendente;
 
+        // Os campos 'loja' e 'departamento' já vêm no objeto 'chamado' e são passados automaticamente no spread
         res.status(200).json({ ...chamado, Funcionario, Categorias, Atendente });
 
     } catch (error) {

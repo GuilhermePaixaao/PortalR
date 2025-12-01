@@ -2,22 +2,25 @@ import pool from '../config/database.js';
 
 /**
  * (ATUALIZADO)
- * Cria um novo chamado usando a 'categoria_unificada_id'.
+ * Cria um novo chamado usando a 'categoria_unificada_id' e agora inclui Loja/Departamento.
  */
 export const create = async (chamado) => {
     const { 
         assunto, descricao, prioridade, status, requisitanteIdNum, 
-        categoriaUnificadaIdNum, // <-- CAMPO NOVO
-        nomeRequisitanteManual, emailRequisitanteManual, telefoneRequisitanteManual 
+        categoriaUnificadaIdNum,
+        nomeRequisitanteManual, emailRequisitanteManual, telefoneRequisitanteManual,
+        loja, departamento // <-- (NOVO) Recebe os novos campos
     } = chamado; 
 
     // Removemos 'categoria_id' e 'subcategoria_id' do SQL
+    // Adicionamos 'loja' e 'departamento'
     const sql = `
         INSERT INTO Chamados 
             (assunto, descricao, prioridade, status, requisitante_id, 
              categoria_unificada_id,
-             nome_requisitante_manual, email_requisitante_manual, telefone_requisitante_manual)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+             nome_requisitante_manual, email_requisitante_manual, telefone_requisitante_manual,
+             loja, departamento)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     
     const values = [
@@ -26,10 +29,12 @@ export const create = async (chamado) => {
         prioridade, 
         status, 
         requisitanteIdNum, 
-        categoriaUnificadaIdNum, // <-- VALOR NOVO
+        categoriaUnificadaIdNum,
         nomeRequisitanteManual, 
         emailRequisitanteManual, 
-        telefoneRequisitanteManual
+        telefoneRequisitanteManual,
+        loja,          // <-- (NOVO) Valor da loja
+        departamento   // <-- (NOVO) Valor do departamento
     ];
     
     const [result] = await pool.query(sql, values);
