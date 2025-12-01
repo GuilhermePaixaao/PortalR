@@ -10,8 +10,7 @@
     <link rel="stylesheet" href="css/chamado.css">
     <link rel="stylesheet" href="css/ticket.css">
     <style>
-        /* (Seus estilos CSS ...
-... permanecem os mesmos) */
+        /* (Seus estilos CSS originais) */
         dialog:not([open]) { display: none; }
         dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
         dialog { border: none; border-radius: 8px; padding: 1.5rem; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); max-width: 600px; width: calc(100% - 2rem); }
@@ -83,15 +82,13 @@
         .logo { display: flex; align-items: center; gap: 10px; }
         .logo-icon { height: 30px; width: auto; }
         
-        /* (NOVO) CSS para o container da cascata */
         #categoriaCascataWrapper .grupo-form {
-            margin-bottom: 0; /* Remove a margem de baixo dentro da cascata */
+            margin-bottom: 0; 
         }
 
-        /* --- Estilos da Paginação --- */
         .pagination-controls {
             display: flex;
-            justify-content: flex-end; /* Alinha à direita */
+            justify-content: flex-end; 
             align-items: center;
             gap: 5px;
             margin-top: 20px;
@@ -126,7 +123,7 @@
 
         <header class="header">
             <div class="logo">
-            <img src="/img.png" alt="Logo Portal Supermercado" class="logo-icon">              
+                <img src="/img.png" alt="Logo Portal Supermercado" class="logo-icon">              
                 PORTAL SUPERMERCADO ROSALINA
             </div>
         </header>
@@ -331,6 +328,7 @@
         const inputTelefone = document.getElementById("telefoneRequisitante");
         const listaComentariosContainer = document.getElementById("listaComentariosContainer");
         const paginationControls = document.getElementById("paginationControls"); // NOVO
+        const selectPrioridade = document.getElementById("prioridade"); // NOVO: Referência para o select de prioridade
 
         // (NOVO) Referência para o container da cascata
         const cascataWrapper = document.getElementById("categoriaCascataWrapper");
@@ -415,6 +413,7 @@
             cascataWrapper.appendChild(div);
         }
         
+        // --- (ATUALIZADO) Lógica de Cascata com Prioridade Automática ---
         function handleCascataChange(event) {
             const select = event.target;
             if (select.tagName !== 'SELECT') return;
@@ -422,6 +421,7 @@
             const selectedId = select.value;
             const level = parseInt(select.dataset.level);
 
+            // 1. Remove subcategorias filhas se mudou a seleção
             const allDropdowns = cascataWrapper.querySelectorAll('.grupo-form');
             allDropdowns.forEach(div => {
                 const sel = div.querySelector('select');
@@ -431,7 +431,36 @@
             });
 
             if (selectedId) {
+                // 2. Cria o próximo nível (se houver)
                 criarProximoDropdown(selectedId, level + 1);
+
+                // 3. (NOVO) Busca a categoria e aplica a prioridade
+                const categoriaSelecionada = allCategories.find(c => c.id == selectedId);
+                
+                if (categoriaSelecionada && categoriaSelecionada.prioridade_padrao) {
+                    let p = categoriaSelecionada.prioridade_padrao;
+                    
+                    // Normalização de texto (Banco x HTML)
+                    // Banco: BAIXA, MEDIA, ALTA, URGENTE
+                    // HTML: Baixa, Média, Alta, Planejado
+                    
+                    if (p === 'URGENTE') p = 'Alta'; 
+                    if (p === 'MEDIA') p = 'Média';
+                    if (p === 'BAIXA') p = 'Baixa';
+                    if (p === 'ALTA') p = 'Alta';
+
+                    // Percorre as opções do select de prioridade e seleciona a correta
+                    for (let i = 0; i < selectPrioridade.options.length; i++) {
+                        if (selectPrioridade.options[i].value.toLowerCase() === p.toLowerCase()) {
+                            selectPrioridade.selectedIndex = i;
+                            
+                            // Feedback visual (piscar em amarelo)
+                            selectPrioridade.style.backgroundColor = "#fff3cd";
+                            setTimeout(() => selectPrioridade.style.backgroundColor = "", 500);
+                            break;
+                        }
+                    }
+                }
             }
         }
 
