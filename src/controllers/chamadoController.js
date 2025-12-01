@@ -2,6 +2,33 @@ import * as ChamadoModel from '../models/chamadoModel.js';
 import * as EmailService from '../services/emailService.js'; 
 
 // ====================================================
+// ======== NOVAS FUNÇÕES PARA DADOS DINÂMICOS ========
+// ====================================================
+
+export const listarLojas = async (req, res) => {
+    try {
+        const lojas = await ChamadoModel.getTodasLojas();
+        res.json(lojas);
+    } catch (error) {
+        console.error("Erro ao listar lojas:", error);
+        res.status(500).json({ error: 'Erro ao buscar lojas' });
+    }
+};
+
+export const listarDepartamentosDaLoja = async (req, res) => {
+    try {
+        const { lojaId } = req.params;
+        if (!lojaId) return res.status(400).json({ error: 'ID da loja é obrigatório' });
+        
+        const departamentos = await ChamadoModel.getDepartamentosPorLoja(lojaId);
+        res.json(departamentos);
+    } catch (error) {
+        console.error("Erro ao listar departamentos:", error);
+        res.status(500).json({ error: 'Erro ao buscar departamentos' });
+    }
+};
+
+// ====================================================
 // ======== CRIAR CHAMADO (COM ENVIO DE E-MAIL) ========
 // ====================================================
 export const criarChamado = async (req, res) => {
@@ -16,23 +43,24 @@ export const criarChamado = async (req, res) => {
         const chamado = JSON.parse(req.body.chamado);
         const arquivos = req.files; 
 
-        // Extrai os campos do corpo da requisição
+        // [ALTERAÇÃO] Extraindo 'loja' e 'departamento' do corpo da requisição
+        // O frontend envia o ID selecionado no <select>
         const {
             assunto, descricao, prioridade, requisitante_id,
             categoria_unificada_id, 
             nome_requisitante_manual, email_requisitante_manual, telefone_requisitante_manual,
-            loja, departamento // <-- Recebe os IDs como string ou número do frontend
+            loja, departamento 
         } = chamado;
 
         if (!assunto || !descricao || !requisitante_id ||
-            !nome_requisitante_manual || !email_requisitante_manual) {
+            !nome_requisitante_manual || !email_requisitante_manual || !telefone_requisitante_manual) {
             return res.status(400).json({
                 success: false,
                 message: 'Assunto, Descrição, ID do Requisitante e todos os dados de Contato são obrigatórios.'
             });
         }
 
-        // Monta o objeto para o Model
+        // [ALTERAÇÃO] Convertendo para ID (Inteiro) antes de salvar
         const dadosParaCriar = {
             assunto: assunto,
             descricao: descricao,
@@ -44,8 +72,7 @@ export const criarChamado = async (req, res) => {
             emailRequisitanteManual: email_requisitante_manual,
             telefoneRequisitanteManual: telefone_requisitante_manual,
             
-            // CONVERSÃO IMPORTANTE: Transforma o valor do select (string) em Inteiro (ID)
-            // Se vier vazio ou nulo, salva como null no banco
+            // Salva o ID. Se vier vazio, salva null.
             loja_id: loja ? parseInt(loja) : null,                 
             departamento_id: departamento ? parseInt(departamento) : null 
         };
@@ -73,7 +100,7 @@ export const criarChamado = async (req, res) => {
         }
 
         // =================================================
-        // ENVIO DE E-MAIL DE CRIAÇÃO
+        // [NOVO] ENVIO DE E-MAIL DE CRIAÇÃO
         // =================================================
         if (novoChamado.emailRequisitante) {
             EmailService.enviarNotificacaoCriacao(novoChamado.emailRequisitante, novoChamado)
@@ -93,14 +120,14 @@ export const criarChamado = async (req, res) => {
             nomePai: novoChamado.nomeCategoriaPai
         } : null;
 
-        // Limpa campos duplicados do objeto de resposta
+        // Limpa campos duplicados
         delete novoChamado.nomeRequisitante;
         delete novoChamado.emailRequisitante;
         delete novoChamado.telefoneRequisitante;
-        delete chamado.nomeCategoria;
-        delete chamado.nomeCategoriaPai;
+        delete novoChamado.nomeCategoria;
+        delete novoChamado.nomeCategoriaPai;
 
-        // O 'novoChamado' já tem os campos 'loja' e 'departamento' (nomes) vindos do Model
+        // O objeto 'novoChamado' já contém 'loja' e 'departamento' (nomes) retornados pelo Model via JOIN
         const chamadoFormatado = { ...novoChamado, Funcionario, Categorias };
 
         res.status(201).json({ success: true, data: chamadoFormatado });
@@ -110,7 +137,14 @@ export const criarChamado = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Erro ao processar dados: JSON do chamado mal formatado.' });
         }
         if (error.code === 'ER_NO_REFERENCED_ROW_2') {
-            return res.status(400).json({ success: false, message: 'Erro de integridade: ID de Loja, Departamento ou Categoria inválido.' });
+            // Verifica qual chave estrangeira falhou
+            let msg = 'Erro de integridade: Registro referenciado não encontrado.';
+            if (error.message.includes('fk_Chamados_Loja')) msg = 'Erro: A Loja selecionada é inválida.';
+            else if (error.message.includes('fk_Chamados_Departamento')) msg = 'Erro: O Departamento selecionado é inválido.';
+            else if (error.message.includes('fk_Chamados_Funcionario')) msg = 'Erro: Requisitante não encontrado.';
+            else if (error.message.includes('categoria_unificada_id')) msg = 'Erro: Categoria inválida.';
+            
+            return res.status(400).json({ success: false, message: msg });
         }
         console.error('Erro ao criar chamado:', error);
         res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
@@ -151,7 +185,7 @@ export const listarChamados = async (req, res) => {
             delete chamado.nomeAtendente;
             delete chamado.emailAtendente;
 
-            // Os campos 'loja' e 'departamento' (nomes) já vêm no objeto 'chamado' e são passados automaticamente no spread
+            // Campos 'loja' e 'departamento' são passados automaticamente
             return { ...chamado, Funcionario, Categorias, Atendente };
         });
 
@@ -232,9 +266,10 @@ export const deletarChamado = async (req, res) => {
 };
 
 // ====================================================
-// ======== ATUALIZAR STATUS ========
+// ======== ATUALIZAR STATUS (COM ENVIO DE E-MAIL) ========
 // ====================================================
 export const atualizarStatus = async (req, res) => {
+    console.log("[BACKEND] Corpo da requisição recebido:", req.body);
     try {
         const idNum = parseInt(req.params.id);
         const { status, atendenteId } = req.body; 
@@ -242,14 +277,18 @@ export const atualizarStatus = async (req, res) => {
             return res.status(400).json({ success: false, message: 'ID e Status são obrigatórios.' });
         }
         
+        console.log(`[BACKEND] Tentando salvar: ID=${idNum}, Status=${status}, AtendenteID=${atendenteId}`);
         const result = await ChamadoModel.updateStatus(idNum, status, atendenteId ? parseInt(atendenteId) : null);
         
         if (result.affectedRows === 0) {
             return res.status(404).json({ success: false, message: 'Erro: Chamado não encontrado.' });
         }
 
-        // Envia notificação por e-mail se possível
+        // =================================================
+        // [NOVO] ENVIO DE E-MAIL DE ATUALIZAÇÃO
+        // =================================================
         const chamadoAtualizado = await ChamadoModel.findById(idNum);
+        
         if (chamadoAtualizado && chamadoAtualizado.emailRequisitante) {
             EmailService.enviarNotificacaoStatus(
                 chamadoAtualizado.emailRequisitante, 
@@ -294,7 +333,7 @@ export const atualizarAtendente = async (req, res) => {
         const idNum = parseInt(req.params.id);
         const { atendenteId } = req.body; 
         const novoAtendenteId = (atendenteId && parseInt(atendenteId) > 0) ? parseInt(atendenteId) : null;
-        
+        console.log(`[BACKEND] Trocando atendente: ID=${idNum}, Novo AtendenteID=${novoAtendenteId}`);
         const result = await ChamadoModel.updateAtendente(idNum, novoAtendenteId);
         if (result.affectedRows === 0) {
             return res.status(404).json({ success: false, message: 'Erro: Chamado não encontrado.' });

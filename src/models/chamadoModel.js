@@ -1,14 +1,47 @@
 import pool from '../config/database.js';
 
+// =================================================================
+// 1. NOVAS FUNÇÕES PARA O FRONT-END (CASCATA)
+// =================================================================
+
 /**
- * Cria um novo chamado salvando 'loja_id' e 'departamento_id'.
+ * Busca todas as lojas cadastradas para preencher o primeiro Select.
+ */
+export const getTodasLojas = async () => {
+    const [rows] = await pool.query('SELECT * FROM Loja ORDER BY nome ASC');
+    return rows;
+};
+
+/**
+ * Busca os departamentos vinculados a uma loja específica.
+ */
+export const getDepartamentosPorLoja = async (lojaId) => {
+    const sql = `
+        SELECT d.id, d.nome 
+        FROM Departamento d
+        INNER JOIN loja_departamento ld ON d.id = ld.departamento_id
+        WHERE ld.loja_id = ?
+        ORDER BY d.nome ASC
+    `;
+    const [rows] = await pool.query(sql, [lojaId]);
+    return rows;
+};
+
+
+// =================================================================
+// 2. FUNÇÕES CRUD DE CHAMADOS (ATUALIZADAS PARA IDs)
+// =================================================================
+
+/**
+ * (ATUALIZADO)
+ * Cria um novo chamado salvando os IDs de Loja e Departamento.
  */
 export const create = async (chamado) => {
     const { 
         assunto, descricao, prioridade, status, requisitanteIdNum, 
         categoriaUnificadaIdNum,
         nomeRequisitanteManual, emailRequisitanteManual, telefoneRequisitanteManual,
-        loja_id, departamento_id // <-- AGORA RECEBE IDs
+        loja_id, departamento_id // <-- Agora recebemos os IDs vindos do Controller
     } = chamado; 
 
     const sql = `
@@ -16,7 +49,7 @@ export const create = async (chamado) => {
             (assunto, descricao, prioridade, status, requisitante_id, 
              categoria_unificada_id,
              nome_requisitante_manual, email_requisitante_manual, telefone_requisitante_manual,
-             loja_id, departamento_id)
+             loja_id, departamento_id) -- <-- Colunas de ID
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     
@@ -30,8 +63,8 @@ export const create = async (chamado) => {
         nomeRequisitanteManual, 
         emailRequisitanteManual, 
         telefoneRequisitanteManual,
-        loja_id || null,          // <-- SALVA O ID
-        departamento_id || null   // <-- SALVA O ID
+        loja_id || null,          // Salva o ID da loja (ou null)
+        departamento_id || null   // Salva o ID do departamento (ou null)
     ];
     
     const [result] = await pool.query(sql, values);
@@ -39,27 +72,42 @@ export const create = async (chamado) => {
 };
 
 /**
- * Busca um chamado por ID e faz os JOINs para trazer os nomes de Loja e Departamento.
+ * (ATUALIZADO)
+ * Busca um chamado por ID e faz os JOINs para trazer os NOMES da Loja e Departamento.
  */
 export const findById = async (id) => {
     const sql = `
         SELECT 
             ch.*, 
+            
+            -- Dados do Requisitante
             COALESCE(ch.nome_requisitante_manual, f_req.nomeFuncionario) AS nomeRequisitante,
             ch.email_requisitante_manual AS emailRequisitante,
             ch.telefone_requisitante_manual AS telefoneRequisitante,
+            
+            -- Dados do Atendente
             f_atend.nomeFuncionario AS nomeAtendente, 
+            
+            -- Dados da Categoria
             cat.nome AS nomeCategoria,
             pai.nome AS nomeCategoriaPai,
-            l.nome AS loja,              -- Traz o NOME da loja
-            d.nome AS departamento       -- Traz o NOME do departamento
+            
+            -- (NOVO) Traz o NOME da loja e departamento baseado no ID salvo
+            l.nome AS loja,
+            d.nome AS departamento
+            
         FROM Chamados ch
+        
+        -- Joins Padrão
         LEFT JOIN Funcionario f_req ON ch.requisitante_id = f_req.id
         LEFT JOIN Funcionario f_atend ON ch.atendente_id = f_atend.id 
         LEFT JOIN Categorias cat ON ch.categoria_unificada_id = cat.id
         LEFT JOIN Categorias pai ON cat.parent_id = pai.id 
-        LEFT JOIN Loja l ON ch.loja_id = l.id             -- Join Loja
-        LEFT JOIN Departamento d ON ch.departamento_id = d.id -- Join Departamento
+        
+        -- (NOVO) Joins com tabelas de Loja e Departamento
+        LEFT JOIN Loja l ON ch.loja_id = l.id
+        LEFT JOIN Departamento d ON ch.departamento_id = d.id
+        
         WHERE ch.id = ?
     `;
     const [rows] = await pool.query(sql, [id]);
@@ -67,7 +115,8 @@ export const findById = async (id) => {
 };
 
 /**
- * Busca todos os chamados com os nomes de Loja e Departamento.
+ * (ATUALIZADO)
+ * Busca todos os chamados listando os nomes de Loja e Departamento.
  */
 export const findAll = async (filtros = {}) => {
     let sql = `
@@ -79,13 +128,18 @@ export const findAll = async (filtros = {}) => {
             f_atend.nomeFuncionario AS nomeAtendente, 
             cat.nome AS nomeCategoria,
             pai.nome AS nomeCategoriaPai,
+
+            -- (NOVO) Nomes para exibição na lista
             l.nome AS loja,
             d.nome AS departamento
+
         FROM Chamados ch
         LEFT JOIN Funcionario f_req ON ch.requisitante_id = f_req.id
         LEFT JOIN Funcionario f_atend ON ch.atendente_id = f_atend.id 
         LEFT JOIN Categorias cat ON ch.categoria_unificada_id = cat.id
         LEFT JOIN Categorias pai ON cat.parent_id = pai.id
+
+        -- (NOVO) Joins
         LEFT JOIN Loja l ON ch.loja_id = l.id
         LEFT JOIN Departamento d ON ch.departamento_id = d.id
     `;
@@ -127,7 +181,10 @@ export const findAll = async (filtros = {}) => {
     return chamados;
 };
 
-// --- Demais funções (Delete, Update) permanecem iguais ---
+// =================================================================
+// 3. FUNÇÕES RESTANTES (SEM MUDANÇAS DE LÓGICA)
+// =================================================================
+
 export const deleteById = async (id) => {
     await pool.query('DELETE FROM Comentarios WHERE chamado_id = ?', [id]);
     const [result] = await pool.query('DELETE FROM Chamados WHERE id = ?', [id]);
@@ -137,6 +194,7 @@ export const deleteById = async (id) => {
 export const updateStatus = async (id, status, atendenteId) => {
     let sql;
     let values;
+
     if (atendenteId) {
         sql = "UPDATE Chamados SET status = ?, atendente_id = ? WHERE id = ?";
         values = [status, atendenteId, id];
@@ -144,6 +202,7 @@ export const updateStatus = async (id, status, atendenteId) => {
         sql = "UPDATE Chamados SET status = ? WHERE id = ?";
         values = [status, id];
     }
+    
     const [result] = await pool.query(sql, values);
     return result;
 };
@@ -161,7 +220,15 @@ export const updateAtendente = async (id, atendenteId) => {
 };
 
 export const countByStatus = async () => {
-    const sql = `SELECT status, COUNT(id) as count FROM Chamados GROUP BY status;`;
+    const sql = `
+        SELECT 
+            status, 
+            COUNT(id) as count
+        FROM 
+            Chamados
+        GROUP BY 
+            status;
+    `;
     const [rows] = await pool.query(sql);
     return rows; 
 };

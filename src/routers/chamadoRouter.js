@@ -19,7 +19,12 @@ router.post('/chamados', upload.array('anexos'), ChamadoController.criarChamado)
 // GET /chamados (Listar todos os chamados com filtros)
 router.get('/chamados', ChamadoController.listarChamados);
 
-// --- ROTAS DE Contagem (MAIS ESPECÍFICA) ---
+// --- ROTAS DE DADOS AUXILIARES (CASCATA LOJA/DEPTO) ---
+// (Importante: Definir antes de /chamados/:id para evitar conflito de rota)
+router.get('/chamados/dados/lojas', ChamadoController.listarLojas);
+router.get('/chamados/dados/lojas/:lojaId/departamentos', ChamadoController.listarDepartamentosDaLoja);
+
+// --- ROTAS DE CONTAGEM ---
 // GET /chamados/contagem (Contagem de chamados por status)
 router.get('/chamados/contagem', ChamadoController.contarChamadosPorStatus);
 

@@ -157,35 +157,20 @@
                         <div class="grupo-form">
                             <label for="loja">Loja</label>
                             <select id="loja" name="loja" class="form-select">
-                                <option value="">-- Selecione a Loja --</option>
-                                <option value="Matriz">Matriz</option>
-                                <option value="Loja 01">Loja 01</option>
-                                <option value="Loja 02">Loja 02</option>
-                                <option value="Loja 03">Loja 03</option>
-                                <option value="Loja 04">Loja 04</option>
-                                <option value="CD">Centro de Distribuição</option>
+                                <option value="">Carregando...</option>
                             </select>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="grupo-form">
                             <label for="departamento">Departamento</label>
-                            <select id="departamento" name="departamento" class="form-select">
-                                <option value="">-- Selecione o Departamento --</option>
-                                <option value="TI">T.I.</option>
-                                <option value="RH">Recursos Humanos</option>
-                                <option value="Financeiro">Financeiro</option>
-                                <option value="Comercial">Comercial</option>
-                                <option value="Frente de Caixa">Frente de Caixa</option>
-                                <option value="Açougue">Açougue</option>
-                                <option value="Padaria">Padaria</option>
-                                <option value="Hortifruti">Hortifruti</option>
-                                <option value="Depósito">Depósito</option>
-                                <option value="Prevenção">Prevenção</option>
+                            <select id="departamento" name="departamento" class="form-select" disabled>
+                                <option value="">← Selecione a Loja</option>
                             </select>
                         </div>
                     </div>
                 </div>
+
                 <hr>
 
                 <div class="grupo-form">
@@ -349,6 +334,7 @@
         let currentPage = 1;
         let allCategories = [];
 
+        // Referências
         const modal = document.getElementById("modalTicket");
         const btnAbrir = document.getElementById("newTicketButton");
         const btnFechar = document.getElementById("fecharModal");
@@ -368,7 +354,12 @@
         const paginationControls = document.getElementById("paginationControls");
         const selectPrioridade = document.getElementById("prioridade");
         const cascataWrapper = document.getElementById("categoriaCascataWrapper");
+        
+        // Referências para a Cascata de Loja/Depto
+        const selectLoja = document.getElementById("loja");
+        const selectDepartamento = document.getElementById("departamento");
 
+        // --- Funções Auxiliares (sem mudanças) ---
         function exibirMensagem(elemento, mensagem, sucesso = true) {
             elemento.textContent = mensagem;
             elemento.className = sucesso ? 'alert alert-success' : 'alert alert-danger';
@@ -399,6 +390,56 @@
             input.value = valor;
         }
 
+        // --- (NOVO) Carregar Lojas no Início ---
+        async function carregarLojas() {
+            try {
+                const response = await fetch(`${API_URL}/chamados/dados/lojas`);
+                if (!response.ok) throw new Error("Erro ao carregar lojas.");
+                const lojas = await response.json();
+                
+                selectLoja.innerHTML = '<option value="">-- Selecione a Loja --</option>';
+                lojas.forEach(loja => {
+                    selectLoja.add(new Option(loja.nome, loja.id));
+                });
+            } catch (error) {
+                console.error(error);
+                selectLoja.innerHTML = '<option value="">Erro ao carregar</option>';
+            }
+        }
+
+        // --- (NOVO) Listener para carregar Departamentos quando muda a Loja ---
+        selectLoja.addEventListener('change', async () => {
+            const lojaId = selectLoja.value;
+            selectDepartamento.innerHTML = '<option value="">Carregando...</option>';
+            selectDepartamento.disabled = true;
+
+            if (!lojaId) {
+                selectDepartamento.innerHTML = '<option value="">← Selecione a Loja</option>';
+                selectDepartamento.disabled = true;
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/chamados/dados/lojas/${lojaId}/departamentos`);
+                if (!response.ok) throw new Error("Erro ao buscar departamentos.");
+                const departamentos = await response.json();
+
+                selectDepartamento.innerHTML = '<option value="">-- Selecione o Departamento --</option>';
+                if (departamentos.length === 0) {
+                    selectDepartamento.add(new Option("Nenhum departamento encontrado", ""));
+                } else {
+                    departamentos.forEach(dept => {
+                        selectDepartamento.add(new Option(dept.nome, dept.id));
+                    });
+                }
+                selectDepartamento.disabled = false;
+            } catch (error) {
+                console.error(error);
+                selectDepartamento.innerHTML = '<option value="">Erro ao carregar</option>';
+            }
+        });
+
+        // --- Carregar Categorias ---
         async function carregarDadosIniciais() {
             try {
                 const response = await fetch(`${API_URL}/categorias`);
@@ -410,7 +451,6 @@
                 console.error(error);
                 exibirMensagem(modal.open ? modalResposta : divRespostaGeral, error.message, false);
                 cascataWrapper.innerHTML = '<p class="text-danger">Erro ao carregar categorias.</p>';
-                throw error;
             }
         }
         
@@ -550,7 +590,7 @@
                     document.getElementById('detalheAssunto').textContent = chamado.assunto;
                     document.getElementById('detalheDescricao').textContent = chamado.descricao;
                     
-                    // PREENCHE LOJA E DEPARTAMENTO
+                    // PREENCHE LOJA E DEPARTAMENTO (Nomes retornados pelo JOIN)
                     document.getElementById('detalheLoja').textContent = chamado.loja || 'N/A';
                     document.getElementById('detalheDepartamento').textContent = chamado.departamento || 'N/A';
 
@@ -599,9 +639,9 @@
             const descricao = ticketForm.descricao.value.trim();
             const prioridade = ticketForm.prioridade.value || 'Média';
             
-            // CAPTURA LOJA E DEPARTAMENTO
-            const loja = ticketForm.loja.value.trim();
-            const departamento = ticketForm.departamento.value.trim();
+            // CAPTURA LOJA E DEPARTAMENTO (IDs)
+            const loja = selectLoja.value;
+            const departamento = selectDepartamento.value;
 
             const allSelects = cascataWrapper.querySelectorAll('select');
             let categoriaUnificadaId = null;
@@ -616,6 +656,10 @@
             }
             if (!categoriaUnificadaId) {
                 exibirMensagem(modalResposta, 'Por favor, selecione uma Categoria.', false);
+                return;
+            }
+            if (!loja) {
+                exibirMensagem(modalResposta, 'Por favor, selecione uma Loja.', false);
                 return;
             }
 
@@ -640,8 +684,8 @@
                     prioridade: prioridade,
                     requisitante_id: userId,
                     categoria_unificada_id: parseInt(categoriaUnificadaId),
-                    loja: loja,               // <-- ENVIA
-                    departamento: departamento // <-- ENVIA
+                    loja: loja,               // Envia o ID
+                    departamento: departamento // Envia o ID
                 }
             };
             formData.append('chamado', JSON.stringify(dadosChamado.chamado));
@@ -690,6 +734,10 @@
             limparMensagem(modalResposta);
             cascataWrapper.innerHTML = '';
             criarProximoDropdown(null, 0); 
+            // Resetar Loja/Depto
+            selectLoja.value = "";
+            selectDepartamento.innerHTML = '<option value="">← Selecione a Loja</option>';
+            selectDepartamento.disabled = true;
         }
 
         btnAbrir.addEventListener('click', () => {
@@ -723,7 +771,11 @@
         cascataWrapper.addEventListener('change', handleCascataChange);
         
         async function init() {
-            await carregarDadosIniciais().catch(error => { console.error("Falha ao carregar categorias.", error); }); 
+            // Carregamentos paralelos
+            await Promise.all([
+                carregarDadosIniciais().catch(e => console.error("Erro Categorias", e)),
+                carregarLojas().catch(e => console.error("Erro Lojas", e))
+            ]);
             await listarChamados(); 
         }
         init();
