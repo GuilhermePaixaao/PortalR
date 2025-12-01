@@ -13,7 +13,8 @@ import { Server } from 'socket.io'; // O Servidor do Socket.io
 // --- FIM NOVO ---
 
 import mainRouter from './src/routers/index.js';
-
+import organizacaoRouter from './src/routers/organizacaoRouter.js';
+// ...
 
 console.log("====================================");
 console.log("DEBUG: A EVOLUTION_API_URL é:");
@@ -86,8 +87,7 @@ app.get('/', (req, res) => {
 // Servir os arquivos estáticos (CSS, JS, Imagens)
 app.use(express.static(path.join(__dirname, 'src', 'views')));
 app.use(express.static(path.join(__dirname, 'public')));
-import organizacaoRouter from './src/routers/organizacaoRouter.js';
-// ...
+
 app.use('/api/org', organizacaoRouter);
 
 // Usar TODAS as suas rotas da API
