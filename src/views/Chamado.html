@@ -115,6 +115,31 @@
             cursor: not-allowed;
             background-color: #f8f9fa;
         }
+
+        /* --- Estilo do Botão FAQ no Header --- */
+        .btn-faq-header {
+            margin-left: 15px; /* Espaço entre o título e o botão */
+            background-color: #e7f1ff; /* Fundo azul suave */
+            color: #0d6efd; /* Texto azul */
+            border: 1px solid #0d6efd; /* Borda azul */
+            padding: 5px 15px;
+            border-radius: 50px; /* Borda redonda (estilo pílula) */
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-decoration: none; /* Remove o sublinhado */
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            vertical-align: middle;
+        }
+
+        .btn-faq-header:hover {
+            background-color: #0d6efd; /* Fundo azul ao passar o mouse */
+            color: #ffffff; /* Texto branco */
+            text-decoration: none;
+            transform: translateY(-1px); /* Leve efeito de elevação */
+        }
     </style>
 </head>
 <body>
@@ -125,6 +150,15 @@
             <div class="logo">
                 <img src="/img.png" alt="Logo Portal Supermercado" class="logo-icon">              
                 PORTAL SUPERMERCADO ROSALINA
+                <a href="SEU_LINK_AQUI" target="_blank" class="btn-faq-header" title="Dúvidas Frequentes">
+                    ❓ FAQ
+                </a>
+            </div>
+            
+            <div class="header-actions">
+                <button id="themeToggle" class="btn-theme-toggle" title="Alternar Tema">🌙</button>
+                <span id="userNameDisplay"></span>
+                <button id="logoutButton" class="btn-logout">Sair</button>
             </div>
         </header>
 
@@ -267,6 +301,25 @@
             <div class="form-actions"><button type="button" id="fecharModalDetalhes">Fechar</button></div>
         </dialog>
         
+        <aside class="sidebar">
+            <nav>
+                <ul>
+                    <li><a href="Dashboard.html" title="Início"><span class="icon">🏠</span><span class="text">Início</span></a></li>
+                    <li><a href="Imprimir.html" title="Impressão de Preços"><span class="icon">🖨️</span><span class="text">Imprimir</span></a></li>
+                    <li class="active ticket-item" id="menu-link-chamado"><a href="Chamado.html" title="Abrir Chamado (Airus)"><span class="icon">➕</span><span class="text">Chamado</span></a></li>
+                    <li><a href="AtendimentoWhatsApp.html" title="Atendimento WhatsApp"><span class="icon">💬</span><span class="text">WhatsApp</span></a></li>
+                    <li><a href="Funcionarios.html" title="Funcionários"><span class="icon">💼</span><span class="text">Funcionários</span></a></li>
+                    <li>
+                        <a href="Categorias.html" title="Categorias">
+                            <span class="icon">🏷️</span>
+                            <span class="text">Categorias</span>
+                        </a>
+                    </li>    
+                    <li><a href="GerenciarLojas.html"><span class="icon">🏢</span> Lojas e Deptos</a></li>
+                </ul>
+            </nav>
+        </aside>
+
         <main class="main-content">
             <img src="/imgrosa.png" height="126" width="320" >              
             <hr>
@@ -358,6 +411,31 @@
         // Referências para a Cascata de Loja/Depto
         const selectLoja = document.getElementById("loja");
         const selectDepartamento = document.getElementById("departamento");
+
+        // --- (NOVO) Lógica do Tema Escuro ---
+        const btnThemeToggle = document.getElementById("themeToggle");
+        
+        function toggleTheme() {
+            document.body.classList.toggle("dark-mode");
+            let isDark = document.body.classList.contains("dark-mode");
+            localStorage.setItem("theme", isDark ? "dark" : "light");
+            if (btnThemeToggle) btnThemeToggle.textContent = isDark ? "☀️" : "🌙";
+        }
+
+        function loadTheme() {
+            const savedTheme = localStorage.getItem("theme");
+            if (savedTheme === "dark") {
+                document.body.classList.add("dark-mode");
+                if (btnThemeToggle) btnThemeToggle.textContent = "☀️";
+            } else {
+                document.body.classList.remove("dark-mode");
+                if (btnThemeToggle) btnThemeToggle.textContent = "🌙";
+            }
+        }
+        
+        if (btnThemeToggle) btnThemeToggle.addEventListener('click', toggleTheme);
+        loadTheme();
+        // --- Fim Lógica Tema ---
 
         // --- Funções Auxiliares (sem mudanças) ---
         function exibirMensagem(elemento, mensagem, sucesso = true) {
@@ -764,6 +842,39 @@
             modalDetalhes.removeAttribute('data-current-ticket-id');
             modalDetalhes.close();
         });
+
+        // Logout
+        const btnLogout = document.getElementById("logoutButton");
+        if(btnLogout) {
+            btnLogout.addEventListener('click', () => {
+                localStorage.removeItem("userData");
+                window.location.href = "Login.html";
+            });
+        }
+
+        // Lógica de exibição do nome do usuário e controle de acesso
+        try {
+            const userData = JSON.parse(localStorage.getItem("userData"));
+            const userNameDisplay = document.getElementById('userNameDisplay');
+            if (userNameDisplay && userData?.data?.nomeFuncionario) {
+                userNameDisplay.textContent = `Olá, ${userData.data.nomeFuncionario.split(' ')[0]}`;
+            }
+
+            const userPerfil = userData?.data?.perfil;
+            const linkChamadoLi = document.getElementById("menu-link-chamado");
+
+            if (linkChamadoLi && (userPerfil === 'AGENTE' || userPerfil === 'ADMIN')) {
+                const a = linkChamadoLi.querySelector('a');
+                a.href = "GerenciarChamados.html";
+                a.title = "Gerenciar Chamados";
+                a.querySelector('.icon').textContent = "✔️";
+                a.querySelector('.text').innerHTML = "Gerenciar<br>Chamados";
+                // Remove a classe active se estivermos nesta página mas o link mudou para gerenciamento
+                // (Opcional, depende de onde o usuário está)
+            }
+        } catch (error) {
+            console.error('Erro ao exibir nome do usuário:', error);
+        }
 
         ticketForm.addEventListener('submit', criarChamado);
         btnFiltrar.addEventListener('click', () => listarChamados(1)); 
