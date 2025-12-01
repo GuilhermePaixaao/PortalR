@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Lojas e Departamentos - Portal</title>
+    <script>
+        const userDataString = localStorage.getItem("userData");
+        if (!userDataString) window.location.replace("Login.html");
+        try {
+            const userData = JSON.parse(userDataString);
+            if (userData?.data?.perfil === 'REQUISITANTE') window.location.replace("Chamado.html");
+        } catch (e) { window.location.replace("Login.html"); }
+    </script>
+    <link rel="stylesheet" href="css/dashboard.css">
+    <link rel="icon" type="image/png" href="/logo.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .split-container { display: flex; gap: 20px; flex-wrap: wrap; }
+        .split-col { flex: 1; min-width: 300px; }
+        .card { background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); padding: 20px; display: flex; flex-direction: column; height: 100%; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        h3 { margin: 0; font-size: 1.1rem; color: #333; }
+        
+        .btn-add { background-color: #28a745; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.9rem; }
+        .btn-add:hover { background-color: #218838; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+        th { background-color: #f8f9fa; color: #555; font-weight: 600; }
+        
+        .actions button { background: none; border: none; cursor: pointer; font-size: 1rem; margin-left: 5px; transition: transform 0.2s; }
+        .actions button:hover { transform: scale(1.2); }
+        .btn-config { color: #0d6efd; }
+        .btn-edit { color: #ffc107; }
+        .btn-delete { color: #dc3545; }
+
+        /* Modal */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content { background-color: white; padding: 25px; border-radius: 8px; width: 400px; max-width: 90%; position: relative; }
+        .close-modal { position: absolute; top: 15px; right: 20px; font-size: 1.5rem; cursor: pointer; color: #aaa; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .form-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        .btn-save { width: 100%; background-color: #0d6efd; color: white; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer; }
+
+        /* Checklist de Departamentos */
+        .dept-list { max-height: 300px; overflow-y: auto; border: 1px solid #eee; padding: 10px; border-radius: 4px; }
+        .dept-item { display: flex; align-items: center; padding: 5px 0; border-bottom: 1px solid #f5f5f5; }
+        .dept-item input { width: auto; margin-right: 10px; }
+        .dept-item label { margin: 0; cursor: pointer; flex: 1; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <header class="header">
+            <div class="logo">
+                <img src="/img.png" alt="Logo" class="logo-icon" style="height:30px; width:auto; margin-right:10px;">              
+                PORTAL ROSALINA
+            </div>
+            <button onclick="localStorage.removeItem('userData'); window.location.href='Login.html'" style="background:#dc3545; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">Sair</button>
+        </header>
+        
+        <aside class="sidebar">
+            <nav>
+                <ul>
+                    <li><a href="Dashboard.html"><span class="icon">🏠</span> Início</a></li>
+                    <li><a href="GerenciarChamados.html"><span class="icon">✔️</span> Chamados</a></li>
+                    <li><a href="AtendimentoWhatsApp.html"><span class="icon">💬</span> WhatsApp</a></li>
+                    <li><a href="Funcionarios.html"><span class="icon">💼</span> Funcionários</a></li>
+                    <li><a href="Categorias.html"><span class="icon">🏷️</span> Categorias</a></li>
+                    <li class="active"><a href="GerenciarLojas.html"><span class="icon">🏢</span> Lojas e Deptos</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content" style="padding: 20px; overflow-y: auto;">
+            <h2 style="color: #333; margin-bottom: 20px;">Gerenciar Organização</h2>
+            
+            <div class="split-container">
+                <div class="split-col">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>🏪 Lojas</h3>
+                            <button class="btn-add" onclick="openModal('loja')">+ Nova Loja</button>
+                        </div>
+                        <table id="tableLojas">
+                            <thead><tr><th>ID</th><th>Nome</th><th style="text-align:right">Ações</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="split-col">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>📂 Departamentos (Geral)</h3>
+                            <button class="btn-add" onclick="openModal('departamento')">+ Novo Depto</button>
+                        </div>
+                        <table id="tableDeptos">
+                            <thead><tr><th>ID</th><th>Nome</th><th style="text-align:right">Ações</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="modalGeneric" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal('modalGeneric')">&times;</span>
+            <h3 id="modalTitle">Novo</h3>
+            <form id="formGeneric">
+                <input type="hidden" id="genericId">
+                <input type="hidden" id="genericType">
+                <div class="form-group">
+                    <label>Nome</label>
+                    <input type="text" id="genericName" required>
+                </div>
+                <button type="submit" class="btn-save">Salvar</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="modalConfig" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal('modalConfig')">&times;</span>
+            <h3 id="configTitle">Configurar Departamentos</h3>
+            <p style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">Selecione quais departamentos existem nesta loja:</p>
+            
+            <form id="formConfig">
+                <input type="hidden" id="configLojaId">
+                <div class="dept-list" id="deptChecklist">
+                    </div>
+                <div style="margin-top: 15px;">
+                    <button type="submit" class="btn-save">Salvar Configuração</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/globalNotification.js"></script>
+    <script>
+        const API_BASE = '/api/org';
+
+        document.addEventListener('DOMContentLoaded', loadAll);
+
+        async function loadAll() {
+            loadLojas();
+            loadDeptos();
+        }
+
+        async function loadLojas() {
+            const res = await fetch(`${API_BASE}/lojas`);
+            const data = await res.json();
+            const tbody = document.querySelector('#tableLojas tbody');
+            tbody.innerHTML = '';
+            data.forEach(item => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${item.id}</td>
+                        <td>${item.nome}</td>
+                        <td style="text-align:right" class="actions">
+                            <button class="btn-config" onclick="configLoja(${item.id}, '${item.nome}')" title="Configurar Departamentos"><i class="fas fa-cog"></i></button>
+                            <button class="btn-edit" onclick="editItem('loja', ${item.id}, '${item.nome}')"><i class="fas fa-edit"></i></button>
+                            <button class="btn-delete" onclick="deleteItem('loja', ${item.id})"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>`;
+            });
+        }
+
+        async function loadDeptos() {
+            const res = await fetch(`${API_BASE}/departamentos`);
+            const data = await res.json();
+            const tbody = document.querySelector('#tableDeptos tbody');
+            tbody.innerHTML = '';
+            data.forEach(item => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${item.id}</td>
+                        <td>${item.nome}</td>
+                        <td style="text-align:right" class="actions">
+                            <button class="btn-edit" onclick="editItem('departamento', ${item.id}, '${item.nome}')"><i class="fas fa-edit"></i></button>
+                            <button class="btn-delete" onclick="deleteItem('departamento', ${item.id})"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>`;
+            });
+        }
+
+        // --- CRUD BÁSICO ---
+        function openModal(type) {
+            document.getElementById('genericType').value = type;
+            document.getElementById('genericId').value = '';
+            document.getElementById('genericName').value = '';
+            document.getElementById('modalTitle').innerText = type === 'loja' ? 'Nova Loja' : 'Novo Departamento';
+            document.getElementById('modalGeneric').classList.add('active');
+        }
+
+        function editItem(type, id, nome) {
+            document.getElementById('genericType').value = type;
+            document.getElementById('genericId').value = id;
+            document.getElementById('genericName').value = nome;
+            document.getElementById('modalTitle').innerText = type === 'loja' ? 'Editar Loja' : 'Editar Departamento';
+            document.getElementById('modalGeneric').classList.add('active');
+        }
+
+        async function deleteItem(type, id) {
+            if(!confirm('Tem certeza?')) return;
+            const endpoint = type === 'loja' ? 'lojas' : 'departamentos';
+            await fetch(`${API_BASE}/${endpoint}/${id}`, { method: 'DELETE' });
+            loadAll();
+        }
+
+        document.getElementById('formGeneric').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const type = document.getElementById('genericType').value;
+            const id = document.getElementById('genericId').value;
+            const nome = document.getElementById('genericName').value;
+            const endpoint = type === 'loja' ? 'lojas' : 'departamentos';
+            
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `${API_BASE}/${endpoint}/${id}` : `${API_BASE}/${endpoint}`;
+
+            await fetch(url, {
+                method: method,
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ nome })
+            });
+            
+            closeModal('modalGeneric');
+            loadAll();
+        });
+
+        // --- CONFIGURAÇÃO DE VÍNCULOS ---
+        async function configLoja(id, nome) {
+            document.getElementById('configLojaId').value = id;
+            document.getElementById('configTitle').innerText = `Configurar: ${nome}`;
+            
+            const div = document.getElementById('deptChecklist');
+            div.innerHTML = 'Carregando...';
+            
+            document.getElementById('modalConfig').classList.add('active');
+
+            // Busca todos os vínculos desta loja
+            const res = await fetch(`${API_BASE}/lojas/${id}/vinculos`);
+            const deptos = await res.json();
+            
+            div.innerHTML = '';
+            deptos.forEach(d => {
+                const checked = d.vinculado ? 'checked' : '';
+                div.innerHTML += `
+                    <div class="dept-item">
+                        <input type="checkbox" name="deptos" value="${d.id}" id="d_${d.id}" ${checked}>
+                        <label for="d_${d.id}">${d.nome}</label>
+                    </div>`;
+            });
+        }
+
+        document.getElementById('formConfig').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('configLojaId').value;
+            const checkboxes = document.querySelectorAll('input[name="deptos"]:checked');
+            const departamentos = Array.from(checkboxes).map(cb => cb.value);
+
+            await fetch(`${API_BASE}/lojas/${id}/vinculos`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ departamentos })
+            });
+
+            closeModal('modalConfig');
+            alert('Configuração salva!');
+        });
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+    </script>
+</body>
+</html>
