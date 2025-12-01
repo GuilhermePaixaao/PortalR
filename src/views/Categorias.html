@@ -43,11 +43,25 @@
     .logo { display: flex; align-items: center; gap: 10px; }
     .logo-icon { height: 30px; width: auto; }
 
-    /* Badges de Prioridade */
-    .badge-prioridade { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; color: #fff; text-transform: uppercase; }
+    /* --- CORES DAS PRIORIDADES --- */
+    .badge-prioridade { 
+        padding: 5px 10px; 
+        border-radius: 12px; 
+        font-size: 0.8rem; 
+        font-weight: 700; 
+        color: #fff; 
+        text-transform: uppercase; 
+        display: inline-block;
+        min-width: 80px;
+        text-align: center;
+    }
+    /* Verde para Baixa */
     .badge-baixa { background-color: #28a745; }    
+    /* Amarelo para Média (texto escuro para contraste) */
     .badge-media { background-color: #ffc107; color: #333; }
+    /* Laranja para Alta */
     .badge-alta { background-color: #fd7e14; }     
+    /* Vermelho para Urgente/Planejado */
     .badge-urgente, .badge-planejado { background-color: #dc3545; }  
   </style>
 </head>
@@ -113,8 +127,7 @@
                     <option value="BAIXA">Baixa</option>
                     <option value="Média">Média</option>
                     <option value="Alta">Alta</option>
-                    <option value="Planejado">Planejado</option>
-                    <option value="Urgente">Urgente</option>
+                    <option value="Planejado">Planejado / Urgente</option>
                   </select>
                   <div class="form-text text-muted" style="font-size: 0.8rem;">Chamados desta categoria iniciarão com esta prioridade.</div>
                 </div>
@@ -213,7 +226,6 @@
     const txtId = document.getElementById("txtId");
     const txtNomeCategoria = document.getElementById("txtNomeCategoria");
     const cboParent = document.getElementById("cboParent");
-    // NOVO: Referência ao select de prioridade
     const cboPrioridade = document.getElementById("cboPrioridade");
     const divBotoes = document.getElementById("divBotoes");
     const divResposta = document.getElementById("divResposta");
@@ -247,6 +259,19 @@
     function exibirErro(mensagem) {
       divResposta.textContent = mensagem;
       divResposta.className = 'alert alert-danger mt-3';
+    }
+
+    // --- HELPER PARA GERAR O HTML DA BADGE ---
+    function getBadgeHtml(prioridade) {
+        const p = prioridade || 'BAIXA';
+        const pLower = p.toLowerCase();
+        let badgeClass = 'badge-baixa'; // Padrão Verde
+
+        if(pLower === 'média' || pLower === 'media') badgeClass = 'badge-media'; // Amarelo
+        if(pLower === 'alta') badgeClass = 'badge-alta'; // Laranja
+        if(pLower === 'planejado' || pLower === 'urgente') badgeClass = 'badge-planejado'; // Vermelho
+
+        return `<span class="badge-prioridade ${badgeClass}">${p}</span>`;
     }
 
     // --- CRUD DE CATEGORIAS ---
@@ -376,18 +401,14 @@
         categorias.forEach(cat => {
           const tr = document.createElement("tr");
           
-          // Badge da Prioridade
-          const prioridade = cat.prioridade_padrao || 'BAIXA';
-          let badgeClass = 'badge-baixa';
-          if(prioridade === 'Média') badgeClass = 'badge-media';
-          if(prioridade === 'Alta') badgeClass = 'badge-alta';
-          if(prioridade === 'Planejado') badgeClass = 'badge-planejado';
+          // Usa a função helper para gerar a badge
+          const badgeHtml = getBadgeHtml(cat.prioridade_padrao);
 
           tr.innerHTML = `
             <td>${cat.id}</td>
             <td>${cat.nome}</td>
             <td>${cat.nome_pai || '--'}</td> 
-            <td><span class="badge-prioridade ${badgeClass}">${prioridade}</span></td>
+            <td>${badgeHtml}</td>
             <td>
               <button class="btn btn-sm btn-info btn-selecionar">Selecionar</button>
             </td>
@@ -395,7 +416,7 @@
           tr.querySelector('.btn-selecionar').addEventListener('click', () => {
             txtId.value = cat.id;
             txtNomeCategoria.value = cat.nome || '';
-            cboPrioridade.value = cat.prioridade_padrao || "BAIXA"; // Preenche prioridade no form
+            cboPrioridade.value = cat.prioridade_padrao || "BAIXA"; 
             
             preencherSelectPai(API_DATA_CATEGORIAS); 
             cboParent.value = cat.parent_id || ""; 
@@ -410,7 +431,6 @@
       divTabela.appendChild(table);
     }
     
-    // (NOVA) Função para renderizar a tabela SÓ DE SUBCATEGORIAS
     function renderSubCategoriaTable(subcategorias) {
       divSubTabela.innerHTML = "";
       const table = document.createElement("table");
@@ -430,17 +450,17 @@
 
       if (subcategorias && subcategorias.length > 0) {
         subcategorias.forEach(cat => {
-          // --- CORREÇÃO AQUI: Criar o elemento TR ---
+          // --- CORREÇÃO APLICADA: Criando o TR antes de usar ---
           const tr = document.createElement("tr"); 
-          // ------------------------------------------
-
-          const prioridade = cat.prioridade_padrao || 'BAIXA';
           
+          // Usa a função helper para gerar a badge
+          const badgeHtml = getBadgeHtml(cat.prioridade_padrao);
+
           tr.innerHTML = `
             <td>${cat.id}</td>
             <td>${cat.nome}</td>
             <td>${cat.nome_pai || '(Pai não encontrado)'}</td> 
-            <td>${prioridade}</td> 
+            <td>${badgeHtml}</td> 
           `;
           tbody.appendChild(tr);
         });
