@@ -82,6 +82,6 @@ export const salvarVinculos = async (req, res) => {
         const { id } = req.params; // ID da Loja
         const { departamentos } = req.body; // Array de IDs [1, 2, 5]
         await OrgModel.salvarVinculos(id, departamentos);
-        res.json({ message: "Vínculos salvos com sucesso!" });
+        res.json({ message: "Vínculos salvos com sucesso!" });a
     } catch (e) { res.status(500).json({ error: e.message }); }
 };
