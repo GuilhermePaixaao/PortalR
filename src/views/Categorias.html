@@ -276,8 +276,8 @@
 
         if(pLower === 'média' || pLower === 'media') badgeClass = 'badge-media'; // Amarelo
         if(pLower === 'alta') badgeClass = 'badge-alta'; // Laranja
-        if(pLower === 'planejado' || pLower === 'urgente') badgeClass = 'badge-planejado'; // Vermelho
-
+        if(pLower === 'planejado' ) badgeClass = 'badge-planejado';
+        if(pLower === 'urgente' || pLower === 'critico' || pLower === 'crítico') badgeClass = 'badge-urgente'; // Vermelho        
         return `<span class="badge-prioridade ${badgeClass}">${p}</span>`;
     }
 
