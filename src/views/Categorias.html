@@ -409,6 +409,7 @@
       divTabela.appendChild(table);
     }
     
+    // (NOVA) Função para renderizar a tabela SÓ DE SUBCATEGORIAS
     function renderSubCategoriaTable(subcategorias) {
       divSubTabela.innerHTML = "";
       const table = document.createElement("table");
@@ -428,7 +429,12 @@
 
       if (subcategorias && subcategorias.length > 0) {
         subcategorias.forEach(cat => {
+          // --- CORREÇÃO AQUI: Criar o elemento TR ---
+          const tr = document.createElement("tr"); 
+          // ------------------------------------------
+
           const prioridade = cat.prioridade_padrao || 'BAIXA';
+          
           tr.innerHTML = `
             <td>${cat.id}</td>
             <td>${cat.nome}</td>
