@@ -106,7 +106,7 @@
         .btn-desconectar { background-color: #ffc107; color: #333; border: none; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; font-weight: bold; }
         .btn-desconectar:hover { background-color: #e0a800; }
         
-        /* --- ESTILOS DA TOOLBAR DO CHAT (NOVO) --- */
+        /* --- ESTILOS DA TOOLBAR DO CHAT --- */
         .chat-header {
             padding: 8px 16px; 
             background-color: var(--wa-header-bg); 
@@ -156,6 +156,12 @@
 
         /* --- Cores Específicas por Função --- */
         .btn-history { border-color: #6c757d; color: #6c757d; } /* Histórico (Cinza) */
+        .btn-associar { border-color: #6f42c1; color: #6f42c1; } /* Roxo - Associar */
+        .btn-associar:hover { background-color: #f3e5f5; }
+        
+        .btn-criar { border-color: #20c997; color: #20c997; } /* Verde Água - Criar */
+        .btn-criar:hover { background-color: #e6fffa; }
+
         .btn-assumir { border-color: #ffc107; color: #ffc107; } /* Assumir (Amarelo) */
         .btn-assumir:hover { background-color: #fff3cd; }
         .btn-transfer { border-color: #0d6efd; color: #0d6efd; } /* Transferir (Azul) */
@@ -172,7 +178,7 @@
             border-color: #ccc !important;
         }
 
-        /* --- ESTILO DO MODAL DE TRANSFERÊNCIA (NOVO) --- */
+        /* --- MODAIS GERAIS --- */
         .modal-overlay {
             display: none; /* Oculto por padrão */
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -188,11 +194,18 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             display: flex; flex-direction: column; gap: 15px;
         }
-        .modal-title { font-size: 1.2rem; font-weight: bold; color: var(--text-primary); margin-bottom: 10px; }
-        .modal-select {
-            padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 1rem;
+        .modal-title { font-size: 1.2rem; font-weight: bold; color: var(--text-primary); margin-bottom: 5px; }
+        
+        /* Estilos de Formulário no Modal */
+        .modal-form-group { margin-bottom: 10px; text-align: left; }
+        .modal-label { display: block; margin-bottom: 5px; font-weight: 500; color: var(--text-primary); font-size: 0.9rem; }
+        .modal-input, .modal-select, .modal-textarea {
+            width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; 
             background-color: var(--input-bg); color: var(--text-primary);
+            font-size: 0.95rem; box-sizing: border-box;
         }
+        .modal-textarea { resize: vertical; min-height: 80px; font-family: inherit; }
+
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
         .btn-cancelar { background: #ccc; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; }
         .btn-confirmar-transfer { background: #0d6efd; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; }
@@ -278,6 +291,14 @@
                                 <i class="fas fa-history"></i>
                             </button>
 
+                            <button id="btnAssociarTicket" class="action-btn btn-associar" title="Associar a Ticket Existente">
+                                <i class="fas fa-link"></i>
+                            </button>
+
+                            <button id="btnCriarChamado" class="action-btn btn-criar" title="Criar Chamado do Chat">
+                                <i class="fas fa-plus"></i>
+                            </button>
+
                             <button id="btnAssumir" class="action-btn btn-assumir" title="Assumir Atendimento">
                                 <i class="fas fa-user-plus"></i>
                             </button>
@@ -315,6 +336,63 @@
             <div class="modal-actions">
                 <button id="btnCancelarTransfer" class="btn-cancelar">Cancelar</button>
                 <button id="btnConfirmarTransfer" class="btn-confirmar-transfer">Transferir</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalAssociarTicket" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-title">🔗 Associar Ticket</div>
+            <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:10px;">Vincule este chat a um chamado existente.</p>
+            
+            <div class="modal-form-group">
+                <label class="modal-label">ID do Chamado</label>
+                <input type="number" id="inputTicketId" class="modal-input" placeholder="Ex: 123">
+            </div>
+            
+            <div id="associarResult" style="margin-bottom:10px; font-size:0.85rem; min-height: 20px;"></div>
+
+            <div class="modal-actions">
+                <button id="btnCancelarAssociar" class="btn-cancelar">Cancelar</button>
+                <button id="btnConfirmarAssociar" class="btn-confirmar-transfer">Verificar & Associar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalCriarChamado" class="modal-overlay">
+        <div class="modal-content" style="width: 450px;">
+            <div class="modal-title">📝 Novo Chamado (WhatsApp)</div>
+            
+            <div class="modal-form-group">
+                <label class="modal-label">Assunto</label>
+                <input type="text" id="inputAssunto" class="modal-input" placeholder="Resumo do problema">
+            </div>
+
+            <div class="modal-form-group">
+                <label class="modal-label">Categoria</label>
+                <select id="selectCategoria" class="modal-select">
+                    <option value="">Carregando...</option>
+                </select>
+            </div>
+
+            <div class="modal-form-group">
+                <label class="modal-label">Prioridade</label>
+                <select id="selectPrioridade" class="modal-select">
+                    <option value="Baixa">Baixa</option>
+                    <option value="Média" selected>Média</option>
+                    <option value="Alta">Alta</option>
+                    <option value="Crítica">Crítica</option>
+                </select>
+            </div>
+
+            <div class="modal-form-group">
+                <label class="modal-label">Descrição</label>
+                <textarea id="inputDescricao" class="modal-textarea" placeholder="Detalhes do chamado..."></textarea>
+            </div>
+
+            <div class="modal-actions">
+                <button id="btnCancelarCriar" class="btn-cancelar">Cancelar</button>
+                <button id="btnSalvarChamado" class="btn-confirmar-transfer">Criar Chamado</button>
             </div>
         </div>
     </div>
@@ -364,12 +442,30 @@
         const btnFinalizar = document.getElementById('btnFinalizar');
         const btnTransferir = document.getElementById('btnTransferir');
         const btnHistorico = document.getElementById('btnHistorico');
+        const btnAssociarTicket = document.getElementById('btnAssociarTicket'); // [NOVO]
+        const btnCriarChamado = document.getElementById('btnCriarChamado'); // [NOVO]
 
         // Referências ao Modal de Transferência
         const modalTransfer = document.getElementById('modalTransferencia');
         const selectAgentes = document.getElementById('selectAgentes');
         const btnCancelarTransfer = document.getElementById('btnCancelarTransfer');
         const btnConfirmarTransfer = document.getElementById('btnConfirmarTransfer');
+
+        // Referências ao Modal Associar
+        const modalAssociar = document.getElementById('modalAssociarTicket');
+        const inputTicketId = document.getElementById('inputTicketId');
+        const btnCancelarAssociar = document.getElementById('btnCancelarAssociar');
+        const btnConfirmarAssociar = document.getElementById('btnConfirmarAssociar');
+        const associarResult = document.getElementById('associarResult');
+
+        // Referências ao Modal Criar Chamado
+        const modalCriar = document.getElementById('modalCriarChamado');
+        const inputAssunto = document.getElementById('inputAssunto');
+        const selectCategoria = document.getElementById('selectCategoria');
+        const selectPrioridade = document.getElementById('selectPrioridade');
+        const inputDescricao = document.getElementById('inputDescricao');
+        const btnCancelarCriar = document.getElementById('btnCancelarCriar');
+        const btnSalvarChamado = document.getElementById('btnSalvarChamado');
 
         let AppState = {
             activeNumber: null,
@@ -416,6 +512,8 @@
             btnAssumir.disabled = true;
             btnFinalizar.disabled = true;
             btnTransferir.disabled = true;
+            btnAssociarTicket.disabled = true; // [NOVO]
+            btnCriarChamado.disabled = true;   // [NOVO]
             chatStatusText.textContent = "";
 
             if (!chat) return;
@@ -447,16 +545,20 @@
                 chatStatusText.style.color = "#28a745"; // Verde
             }
 
-            // 2. Lógica dos botões de AÇÃO (Encerrar/Transferir)
+            // 2. Lógica dos botões de AÇÃO (Encerrar/Transferir/Criar/Associar)
             // Habilitado se EU sou o agente OU (ninguém é e está na fase humana/fila)
             if (souOAgente || (!temAgente && emAtendimentoHumano)) {
                 btnFinalizar.disabled = false;
                 btnTransferir.disabled = false;
+                btnAssociarTicket.disabled = false; // [NOVO]
+                btnCriarChamado.disabled = false;   // [NOVO]
             } 
             // Se outra pessoa assumiu, desabilita
             else if (temAgente && !souOAgente) {
                 btnFinalizar.disabled = true;
                 btnTransferir.disabled = true;
+                btnAssociarTicket.disabled = true;
+                btnCriarChamado.disabled = true;
             } 
             // Exceção: Permitir encerrar conversa presa no robô (Menu/Inicio)
             if (chat.etapa === 'MENU' || chat.etapa === 'INICIO') {
@@ -656,16 +758,11 @@
             }
         });
 
-        // 4. Escutar evento de Socket para atualizar se alguém transferiu PARA MIM ou DE MIM
         socket.on('transferenciaChamado', (data) => {
-            // data = { chatId, novoAgente, antigoAgente }
-            
-            // Atualiza o dado localmente se o chat existir na minha lista
             const chat = AppState.chatList.find(c => c.numero === data.chatId);
             if (chat) {
                 chat.nomeAgente = data.novoAgente;
                 
-                // Verifica se SOU EU o novo agente
                 let souEu = false;
                 try { 
                     const u = JSON.parse(localStorage.getItem("userData"));
@@ -674,19 +771,14 @@
 
                 if (souEu) {
                     chat.visivel = true; 
-                    chat.pending = false; // Já está atendido (por mim)
-                    // Toca um som ou notificação se quiser
+                    chat.pending = false; 
                 } else {
-                    // Se transferiu DE MIM para OUTRO, eu não vejo mais (se sua regra for essa)
-                    // Se eu for ADMIN talvez eu continue vendo, ajuste conforme necessidade.
-                    // Aqui assumo que se não sou eu, não vejo mais como "meu atendimento".
                     chat.visivel = false; 
                 }
                 
                 saveState();
                 renderSidebar();
                 
-                // Se eu estiver com esse chat aberto, atualizo a toolbar ou fecho
                 if (AppState.activeNumber === data.chatId) {
                     if (!souEu) {
                         alert(`Este atendimento foi transferido para ${data.novoAgente}.`);
@@ -697,8 +789,6 @@
                     }
                 }
             } else if (data.novoAgente === JSON.parse(localStorage.getItem("userData"))?.data?.nomeFuncionario) {
-                // Se transferiram pra mim e eu nem tinha o chat na lista, ele deve aparecer
-                // Força uma sincronização ou adiciona manualmente (Sincronizar é mais seguro)
                 syncChatsWithServer(); 
             }
         });
@@ -714,7 +804,6 @@
 
             chatTitle.textContent = chat ? chat.nome : number; 
             
-            // --- ATUALIZA OS BOTÕES DA TOOLBAR ---
             atualizarBotoesToolbar(chat);
             
             messagesContainer.innerHTML = '';
@@ -796,7 +885,6 @@
 
         async function finalizarChat() {
             if (!AppState.activeNumber) return;
-            // Verifica se está desabilitado
             if (document.getElementById('btnFinalizar').disabled) return;
 
             if (!confirm(`Tem certeza que deseja encerrar o atendimento?`)) return;
@@ -841,7 +929,6 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
-        // LISTENER BOTÃO ASSUMIR
         btnAssumir.addEventListener('click', async () => {
             if (!AppState.activeNumber) return;
             if (btnAssumir.disabled) return;
@@ -859,23 +946,20 @@
                 if(chat) {
                     chat.pending = false;
                     chat.etapa = 'ATENDIMENTO_HUMANO'; 
-                    chat.nomeAgente = nomeAgente; // Marca localmente
+                    chat.nomeAgente = nomeAgente; 
                 }
                 
                 saveState();
                 renderSidebar();
                 
-                // Atualiza a toolbar para refletir a mudança
                 atualizarBotoesToolbar(chat);
 
                 appendMessageToView("✅ Você assumiu este chamado.", true, "Sistema", new Date());
             } catch (e) { alert("Erro ao assumir."); }
         });
 
-        // LISTENER BOTÃO FINALIZAR
         btnFinalizar.addEventListener('click', finalizarChat);
 
-        // LISTENER BOTÃO TRANSFERIR
         btnTransferir.addEventListener('click', async () => {
             if (btnTransferir.disabled) return;
             if (!AppState.activeNumber) return;
@@ -884,26 +968,20 @@
             selectAgentes.innerHTML = '<option value="">Carregando...</option>';
 
             try {
-                // Assume que você tem uma rota que lista funcionários (padrão do seu sistema)
-                // Se não tiver, precisará criar GET /api/funcionarios no funcionarioRouter.js
-                // Usando /usuarios que foi mencionado em outros arquivos
                 const resp = await fetch('/usuarios'); 
                 const json = await resp.json();
                 
-                // Pega o seu próprio nome para não mostrar na lista
                 let meuNome = "";
                 try { meuNome = JSON.parse(localStorage.getItem("userData")).data.nomeFuncionario; } catch(e){}
 
                 selectAgentes.innerHTML = '<option value="">Selecione um agente...</option>';
                 
-                // Filtra para mostrar apenas AGENTES ou ADMINS e remove você mesmo da lista
                 const lista = Array.isArray(json) ? json : (json.data || []);
                 
                 lista.forEach(func => {
-                    // Ajuste a lógica de filtro conforme seus perfis ('AGENTE', 'ADMIN', etc)
                     if (func.nomeFuncionario !== meuNome && (func.perfil === 'AGENTE' || func.perfil === 'ADMIN')) {
                         const opt = document.createElement('option');
-                        opt.value = func.nomeFuncionario; // Vamos transferir pelo NOME para facilitar
+                        opt.value = func.nomeFuncionario; 
                         opt.textContent = func.nomeFuncionario;
                         selectAgentes.appendChild(opt);
                     }
@@ -912,6 +990,136 @@
             } catch (e) {
                 console.error(e);
                 selectAgentes.innerHTML = '<option value="">Erro ao carregar lista</option>';
+            }
+        });
+
+        // ========================================================
+        // === LÓGICA BOTÃO ASSOCIAR TICKET ===
+        // ========================================================
+        btnAssociarTicket.addEventListener('click', () => {
+            if(btnAssociarTicket.disabled) return;
+            modalAssociar.style.display = 'flex';
+            inputTicketId.value = '';
+            associarResult.innerHTML = '';
+            associarResult.style.color = 'black';
+        });
+
+        btnCancelarAssociar.addEventListener('click', () => {
+            modalAssociar.style.display = 'none';
+        });
+
+        btnConfirmarAssociar.addEventListener('click', async () => {
+            const id = inputTicketId.value.trim();
+            if(!id) return alert("Digite um ID!");
+
+            associarResult.innerHTML = 'Verificando <i class="fas fa-spinner fa-spin"></i>';
+            
+            try {
+                const res = await fetch('/api/whatsapp/ticket/verificar', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ id })
+                });
+                const json = await res.json();
+
+                if(json.success && json.data) {
+                    const t = json.data;
+                    associarResult.innerHTML = `✅ <b>Ticket Encontrado:</b><br>#${t.id} - ${t.assunto} (${t.status})`;
+                    associarResult.style.color = 'green';
+                    
+                    // Opcional: Se quiser fechar após 2 segundos
+                    // setTimeout(() => modalAssociar.style.display = 'none', 2000);
+                } else {
+                    associarResult.innerHTML = '❌ Ticket não encontrado.';
+                    associarResult.style.color = 'red';
+                }
+            } catch(e) {
+                associarResult.textContent = 'Erro ao verificar.';
+            }
+        });
+
+        // ========================================================
+        // === LÓGICA BOTÃO CRIAR CHAMADO ===
+        // ========================================================
+        btnCriarChamado.addEventListener('click', async () => {
+            if(btnCriarChamado.disabled) return;
+            if(!AppState.activeNumber) return;
+
+            modalCriar.style.display = 'flex';
+            // Reseta form
+            inputAssunto.value = '';
+            inputDescricao.value = '';
+            selectPrioridade.value = 'Média';
+            
+            // Carrega categorias
+            if(selectCategoria.options.length <= 1) {
+                try {
+                    const res = await fetch('/api/categorias'); // Rota padrão
+                    const json = await res.json(); // Espera [{id, nome}, ...]
+                    selectCategoria.innerHTML = '<option value="">Selecione...</option>';
+                    
+                    // Ajuste caso sua API retorne { success:true, data: [] }
+                    const lista = Array.isArray(json) ? json : (json.data || []);
+                    
+                    lista.forEach(cat => {
+                        const opt = document.createElement('option');
+                        opt.value = cat.id;
+                        opt.textContent = cat.nome;
+                        selectCategoria.appendChild(opt);
+                    });
+                } catch(e) { console.error("Erro ao carregar categorias", e); }
+            }
+        });
+
+        btnCancelarCriar.addEventListener('click', () => {
+            modalCriar.style.display = 'none';
+        });
+
+        btnSalvarChamado.addEventListener('click', async () => {
+            const assunto = inputAssunto.value.trim();
+            const descricao = inputDescricao.value.trim();
+            const categoriaId = selectCategoria.value;
+            const prioridade = selectPrioridade.value;
+
+            if(!assunto || !categoriaId) return alert("Preencha Assunto e Categoria.");
+
+            if(!confirm("Confirmar criação do chamado?")) return;
+
+            try {
+                // Pega ID do agente logado para ser o 'requisitante_id' (criador)
+                const userData = JSON.parse(localStorage.getItem("userData"));
+                const agenteId = userData?.data?.id; 
+
+                const payload = {
+                    chamado: {
+                        assunto,
+                        descricao,
+                        categoria_id: categoriaId,
+                        prioridade,
+                        requisitante_id: agenteId, // O agente abre em nome do cliente
+                        status: 'Aberto'
+                    },
+                    numero: AppState.activeNumber // Telefone do cliente
+                };
+
+                const res = await fetch('/api/whatsapp/ticket/criar', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                const json = await res.json();
+
+                if(json.success) {
+                    alert(`Chamado #${json.id} criado com sucesso!`);
+                    modalCriar.style.display = 'none';
+                    appendMessageToView(`🎫 Chamado #${json.id} criado: ${assunto}`, true, "Sistema", new Date());
+                } else {
+                    alert("Erro ao criar: " + json.message);
+                }
+
+            } catch(e) {
+                alert("Erro de conexão.");
+                console.error(e);
             }
         });
 
@@ -948,10 +1156,9 @@
                     alert("Transferência realizada com sucesso!");
                     modalTransfer.style.display = 'none';
                     
-                    // Opcional: Remover o chat da tela imediatamente pois não é mais seu
                     const chat = AppState.chatList.find(c => c.numero === AppState.activeNumber);
                     if(chat) {
-                        chat.visivel = false; // Oculta
+                        chat.visivel = false; 
                         chat.nomeAgente = novoAgente;
                     }
                     AppState.activeNumber = null;
@@ -967,7 +1174,6 @@
             }
         });
 
-        // LISTENER BOTÃO HISTÓRICO
         btnHistorico.addEventListener('click', () => {
             alert("Visualização de histórico completo em breve.");
         });

@@ -1,5 +1,6 @@
 import * as evolutionService from '../services/evolutionService.js';
-import * as chamadoModel from '../models/chamadoModel.js'; // <-- Importa o modelo de chamado
+import * as chamadoModel from '../models/chamadoModel.js'; 
+import * as EmailService from '../services/emailService.js'; // [NOVO] Necessário para enviar e-mail ao criar chamado
 import { OpenAI } from 'openai';
 
 // ==================================================
@@ -30,7 +31,6 @@ REGRAS RÍGIDAS DE COMPORTAMENTO:
 `;
 
 // Memória local
-// Estrutura: { '5512...': { etapa: '...', botPausado: false, mostrarNaFila: false, ... } }
 const userContext = {};
 
 // ==================================================
@@ -179,9 +179,7 @@ export const handleWebhook = async (req, res) => {
             // 1. MENU PRINCIPAL
             // ------------------------------------------------
             if (ehSaudacao) {
-                // CORREÇÃO DO BUG: Impede que a saudação se repita se já estiver no menu
                 if (ctx.etapa === 'MENU' && textoMin !== 'menu' && textoMin !== 'inicio') {
-                    // Se for repetição de saudação na etapa MENU, força a resposta de OPÇÃO INVÁLIDA e retorna (evita IA).
                     respostaBot = MENSAGENS.OPCAO_INVALIDA;
                     await evolutionService.enviarTexto(idRemoto, respostaBot);
                     
@@ -216,43 +214,28 @@ export const handleWebhook = async (req, res) => {
                 ctx.nomeAgente = null;
             }
 
-            // ------------------------------------------------
-            // 3. ETAPA: MENU -> SUBMENU T.I (COM ALERTA NO PAINEL) OU CONSULTA TICKET
-            // ------------------------------------------------
+            // 3. ETAPA: MENU -> SUBMENU T.I
             else if (ctx.etapa === 'MENU') {
                 if (texto === '1' || textoMin.includes('suporte')) {
-                    // Manda o Submenu
                     respostaBot = MENSAGENS.MENU_TI_COM_FILA;
                     ctx.etapa = 'SUBMENU_TI'; 
                     ctx.botPausado = false; 
-                    
                     ctx.mostrarNaFila = true; 
-
                     io.emit('notificacaoChamado', { 
                         chatId: idRemoto, 
                         nome: nomeAutor,
                         status: 'PENDENTE_TI' 
                     });
                 } 
-                // === LÓGICA DE CONSULTA DE TICKET ===
                 else if (texto.startsWith('*') || textoMin === 'ticket') {
-                    
                     let ticketNumeroStr = '';
-                    
                     if (texto.startsWith('*')) {
-                        // Se começou com *, tenta pegar o número que vem depois
                         ticketNumeroStr = texto.substring(1).trim();
                     } else if (textoMin === 'ticket') {
-                        // Se o usuário digitou APENAS a palavra 'ticket'
-                        // Pedir o número, mantendo na etapa MENU e pausando o bot.
                         respostaBot = "Por favor, digite o *número do ticket* após o asterisco. Exemplo: *123";
-                        
-                        // Pausa o bot temporariamente para o usuário digitar o número
                         ctx.etapa = 'MENU'; 
                         ctx.botPausado = true;
                         setTimeout(() => { ctx.botPausado = false; }, 30000); 
-
-                        // Envia a resposta e sai do processamento
                         await evolutionService.enviarTexto(idRemoto, respostaBot);
                         io.emit('novaMensagemWhatsapp', { 
                             id: 'bot-'+Date.now(), chatId: idRemoto, nome: "Bot", texto: respostaBot, fromMe: true, mostrarNaFila: ctx.mostrarNaFila
@@ -260,84 +243,64 @@ export const handleWebhook = async (req, res) => {
                         return res.status(200).json({ success: true });
                     }
                     
-                    // Se houver número (após o * ou se a lógica acima não se aplicou)
                     const ticketId = parseInt(ticketNumeroStr);
-                    
                     if (isNaN(ticketId) || ticketId <= 0) {
-                        // Se a string era "* " ou "*abc"
                         respostaBot = "⚠️ Por favor, digite um número de ticket válido após o asterisco. Exemplo: *123";
                     } else {
-                        // Faz a consulta no banco de dados
                         const ticket = await chamadoModel.findById(ticketId); 
-                        
                         if (ticket) {
-                            // Encontrado: Formata a resposta com detalhes
                             const categoriaNome = ticket.nomeCategoriaPai ? `${ticket.nomeCategoriaPai} / ${ticket.nomeCategoria}` : ticket.nomeCategoria;
-                            
                             respostaBot = `🎫 *Detalhes do Ticket #${ticket.id}*\n`;
                             respostaBot += `*Assunto:* ${ticket.assunto}\n`;
                             respostaBot += `*Status:* ${ticket.status}\n`;
                             respostaBot += `*Categoria:* ${categoriaNome || 'Não Atribuída'}\n`;
-                            
                             if (ticket.atendente_id) {
                                 respostaBot += `*Atendente:* ${ticket.nomeAtendente || 'Em Atribuição'}\n`;
                             }
-                            
                             respostaBot += `*Prioridade:* ${ticket.prioridade}`;
-
                             ctx.etapa = 'MENU';
                             ctx.botPausado = true;
                             setTimeout(() => { ctx.botPausado = false; }, 30000); 
                         } else {
-                            // Não encontrado
-                            respostaBot = `❌ O Ticket #${ticketId} não foi encontrado. Verifique o número digitado.`;
+                            respostaBot = `❌ O Ticket #${ticketId} não foi encontrado.`;
                         }
                     }
-                } 
-                // === FIM DA CORREÇÃO DE CONSULTA DE TICKET ===
-                else {
-                    // === ALTERAÇÃO AQUI: Removemos a IA e retornamos Opção Inválida ===
+                } else {
                     respostaBot = MENSAGENS.OPCAO_INVALIDA;
                 }
             }
 
-            // ------------------------------------------------
-            // 4. ETAPA: SUBMENU T.I (DENTRO DA FILA)
-            // ------------------------------------------------
+            // 4. ETAPA: SUBMENU T.I
             else if (ctx.etapa === 'SUBMENU_TI') {
                 if (texto === '1') {
                     respostaBot = "📝 Certo. Por favor, *descreva o problema* resumidamente em uma mensagem para eu registrar.";
                     ctx.etapa = 'REGISTRAR_CHAMADO';
                 }
                 else if (texto === '2') {
-                    // Agora sim pausa e avisa que vai chamar humano
                     respostaBot = MENSAGENS.FILA_TI;
                     ctx.etapa = 'FILA';
                     ctx.botPausado = true; 
-                    ctx.mostrarNaFila = true; // Garante que está na fila
+                    ctx.mostrarNaFila = true; 
                 }
                 else if (texto === '3') {
                     respostaBot = MENSAGENS.SAUDACAO(nomeAutor);
                     ctx.etapa = 'MENU';
-                    ctx.mostrarNaFila = false; // Saiu da fila
+                    ctx.mostrarNaFila = false; 
                 }
                 else {
-                    // === ALTERAÇÃO AQUI: Removemos a IA e retornamos Opção Inválida ===
                     respostaBot = MENSAGENS.OPCAO_INVALIDA;
                 }
             }
 
-            // 5. FILA (Mudo)
+            // 5. FILA / AVALIAÇÃO
             else if (ctx.etapa === 'FILA') { /* Silêncio */ }
-
-            // 6. AVALIAÇÃO
             else if (ctx.etapa === 'AVALIACAO_NOTA') {
                 if (['1', '2', '3', '4', '5'].includes(texto)) {
                     respostaBot = MENSAGENS.AVALIACAO_MOTIVO;
                     ctx.etapa = 'AVALIACAO_MOTIVO';
                 } else if (texto === '9') {
                     respostaBot = MENSAGENS.ENCERRAMENTO_FINAL;
-                    ctx.mostrarNaFila = false; // Remove da fila
+                    ctx.mostrarNaFila = false; 
                     delete userContext[idRemoto];
                 } else {
                     respostaBot = MENSAGENS.OPCAO_INVALIDA;
@@ -345,16 +308,15 @@ export const handleWebhook = async (req, res) => {
             }
             else if (ctx.etapa === 'AVALIACAO_MOTIVO') {
                 respostaBot = MENSAGENS.ENCERRAMENTO_FINAL;
-                ctx.mostrarNaFila = false; // Remove da fila
+                ctx.mostrarNaFila = false; 
                 delete userContext[idRemoto]; 
             }
 
-            // FALLBACK IA (Início - Mantemos IA apenas se o usuário nunca entrou no menu)
+            // FALLBACK IA
             else if (!respostaBot && !ctx.botPausado && ctx.etapa === 'INICIO') {
                 respostaBot = await processarComGroq(idRemoto, texto, nomeAutor);
             }
 
-            // ENVIO
             if (respostaBot) {
                 await evolutionService.enviarTexto(idRemoto, respostaBot);
                 io.emit('novaMensagemWhatsapp', { 
@@ -380,20 +342,17 @@ export const handleWebhook = async (req, res) => {
 // 5. CONTROLES DO PAINEL (ATENDIMENTO HUMANO)
 // ==================================================
 
-// Rota chamada quando clica em "ASSUMIR ATENDIMENTO"
 export const atenderAtendimento = async (req, res) => {
     const { numero, nomeAgente } = req.body;
     try {
         if (!userContext[numero]) userContext[numero] = { historico: [] };
         
-        // Pausa o bot e salva o nome do agente
         userContext[numero].nomeAgente = nomeAgente;
         userContext[numero].botPausado = true; 
         userContext[numero].etapa = 'ATENDIMENTO_HUMANO';
-        userContext[numero].mostrarNaFila = true; // Continua na fila pois é um atendimento ativo
+        userContext[numero].mostrarNaFila = true; 
 
         const msg = `👨‍💻 *${nomeAgente}* atendeu seu pedido e falará com você agora.`;
-        
         await evolutionService.enviarTexto(numero, msg);
         res.status(200).json({ success: true });
     } catch (error) { res.status(500).json({ success: false }); }
@@ -406,7 +365,7 @@ export const finalizarAtendimento = async (req, res) => {
         userContext[numero].etapa = 'AVALIACAO_NOTA';
         userContext[numero].botPausado = true;
         userContext[numero].nomeAgente = null;
-        userContext[numero].mostrarNaFila = false; // <--- AGORA SAI DA LISTA DO AGENTE
+        userContext[numero].mostrarNaFila = false; 
 
         const msg = MENSAGENS.AVALIACAO_INICIO;
         await evolutionService.enviarTexto(numero, msg);
@@ -414,17 +373,14 @@ export const finalizarAtendimento = async (req, res) => {
     } catch (error) { res.status(500).json({ success: false }); }
 };
 
-// Rota chamada quando você envia mensagem pelo input do portal
 export const handleSendMessage = async (req, res) => {
   const { numero, mensagem, nomeAgenteTemporario } = req.body;
   try {
       let mensagemFinal = mensagem;
       const contexto = userContext[numero];
       
-      // Se o agente enviou mensagem, garante que aparece na fila
       if(contexto) contexto.mostrarNaFila = true;
       else if (!contexto) {
-          // Cria contexto básico se agente iniciou conversa
           userContext[numero] = { etapa: 'ATENDIMENTO_HUMANO', botPausado: true, mostrarNaFila: true };
       }
 
@@ -440,49 +396,32 @@ export const handleSendMessage = async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };
 
-// ==================================================
-// 6. ROTA DE LISTAGEM COM FILTRO
-// ==================================================
 export const listarConversas = async (req, res) => { 
     try { 
         const c = await evolutionService.buscarConversas(); 
-        
-        // Mapeia e adiciona a flag 'visivel' baseada no estado do Bot
         const m = c.map(x => {
             const ctx = userContext[x.id] || {};
-            
-            // Lógica de Exibição:
-            // Mostra se: 
-            // 1. Está marcado explicitamente como 'mostrarNaFila' (Digitou 1)
-            // 2. OU Está em atendimento humano
             const deveAparecer = ctx.mostrarNaFila === true || ctx.etapa === 'ATENDIMENTO_HUMANO';
-
             return { 
                 numero: x.id, 
                 nome: x.pushName || x.id.split('@')[0], 
                 ultimaMensagem: x.conversation || "...", 
                 unread: x.unreadCount > 0,
-                visivel: deveAparecer, // <--- Frontend usa isso para filtrar
-                // === CORREÇÃO: Enviando dados de estado para o front ===
-                etapa: ctx.etapa || 'INICIO', // Envia a etapa atual
-                nomeAgente: ctx.nomeAgente || null // Envia se tem agente
+                visivel: deveAparecer, 
+                etapa: ctx.etapa || 'INICIO', 
+                nomeAgente: ctx.nomeAgente || null 
             };
         }); 
-        
         res.status(200).json({ success: true, data: m }); 
     } catch (e) { res.status(200).json({ success: true, data: [] }); } 
 };
 
-// [NOVO] Controlador para listar mensagens do chat
 export const listarMensagensChat = async (req, res) => {
     const { numero } = req.body;
-    
     if (!numero) return res.status(400).json({ success: false, message: 'Número obrigatório' });
 
     try {
         const rawMessages = await evolutionService.buscarMensagensHistorico(numero);
-        
-        // Formata as mensagens para o padrão que seu HTML espera
         const formattedMessages = rawMessages.map(msg => {
             const content = msg.message?.conversation || 
                             msg.message?.extendedTextMessage?.text || 
@@ -502,10 +441,7 @@ export const listarMensagensChat = async (req, res) => {
                 name: msg.pushName || (msg.key.fromMe ? "Eu" : "Cliente")
             };
         });
-
-        // Ordena por data
         formattedMessages.sort((a, b) => new Date(a.time) - new Date(b.time));
-
         res.status(200).json({ success: true, data: formattedMessages });
     } catch (e) {
         console.error("Erro ao listar mensagens:", e);
@@ -513,58 +449,108 @@ export const listarMensagensChat = async (req, res) => {
     }
 };
 
-// Dentro de src/controllers/whatsappController.js
 export const handleDisconnect = async (req, res) => {
     try {
-        // Supondo que o evolutionService tenha a função correta
         await evolutionService.desconectarInstancia(); 
         res.status(200).json({ success: true, message: 'Instância desconectada.' });
     } catch (e) { 
-        // A Evolution API geralmente usa a rota /instance/disconnect/{instanceName}
         res.status(500).json({ success: false, message: e.message }); 
-    }
-};
-// ... (outras importações e códigos existentes)
-
-// Rota para TRANSFERIR o atendimento para outro agente
-export const transferirAtendimento = async (req, res) => {
-    const { numero, novoAgente, nomeAgenteAtual } = req.body;
-    
-    try {
-        // Verifica se o chat existe na memória
-        if (!userContext[numero]) {
-             return res.status(404).json({ success: false, message: "Chat não ativo ou não encontrado na memória." });
-        }
-
-        const oldAgent = nomeAgenteAtual || userContext[numero].nomeAgente || "Atendente";
-        
-        // 1. Atualiza o contexto com o novo agente
-        userContext[numero].nomeAgente = novoAgente;
-        userContext[numero].etapa = 'ATENDIMENTO_HUMANO'; // Garante que continue como humano
-        userContext[numero].botPausado = true;
-        userContext[numero].mostrarNaFila = true; // Garante que apareça na lista do novo agente
-
-        // 2. Avisa o cliente no WhatsApp
-        const msgTransferencia = `🔄 *Atendimento Transferido*\n\nO atendente *${oldAgent}* transferiu seu chamado para *${novoAgente}*. Por favor, aguarde um momento.`;
-        await evolutionService.enviarTexto(numero, msgTransferencia);
-        
-        // 3. Notifica todos os frontends via Socket para atualizarem suas listas
-        // (O chat vai sumir da sua tela e aparecer na do novo agente)
-        if(req.io) {
-             req.io.emit('transferenciaChamado', { 
-                chatId: numero, 
-                novoAgente: novoAgente,
-                antigoAgente: oldAgent
-             });
-        }
-
-        res.status(200).json({ success: true });
-
-    } catch (e) {
-        console.error("Erro ao transferir:", e);
-        res.status(500).json({ success: false, message: e.message });
     }
 };
 export const connectInstance = async (req, res) => { try { const r = await evolutionService.criarInstancia(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
 export const checarStatus = async (req, res) => { try { const r = await evolutionService.consultarStatus(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
 export const configurarUrlWebhook = async (req, res) => { try { const h = req.get('host'); const p = h.includes('localhost') ? 'http' : 'https'; await evolutionService.configurarWebhook(`${p}://${h}/api/evolution/webhook`); res.status(200).json({ success: true }); } catch (e) { res.status(500).json({ success: false }); } };
+
+// Rota para TRANSFERIR o atendimento para outro agente
+export const transferirAtendimento = async (req, res) => {
+    const { numero, novoAgente, nomeAgenteAtual } = req.body;
+    try {
+        if (!userContext[numero]) {
+             return res.status(404).json({ success: false, message: "Chat não ativo ou não encontrado na memória." });
+        }
+        const oldAgent = nomeAgenteAtual || userContext[numero].nomeAgente || "Atendente";
+        userContext[numero].nomeAgente = novoAgente;
+        userContext[numero].etapa = 'ATENDIMENTO_HUMANO'; 
+        userContext[numero].botPausado = true;
+        userContext[numero].mostrarNaFila = true; 
+        const msgTransferencia = `🔄 *Atendimento Transferido*\n\nO atendente *${oldAgent}* transferiu seu chamado para *${novoAgente}*. Por favor, aguarde um momento.`;
+        await evolutionService.enviarTexto(numero, msgTransferencia);
+        if(req.io) {
+             req.io.emit('transferenciaChamado', { 
+                chatId: numero, novoAgente: novoAgente, antigoAgente: oldAgent
+             });
+        }
+        res.status(200).json({ success: true });
+    } catch (e) {
+        console.error("Erro ao transferir:", e);
+        res.status(500).json({ success: false, message: e.message });
+    }
+};
+
+// ==================================================
+// [NOVO] FUNÇÕES PARA ASSOCIAR E CRIAR TICKET
+// ==================================================
+
+// 1. Verificar se um Ticket existe (Botão Associar)
+export const verificarTicket = async (req, res) => {
+    const { id } = req.body;
+    if(!id) return res.status(400).json({success:false, message: "ID obrigatório"});
+
+    try {
+        const ticket = await chamadoModel.findById(id);
+        if(ticket) {
+            // Se encontrado, retornamos os dados principais
+            res.json({ success: true, data: ticket });
+        } else {
+            res.json({ success: false, message: "Ticket não encontrado" });
+        }
+    } catch(e) { 
+        res.status(500).json({ success: false, message: e.message }); 
+    }
+};
+
+// 2. Criar Chamado a partir do Chat (Botão Criar)
+export const criarChamadoDoChat = async (req, res) => {
+    const { chamado, numero } = req.body; 
+    // 'chamado' contém { assunto, descricao, categoria_unificada_id, prioridade, requisitante_id, nome_requisitante_manual ... }
+    // 'numero' é o telefone do WhatsApp (idRemoto)
+
+    try {
+        // A. Cria o chamado usando o model existente
+        const novoId = await chamadoModel.create(chamado);
+        
+        // B. Busca o chamado recém criado para ter detalhes (como nome do requisitante salvo)
+        const ticketCriado = await chamadoModel.findById(novoId);
+
+        // C. Envia mensagem no WhatsApp avisando o cliente
+        const msgZap = `🎫 *Chamado Criado com Sucesso*\n\nSeu atendimento gerou o ticket *#${novoId}*.\n*Assunto:* ${ticketCriado.assunto}\n\nAguarde, nossa equipe técnica já está atuando.`;
+        await evolutionService.enviarTexto(numero, msgZap);
+
+        // D. Atualiza o contexto do bot (Opcional: vincula ticket ao chat em memória)
+        if(userContext[numero]) {
+            userContext[numero].ultimoTicketId = novoId;
+        }
+
+        // E. Envia e-mail (se houver e-mail do requisitante)
+        if (ticketCriado.emailRequisitante) {
+            EmailService.enviarNotificacaoCriacao(ticketCriado.emailRequisitante, ticketCriado)
+                .catch(err => console.error("Erro silencioso ao enviar email:", err));
+        }
+
+        // F. Notifica Socket (para aparecer no painel de "Gerenciar Chamados")
+        if (req.io) {
+            req.io.emit('novoChamadoInterno', {
+                id: novoId,
+                assunto: ticketCriado.assunto,
+                requisitante: ticketCriado.nomeRequisitante || "WhatsApp",
+                prioridade: ticketCriado.prioridade
+            });
+        }
+
+        res.status(201).json({ success: true, id: novoId });
+
+    } catch (e) {
+        console.error("Erro ao criar chamado do chat:", e);
+        res.status(500).json({ success: false, message: e.message });
+    }
+};

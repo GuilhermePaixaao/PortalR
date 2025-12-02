@@ -18,19 +18,30 @@ router.get('/api/whatsapp/status', WhatsappController.checarStatus);
 // Rota para listar conversas
 router.get('/api/whatsapp/chats', WhatsappController.listarConversas);
 
-// === CORREÇÃO AQUI: ADICIONADAS AS ROTAS QUE FALTAVAM ===
 // Rota para o agente assumir o chamado
 router.post('/api/whatsapp/atender', WhatsappController.atenderAtendimento);
 
 // Rota para finalizar atendimento
 router.post('/api/whatsapp/finalizar', WhatsappController.finalizarAtendimento);
+
+// Rota para transferir atendimento
+router.post('/api/whatsapp/transferir', WhatsappController.transferirAtendimento);
+
+// =========================================================
+// === NOVAS ROTAS (PARTE 1 - TICKETS) ===
+// =========================================================
+
+// Validar se um ticket existe (Botão Associar)
+router.post('/api/whatsapp/ticket/verificar', WhatsappController.verificarTicket);
+
+// Criar um novo ticket a partir do chat (Botão Criar)
+router.post('/api/whatsapp/ticket/criar', WhatsappController.criarChamadoDoChat);
+
 // =========================================================
 
 // Rota para forçar a configuração do Webhook
 router.get('/api/whatsapp/configure-webhook', WhatsappController.configurarUrlWebhook);
 
 router.post('/api/whatsapp/disconnect', WhatsappController.handleDisconnect);
-
-router.post('/api/whatsapp/transferir', WhatsappController.transferirAtendimento);
 
 export default router;
