@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="css/chamado.css">
     <link rel="stylesheet" href="css/ticket.css">
     <style>
-        /* (Seus estilos CSS originais) */
+        /* (Estilos CSS originais mantidos) */
         dialog:not([open]) { display: none; }
         dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
         dialog { border: none; border-radius: 8px; padding: 1.5rem; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); max-width: 600px; width: calc(100% - 2rem); }
@@ -156,13 +156,17 @@
                     <div class="col-md-6">
                         <div class="grupo-form">
                             <label for="loja">Loja <span aria-hidden="true" style="color:red;">*</span></label>
-                            <input type="text" id="loja" name="loja" placeholder="Ex: Loja 01, Matriz..." required>
+                            <select id="loja" name="loja" class="form-select" required>
+                                <option value="">-- Carregando... --</option>
+                            </select>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="grupo-form">
                             <label for="departamento">Departamento <span aria-hidden="true" style="color:red;">*</span></label>
-                            <input type="text" id="departamento" name="departamento" placeholder="Ex: Açougue, Frente de Caixa..." required>
+                            <select id="departamento" name="departamento" class="form-select" disabled required>
+                                <option value="">-- Selecione primeiro a Loja --</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -351,13 +355,17 @@
         const btnFiltrar = document.getElementById("btnFiltrar");
         const inputTelefone = document.getElementById("telefoneRequisitante");
         const listaComentariosContainer = document.getElementById("listaComentariosContainer");
-        const paginationControls = document.getElementById("paginationControls"); // NOVO
-        const selectPrioridade = document.getElementById("prioridade"); // NOVO: Referência para o select de prioridade
+        const paginationControls = document.getElementById("paginationControls");
+        const selectPrioridade = document.getElementById("prioridade"); 
 
-        // (NOVO) Referência para o container da cascata
+        // Referência para o container da cascata de categorias
         const cascataWrapper = document.getElementById("categoriaCascataWrapper");
 
-        // --- Funções Auxiliares (sem mudanças) ---
+        // [MUDANÇA] Referências para os selects de Loja e Departamento
+        const selectLoja = document.getElementById("loja");
+        const selectDepartamento = document.getElementById("departamento");
+
+        // --- Funções Auxiliares ---
         function exibirMensagem(elemento, mensagem, sucesso = true) {
             elemento.textContent = mensagem;
             elemento.className = sucesso ? 'alert alert-success' : 'alert alert-danger';
@@ -394,7 +402,76 @@
             input.value = valor;
         }
 
-        // --- Carregar Categorias (Mantém a propagação do erro) ---
+        // =======================================================
+        // [MUDANÇA] FUNÇÕES PARA CARREGAR DADOS DOS SELECTS (LOJAS/DEPTOS)
+        // =======================================================
+
+        // 1. Carrega as Lojas ao iniciar a página
+        async function carregarLojasSelect() {
+            try {
+                const response = await fetch(`${API_URL}/chamados/dados/lojas`);
+                if (!response.ok) throw new Error("Erro ao carregar lojas.");
+                const lojas = await response.json();
+
+                selectLoja.innerHTML = '<option value="">-- Selecione a Loja --</option>';
+                
+                lojas.forEach(loja => {
+                    const option = document.createElement("option");
+                    option.value = loja.id; // Envia o ID
+                    option.textContent = loja.nome;
+                    selectLoja.appendChild(option);
+                });
+            } catch (error) {
+                console.error("Erro lojas:", error);
+                selectLoja.innerHTML = '<option value="">Erro ao carregar</option>';
+            }
+        }
+
+        // 2. Carrega Departamentos baseado na Loja escolhida
+        async function carregarDepartamentosSelect(lojaId) {
+            selectDepartamento.innerHTML = '<option value="">Carregando...</option>';
+            selectDepartamento.disabled = true;
+
+            if (!lojaId) {
+                selectDepartamento.innerHTML = '<option value="">-- Selecione primeiro a Loja --</option>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/chamados/dados/lojas/${lojaId}/departamentos`);
+                if (!response.ok) throw new Error("Erro ao carregar departamentos.");
+                const departamentos = await response.json();
+
+                selectDepartamento.innerHTML = '<option value="">-- Selecione o Departamento --</option>';
+                
+                if (departamentos.length === 0) {
+                    const opt = document.createElement("option");
+                    opt.text = "Nenhum departamento vinculado";
+                    selectDepartamento.add(opt);
+                } else {
+                    departamentos.forEach(dept => {
+                        const option = document.createElement("option");
+                        option.value = dept.id; // Envia o ID
+                        option.textContent = dept.nome;
+                        selectDepartamento.appendChild(option);
+                    });
+                }
+                selectDepartamento.disabled = false; 
+
+            } catch (error) {
+                console.error("Erro departamentos:", error);
+                selectDepartamento.innerHTML = '<option value="">Erro ao carregar</option>';
+            }
+        }
+
+        // --- Event Listener para o efeito cascata ---
+        selectLoja.addEventListener('change', () => {
+            const lojaId = selectLoja.value;
+            carregarDepartamentosSelect(lojaId);
+        });
+
+        // =======================================================
+
         async function carregarDadosIniciais() {
             try {
                 const response = await fetch(`${API_URL}/categorias`);
@@ -437,7 +514,6 @@
             cascataWrapper.appendChild(div);
         }
         
-        // --- (ATUALIZADO) Lógica de Cascata com Prioridade Automática ---
         function handleCascataChange(event) {
             const select = event.target;
             if (select.tagName !== 'SELECT') return;
@@ -445,7 +521,6 @@
             const selectedId = select.value;
             const level = parseInt(select.dataset.level);
 
-            // 1. Remove subcategorias filhas se mudou a seleção
             const allDropdowns = cascataWrapper.querySelectorAll('.grupo-form');
             allDropdowns.forEach(div => {
                 const sel = div.querySelector('select');
@@ -455,30 +530,20 @@
             });
 
             if (selectedId) {
-                // 2. Cria o próximo nível (se houver)
                 criarProximoDropdown(selectedId, level + 1);
 
-                // 3. (NOVO) Busca a categoria e aplica a prioridade
                 const categoriaSelecionada = allCategories.find(c => c.id == selectedId);
                 
                 if (categoriaSelecionada && categoriaSelecionada.prioridade_padrao) {
                     let p = categoriaSelecionada.prioridade_padrao;
-                    
-                    // Normalização de texto (Banco x HTML)
-                    // Banco: BAIXA, MEDIA, ALTA, URGENTE
-                    // HTML: Baixa, Média, Alta, Planejado
-                    
                     if (p === 'URGENTE') p = 'Alta'; 
                     if (p === 'MEDIA') p = 'Média';
                     if (p === 'BAIXA') p = 'Baixa';
                     if (p === 'ALTA') p = 'Alta';
 
-                    // Percorre as opções do select de prioridade e seleciona a correta
                     for (let i = 0; i < selectPrioridade.options.length; i++) {
                         if (selectPrioridade.options[i].value.toLowerCase() === p.toLowerCase()) {
                             selectPrioridade.selectedIndex = i;
-                            
-                            // Feedback visual (piscar em amarelo)
                             selectPrioridade.style.backgroundColor = "#fff3cd";
                             setTimeout(() => selectPrioridade.style.backgroundColor = "", 500);
                             break;
@@ -488,29 +553,25 @@
             }
         }
 
-
-        // --- NOVO: Lógica de Paginação no Frontend ---
+        // --- Paginação no Frontend ---
         function renderPaginationControls(totalItems, currentPage) {
             paginationControls.innerHTML = '';
             const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
 
             if (totalPages <= 1) return;
 
-            // Botão << (Primeira)
             const btnFirst = document.createElement('button');
             btnFirst.textContent = '«';
             btnFirst.disabled = currentPage === 1;
             btnFirst.addEventListener('click', () => setPage(1));
             paginationControls.appendChild(btnFirst);
 
-            // Botão < (Anterior)
             const btnPrev = document.createElement('button');
             btnPrev.textContent = '<';
             btnPrev.disabled = currentPage === 1;
             btnPrev.addEventListener('click', () => setPage(currentPage - 1));
             paginationControls.appendChild(btnPrev);
 
-            // Botões Numéricos
             for (let i = 1; i <= totalPages; i++) {
                 const btnPage = document.createElement('button');
                 btnPage.textContent = i;
@@ -522,14 +583,12 @@
                 paginationControls.appendChild(btnPage);
             }
 
-            // Botão > (Próxima)
             const btnNext = document.createElement('button');
             btnNext.textContent = '>';
             btnNext.disabled = currentPage === totalPages;
             btnNext.addEventListener('click', () => setPage(currentPage + 1));
             paginationControls.appendChild(btnNext);
 
-            // Botão >> (Última)
             const btnLast = document.createElement('button');
             btnLast.textContent = '»';
             btnLast.disabled = currentPage === totalPages;
@@ -546,10 +605,7 @@
             renderizarChamados(ticketsToRender);
             renderPaginationControls(allTickets.length, currentPage);
         }
-        // --- FIM NOVO ---
 
-
-        // --- Renderizar Lista de Chamados (Adaptado para Paginação) ---
         function renderizarChamados(chamados) {
             if (loadingIndicator) loadingIndicator.style.display = 'none';
             ticketList.querySelectorAll('.data-row').forEach(row => row.remove());
@@ -609,7 +665,6 @@
                     document.getElementById('detalheAssunto').textContent = chamado.assunto;
                     document.getElementById('detalheDescricao').textContent = chamado.descricao;
                     
-                    // PREENCHE LOJA E DEPARTAMENTO
                     document.getElementById('detalheLoja').textContent = chamado.loja || 'N/A';
                     document.getElementById('detalheDepartamento').textContent = chamado.departamento || 'N/A';
 
@@ -625,8 +680,6 @@
             });
         }
 
-
-        // --- Listar Chamados (Modificado para Salvar Todos) ---
         async function listarChamados() {
             limparMensagem(divRespostaGeral);
             ticketList.querySelectorAll('.data-row').forEach(row => row.remove());
@@ -637,8 +690,7 @@
             if (filtroPrioridade.value) params.append('prioridade', filtroPrioridade.value);
             if (filtroStatus.value) params.append('status', filtroStatus.value);
             
-            // [CORREÇÃO ANTERIOR] Mantemos a linha comentada para exibir TODOS os chamados
-            // if (userId) params.append('requisitante_id', userId); 
+            // if (userId) params.append('requisitante_id', userId); // Exibe todos, conforme sua solicitação
 
             const url = `${API_URL}/chamados?${params.toString()}`;
 
@@ -646,10 +698,8 @@
                 const response = await fetch(url);
                 if (!response.ok) throw new Error("Erro ao buscar chamados.");
                 
-                // 1. Salva TODOS os tickets na variável global
                 allTickets = await response.json();
                 
-                // 2. Reseta e renderiza apenas a primeira página
                 currentPage = 1;
                 const initialTickets = allTickets.slice(0, ITEMS_PER_PAGE);
 
@@ -662,21 +712,21 @@
             }
         }
 
-        // --- (ATUALIZADO) Criar Novo Chamado (Mantém o fluxo) ---
+        // --- (ATUALIZADO) Criar Novo Chamado ---
         async function criarChamado(event) {
             event.preventDefault();
             limparMensagem(modalResposta);
 
             const nomeRequisitante = ticketForm.nomeRequisitante.value.trim();
-            const emailRequisitante = ticketForm.emailRequisitante.value.trim();
+            const emailRequisitante = ticketForm.emailRequisitante.value.trim(); 
             const telefoneRequisitante = ticketForm.telefoneRequisitante.value.trim();
             const assunto = ticketForm.assunto.value.trim();
             const descricao = ticketForm.descricao.value.trim();
             const prioridade = ticketForm.prioridade.value || 'Média';
             
-            // CAPTURA LOJA E DEPARTAMENTO
-            const loja = ticketForm.loja.value.trim();
-            const departamento = ticketForm.departamento.value.trim();
+            // [MUDANÇA] Agora pegamos o valor do Select (que é o ID)
+            const loja = selectLoja.value;
+            const departamento = selectDepartamento.value;
 
             const allSelects = cascataWrapper.querySelectorAll('select');
             let categoriaUnificadaId = null;
@@ -689,7 +739,7 @@
                 }
             }
             
-            // [NOVA VALIDAÇÃO] Campos obrigatórios atualizados
+            // [MUDANÇA] Validação ajustada para os novos Selects e Campos Obrigatórios
             if (!nomeRequisitante || !telefoneRequisitante || !loja || !departamento || !assunto || !descricao) {
                 exibirMensagem(modalResposta, 'Preencha os campos obrigatórios: Nome, Telefone, Loja, Departamento, Assunto e Descrição.', false);
                 return;
@@ -714,7 +764,7 @@
             const dadosChamado = {
                 chamado: {
                     nome_requisitante_manual: nomeRequisitante,
-                    email_requisitante_manual: emailRequisitante, // Envia mesmo que vazio
+                    email_requisitante_manual: emailRequisitante, 
                     telefone_requisitante_manual: telefoneRequisitante,
                     assunto: assunto,
                     descricao: descricao,
@@ -750,7 +800,6 @@
             }
         }
         
-        // --- Funções de Comentários (sem mudanças) ---
         function renderizarComentarios(comentarios) {
             listaComentariosContainer.innerHTML = ''; 
             listaComentariosContainer.classList.remove('comment-empty-state');
@@ -791,12 +840,16 @@
             }
         }
         
-        // --- (ATUALIZADO) Lógica do Modal "Novo Chamado" ---
         function resetarModalForm() {
             ticketForm.reset();
             limparMensagem(modalResposta);
             cascataWrapper.innerHTML = '';
             criarProximoDropdown(null, 0); 
+            
+            // [MUDANÇA] Reseta os selects de Loja e Departamento
+            selectLoja.value = "";
+            selectDepartamento.innerHTML = '<option value="">-- Selecione primeiro a Loja --</option>';
+            selectDepartamento.disabled = true;
         }
 
         btnAbrir.addEventListener('click', () => {
@@ -827,23 +880,21 @@
             modalDetalhes.close();
         });
 
-        // --- Event Listeners ---
         ticketForm.addEventListener('submit', criarChamado);
-        // Ao filtrar, voltamos para a primeira página
         btnFiltrar.addEventListener('click', () => listarChamados(1)); 
         if(inputTelefone) {
             inputTelefone.addEventListener('input', () => aplicarMascaraTelefone(inputTelefone));
         }
         
-        // (NOVO) Event Listener para o dropdown de Categoria Pai
         cascataWrapper.addEventListener('change', handleCascataChange);
         
-        // --- Inicialização (CORRIGIDA) ---
+        // --- (MUDANÇA) Inicialização ---
         async function init() {
-            // Adiciona .catch() para que o erro na categoria não bloqueie a listagem de chamados.
-            await carregarDadosIniciais().catch(error => {
-                console.error("Falha ao carregar categorias. Prosseguindo para listagem de chamados.", error);
-            }); 
+            // Carrega dados iniciais em paralelo (Categorias e Lojas)
+            await Promise.all([
+                carregarDadosIniciais().catch(e => console.error(e)),
+                carregarLojasSelect().catch(e => console.error(e)) 
+            ]);
             
             await listarChamados(); 
         }
