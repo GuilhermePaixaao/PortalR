@@ -142,27 +142,27 @@
                     </div>
                     <div class="col-md-6">
                         <div class="grupo-form">
-                            <label for="emailRequisitante">Seu Email <span aria-hidden="true" style="color:red;">*</span></label>
-                            <input type="email" id="emailRequisitante" name="emailRequisitante" required>
+                            <label for="emailRequisitante">Seu Email (Opcional)</label>
+                            <input type="email" id="emailRequisitante" name="emailRequisitante">
                         </div>
                     </div>
                 </div>
                 <div class="grupo-form">
-                    <label for="telefoneRequisitante">Seu Telefone (Opcional)</label>
-                    <input type="tel" id="telefoneRequisitante" name="telefoneRequisitante" placeholder="(XX) XXXXX-XXXX">
+                    <label for="telefoneRequisitante">Seu Telefone <span aria-hidden="true" style="color:red;">*</span></label>
+                    <input type="tel" id="telefoneRequisitante" name="telefoneRequisitante" placeholder="(XX) XXXXX-XXXX" required>
                 </div>
                 
                 <div class="row">
                     <div class="col-md-6">
                         <div class="grupo-form">
-                            <label for="loja">Loja</label>
-                            <input type="text" id="loja" name="loja" placeholder="Ex: Loja 01, Matriz...">
+                            <label for="loja">Loja <span aria-hidden="true" style="color:red;">*</span></label>
+                            <input type="text" id="loja" name="loja" placeholder="Ex: Loja 01, Matriz..." required>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="grupo-form">
-                            <label for="departamento">Departamento</label>
-                            <input type="text" id="departamento" name="departamento" placeholder="Ex: Açougue, Frente de Caixa...">
+                            <label for="departamento">Departamento <span aria-hidden="true" style="color:red;">*</span></label>
+                            <input type="text" id="departamento" name="departamento" placeholder="Ex: Açougue, Frente de Caixa..." required>
                         </div>
                     </div>
                 </div>
@@ -636,7 +636,9 @@
             if (filtroAssunto.value.trim()) params.append('assunto', filtroAssunto.value.trim());
             if (filtroPrioridade.value) params.append('prioridade', filtroPrioridade.value);
             if (filtroStatus.value) params.append('status', filtroStatus.value);
-            //if (userId) params.append('requisitante_id', userId); 
+            
+            // [CORREÇÃO ANTERIOR] Mantemos a linha comentada para exibir TODOS os chamados
+            // if (userId) params.append('requisitante_id', userId); 
 
             const url = `${API_URL}/chamados?${params.toString()}`;
 
@@ -687,8 +689,9 @@
                 }
             }
             
-            if (!nomeRequisitante || !emailRequisitante || !assunto || !descricao) {
-                exibirMensagem(modalResposta, 'Nome, Email, Assunto e Descrição são obrigatórios.', false);
+            // [NOVA VALIDAÇÃO] Campos obrigatórios atualizados
+            if (!nomeRequisitante || !telefoneRequisitante || !loja || !departamento || !assunto || !descricao) {
+                exibirMensagem(modalResposta, 'Preencha os campos obrigatórios: Nome, Telefone, Loja, Departamento, Assunto e Descrição.', false);
                 return;
             }
             
@@ -711,15 +714,15 @@
             const dadosChamado = {
                 chamado: {
                     nome_requisitante_manual: nomeRequisitante,
-                    email_requisitante_manual: emailRequisitante,
+                    email_requisitante_manual: emailRequisitante, // Envia mesmo que vazio
                     telefone_requisitante_manual: telefoneRequisitante,
                     assunto: assunto,
                     descricao: descricao,
                     prioridade: prioridade,
                     requisitante_id: userId,
                     categoria_unificada_id: parseInt(categoriaUnificadaId),
-                    loja: loja,               // <-- ENVIA
-                    departamento: departamento // <-- ENVIA
+                    loja: loja,               
+                    departamento: departamento 
                 }
             };
             
