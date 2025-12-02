@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rosalina - Base de Conhecimento</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;700;900&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/10cadf5a4c.js" crossorigin="anonymous"></script>
+    
+    <style>
+        /* ================= ESTILOS GERAIS ================= */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #0073e9; /* Cor de fundo principal */
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* ================= CABEÇALHO ================= */
+        header {
+            height: 90px;
+            background-color: #0073E9;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 40px;
+            color: white;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            flex-shrink: 0;
+        }
+
+        .header-left { display: flex; align-items: center; gap: 15px; }
+        
+        .logo-text { line-height: 1.2; }
+        .logo-text span { font-weight: 900; font-size: 1.5rem; letter-spacing: 1px; }
+        .logo-text div { font-size: 0.85rem; opacity: 0.9; }
+
+        .user-avatar {
+            width: 50px; height: 50px;
+            background-color: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            cursor: pointer; font-weight: bold; font-size: 20px;
+        }
+
+        /* ================= LAYOUT PRINCIPAL ================= */
+        .main-wrapper {
+            flex: 1;
+            display: flex;
+            padding: 20px 40px 30px 40px;
+            gap: 20px;
+            height: calc(100vh - 90px); /* Altura total menos header */
+        }
+
+        /* ================= SIDEBAR (MENU) ================= */
+        .sidebar {
+            width: 350px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            height: 100%;
+            flex-shrink: 0;
+        }
+
+        .card {
+            background: white;
+            border-radius: 6px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        /* Barra de Pesquisa */
+        .search-card { padding: 15px; flex-shrink: 0; }
+        .search-input-group { position: relative; }
+        .search-icon {
+            position: absolute;
+            left: 12px; top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+        }
+        .search-input {
+            width: 100%;
+            padding: 10px 10px 10px 40px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            font-family: 'Poppins', sans-serif;
+            outline: none;
+        }
+        .search-input:focus { border-color: #0073e9; }
+
+        /* Lista de Pastas */
+        .tree-card {
+            flex: 1;
+            padding: 10px 0;
+            overflow-y: auto;
+        }
+
+        .tree-list { list-style: none; padding: 0 10px; }
+        
+        .tree-node {
+            display: flex;
+            align-items: center;
+            padding: 12px 8px;
+            margin-bottom: 2px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #333;
+            transition: background 0.2s;
+            font-weight: 500;
+        }
+
+        .tree-node:hover { background-color: #f8f9fa; }
+        
+        /* Ícones e Setas */
+        .tree-node i { margin-right: 10px; color: #555; width: 20px; text-align: center; }
+        .toggle-icon { font-size: 12px; transition: transform 0.2s; }
+        .tree-node.expanded .toggle-icon { transform: rotate(90deg); }
+        .tree-node.expanded .folder-icon::before { content: "\f07c"; } /* Ícone pasta aberta */
+
+        /* Sub-menu (Arquivos) */
+        .sub-tree {
+            list-style: none;
+            padding-left: 25px;
+            display: none; /* Escondido por padrão */
+            background-color: #fff;
+        }
+        .sub-tree.show { display: block; }
+
+        .file-node {
+            display: flex;
+            align-items: center;
+            padding: 8px 10px;
+            margin: 2px 0;
+            font-size: 13px;
+            color: #555;
+            cursor: pointer;
+            border-radius: 4px;
+            border-left: 2px solid transparent;
+        }
+
+        .file-node:hover { background-color: #f0f0f0; color: #0073e9; }
+        
+        /* Arquivo Ativo */
+        .file-node.active {
+            background-color: #d1f6eb;
+            color: #000;
+            font-weight: 600;
+            border-left: 3px solid #0073e9;
+        }
+        
+        .file-node i { margin-right: 8px; font-size: 14px; color: #e74c3c; } /* Ícone vermelho para PDF */
+
+        /* ================= VISUALIZADOR (DIREITA) ================= */
+        .content-area {
+            flex: 1;
+            background: white;
+            border-radius: 6px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .content-header {
+            padding: 15px 24px;
+            border-bottom: 1px solid #eee;
+            background-color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .article-title {
+            color: #333;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .article-actions a {
+            text-decoration: none;
+            color: #0073e9;
+            font-size: 13px;
+            font-weight: 600;
+            border: 1px solid #0073e9;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .article-actions a:hover { background-color: #0073e9; color: white; }
+
+        /* Área do PDF */
+        .pdf-wrapper {
+            flex: 1;
+            background-color: #525659; /* Cor de fundo padrão de visualizadores PDF */
+            position: relative;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Estado Vazio */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            color: #ccc;
+        }
+        .empty-state i { font-size: 4rem; margin-bottom: 15px; }
+
+        /* Scrollbar Personalizada */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #bbb; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-left">
+            <svg width="35" height="35" viewBox="0 0 31 31" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M11.1641 8.05664C12.3685 6.85221 13.8138 6.25 15.5 6.25C17.1862 6.25 18.6315 6.85221 19.8359 8.05664C21.0404 9.26107 21.6426 10.7064 21.6426 12.3926C21.6426 13.6934 20.8717 15.0423 19.3301 16.4395C17.7884 17.7884 17.0176 19.0169 17.0176 20.125H13.9824C13.9824 19.0169 14.2233 18.0775 14.7051 17.3066C15.1868 16.4876 15.7168 15.9095 16.2949 15.5723C16.873 15.1868 17.403 14.7292 17.8848 14.1992C18.3665 13.6693 18.6074 13.0671 18.6074 12.3926C18.6074 11.5736 18.2943 10.875 17.668 10.2969C17.0417 9.67057 16.319 9.35742 15.5 9.35742C14.681 9.35742 13.9583 9.67057 13.332 10.2969C12.7057 10.875 12.3926 11.5736 12.3926 12.3926H9.35742C9.35742 10.7064 9.95964 9.26107 11.1641 8.05664ZM6.75586 24.2441C9.21289 26.653 12.1276 27.8574 15.5 27.8574C18.8724 27.8574 21.763 26.653 24.1719 24.2441C26.6289 21.7871 27.8574 18.8724 27.8574 15.5C27.8574 12.1276 26.6289 9.23698 24.1719 6.82812C21.763 4.37109 18.8724 3.14258 15.5 3.14258C12.1276 3.14258 9.21289 4.37109 6.75586 6.82812C4.34701 9.23698 3.14258 12.1276 3.14258 15.5C3.14258 18.8724 4.34701 21.7871 6.75586 24.2441ZM4.58789 4.66016C7.62305 1.625 11.2604 0.107422 15.5 0.107422C19.7396 0.107422 23.3529 1.625 26.3398 4.66016C29.375 7.64714 30.8926 11.2604 30.8926 15.5C30.8926 19.7396 29.375 23.377 26.3398 26.4121C23.3529 29.3991 19.7396 30.8926 15.5 30.8926C11.2604 30.8926 7.62305 29.3991 4.58789 26.4121C1.60091 23.377 0.107422 19.7396 0.107422 15.5C0.107422 11.2604 1.60091 7.64714 4.58789 4.66016ZM13.9824 24.75V21.6426H17.0176V24.75H13.9824Z" fill="white"></path>
+            </svg>
+            <div class="logo-text">
+                <span>ROSALINA</span><br>
+                <div>Central de Arquivos</div>
+            </div>
+        </div>
+        <div class="user-avatar">R</div>
+    </header>
+
+    <div class="main-wrapper">
+        
+        <aside class="sidebar">
+            <div class="card search-card">
+                <div class="search-input-group">
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" class="search-input" placeholder="Pesquisar manuais...">
+                </div>
+            </div>
+
+            <div class="card tree-card">
+                <ul class="tree-list">
+                    
+                    <li>
+                        <div class="tree-node" onclick="toggleFolder(this)">
+                            <i class="fas fa-chevron-right toggle-icon"></i>
+                            <i class="fas fa-folder folder-icon"></i>
+                            ROSALINA POS (PDV)
+                        </div>
+                        <ul class="sub-tree">
+                            <li class="file-node" onclick="loadPDF('Manual de Instalação PDV', 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', this)">
+                                <i class="fas fa-file-pdf"></i> Manual de Instalação.pdf
+                            </li>
+                            <li class="file-node" onclick="loadPDF('Erro de Cupom Aberto', 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', this)">
+                                <i class="fas fa-file-pdf"></i> Erro Cupom Aberto.pdf
+                            </li>
+                        </ul>
+                    </li>
+
+                    <li>
+                        <div class="tree-node" onclick="toggleFolder(this)">
+                            <i class="fas fa-chevron-right toggle-icon"></i>
+                            <i class="fas fa-folder folder-icon"></i>
+                            FISCAL E SEFAZ
+                        </div>
+                        <ul class="sub-tree">
+                            <li class="file-node" onclick="loadPDF('Certificados Digitais', 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', this)">
+                                <i class="fas fa-file-pdf"></i> Guia Certificados.pdf
+                            </li>
+                        </ul>
+                    </li>
+
+                    <li>
+                        <div class="tree-node" onclick="toggleFolder(this)">
+                            <i class="fas fa-chevron-right toggle-icon"></i>
+                            <i class="fas fa-folder folder-icon"></i>
+                            SUPORTE TÉCNICO
+                        </div>
+                        <ul class="sub-tree">
+                            <li class="file-node" onclick="loadPDF('Configuração de Impressoras', 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', this)">
+                                <i class="fas fa-file-pdf"></i> Config. Impressoras.pdf
+                            </li>
+                        </ul>
+                    </li>
+
+                </ul>
+            </div>
+        </aside>
+
+        <main class="content-area">
+            <div class="content-header">
+                <div class="article-title" id="pdf-title">Selecione um arquivo</div>
+                <div class="article-actions">
+                    <a href="#" id="download-btn" target="_blank" style="display: none;">
+                        <i class="fas fa-download"></i> Baixar / Abrir
+                    </a>
+                </div>
+            </div>
+
+            <div class="pdf-wrapper" id="pdf-container">
+                <div class="empty-state">
+                    <i class="fas fa-file-pdf"></i>
+                    <p>Selecione um documento no menu ao lado para visualizar.</p>
+                </div>
+                <iframe id="pdf-viewer" src="" style="display: none;"></iframe>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // 1. Função para Abrir/Fechar Pastas
+        function toggleFolder(element) {
+            element.classList.toggle('expanded');
+            
+            // Acha a lista (ul) que vem logo depois do elemento clicado
+            const subTree = element.nextElementSibling;
+            if (subTree) {
+                subTree.classList.toggle('show');
+            }
+
+            // Alterna ícone da pasta
+            const folderIcon = element.querySelector('.folder-icon');
+            if (element.classList.contains('expanded')) {
+                folderIcon.classList.remove('fa-folder');
+                folderIcon.classList.add('fa-folder-open');
+            } else {
+                folderIcon.classList.remove('fa-folder-open');
+                folderIcon.classList.add('fa-folder');
+            }
+        }
+
+        // 2. Função para Carregar o PDF
+        function loadPDF(title, url, element) {
+            // Atualiza título
+            document.getElementById('pdf-title').innerText = title;
+            
+            // Atualiza botão de download
+            const downloadBtn = document.getElementById('download-btn');
+            downloadBtn.href = url;
+            downloadBtn.style.display = 'inline-block';
+
+            // Configura o visualizador
+            const iframe = document.getElementById('pdf-viewer');
+            const emptyState = document.querySelector('.empty-state');
+
+            iframe.src = url;
+            iframe.style.display = 'block';
+            emptyState.style.display = 'none';
+
+            // Gerencia classe 'active' no menu (destaque azul)
+            document.querySelectorAll('.file-node').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+        }
+
+        // 3. Busca simples (Filtro)
+        const searchInput = document.querySelector('.search-input');
+        searchInput.addEventListener('keyup', function(e) {
+            const term = e.target.value.toLowerCase();
+            const items = document.querySelectorAll('.file-node');
+
+            items.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                if(text.includes(term)) {
+                    item.style.display = 'flex';
+                    // Opcional: Abrir a pasta pai se encontrar item
+                    item.parentElement.classList.add('show'); 
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>
