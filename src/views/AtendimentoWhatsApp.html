@@ -155,11 +155,11 @@
         }
 
         /* --- Cores Específicas por Função --- */
-        .btn-history { border-color: #6c757d; color: #6c757d; } /* Histórico */
+        .btn-history { border-color: #6c757d; color: #6c757d; } /* Histórico (Cinza) */
         .btn-assumir { border-color: #ffc107; color: #ffc107; } /* Assumir (Amarelo) */
         .btn-assumir:hover { background-color: #fff3cd; }
-        .btn-transfer { border-color: #0d6efd; color: #0d6efd; } /* Transferir */
-        .btn-close { border-color: #dc3545; color: #dc3545; } /* Encerrar */
+        .btn-transfer { border-color: #0d6efd; color: #0d6efd; } /* Transferir (Azul) */
+        .btn-close { border-color: #dc3545; color: #dc3545; } /* Encerrar (Vermelho) */
         .btn-close:hover { background-color: #f8d7da; }
 
         /* --- Estado DESABILITADO (Apagado) --- */
@@ -172,9 +172,35 @@
             border-color: #ccc !important;
         }
 
-        #painelAtendimento { display: none; background-color: #fff3cd; color: #856404; padding: 15px; text-align: center; border-bottom: 1px solid #ffeeba; animation: fadeIn 0.5s; width: 100%; }
-        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-        .btn-assumir-painel { background-color: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; margin-left: 10px; text-transform: uppercase; font-size: 0.85rem; }
+        /* --- ESTILO DO MODAL DE TRANSFERÊNCIA (NOVO) --- */
+        .modal-overlay {
+            display: none; /* Oculto por padrão */
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center; justify-content: center;
+        }
+        .modal-content {
+            background-color: #fff;
+            padding: 25px;
+            border-radius: 8px;
+            width: 350px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            display: flex; flex-direction: column; gap: 15px;
+        }
+        .modal-title { font-size: 1.2rem; font-weight: bold; color: var(--text-primary); margin-bottom: 10px; }
+        .modal-select {
+            padding: 10px; border: 1px solid #ccc; border-radius: 5px; font-size: 1rem;
+            background-color: var(--input-bg); color: var(--text-primary);
+        }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
+        .btn-cancelar { background: #ccc; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; }
+        .btn-confirmar-transfer { background: #0d6efd; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; }
+        .btn-confirmar-transfer:hover { background: #0b5ed7; }
+
+        /* Ajustes para modo escuro do modal */
+        body.dark-mode .modal-content { background-color: var(--wa-sidebar-bg); border: 1px solid var(--wa-border); }
+        body.dark-mode .btn-cancelar { background: #444; color: #fff; }
     </style>
 </head>
 
@@ -265,10 +291,6 @@
                             </button>
                         </div>
                     </div>
-
-                    <div id="painelAtendimento">
-                        <span>🔔 <b>Atenção:</b> Este cliente entrou na fila de T.I.</span>
-                        </div>
                     
                     <div class="messages-container" id="messagesContainer"></div>
                     
@@ -279,6 +301,22 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <div id="modalTransferencia" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-title">🔄 Transferir Atendimento</div>
+            <p style="color:var(--text-secondary); font-size:0.9rem;">Selecione o agente para transferir:</p>
+            
+            <select id="selectAgentes" class="modal-select">
+                <option value="">Carregando agentes...</option>
+            </select>
+
+            <div class="modal-actions">
+                <button id="btnCancelarTransfer" class="btn-cancelar">Cancelar</button>
+                <button id="btnConfirmarTransfer" class="btn-confirmar-transfer">Transferir</button>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
@@ -319,14 +357,19 @@
         const chatInput = document.getElementById('chatInput');
         const sendButton = document.getElementById('sendButton');
         const filaHeader = document.getElementById('filaHeader');
-        const painelAtendimento = document.getElementById('painelAtendimento');
         const chatTitle = document.getElementById('chatTitle'); 
         
-        // Referências aos novos botões
+        // Referências aos botões da Toolbar
         const btnAssumir = document.getElementById('btnAssumir');
         const btnFinalizar = document.getElementById('btnFinalizar');
         const btnTransferir = document.getElementById('btnTransferir');
         const btnHistorico = document.getElementById('btnHistorico');
+
+        // Referências ao Modal de Transferência
+        const modalTransfer = document.getElementById('modalTransferencia');
+        const selectAgentes = document.getElementById('selectAgentes');
+        const btnCancelarTransfer = document.getElementById('btnCancelarTransfer');
+        const btnConfirmarTransfer = document.getElementById('btnConfirmarTransfer');
 
         let AppState = {
             activeNumber: null,
@@ -613,6 +656,53 @@
             }
         });
 
+        // 4. Escutar evento de Socket para atualizar se alguém transferiu PARA MIM ou DE MIM
+        socket.on('transferenciaChamado', (data) => {
+            // data = { chatId, novoAgente, antigoAgente }
+            
+            // Atualiza o dado localmente se o chat existir na minha lista
+            const chat = AppState.chatList.find(c => c.numero === data.chatId);
+            if (chat) {
+                chat.nomeAgente = data.novoAgente;
+                
+                // Verifica se SOU EU o novo agente
+                let souEu = false;
+                try { 
+                    const u = JSON.parse(localStorage.getItem("userData"));
+                    if (data.novoAgente === u.data.nomeFuncionario) souEu = true;
+                } catch(e){}
+
+                if (souEu) {
+                    chat.visivel = true; 
+                    chat.pending = false; // Já está atendido (por mim)
+                    // Toca um som ou notificação se quiser
+                } else {
+                    // Se transferiu DE MIM para OUTRO, eu não vejo mais (se sua regra for essa)
+                    // Se eu for ADMIN talvez eu continue vendo, ajuste conforme necessidade.
+                    // Aqui assumo que se não sou eu, não vejo mais como "meu atendimento".
+                    chat.visivel = false; 
+                }
+                
+                saveState();
+                renderSidebar();
+                
+                // Se eu estiver com esse chat aberto, atualizo a toolbar ou fecho
+                if (AppState.activeNumber === data.chatId) {
+                    if (!souEu) {
+                        alert(`Este atendimento foi transferido para ${data.novoAgente}.`);
+                        showScreen('welcome');
+                        AppState.activeNumber = null;
+                    } else {
+                        atualizarBotoesToolbar(chat);
+                    }
+                }
+            } else if (data.novoAgente === JSON.parse(localStorage.getItem("userData"))?.data?.nomeFuncionario) {
+                // Se transferiram pra mim e eu nem tinha o chat na lista, ele deve aparecer
+                // Força uma sincronização ou adiciona manualmente (Sincronizar é mais seguro)
+                syncChatsWithServer(); 
+            }
+        });
+
         async function openChat(number) {
             AppState.activeNumber = number;
             const chat = AppState.chatList.find(c => c.numero === number);
@@ -660,9 +750,6 @@
                 console.error("Erro ao sincronizar mensagens:", e);
                 loadingDiv.remove();
             }
-
-            // Oculta painel antigo, pois agora usamos a toolbar
-            painelAtendimento.style.display = 'none';
             
             chatInput.disabled = false; 
             chatInput.focus();
@@ -789,9 +876,95 @@
         btnFinalizar.addEventListener('click', finalizarChat);
 
         // LISTENER BOTÃO TRANSFERIR
-        btnTransferir.addEventListener('click', () => {
+        btnTransferir.addEventListener('click', async () => {
             if (btnTransferir.disabled) return;
-            alert("Funcionalidade de transferência em desenvolvimento.");
+            if (!AppState.activeNumber) return;
+
+            modalTransfer.style.display = 'flex';
+            selectAgentes.innerHTML = '<option value="">Carregando...</option>';
+
+            try {
+                // Assume que você tem uma rota que lista funcionários (padrão do seu sistema)
+                // Se não tiver, precisará criar GET /api/funcionarios no funcionarioRouter.js
+                // Usando /usuarios que foi mencionado em outros arquivos
+                const resp = await fetch('/usuarios'); 
+                const json = await resp.json();
+                
+                // Pega o seu próprio nome para não mostrar na lista
+                let meuNome = "";
+                try { meuNome = JSON.parse(localStorage.getItem("userData")).data.nomeFuncionario; } catch(e){}
+
+                selectAgentes.innerHTML = '<option value="">Selecione um agente...</option>';
+                
+                // Filtra para mostrar apenas AGENTES ou ADMINS e remove você mesmo da lista
+                const lista = Array.isArray(json) ? json : (json.data || []);
+                
+                lista.forEach(func => {
+                    // Ajuste a lógica de filtro conforme seus perfis ('AGENTE', 'ADMIN', etc)
+                    if (func.nomeFuncionario !== meuNome && (func.perfil === 'AGENTE' || func.perfil === 'ADMIN')) {
+                        const opt = document.createElement('option');
+                        opt.value = func.nomeFuncionario; // Vamos transferir pelo NOME para facilitar
+                        opt.textContent = func.nomeFuncionario;
+                        selectAgentes.appendChild(opt);
+                    }
+                });
+
+            } catch (e) {
+                console.error(e);
+                selectAgentes.innerHTML = '<option value="">Erro ao carregar lista</option>';
+            }
+        });
+
+        // Fechar Modal
+        btnCancelarTransfer.addEventListener('click', () => {
+            modalTransfer.style.display = 'none';
+        });
+
+        // Confirmar Transferência
+        btnConfirmarTransfer.addEventListener('click', async () => {
+            const novoAgente = selectAgentes.value;
+            if (!novoAgente) return alert("Selecione um agente!");
+            if (!AppState.activeNumber) return;
+
+            if(!confirm(`Confirma a transferência deste chat para ${novoAgente}?`)) return;
+
+            try {
+                const userData = JSON.parse(localStorage.getItem("userData"));
+                const meuNome = userData?.data?.nomeFuncionario || "Admin";
+
+                const response = await fetch('/api/whatsapp/transferir', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        numero: AppState.activeNumber, 
+                        novoAgente: novoAgente,
+                        nomeAgenteAtual: meuNome
+                    })
+                });
+
+                const resJson = await response.json();
+
+                if (resJson.success) {
+                    alert("Transferência realizada com sucesso!");
+                    modalTransfer.style.display = 'none';
+                    
+                    // Opcional: Remover o chat da tela imediatamente pois não é mais seu
+                    const chat = AppState.chatList.find(c => c.numero === AppState.activeNumber);
+                    if(chat) {
+                        chat.visivel = false; // Oculta
+                        chat.nomeAgente = novoAgente;
+                    }
+                    AppState.activeNumber = null;
+                    saveState();
+                    renderSidebar();
+                    showScreen('welcome');
+                } else {
+                    alert("Erro ao transferir: " + (resJson.message || "Erro desconhecido"));
+                }
+
+            } catch (e) {
+                alert("Erro de conexão ao transferir.");
+            }
         });
 
         // LISTENER BOTÃO HISTÓRICO

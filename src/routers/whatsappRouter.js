@@ -30,4 +30,7 @@ router.post('/api/whatsapp/finalizar', WhatsappController.finalizarAtendimento);
 router.get('/api/whatsapp/configure-webhook', WhatsappController.configurarUrlWebhook);
 
 router.post('/api/whatsapp/disconnect', WhatsappController.handleDisconnect);
+
+router.post('/api/whatsapp/transferir', WhatsappController.transferirAtendimento);
+
 export default router;

@@ -524,6 +524,47 @@ export const handleDisconnect = async (req, res) => {
         res.status(500).json({ success: false, message: e.message }); 
     }
 };
+// ... (outras importações e códigos existentes)
+
+// Rota para TRANSFERIR o atendimento para outro agente
+export const transferirAtendimento = async (req, res) => {
+    const { numero, novoAgente, nomeAgenteAtual } = req.body;
+    
+    try {
+        // Verifica se o chat existe na memória
+        if (!userContext[numero]) {
+             return res.status(404).json({ success: false, message: "Chat não ativo ou não encontrado na memória." });
+        }
+
+        const oldAgent = nomeAgenteAtual || userContext[numero].nomeAgente || "Atendente";
+        
+        // 1. Atualiza o contexto com o novo agente
+        userContext[numero].nomeAgente = novoAgente;
+        userContext[numero].etapa = 'ATENDIMENTO_HUMANO'; // Garante que continue como humano
+        userContext[numero].botPausado = true;
+        userContext[numero].mostrarNaFila = true; // Garante que apareça na lista do novo agente
+
+        // 2. Avisa o cliente no WhatsApp
+        const msgTransferencia = `🔄 *Atendimento Transferido*\n\nO atendente *${oldAgent}* transferiu seu chamado para *${novoAgente}*. Por favor, aguarde um momento.`;
+        await evolutionService.enviarTexto(numero, msgTransferencia);
+        
+        // 3. Notifica todos os frontends via Socket para atualizarem suas listas
+        // (O chat vai sumir da sua tela e aparecer na do novo agente)
+        if(req.io) {
+             req.io.emit('transferenciaChamado', { 
+                chatId: numero, 
+                novoAgente: novoAgente,
+                antigoAgente: oldAgent
+             });
+        }
+
+        res.status(200).json({ success: true });
+
+    } catch (e) {
+        console.error("Erro ao transferir:", e);
+        res.status(500).json({ success: false, message: e.message });
+    }
+};
 export const connectInstance = async (req, res) => { try { const r = await evolutionService.criarInstancia(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
 export const checarStatus = async (req, res) => { try { const r = await evolutionService.consultarStatus(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
 export const configurarUrlWebhook = async (req, res) => { try { const h = req.get('host'); const p = h.includes('localhost') ? 'http' : 'https'; await evolutionService.configurarWebhook(`${p}://${h}/api/evolution/webhook`); res.status(200).json({ success: true }); } catch (e) { res.status(500).json({ success: false }); } };
