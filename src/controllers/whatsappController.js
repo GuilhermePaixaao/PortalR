@@ -1,6 +1,6 @@
 import * as evolutionService from '../services/evolutionService.js';
 import * as chamadoModel from '../models/chamadoModel.js'; 
-import * as EmailService from '../services/emailService.js'; // [NOVO] Necessário para enviar e-mail ao criar chamado
+import * as EmailService from '../services/emailService.js'; // Necessário para enviar e-mail ao criar chamado
 import { OpenAI } from 'openai';
 
 // ==================================================
@@ -13,7 +13,7 @@ const groq = new OpenAI({
 
 const MODELO_IA = "llama-3.1-8b-instant"; 
 
-// --- CACHE ANTI-DUPLICAÇÃO (Impede mensagens repetidas) ---
+// --- CACHE ANTI-DUPLICAÇÃO ---
 const processedMessageIds = new Set();
 
 const SISTEMA_PROMPT = `
@@ -77,18 +77,13 @@ Por favor, nos avalie de 1 a 5 e conte como foi o seu atendimento.
 // ==================================================
 async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
     const contexto = userContext[numeroUsuario];
-    
     if (!contexto || contexto.botPausado) return null;
 
     try {
         if (!contexto.historico || contexto.historico.length === 0) {
-            contexto.historico = [
-                { role: "system", content: SISTEMA_PROMPT }
-            ];
+            contexto.historico = [{ role: "system", content: SISTEMA_PROMPT }];
         }
-
         contexto.historico.push({ role: "user", content: textoUsuario });
-
         if (contexto.historico.length > 12) {
             contexto.historico = [contexto.historico[0], ...contexto.historico.slice(-10)];
         }
@@ -101,13 +96,10 @@ async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
         });
 
         const respostaIA = completion.choices[0]?.message?.content || "";
-
         if (respostaIA) {
             contexto.historico.push({ role: "assistant", content: respostaIA });
         }
-
         return respostaIA;
-
     } catch (erro) {
         console.error("[GROQ] Erro na IA:", erro);
         return null; 
@@ -131,7 +123,6 @@ export const handleWebhook = async (req, res) => {
       const idRemoto = msg.key.remoteJid;
       const isFromMe = msg.key.fromMe;
       
-      // --- 1. ANTI-DUPLICAÇÃO ---
       if (processedMessageIds.has(idMensagem)) return res.status(200).json({ success: true });
       processedMessageIds.add(idMensagem);
       setTimeout(() => processedMessageIds.delete(idMensagem), 10000);
@@ -142,8 +133,6 @@ export const handleWebhook = async (req, res) => {
       const isStatus = idRemoto === 'status@broadcast'; 
 
       if (!isStatus && !isGroup && texto) {
-        
-        // --- NOTIFICA O FRONTEND (SOCKET) ---
         const ctxAtual = userContext[idRemoto] || {};
         io.emit('novaMensagemWhatsapp', { 
             id: idMensagem, 
@@ -158,15 +147,8 @@ export const handleWebhook = async (req, res) => {
             if (!userContext[idRemoto]) userContext[idRemoto] = { etapa: 'INICIO', botPausado: false, historico: [], mostrarNaFila: false };
             const ctx = userContext[idRemoto];
             let respostaBot = null;
-            
             const textoMin = texto.toLowerCase();
-
-            // Saudação robusta
-            const saudacoes = [
-                'oi', 'olá', 'ola', 'oie', 'menu', 'inicio', 'start', 
-                'bom dia', 'boa tarde', 'boa noite', 'opa', 'e ai', 'eai', 'hey', 
-                'saudações', 'ata', 'ok', 'entendi', 'teste'
-            ];
+            const saudacoes = ['oi', 'olá', 'ola', 'oie', 'menu', 'inicio', 'start', 'bom dia', 'boa tarde', 'boa noite', 'opa', 'e ai', 'eai', 'hey', 'saudações', 'ata', 'ok', 'entendi', 'teste'];
             const textoLimpo = textoMin.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"").trim(); 
             const ehSaudacao = saudacoes.some(s => {
                 const sLimpa = s.replace(/\s/g, '');
@@ -175,21 +157,11 @@ export const handleWebhook = async (req, res) => {
                 return false;
             });
 
-            // ------------------------------------------------
-            // 1. MENU PRINCIPAL
-            // ------------------------------------------------
             if (ehSaudacao) {
                 if (ctx.etapa === 'MENU' && textoMin !== 'menu' && textoMin !== 'inicio') {
                     respostaBot = MENSAGENS.OPCAO_INVALIDA;
                     await evolutionService.enviarTexto(idRemoto, respostaBot);
-                    
-                    io.emit('novaMensagemWhatsapp', { 
-                        id: 'opt_invalida-'+Date.now(), 
-                        chatId: idRemoto, 
-                        nome: "Bot", 
-                        texto: respostaBot, 
-                        fromMe: true 
-                    });
+                    io.emit('novaMensagemWhatsapp', { id: 'opt_invalida-'+Date.now(), chatId: idRemoto, nome: "Bot", texto: respostaBot, fromMe: true });
                     return res.status(200).json({ success: true });
                 } else {
                     ctx.etapa = 'MENU';
@@ -197,52 +169,37 @@ export const handleWebhook = async (req, res) => {
                     ctx.nomeAgente = null;
                     ctx.mostrarNaFila = false;
                     ctx.historico = [{ role: "system", content: SISTEMA_PROMPT }];
-
                     const textoSaudacao = MENSAGENS.SAUDACAO(nomeAutor);
                     await evolutionService.enviarTexto(idRemoto, textoSaudacao);
-                    
                     io.emit('novaMensagemWhatsapp', { id: 'menu-'+Date.now(), chatId: idRemoto, nome: "Bot", texto: textoSaudacao, fromMe: true });
                     return res.status(200).json({ success: true });
                 }
             }
-            
-            // 2. FINALIZAR (#)
             else if (texto === '#' || texto.toLowerCase() === 'encerrar') {
                 respostaBot = MENSAGENS.AVALIACAO_INICIO;
                 ctx.etapa = 'AVALIACAO_NOTA';
                 ctx.botPausado = true; 
                 ctx.nomeAgente = null;
             }
-
-            // 3. ETAPA: MENU -> SUBMENU T.I
             else if (ctx.etapa === 'MENU') {
                 if (texto === '1' || textoMin.includes('suporte')) {
                     respostaBot = MENSAGENS.MENU_TI_COM_FILA;
                     ctx.etapa = 'SUBMENU_TI'; 
                     ctx.botPausado = false; 
                     ctx.mostrarNaFila = true; 
-                    io.emit('notificacaoChamado', { 
-                        chatId: idRemoto, 
-                        nome: nomeAutor,
-                        status: 'PENDENTE_TI' 
-                    });
+                    io.emit('notificacaoChamado', { chatId: idRemoto, nome: nomeAutor, status: 'PENDENTE_TI' });
                 } 
                 else if (texto.startsWith('*') || textoMin === 'ticket') {
-                    let ticketNumeroStr = '';
-                    if (texto.startsWith('*')) {
-                        ticketNumeroStr = texto.substring(1).trim();
-                    } else if (textoMin === 'ticket') {
+                    let ticketNumeroStr = texto.startsWith('*') ? texto.substring(1).trim() : '';
+                    if (textoMin === 'ticket') {
                         respostaBot = "Por favor, digite o *número do ticket* após o asterisco. Exemplo: *123";
                         ctx.etapa = 'MENU'; 
                         ctx.botPausado = true;
                         setTimeout(() => { ctx.botPausado = false; }, 30000); 
                         await evolutionService.enviarTexto(idRemoto, respostaBot);
-                        io.emit('novaMensagemWhatsapp', { 
-                            id: 'bot-'+Date.now(), chatId: idRemoto, nome: "Bot", texto: respostaBot, fromMe: true, mostrarNaFila: ctx.mostrarNaFila
-                        });
+                        io.emit('novaMensagemWhatsapp', { id: 'bot-'+Date.now(), chatId: idRemoto, nome: "Bot", texto: respostaBot, fromMe: true, mostrarNaFila: ctx.mostrarNaFila });
                         return res.status(200).json({ success: true });
                     }
-                    
                     const ticketId = parseInt(ticketNumeroStr);
                     if (isNaN(ticketId) || ticketId <= 0) {
                         respostaBot = "⚠️ Por favor, digite um número de ticket válido após o asterisco. Exemplo: *123";
@@ -254,9 +211,7 @@ export const handleWebhook = async (req, res) => {
                             respostaBot += `*Assunto:* ${ticket.assunto}\n`;
                             respostaBot += `*Status:* ${ticket.status}\n`;
                             respostaBot += `*Categoria:* ${categoriaNome || 'Não Atribuída'}\n`;
-                            if (ticket.atendente_id) {
-                                respostaBot += `*Atendente:* ${ticket.nomeAtendente || 'Em Atribuição'}\n`;
-                            }
+                            if (ticket.atendente_id) respostaBot += `*Atendente:* ${ticket.nomeAtendente || 'Em Atribuição'}\n`;
                             respostaBot += `*Prioridade:* ${ticket.prioridade}`;
                             ctx.etapa = 'MENU';
                             ctx.botPausado = true;
@@ -269,8 +224,6 @@ export const handleWebhook = async (req, res) => {
                     respostaBot = MENSAGENS.OPCAO_INVALIDA;
                 }
             }
-
-            // 4. ETAPA: SUBMENU T.I
             else if (ctx.etapa === 'SUBMENU_TI') {
                 if (texto === '1') {
                     respostaBot = "📝 Certo. Por favor, *descreva o problema* resumidamente em uma mensagem para eu registrar.";
@@ -291,8 +244,6 @@ export const handleWebhook = async (req, res) => {
                     respostaBot = MENSAGENS.OPCAO_INVALIDA;
                 }
             }
-
-            // 5. FILA / AVALIAÇÃO
             else if (ctx.etapa === 'FILA') { /* Silêncio */ }
             else if (ctx.etapa === 'AVALIACAO_NOTA') {
                 if (['1', '2', '3', '4', '5'].includes(texto)) {
@@ -311,8 +262,6 @@ export const handleWebhook = async (req, res) => {
                 ctx.mostrarNaFila = false; 
                 delete userContext[idRemoto]; 
             }
-
-            // FALLBACK IA
             else if (!respostaBot && !ctx.botPausado && ctx.etapa === 'INICIO') {
                 respostaBot = await processarComGroq(idRemoto, texto, nomeAutor);
             }
@@ -463,21 +412,33 @@ export const configurarUrlWebhook = async (req, res) => { try { const h = req.ge
 
 // Rota para TRANSFERIR o atendimento para outro agente
 export const transferirAtendimento = async (req, res) => {
-    const { numero, novoAgente, nomeAgenteAtual } = req.body;
+    const { numero, novoAgente, nomeAgenteAtual, nomeCliente } = req.body; 
     try {
         if (!userContext[numero]) {
              return res.status(404).json({ success: false, message: "Chat não ativo ou não encontrado na memória." });
         }
+        
         const oldAgent = nomeAgenteAtual || userContext[numero].nomeAgente || "Atendente";
+        
+        // Atualiza estado no servidor
         userContext[numero].nomeAgente = novoAgente;
         userContext[numero].etapa = 'ATENDIMENTO_HUMANO'; 
         userContext[numero].botPausado = true;
         userContext[numero].mostrarNaFila = true; 
+
+        // Mensagem mais limpa e profissional
         const msgTransferencia = `🔄 *Atendimento Transferido*\n\nO atendente *${oldAgent}* transferiu seu chamado para *${novoAgente}*. Por favor, aguarde um momento.`;
+        
         await evolutionService.enviarTexto(numero, msgTransferencia);
+        
+        // Emite evento com dados completos para garantir atualização no front
         if(req.io) {
              req.io.emit('transferenciaChamado', { 
-                chatId: numero, novoAgente: novoAgente, antigoAgente: oldAgent
+                chatId: numero, 
+                novoAgente: novoAgente, 
+                antigoAgente: oldAgent,
+                nomeCliente: nomeCliente, // Repassa o nome do cliente
+                timestamp: new Date()
              });
         }
         res.status(200).json({ success: true });
@@ -499,7 +460,6 @@ export const verificarTicket = async (req, res) => {
     try {
         const ticket = await chamadoModel.findById(id);
         if(ticket) {
-            // Se encontrado, retornamos os dados principais
             res.json({ success: true, data: ticket });
         } else {
             res.json({ success: false, message: "Ticket não encontrado" });
@@ -512,21 +472,21 @@ export const verificarTicket = async (req, res) => {
 // 2. Criar Chamado a partir do Chat (Botão Criar)
 export const criarChamadoDoChat = async (req, res) => {
     const { chamado, numero } = req.body; 
-    // 'chamado' contém { assunto, descricao, categoria_unificada_id, prioridade, requisitante_id, nome_requisitante_manual ... }
+    // 'chamado' contém os dados do formulário do modal
     // 'numero' é o telefone do WhatsApp (idRemoto)
 
     try {
         // A. Cria o chamado usando o model existente
         const novoId = await chamadoModel.create(chamado);
         
-        // B. Busca o chamado recém criado para ter detalhes (como nome do requisitante salvo)
+        // B. Busca o chamado recém criado para ter detalhes completos
         const ticketCriado = await chamadoModel.findById(novoId);
 
         // C. Envia mensagem no WhatsApp avisando o cliente
         const msgZap = `🎫 *Chamado Criado com Sucesso*\n\nSeu atendimento gerou o ticket *#${novoId}*.\n*Assunto:* ${ticketCriado.assunto}\n\nAguarde, nossa equipe técnica já está atuando.`;
         await evolutionService.enviarTexto(numero, msgZap);
 
-        // D. Atualiza o contexto do bot (Opcional: vincula ticket ao chat em memória)
+        // D. Atualiza o contexto do bot
         if(userContext[numero]) {
             userContext[numero].ultimoTicketId = novoId;
         }
@@ -537,7 +497,7 @@ export const criarChamadoDoChat = async (req, res) => {
                 .catch(err => console.error("Erro silencioso ao enviar email:", err));
         }
 
-        // F. Notifica Socket (para aparecer no painel de "Gerenciar Chamados")
+        // F. Notifica Socket
         if (req.io) {
             req.io.emit('novoChamadoInterno', {
                 id: novoId,

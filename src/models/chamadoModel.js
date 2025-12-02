@@ -44,10 +44,10 @@ export const create = async (chamado) => {
         prioridade, 
         status, 
         
-        // Aceita requisitante_id (Controller) ou requisitanteIdNum (Legado)
+        // Aceita requisitante_id (Controller WhatsApp) ou requisitanteIdNum (Legado Web)
         requisitante_id, requisitanteIdNum,
         
-        // Aceita categoria_id (Controller) ou categoriaUnificadaIdNum (Legado)
+        // Aceita categoria_id (Controller WhatsApp) ou categoriaUnificadaIdNum (Legado Web)
         categoria_id, categoriaUnificadaIdNum,
         
         nomeRequisitanteManual, emailRequisitanteManual, telefoneRequisitanteManual,
@@ -55,6 +55,7 @@ export const create = async (chamado) => {
     } = chamado; 
 
     // Define os valores finais priorizando o que vier preenchido
+    // Isso garante que funcione tanto pelo site quanto pelo modal do WhatsApp
     const finalRequisitanteId = requisitante_id || requisitanteIdNum;
     const finalCategoriaId = categoria_id || categoriaUnificadaIdNum;
 
@@ -97,7 +98,8 @@ export const findById = async (id) => {
             -- Dados do Requisitante (Prioriza manual, se não tiver pega do cadastro)
             COALESCE(ch.nome_requisitante_manual, f_req.nomeFuncionario) AS nomeRequisitante,
             
-            -- [CORREÇÃO] Pega o email do cadastro se não tiver email manual (Importante para notificação)
+            -- [IMPORTANTE] Pega o email do cadastro se não tiver email manual
+            -- Isso permite que o sistema envie o e-mail de notificação corretamente
             COALESCE(ch.email_requisitante_manual, f_req.email) AS emailRequisitante,
             
             ch.telefone_requisitante_manual AS telefoneRequisitante,
