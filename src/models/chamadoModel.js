@@ -29,27 +29,41 @@ export const getDepartamentosPorLoja = async (lojaId) => {
 
 
 // =================================================================
-// 2. FUNÇÕES CRUD DE CHAMADOS (ATUALIZADAS PARA IDs)
+// 2. FUNÇÕES CRUD DE CHAMADOS (ATUALIZADAS)
 // =================================================================
 
 /**
- * (ATUALIZADO)
- * Cria um novo chamado salvando os IDs de Loja e Departamento.
+ * Cria um novo chamado.
+ * Compatível com chamados via WhatsApp (parâmetros simplificados) e Web.
  */
 export const create = async (chamado) => {
+    // Desestrutura aceitando variações de nomes (snake_case do controller ou camelCase legado)
     const { 
-        assunto, descricao, prioridade, status, requisitanteIdNum, 
-        categoriaUnificadaIdNum,
+        assunto, 
+        descricao, 
+        prioridade, 
+        status, 
+        
+        // Aceita requisitante_id (Controller) ou requisitanteIdNum (Legado)
+        requisitante_id, requisitanteIdNum,
+        
+        // Aceita categoria_id (Controller) ou categoriaUnificadaIdNum (Legado)
+        categoria_id, categoriaUnificadaIdNum,
+        
         nomeRequisitanteManual, emailRequisitanteManual, telefoneRequisitanteManual,
-        loja_id, departamento_id // <-- Agora recebemos os IDs vindos do Controller
+        loja_id, departamento_id
     } = chamado; 
+
+    // Define os valores finais priorizando o que vier preenchido
+    const finalRequisitanteId = requisitante_id || requisitanteIdNum;
+    const finalCategoriaId = categoria_id || categoriaUnificadaIdNum;
 
     const sql = `
         INSERT INTO Chamados 
             (assunto, descricao, prioridade, status, requisitante_id, 
              categoria_unificada_id,
              nome_requisitante_manual, email_requisitante_manual, telefone_requisitante_manual,
-             loja_id, departamento_id) -- <-- Colunas de ID
+             loja_id, departamento_id)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     
@@ -58,13 +72,13 @@ export const create = async (chamado) => {
         descricao, 
         prioridade, 
         status, 
-        requisitanteIdNum, 
-        categoriaUnificadaIdNum,
-        nomeRequisitanteManual, 
-        emailRequisitanteManual, 
-        telefoneRequisitanteManual,
-        loja_id || null,          // Salva o ID da loja (ou null)
-        departamento_id || null   // Salva o ID do departamento (ou null)
+        finalRequisitanteId, 
+        finalCategoriaId,
+        nomeRequisitanteManual || null, 
+        emailRequisitanteManual || null, 
+        telefoneRequisitanteManual || null,
+        loja_id || null, 
+        departamento_id || null
     ];
     
     const [result] = await pool.query(sql, values);
@@ -72,17 +86,20 @@ export const create = async (chamado) => {
 };
 
 /**
- * (ATUALIZADO)
- * Busca um chamado por ID e faz os JOINs para trazer os NOMES da Loja e Departamento.
+ * Busca um chamado por ID e faz os JOINs completos.
+ * ATUALIZADO: Recupera o e-mail do funcionário corretamente para notificações.
  */
 export const findById = async (id) => {
     const sql = `
         SELECT 
             ch.*, 
             
-            -- Dados do Requisitante
+            -- Dados do Requisitante (Prioriza manual, se não tiver pega do cadastro)
             COALESCE(ch.nome_requisitante_manual, f_req.nomeFuncionario) AS nomeRequisitante,
-            ch.email_requisitante_manual AS emailRequisitante,
+            
+            -- [CORREÇÃO] Pega o email do cadastro se não tiver email manual (Importante para notificação)
+            COALESCE(ch.email_requisitante_manual, f_req.email) AS emailRequisitante,
+            
             ch.telefone_requisitante_manual AS telefoneRequisitante,
             
             -- Dados do Atendente
@@ -92,19 +109,17 @@ export const findById = async (id) => {
             cat.nome AS nomeCategoria,
             pai.nome AS nomeCategoriaPai,
             
-            -- (NOVO) Traz o NOME da loja e departamento baseado no ID salvo
+            -- Loja e Departamento
             l.nome AS loja,
             d.nome AS departamento
             
         FROM Chamados ch
         
-        -- Joins Padrão
         LEFT JOIN Funcionario f_req ON ch.requisitante_id = f_req.id
         LEFT JOIN Funcionario f_atend ON ch.atendente_id = f_atend.id 
         LEFT JOIN Categorias cat ON ch.categoria_unificada_id = cat.id
         LEFT JOIN Categorias pai ON cat.parent_id = pai.id 
         
-        -- (NOVO) Joins com tabelas de Loja e Departamento
         LEFT JOIN Loja l ON ch.loja_id = l.id
         LEFT JOIN Departamento d ON ch.departamento_id = d.id
         
@@ -115,7 +130,6 @@ export const findById = async (id) => {
 };
 
 /**
- * (ATUALIZADO)
  * Busca todos os chamados listando os nomes de Loja e Departamento.
  */
 export const findAll = async (filtros = {}) => {
@@ -123,13 +137,11 @@ export const findAll = async (filtros = {}) => {
         SELECT 
             ch.*, 
             COALESCE(ch.nome_requisitante_manual, f_req.nomeFuncionario) AS nomeRequisitante,
-            ch.email_requisitante_manual AS emailRequisitante,
+            COALESCE(ch.email_requisitante_manual, f_req.email) AS emailRequisitante,
             ch.telefone_requisitante_manual AS telefoneRequisitante,
             f_atend.nomeFuncionario AS nomeAtendente, 
             cat.nome AS nomeCategoria,
             pai.nome AS nomeCategoriaPai,
-
-            -- (NOVO) Nomes para exibição na lista
             l.nome AS loja,
             d.nome AS departamento
 
@@ -138,8 +150,6 @@ export const findAll = async (filtros = {}) => {
         LEFT JOIN Funcionario f_atend ON ch.atendente_id = f_atend.id 
         LEFT JOIN Categorias cat ON ch.categoria_unificada_id = cat.id
         LEFT JOIN Categorias pai ON cat.parent_id = pai.id
-
-        -- (NOVO) Joins
         LEFT JOIN Loja l ON ch.loja_id = l.id
         LEFT JOIN Departamento d ON ch.departamento_id = d.id
     `;
