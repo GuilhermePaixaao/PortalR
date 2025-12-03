@@ -6,13 +6,19 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Caminho base para salvar os PDFs: raiz/public/pdfs
+// Caminho base para salvar os PDFs
 const PUBLIC_DIR = path.resolve(__dirname, '..', '..', 'public', 'pdfs');
+
+// AJUSTE CRÍTICO: Usar o nome EXATO do arquivo de fonte que você possui
+const NOME_FONTE_USUARIO = 'Roboto-VariableFont_wdth,wght.ttf'; 
+const FONT_PATH = path.resolve(__dirname, '..', '..', 'public', 'fonts', NOME_FONTE_USUARIO);
+const FALLBACK_FONT_NAME = 'RobotoVariable'; // Nome que o PDFKit usará internamente
 
 if (!fs.existsSync(PUBLIC_DIR)) {
     fs.mkdirSync(PUBLIC_DIR, { recursive: true });
 }
 
+// --- SEED: Cria as pastas padrões se não existirem ---
 export const inicializarPastasPadrao = () => {
     const pastasIniciais = [
         "ARIUS ( PDV )", "BLUESOFT", "BUSCA PREÇO ( LOJA )", "FORMATAÇÃO ( WINDOWS )",
@@ -26,9 +32,8 @@ export const inicializarPastasPadrao = () => {
     });
 };
 
-// --- 1. GERAR PDF (COM MAPA POR NOME DE ARQUIVO) ---
+// --- 1. GERAR PDF (Com Múltiplas Fotos por Nome e FIX de Fonte) ---
 export const gerarPdf = async (req, res) => {
-    // Array para rastrear arquivos temporários que devem ser limpos
     const arquivosTemporarios = req.files || [];
     
     try {
@@ -52,23 +57,27 @@ export const gerarPdf = async (req, res) => {
         doc.pipe(stream);
 
         // ====================================================
-        // === NOVO: CRIAR MAPA BASEADO NO NOME DO ARQUIVO ===
+        // === FIX: REGISTRA E USA A FONTE EMBUTIDA PARA UTF-8 ===
+        // Isso resolve o problema de acentos, ç, e caracteres de quebra de linha.
         // ====================================================
+        let fontUsada = 'Helvetica'; 
+        if (fs.existsSync(FONT_PATH)) {
+             doc.registerFont(FALLBACK_FONT_NAME, FONT_PATH);
+             fontUsada = FALLBACK_FONT_NAME; 
+        } else {
+             console.warn(`[AVISO] Fonte UTF-8 não encontrada em ${FONT_PATH}. O problema do 'Ð' pode persistir.`);
+        }
+        doc.font(fontUsada);
+        // ====================================================
+
+        // --- Mapeamento da Foto por Nome (Ex: FOTO1.png -> [FOTO1]) ---
         const imagemMap = {};
         imagens.forEach(file => {
-            // Exemplo: file.originalname = 'FOTO1.png'
-            // O regex busca 'FOTO' seguido de números
             const matchName = file.originalname.match(/FOTO(\d+)\./i); 
-
             if (matchName) {
-                const numeroTag = matchName[1]; // Ex: '1', '2'
-                const tagCompleta = `[FOTO${numeroTag}]`; // Ex: '[FOTO1]'
-                
-                // Mapeia a tag (ex: '[FOTO1]') para o objeto do arquivo
-                imagemMap[tagCompleta] = file;
+                imagemMap[`[FOTO${matchName[1]}]`] = file;
             }
         });
-        // ====================================================
 
         // Título
         doc.fontSize(20).text(titulo, { align: 'center' });
@@ -79,6 +88,7 @@ export const gerarPdf = async (req, res) => {
             if (file && file.path && fs.existsSync(file.path)) {
                 try {
                     if (doc.y > 650) doc.addPage();
+                    
                     doc.image(file.path, {
                         fit: [450, 350],
                         align: 'center',
@@ -86,7 +96,6 @@ export const gerarPdf = async (req, res) => {
                     });
                     doc.moveDown();
                 } catch (err) {
-                    console.error("Erro ao inserir imagem:", err.message);
                     doc.fontSize(10).fillColor('red').text(`[Erro ao carregar imagem: ${file.originalname}]`);
                     doc.fillColor('black').fontSize(12);
                 }
@@ -95,9 +104,7 @@ export const gerarPdf = async (req, res) => {
 
         doc.fontSize(12);
 
-        // --- LÓGICA DE TAGS [FOTO1], [FOTO2] NO CONTEÚDO ---
-        // Procura por tags [FOTON]
-        const tagsUsadas = [];
+        // --- LÓGICA DE POSICIONAMENTO E TAGS ---
         const partes = conteudo.split(/(\[FOTO\d+\])/g);
         let usouAlgumaTag = false;
 
@@ -105,19 +112,16 @@ export const gerarPdf = async (req, res) => {
             const match = parte.match(/^(\[FOTO\d+\])$/);
             
             if (match) {
-                const tagCompleta = match[1]; // Ex: [FOTO1]
+                const tagCompleta = match[1];
                 usouAlgumaTag = true;
-                tagsUsadas.push(tagCompleta);
                 
-                const fileToPlace = imagemMap[tagCompleta]; // Busca no mapa pelo nome do arquivo
+                const fileToPlace = imagemMap[tagCompleta];
 
                 if (fileToPlace) {
                     colocarImagem(fileToPlace);
                 } else {
-                     // Adiciona um placeholder se a tag foi usada mas o arquivo correspondente não foi enviado
                      doc.fontSize(10).fillColor('gray').text(`[IMAGEM ${tagCompleta} NÃO ENCONTRADA]`, { align: 'center' });
                      doc.fillColor('black').fontSize(12);
-                     doc.moveDown(0.5);
                 }
             } else {
                 if (parte.trim() !== "") {
@@ -127,40 +131,30 @@ export const gerarPdf = async (req, res) => {
             }
         });
 
-        // --- FALLBACK (Se não usou NENHUMA tag, mas enviou fotos) ---
+        // --- FALLBACK (Se não usou NENHUMA tag [FOTOx], mas enviou fotos) ---
         if (!usouAlgumaTag && imagens.length > 0) {
             doc.addPage();
             doc.text("Anexos:", { underline: true });
             doc.moveDown();
-            
-            // Coloca todas as imagens (usando a ordem de upload como fallback)
             imagens.forEach(img => colocarImagem(img));
         }
 
         doc.end();
 
         stream.on('finish', () => {
-            // Limpa arquivos temporários
-            imagens.forEach(file => {
+            arquivosTemporarios.forEach(file => {
                 if (file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
             });
 
-            res.json({ 
-                success: true, 
-                url: `/pdfs/${pasta}/${nomeArquivo}`,
-                filename: nomeArquivo
-            });
+            res.json({ success: true, url: `/pdfs/${pasta}/${nomeArquivo}`, filename: nomeArquivo });
         });
 
         stream.on('error', (err) => {
-            console.error("Erro na stream:", err);
-            imagens.forEach(file => { if (file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path); });
+            arquivosTemporarios.forEach(file => { if (file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path); });
             res.status(500).json({ success: false, message: "Erro ao salvar arquivo PDF." });
         });
 
     } catch (error) {
-        console.error("Erro CRÍTICO no controller:", error);
-        // Garante que os temporários sejam limpos mesmo em erro de controller
         arquivosTemporarios.forEach(file => {
              if (file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
         });
