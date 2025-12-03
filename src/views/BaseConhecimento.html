@@ -34,6 +34,7 @@
         }
 
         .header-left { display: flex; align-items: center; gap: 15px; }
+        
         .logo-text { line-height: 1.2; }
         .logo-text span { font-weight: 900; font-size: 1.5rem; letter-spacing: 1px; }
         .logo-text div { font-size: 0.85rem; opacity: 0.9; }
@@ -128,7 +129,10 @@
         }
         .tree-node:hover { background-color: #f8f9fa; }
         .tree-node i { margin-right: 10px; color: #555; width: 20px; text-align: center; }
-        
+        .toggle-icon { font-size: 12px; transition: transform 0.2s; }
+        .tree-node.expanded .toggle-icon { transform: rotate(90deg); }
+        .tree-node.expanded .folder-icon::before { content: "\f07c"; }
+
         .sub-tree {
             list-style: none;
             padding-left: 25px;
@@ -157,7 +161,7 @@
         }
         .file-node i { margin-right: 8px; font-size: 14px; color: #e74c3c; }
 
-        /* ================= VISUALIZADOR ================= */
+        /* ================= VISUALIZADOR (DIREITA) ================= */
         .content-area {
             flex: 1;
             background: white;
@@ -201,7 +205,11 @@
             position: relative;
         }
 
-        iframe { width: 100%; height: 100%; border: none; }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
 
         .empty-state {
             display: flex;
@@ -231,6 +239,8 @@
             width: 500px;
             max-width: 90%;
             box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            max-height: 90vh; /* Limite de altura */
+            overflow-y: auto; /* Rolagem se for muito grande */
         }
         .modal-box h2 { margin-bottom: 20px; color: #333; }
         
@@ -334,11 +344,11 @@
 
                 <div class="form-group">
                     <label>Conteúdo (Texto)</label>
-                    <textarea name="conteudo" rows="6" required placeholder="Digite o conteúdo do manual..."></textarea>
+                    <textarea name="conteudo" rows="8" required placeholder="Digite o conteúdo do manual...&#10;&#10;DICA: Use [FOTO1] para a primeira foto, [FOTO2] para a segunda, etc."></textarea>
                 </div>
 
                 <div class="form-group">
-                    <label>Posição da Foto</label>
+                    <label>Posição das Fotos (Caso não use [FOTO...])</label>
                     <select name="posicao">
                         <option value="topo">No Topo (Acima do Texto)</option>
                         <option value="final">No Final (Abaixo do Texto)</option>
@@ -346,8 +356,8 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Adicionar Foto (Opcional)</label>
-                    <input type="file" name="imagem" accept="image/*">
+                    <label>Adicionar Fotos (Segure CTRL para selecionar várias)</label>
+                    <input type="file" name="imagens" accept="image/*" multiple>
                 </div>
 
                 <div class="modal-footer">
@@ -394,7 +404,7 @@
                 pastas.sort();
 
                 for (const pasta of pastas) {
-                    // Adiciona na Sidebar
+                    // 1. Adiciona na Sidebar
                     const li = document.createElement('li');
                     li.innerHTML = `
                         <div class="tree-node" onclick="toggleFolder(this, '${pasta}')">
@@ -406,7 +416,7 @@
                     `;
                     treeList.appendChild(li);
 
-                    // Adiciona no Select do Modal de PDF
+                    // 2. Adiciona no Select do Modal de PDF
                     if(selectPasta) {
                         const option = document.createElement('option');
                         option.value = pasta;
@@ -431,7 +441,7 @@
                 folderIcon.classList.add('fa-folder-open');
                 subTree.classList.add('show');
                 
-                // Se estiver vazio, busca arquivos no servidor
+                // Se estiver vazio, carrega arquivos
                 if (subTree.innerHTML.trim() === '') {
                     subTree.innerHTML = '<li style="padding:5px 15px; color:#999; font-size:12px;">Carregando...</li>';
                     
@@ -557,7 +567,7 @@
             }
         });
         
-        // Busca Local (Filtra o que já foi carregado na tela)
+        // Busca Local
         document.querySelector('.search-input').addEventListener('keyup', function(e) {
             const term = e.target.value.toLowerCase();
             const items = document.querySelectorAll('.file-node');

@@ -6,8 +6,11 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PUBLIC_DIR = path.join(__dirname, '..', '..', 'public', 'pdfs');
+// Define o caminho absoluto para a pasta public/pdfs
+// Ajuste os '..' conforme a profundidade da sua estrutura de pastas
+const PUBLIC_DIR = path.resolve(__dirname, '..', '..', 'public', 'pdfs');
 
+// Garante que a pasta base existe
 if (!fs.existsSync(PUBLIC_DIR)) {
     fs.mkdirSync(PUBLIC_DIR, { recursive: true });
 }
@@ -25,16 +28,25 @@ export const inicializarPastasPadrao = () => {
     });
 };
 
-// --- GERAR PDF COM MÚLTIPLAS FOTOS ---
 export const gerarPdf = async (req, res) => {
     try {
+        console.log("Iniciando geração de PDF..."); // Log para debug
+        
         const { titulo, conteudo, pasta, posicao } = req.body;
         
-        // Agora recebemos um ARRAY de arquivos (req.files)
+        // Garante que é um array, mesmo que venha vazio
         const imagens = req.files || [];
+        console.log(`Arquivos recebidos: ${imagens.length}`);
+
+        // Validação básica
+        if (!titulo || !conteudo || !pasta) {
+            return res.status(400).json({ success: false, message: "Título, conteúdo e pasta são obrigatórios." });
+        }
 
         const pastaDestino = path.join(PUBLIC_DIR, pasta);
-        if (!fs.existsSync(pastaDestino)) fs.mkdirSync(pastaDestino, { recursive: true });
+        if (!fs.existsSync(pastaDestino)) {
+            fs.mkdirSync(pastaDestino, { recursive: true });
+        }
 
         const doc = new PDFDocument();
         const nomeArquivo = `${titulo.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`;
@@ -43,56 +55,50 @@ export const gerarPdf = async (req, res) => {
 
         doc.pipe(stream);
 
-        // Título
+        // --- TÍTULO ---
         doc.fontSize(20).text(titulo, { align: 'center' });
         doc.moveDown();
 
-        // Função auxiliar para desenhar imagem
+        // Função segura para desenhar imagem
         const colocarImagem = (file) => {
-            if (file) {
+            if (file && file.path && fs.existsSync(file.path)) {
                 try {
-                    // Verifica se a imagem cabe na página atual, senão cria nova
+                    // Verifica se cabe na página, senão cria nova
                     if (doc.y > 650) doc.addPage();
                     
                     doc.image(file.path, {
-                        fit: [450, 350], 
+                        fit: [450, 350],
                         align: 'center',
                         valign: 'center'
                     });
                     doc.moveDown();
                 } catch (err) {
-                    console.error("Erro imagem:", err);
+                    console.error("Erro ao inserir imagem no PDF:", err.message);
+                    doc.text(`[Erro ao carregar imagem: ${file.originalname}]`, { color: 'red' });
                 }
             }
         };
 
         doc.fontSize(12);
 
-        // --- LÓGICA MULTI-FOTOS ---
-        
-        // Expressão Regular para encontrar [FOTO1], [FOTO2], etc.
-        // O split vai dividir o texto mantendo as tags.
-        // Ex: "Texto [FOTO1] Fim" vira ["Texto ", "[FOTO1]", " Fim"]
+        // --- LÓGICA DE SUBSTITUIÇÃO [FOTO1], [FOTO2] ---
+        // Se houver imagens e tags no texto
         const partes = conteudo.split(/(\[FOTO\d+\])/g);
-
         let usouAlgumaTag = false;
 
         partes.forEach(parte => {
-            // Verifica se a parte atual é uma tag [FOTON]
             const match = parte.match(/^\[FOTO(\d+)\]$/);
-
             if (match) {
                 usouAlgumaTag = true;
-                const indice = parseInt(match[1]) - 1; // [FOTO1] é indice 0
+                const indice = parseInt(match[1]) - 1; // [FOTO1] é índice 0
                 
                 if (imagens[indice]) {
                     colocarImagem(imagens[indice]);
                 } else {
-                    // Se pediu foto X mas não enviou arquivo, ignora ou põe aviso
-                    // doc.text(`(Imagem ${indice + 1} não encontrada)`, { align: 'center', color: 'red' });
+                    // Se a tag existe mas a foto não
+                    // doc.text(`[FOTO${indice+1} não encontrada]`, { color: 'gray' });
                 }
             } else {
-                // Se não é tag, é texto normal
                 if (parte.trim() !== "") {
                     doc.text(parte, { align: 'justify' });
                     doc.moveDown(0.5);
@@ -100,58 +106,56 @@ export const gerarPdf = async (req, res) => {
             }
         });
 
-        // --- FALLBACK (PLANO B) ---
-        // Se o usuário mandou imagens mas NÃO escreveu nenhuma tag [FOTO...], 
-        // usamos a lógica antiga de Posição (Topo ou Final) para todas as imagens.
+        // --- FALLBACK (Se não usou tags ou sobraram fotos) ---
+        // Se o usuário não usou [FOTOx], colocamos todas as imagens com base na posição escolhida
         if (!usouAlgumaTag && imagens.length > 0) {
             
-            // Limpa o documento (reset não é possível fácil no pdfkit stream, então vamos continuar)
-            // Na verdade, como o loop acima já imprimiu o texto (porque não achou tags), 
-            // só precisamos desenhar as imagens se a posição for TOPO (ops, tarde demais pro topo) ou FINAL.
+            // Se for 'topo', não temos como voltar o cursor para o início facilmente em stream.
+            // O padrão será colocar no FINAL se não usar tags.
             
-            // Correção: Se não usou tags, o loop acima apenas imprimiu o texto corrido.
-            // Se a pessoa queria no TOPO, já passou.
-            // Para simplificar: Se usar múltiplas fotos, RECOMENDA-SE usar as tags.
-            // Mas se sobrar fotos, vamos colocá-las no final.
+            doc.moveDown();
+            doc.text("Anexos:", { underline: true });
+            doc.moveDown();
             
-            if (posicao === 'topo') {
-                // Infelizmente com stream não dá pra voltar atrás e pôr no topo depois de escrever texto.
-                // Mas podemos adicionar uma nova página no final com as fotos.
-                doc.addPage();
-                doc.text("Anexos:", { underline: true });
-                doc.moveDown();
-                imagens.forEach(img => colocarImagem(img));
-            } else {
-                // Padrão ou Final: coloca tudo no fim
-                doc.moveDown();
-                imagens.forEach(img => colocarImagem(img));
-            }
+            imagens.forEach(img => colocarImagem(img));
         }
 
         doc.end();
 
         stream.on('finish', () => {
-            // Limpa todos os arquivos temporários
+            console.log("PDF Gerado com sucesso:", nomeArquivo);
+            
+            // Limpa arquivos temporários (importante para não lotar o servidor)
             imagens.forEach(file => {
-                if(file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+                try {
+                    if(file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+                } catch(e) { console.error("Erro ao deletar temp:", e); }
             });
             
-            res.json({ success: true, url: `/pdfs/${pasta}/${nomeArquivo}`, filename: nomeArquivo });
+            res.json({ 
+                success: true, 
+                url: `/pdfs/${pasta}/${nomeArquivo}`,
+                filename: nomeArquivo
+            });
+        });
+
+        stream.on('error', (err) => {
+            console.error("Erro na stream do PDF:", err);
+            res.status(500).json({ success: false, message: "Erro ao salvar arquivo PDF." });
         });
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ success: false, message: "Erro ao gerar PDF" });
+        console.error("Erro CRÍTICO no controller:", error);
+        res.status(500).json({ success: false, message: "Erro interno no servidor: " + error.message });
     }
 };
 
-// ... (Mantenha as funções listarPastas, criarPasta, listarArquivosDaPasta iguais ao anterior) ...
 export const listarPastas = (req, res) => {
     try {
         const itens = fs.readdirSync(PUBLIC_DIR, { withFileTypes: true });
         const pastas = itens.filter(i => i.isDirectory()).map(i => i.name);
         res.json(pastas);
-    } catch (e) { res.status(500).json({ error: "Erro pastas" }); }
+    } catch (e) { res.status(500).json({ error: e.message }); }
 };
 
 export const criarPasta = (req, res) => {
@@ -163,7 +167,7 @@ export const criarPasta = (req, res) => {
         if (fs.existsSync(nova)) return res.status(400).json({ error: "Já existe" });
         fs.mkdirSync(nova);
         res.json({ success: true, nome: nomeSeguro });
-    } catch (e) { res.status(500).json({ error: "Erro criar" }); }
+    } catch (e) { res.status(500).json({ error: e.message }); }
 };
 
 export const listarArquivosDaPasta = (req, res) => {
@@ -173,5 +177,5 @@ export const listarArquivosDaPasta = (req, res) => {
         if (!fs.existsSync(p)) return res.json([]);
         const arqs = fs.readdirSync(p).filter(f => f.toLowerCase().endsWith('.pdf')).map(f => ({ nome: f, url: `/pdfs/${pastaName}/${f}` }));
         res.json(arqs);
-    } catch (e) { res.status(500).json({ error: "Erro arquivos" }); }
+    } catch (e) { res.status(500).json({ error: e.message }); }
 };
