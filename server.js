@@ -6,59 +6,46 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path'; 
 import { fileURLToPath } from 'url';
-import * as PdfController from './src/controllers/pdfController.js';
-// --- (NOVO) Importações para Socket.io ---
-import { createServer } from 'http'; // Módulo HTTP nativo
-import { Server } from 'socket.io'; // O Servidor do Socket.io
-// --- FIM NOVO ---
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 
+// Importação dos Routers
 import mainRouter from './src/routers/index.js';
 import organizacaoRouter from './src/routers/organizacaoRouter.js';
-import * as PdfController from './src/controllers/pdfController.js';
-// ...
 
-console.log("====================================");
-console.log("DEBUG: A EVOLUTION_API_URL é:");
-console.log(process.env.EVOLUTION_API_URL);
-console.log("DEBUG: A EVOLUTION_API_KEY é:");
-console.log(process.env.EVOLUTION_API_KEY);
-console.log("====================================");
-// ================== FIM DO DEBUG ==================
+// Importação do Controller de PDF (Apenas uma vez!)
+import * as PdfController from './src/controllers/pdfController.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// --- (NOVO) Cria o servidor HTTP e o servidor de Socket ---
+// Configuração do Servidor HTTP e Socket.io
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: "*", // <-- ATUALIZADO (antes era "https://portal.smrosalina.com.br")
+    origin: "*", 
     methods: ["GET", "POST"]
   }
 });
-PdfController.inicializarPastasPadrao();
-// --- FIM NOVO ---
 
 // =======================================================
-// CONFIGURAÇÕES DO APP (MIDDLEWARE)
+// MIDDLEWARES
 // =======================================================
 app.use(cors()); 
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true })); 
 
-// --- (NOVO) Middleware para injetar o 'io' em todas as requisições ---
-// Isso permite que seus controllers (como o whatsappController) usem o io
+// Injeta o 'io' em todas as requisições
 app.use((req, res, next) => {
   req.io = io;
   next();
 });
-// --- FIM NOVO ---
 
 // =======================================================
 // ROTAS PARA PÁGINAS HTML
 // =======================================================
-// (Suas rotas de páginas HTML /login, /atendimento, etc. continuam aqui)
 app.get('/login', (req, res) => {
     res.sendFile(path.join(__dirname, 'src', 'views', 'Login.html'));
 });
@@ -68,55 +55,52 @@ app.get('/atendimento', (req, res) => {
 app.get('/gerenciar', (req, res) => {
     res.sendFile(path.join(__dirname, 'src', 'views', 'GerenciarChamados.html'));
 });
-
-// (NOVO) Rota para a nova página de atendimento
 app.get('/whatsapp', (req, res) => {
     res.sendFile(path.join(__dirname, 'src', 'views', 'AtendimentoWhatsApp.html'));
 });
-
-// === (CORREÇÃO) PADRONIZAÇÃO DE ROTA: Redireciona o acesso direto ao arquivo para a rota limpa ===
 app.get('/AtendimentoWhatsApp.html', (req, res) => {
-    // Redirecionamento permanente (301)
     res.redirect(301, '/whatsapp'); 
 });
-// =================================================================================================
 
-// Redirecionamento da raiz (/)
+// Rota para a Base de Conhecimento (FAQ)
+app.get('/faq', (req, res) => {
+    res.sendFile(path.join(__dirname, 'src', 'views', 'BaseConhecimento.html'));
+});
+
+// Redirecionamento da raiz
 app.get('/', (req, res) => {
   res.redirect('/login');
 });
 
-// Servir os arquivos estáticos (CSS, JS, Imagens)
+// Arquivos Estáticos
 app.use(express.static(path.join(__dirname, 'src', 'views')));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// =======================================================
+// ROTAS DA API
+// =======================================================
 app.use('/api/org', organizacaoRouter);
-app.get('/faq', (req, res) => {
-    // Certifique-se de que o arquivo HTML foi salvo como BaseConhecimento.html na pasta src/views
-    res.sendFile(path.join(__dirname, 'src', 'views', 'BaseConhecimento.html'));
-});
-// Usar TODAS as suas rotas da API
-app.use(mainRouter); // Gerencia /chamados, /categorias, etc.
+app.use(mainRouter);
 
 // =======================================================
-// (NOVO) LÓGICA DE CONEXÃO DO SOCKET.IO
+// SOCKET.IO
 // =======================================================
 io.on('connection', (socket) => {
   console.log(`Socket conectado: ${socket.id}`);
-  
   socket.on('disconnect', () => {
     console.log(`Socket desconectado: ${socket.id}`);
   });
 });
 
 // =======================================================
-// INICIAR O SERVIDOR (MODIFICADO)
+// INICIALIZAÇÃO
 // =======================================================
 const PORT = process.env.PORT || 3000;
 
-// (MUDANÇA) Use 'httpServer.listen' em vez de 'app.listen'
+// Cria as pastas padrões do PDF antes de iniciar
+PdfController.inicializarPastasPadrao();
+
 httpServer.listen(PORT, () => {
   console.log(`Servidor rodando liso na porta ${PORT}`);
   console.log(`API disponível em: http://localhost:${PORT}`);
-  console.log(`Página de Login: http://localhost:${PORT}/login`);
 });
