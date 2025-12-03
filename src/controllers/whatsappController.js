@@ -46,13 +46,7 @@ const MENSAGENS = {
 
     MENU_TI_COM_FILA: `✅ *Você acessou a Fila de Suporte T.I.*
     
-Para agilizar, escolha uma opção:
-
-1️⃣ - Abrir um Chamado Automático (Bot)
-2️⃣ - Aguardar Atendente Humano
-3️⃣ - Voltar ao Início
-
-Digite o número da opção:`,
+    Opção selecionada: Suporte T.I Você entrou na fila, logo você será atendido. Em caso de urgência pode nos acionar no número: (12) 98142-2925`,
 
     OPCAO_INVALIDA: `A opção digitada não existe, digite uma opção válida!`,
 
