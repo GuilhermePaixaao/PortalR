@@ -89,7 +89,10 @@ app.use(express.static(path.join(__dirname, 'src', 'views')));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/api/org', organizacaoRouter);
-
+app.get('/faq', (req, res) => {
+    // Certifique-se de que o arquivo HTML foi salvo como BaseConhecimento.html na pasta src/views
+    res.sendFile(path.join(__dirname, 'src', 'views', 'BaseConhecimento.html'));
+});
 // Usar TODAS as suas rotas da API
 app.use(mainRouter); // Gerencia /chamados, /categorias, etc.
 

@@ -13,7 +13,7 @@
         
         body {
             font-family: 'Poppins', sans-serif;
-            background-color: #0073e9; /* Cor de fundo principal */
+            background-color: #0073e9;
             height: 100vh;
             display: flex;
             flex-direction: column;
@@ -39,6 +39,23 @@
         .logo-text span { font-weight: 900; font-size: 1.5rem; letter-spacing: 1px; }
         .logo-text div { font-size: 0.85rem; opacity: 0.9; }
 
+        /* Botão Novo (Adicionado) */
+        .btn-novo {
+            background-color: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-novo:hover { background-color: rgba(255,255,255,0.3); }
+
         .user-avatar {
             width: 50px; height: 50px;
             background-color: rgba(255,255,255,0.2);
@@ -53,7 +70,7 @@
             display: flex;
             padding: 20px 40px 30px 40px;
             gap: 20px;
-            height: calc(100vh - 90px); /* Altura total menos header */
+            height: calc(100vh - 90px);
         }
 
         /* ================= SIDEBAR (MENU) ================= */
@@ -73,7 +90,6 @@
             overflow: hidden;
         }
 
-        /* Barra de Pesquisa */
         .search-card { padding: 15px; flex-shrink: 0; }
         .search-input-group { position: relative; }
         .search-icon {
@@ -92,7 +108,6 @@
         }
         .search-input:focus { border-color: #0073e9; }
 
-        /* Lista de Pastas */
         .tree-card {
             flex: 1;
             padding: 10px 0;
@@ -113,20 +128,16 @@
             transition: background 0.2s;
             font-weight: 500;
         }
-
         .tree-node:hover { background-color: #f8f9fa; }
-        
-        /* Ícones e Setas */
         .tree-node i { margin-right: 10px; color: #555; width: 20px; text-align: center; }
         .toggle-icon { font-size: 12px; transition: transform 0.2s; }
         .tree-node.expanded .toggle-icon { transform: rotate(90deg); }
-        .tree-node.expanded .folder-icon::before { content: "\f07c"; } /* Ícone pasta aberta */
+        .tree-node.expanded .folder-icon::before { content: "\f07c"; }
 
-        /* Sub-menu (Arquivos) */
         .sub-tree {
             list-style: none;
             padding-left: 25px;
-            display: none; /* Escondido por padrão */
+            display: none;
             background-color: #fff;
         }
         .sub-tree.show { display: block; }
@@ -142,18 +153,14 @@
             border-radius: 4px;
             border-left: 2px solid transparent;
         }
-
         .file-node:hover { background-color: #f0f0f0; color: #0073e9; }
-        
-        /* Arquivo Ativo */
         .file-node.active {
             background-color: #d1f6eb;
             color: #000;
             font-weight: 600;
             border-left: 3px solid #0073e9;
         }
-        
-        .file-node i { margin-right: 8px; font-size: 14px; color: #e74c3c; } /* Ícone vermelho para PDF */
+        .file-node i { margin-right: 8px; font-size: 14px; color: #e74c3c; }
 
         /* ================= VISUALIZADOR (DIREITA) ================= */
         .content-area {
@@ -193,10 +200,9 @@
         }
         .article-actions a:hover { background-color: #0073e9; color: white; }
 
-        /* Área do PDF */
         .pdf-wrapper {
             flex: 1;
-            background-color: #525659; /* Cor de fundo padrão de visualizadores PDF */
+            background-color: #525659;
             position: relative;
         }
 
@@ -206,7 +212,6 @@
             border: none;
         }
 
-        /* Estado Vazio */
         .empty-state {
             display: flex;
             flex-direction: column;
@@ -217,7 +222,40 @@
         }
         .empty-state i { font-size: 4rem; margin-bottom: 15px; }
 
-        /* Scrollbar Personalizada */
+        /* ================= MODAL ================= */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-box {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            width: 500px;
+            max-width: 90%;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .modal-box h2 { margin-bottom: 20px; color: #333; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; color: #555; }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%; padding: 10px;
+            border: 1px solid #ccc; border-radius: 4px;
+            font-family: inherit;
+        }
+        
+        .modal-footer { text-align: right; margin-top: 20px; }
+        .btn-cancel { padding: 10px 20px; background: #ccc; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px; }
+        .btn-submit { padding: 10px 20px; background: #0073e9; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-submit:hover { background: #005bb5; }
+
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
@@ -236,7 +274,13 @@
                 <div>Central de Arquivos</div>
             </div>
         </div>
-        <div class="user-avatar">R</div>
+        
+        <div style="display: flex; align-items: center;">
+            <button onclick="openModal()" class="btn-novo">
+                <i class="fas fa-plus"></i> Novo Documento
+            </button>
+            <div class="user-avatar">R</div>
+        </div>
     </header>
 
     <div class="main-wrapper">
@@ -250,48 +294,36 @@
             </div>
 
             <div class="card tree-card">
-                <ul class="tree-list">
+                <ul class="tree-list" id="sidebarTree">
                     
-                    <li>
+                    <li id="folder-pdv">
                         <div class="tree-node" onclick="toggleFolder(this)">
                             <i class="fas fa-chevron-right toggle-icon"></i>
                             <i class="fas fa-folder folder-icon"></i>
                             ROSALINA POS (PDV)
                         </div>
-                        <ul class="sub-tree">
-                            <li class="file-node" onclick="loadPDF('Manual de Instalação PDV', 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', this)">
-                                <i class="fas fa-file-pdf"></i> Manual de Instalação.pdf
-                            </li>
-                            <li class="file-node" onclick="loadPDF('Erro de Cupom Aberto', 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', this)">
-                                <i class="fas fa-file-pdf"></i> Erro Cupom Aberto.pdf
-                            </li>
-                        </ul>
+                        <ul class="sub-tree" id="list-pdv">
+                            </ul>
                     </li>
 
-                    <li>
+                    <li id="folder-fiscal">
                         <div class="tree-node" onclick="toggleFolder(this)">
                             <i class="fas fa-chevron-right toggle-icon"></i>
                             <i class="fas fa-folder folder-icon"></i>
                             FISCAL E SEFAZ
                         </div>
-                        <ul class="sub-tree">
-                            <li class="file-node" onclick="loadPDF('Certificados Digitais', 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', this)">
-                                <i class="fas fa-file-pdf"></i> Guia Certificados.pdf
-                            </li>
-                        </ul>
+                        <ul class="sub-tree" id="list-fiscal">
+                            </ul>
                     </li>
 
-                    <li>
+                    <li id="folder-suporte">
                         <div class="tree-node" onclick="toggleFolder(this)">
                             <i class="fas fa-chevron-right toggle-icon"></i>
                             <i class="fas fa-folder folder-icon"></i>
                             SUPORTE TÉCNICO
                         </div>
-                        <ul class="sub-tree">
-                            <li class="file-node" onclick="loadPDF('Configuração de Impressoras', 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', this)">
-                                <i class="fas fa-file-pdf"></i> Config. Impressoras.pdf
-                            </li>
-                        </ul>
+                        <ul class="sub-tree" id="list-suporte">
+                            </ul>
                     </li>
 
                 </ul>
@@ -318,18 +350,49 @@
         </main>
     </div>
 
+    <div class="modal-overlay" id="createModal">
+        <div class="modal-box">
+            <h2>Criar Novo Documento</h2>
+            <form id="pdfForm">
+                <div class="form-group">
+                    <label>Título do Documento</label>
+                    <input type="text" name="titulo" required placeholder="Ex: Manual do Caixa">
+                </div>
+
+                <div class="form-group">
+                    <label>Pasta / Categoria</label>
+                    <select name="pasta" required>
+                        <option value="PDV">Rosalina POS (PDV)</option>
+                        <option value="Fiscal">Fiscal e Sefaz</option>
+                        <option value="Suporte">Suporte Técnico</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Conteúdo (Texto)</label>
+                    <textarea name="conteudo" rows="6" required placeholder="Digite o conteúdo do manual..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Adicionar Foto (Opcional)</label>
+                    <input type="file" name="imagem" accept="image/*">
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancel" onclick="closeModal()">Cancelar</button>
+                    <button type="submit" class="btn-submit">Gerar PDF</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
-        // 1. Função para Abrir/Fechar Pastas
+        // --- 1. Lógica do Menu (Abrir/Fechar) ---
         function toggleFolder(element) {
             element.classList.toggle('expanded');
-            
-            // Acha a lista (ul) que vem logo depois do elemento clicado
             const subTree = element.nextElementSibling;
-            if (subTree) {
-                subTree.classList.toggle('show');
-            }
+            if (subTree) subTree.classList.toggle('show');
 
-            // Alterna ícone da pasta
             const folderIcon = element.querySelector('.folder-icon');
             if (element.classList.contains('expanded')) {
                 folderIcon.classList.remove('fa-folder');
@@ -340,17 +403,13 @@
             }
         }
 
-        // 2. Função para Carregar o PDF
+        // --- 2. Carregar PDF ---
         function loadPDF(title, url, element) {
-            // Atualiza título
             document.getElementById('pdf-title').innerText = title;
-            
-            // Atualiza botão de download
             const downloadBtn = document.getElementById('download-btn');
             downloadBtn.href = url;
             downloadBtn.style.display = 'inline-block';
 
-            // Configura o visualizador
             const iframe = document.getElementById('pdf-viewer');
             const emptyState = document.querySelector('.empty-state');
 
@@ -358,28 +417,97 @@
             iframe.style.display = 'block';
             emptyState.style.display = 'none';
 
-            // Gerencia classe 'active' no menu (destaque azul)
+            // Remove active de todos e adiciona no atual
             document.querySelectorAll('.file-node').forEach(el => el.classList.remove('active'));
-            element.classList.add('active');
+            if(element) element.classList.add('active');
         }
 
-        // 3. Busca simples (Filtro)
-        const searchInput = document.querySelector('.search-input');
-        searchInput.addEventListener('keyup', function(e) {
+        // --- 3. Busca ---
+        document.querySelector('.search-input').addEventListener('keyup', function(e) {
             const term = e.target.value.toLowerCase();
             const items = document.querySelectorAll('.file-node');
-
             items.forEach(item => {
                 const text = item.textContent.toLowerCase();
                 if(text.includes(term)) {
                     item.style.display = 'flex';
-                    // Opcional: Abrir a pasta pai se encontrar item
                     item.parentElement.classList.add('show'); 
                 } else {
                     item.style.display = 'none';
                 }
             });
         });
+
+        // --- 4. Modal ---
+        function openModal() {
+            document.getElementById('createModal').style.display = 'flex';
+        }
+        function closeModal() {
+            document.getElementById('createModal').style.display = 'none';
+        }
+
+        // --- 5. Enviar Formulário (Mágica do Backend) ---
+        document.getElementById('pdfForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const submitBtn = this.querySelector('.btn-submit');
+            submitBtn.innerText = "Gerando...";
+            submitBtn.disabled = true;
+
+            const formData = new FormData(this);
+
+            try {
+                // Chama a rota que criamos no pdfRouter.js
+                const response = await fetch('/gerar-pdf', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('PDF Criado com Sucesso!');
+                    closeModal();
+                    this.reset(); // Limpa o formulário
+
+                    // Adiciona o novo PDF na lista lateral visualmente (sem recarregar)
+                    addPdfToSidebar(formData.get('pasta'), formData.get('titulo'), result.url);
+                    
+                    // Abre o PDF recém criado
+                    loadPDF(formData.get('titulo'), result.url, null);
+                } else {
+                    alert('Erro: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('Erro ao conectar com o servidor.');
+            } finally {
+                submitBtn.innerText = "Gerar PDF";
+                submitBtn.disabled = false;
+            }
+        });
+
+        function addPdfToSidebar(pasta, titulo, url) {
+            let listId = '';
+            if (pasta === 'PDV') listId = 'list-pdv';
+            else if (pasta === 'Fiscal') listId = 'list-fiscal';
+            else if (pasta === 'Suporte') listId = 'list-suporte';
+
+            const ul = document.getElementById(listId);
+            if (ul) {
+                // Abre a pasta pai
+                ul.classList.add('show');
+                ul.previousElementSibling.classList.add('expanded');
+
+                const li = document.createElement('li');
+                li.className = 'file-node active';
+                li.onclick = function() { loadPDF(titulo, url, this); };
+                li.innerHTML = `<i class="fas fa-file-pdf"></i> ${titulo}.pdf`;
+                
+                // Remove active dos outros
+                document.querySelectorAll('.file-node').forEach(el => el.classList.remove('active'));
+                
+                ul.appendChild(li);
+            }
+        }
     </script>
 
 </body>
