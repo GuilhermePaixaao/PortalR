@@ -347,6 +347,32 @@ export const atualizarAtendente = async (req, res) => {
 };
 
 // ====================================================
+// ======== (NOVO) ATUALIZAR CATEGORIA ========
+// ====================================================
+export const atualizarCategoria = async (req, res) => {
+    try {
+        const idNum = parseInt(req.params.id);
+        const { categoriaId } = req.body;
+
+        if (isNaN(idNum) || !categoriaId) {
+            return res.status(400).json({ success: false, message: 'ID e Nova Categoria são obrigatórios.' });
+        }
+
+        // Chama a função no Model (que deve ter sido adicionada no chamadoModel.js)
+        const result = await ChamadoModel.updateCategoria(idNum, parseInt(categoriaId));
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, message: 'Erro: Chamado não encontrado.' });
+        }
+
+        res.status(200).json({ success: true, message: 'Categoria atualizada com sucesso.' });
+    } catch (error) {
+        console.error('Erro ao atualizar categoria:', error);
+        res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
+    }
+};
+
+// ====================================================
 // ======== CONTAR CHAMADOS POR STATUS ========
 // ====================================================
 export const contarChamadosPorStatus = async (req, res) => {

@@ -1,11 +1,11 @@
 import pool from '../config/database.js';
 
 // =================================================================
-// 1. NOVAS FUNÇÕES PARA O FRONT-END (CASCATA)
+// 1. FUNÇÕES AUXILIARES (DADOS DINÂMICOS)
 // =================================================================
 
 /**
- * Busca todas as lojas cadastradas para preencher o primeiro Select.
+ * Busca todas as lojas cadastradas para preencher o select.
  */
 export const getTodasLojas = async () => {
     const [rows] = await pool.query('SELECT * FROM Loja ORDER BY nome ASC');
@@ -29,11 +29,10 @@ export const getDepartamentosPorLoja = async (lojaId) => {
 
 
 // =================================================================
-// 2. FUNÇÕES CRUD DE CHAMADOS (ATUALIZADAS PARA IDs)
+// 2. FUNÇÕES CRUD DE CHAMADOS
 // =================================================================
 
 /**
- * (ATUALIZADO)
  * Cria um novo chamado salvando os IDs de Loja e Departamento.
  */
 export const create = async (chamado) => {
@@ -72,7 +71,6 @@ export const create = async (chamado) => {
 };
 
 /**
- * (ATUALIZADO)
  * Busca um chamado por ID e faz os JOINs para trazer os NOMES da Loja e Departamento.
  */
 export const findById = async (id) => {
@@ -87,24 +85,23 @@ export const findById = async (id) => {
             
             -- Dados do Atendente
             f_atend.nomeFuncionario AS nomeAtendente, 
+            f_atend.email AS emailAtendente,
             
             -- Dados da Categoria
             cat.nome AS nomeCategoria,
             pai.nome AS nomeCategoriaPai,
             
-            -- (NOVO) Traz o NOME da loja e departamento baseado no ID salvo
+            -- Dados da Loja e Departamento
             l.nome AS loja,
             d.nome AS departamento
             
         FROM Chamados ch
         
-        -- Joins Padrão
         LEFT JOIN Funcionario f_req ON ch.requisitante_id = f_req.id
         LEFT JOIN Funcionario f_atend ON ch.atendente_id = f_atend.id 
         LEFT JOIN Categorias cat ON ch.categoria_unificada_id = cat.id
         LEFT JOIN Categorias pai ON cat.parent_id = pai.id 
         
-        -- (NOVO) Joins com tabelas de Loja e Departamento
         LEFT JOIN Loja l ON ch.loja_id = l.id
         LEFT JOIN Departamento d ON ch.departamento_id = d.id
         
@@ -115,8 +112,7 @@ export const findById = async (id) => {
 };
 
 /**
- * (ATUALIZADO)
- * Busca todos os chamados listando os nomes de Loja e Departamento.
+ * Busca todos os chamados com filtros opcionais.
  */
 export const findAll = async (filtros = {}) => {
     let sql = `
@@ -126,10 +122,10 @@ export const findAll = async (filtros = {}) => {
             ch.email_requisitante_manual AS emailRequisitante,
             ch.telefone_requisitante_manual AS telefoneRequisitante,
             f_atend.nomeFuncionario AS nomeAtendente, 
+            f_atend.email AS emailAtendente,
             cat.nome AS nomeCategoria,
             pai.nome AS nomeCategoriaPai,
 
-            -- (NOVO) Nomes para exibição na lista
             l.nome AS loja,
             d.nome AS departamento
 
@@ -139,7 +135,6 @@ export const findAll = async (filtros = {}) => {
         LEFT JOIN Categorias cat ON ch.categoria_unificada_id = cat.id
         LEFT JOIN Categorias pai ON cat.parent_id = pai.id
 
-        -- (NOVO) Joins
         LEFT JOIN Loja l ON ch.loja_id = l.id
         LEFT JOIN Departamento d ON ch.departamento_id = d.id
     `;
@@ -182,10 +177,11 @@ export const findAll = async (filtros = {}) => {
 };
 
 // =================================================================
-// 3. FUNÇÕES RESTANTES (SEM MUDANÇAS DE LÓGICA)
+// 3. FUNÇÕES DE UPDATE E DELETE
 // =================================================================
 
 export const deleteById = async (id) => {
+    // Primeiro deleta comentários para evitar erro de Foreign Key
     await pool.query('DELETE FROM Comentarios WHERE chamado_id = ?', [id]);
     const [result] = await pool.query('DELETE FROM Chamados WHERE id = ?', [id]);
     return result;
@@ -231,4 +227,14 @@ export const countByStatus = async () => {
     `;
     const [rows] = await pool.query(sql);
     return rows; 
+};
+
+/**
+ * (NOVO) Atualiza a categoria unificada do chamado.
+ * Utilizado na tela de Gerenciar Chamados para edição rápida.
+ */
+export const updateCategoria = async (id, categoriaId) => {
+    const sql = "UPDATE Chamados SET categoria_unificada_id = ? WHERE id = ?";
+    const [result] = await pool.query(sql, [categoriaId, id]);
+    return result;
 };
