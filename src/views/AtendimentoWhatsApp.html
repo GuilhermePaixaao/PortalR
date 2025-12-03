@@ -995,7 +995,7 @@
             
             if(selectCategoria.options.length <= 1) {
                 try {
-                    const res = await fetch('/api/categorias'); 
+                    const res = await fetch('/categorias'); 
                     const json = await res.json(); 
                     selectCategoria.innerHTML = '<option value="">Selecione...</option>';
                     
