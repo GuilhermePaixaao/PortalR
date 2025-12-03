@@ -3,74 +3,134 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Configuração para caminhos no padrão ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Defina o caminho base PÚBLICO onde os PDFs ficarão
+// Subimos níveis (..) para sair de src/controllers e chegar na raiz
+const PUBLIC_DIR = path.join(__dirname, '..', '..', 'public', 'pdfs');
+
+// Garante que a pasta base existe
+if (!fs.existsSync(PUBLIC_DIR)) {
+    fs.mkdirSync(PUBLIC_DIR, { recursive: true });
+}
+
+// --- (Seu código existente de gerarPdf aqui...) ---
 export const gerarPdf = async (req, res) => {
+    // ... (Mantenha sua lógica de gerar PDF aqui, usando PUBLIC_DIR) ...
+    // Apenas certifique-se de usar path.join(PUBLIC_DIR, pasta)
     try {
         const { titulo, conteudo, pasta } = req.body;
         const imagemPath = req.file ? req.file.path : null;
 
-        // 1. Define onde salvar (Pasta public/pdfs)
-        // Navega para fora de src/controllers (../../) até a raiz e entra em public/pdfs
-        const publicDir = path.join(__dirname, '..', '..', 'public', 'pdfs', pasta);
-        
-        // Cria a pasta se não existir
-        if (!fs.existsSync(publicDir)){
-            fs.mkdirSync(publicDir, { recursive: true });
-        }
+        const pastaDestino = path.join(PUBLIC_DIR, pasta);
+        if (!fs.existsSync(pastaDestino)) fs.mkdirSync(pastaDestino, { recursive: true });
 
-        // 2. Configura o documento PDF
         const doc = new PDFDocument();
         const nomeArquivo = `${titulo.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`;
-        const caminhoFinal = path.join(publicDir, nomeArquivo);
-        
+        const caminhoFinal = path.join(pastaDestino, nomeArquivo);
         const stream = fs.createWriteStream(caminhoFinal);
-        doc.pipe(stream);
 
-        // 3. Adiciona Conteúdo
-        // Título
+        doc.pipe(stream);
         doc.fontSize(20).text(titulo, { align: 'center' });
         doc.moveDown();
-
-        // Imagem (se houver)
         if (imagemPath) {
-            try {
-                doc.image(imagemPath, {
-                    fit: [400, 300],
-                    align: 'center',
-                    valign: 'center'
-                });
-                doc.moveDown();
-            } catch (err) {
-                console.error("Erro ao processar imagem:", err);
-            }
+             doc.image(imagemPath, { fit: [400, 300], align: 'center', valign: 'center' });
+             doc.moveDown();
         }
-
-        // Texto
-        doc.fontSize(12).text(conteudo, {
-            align: 'justify'
-        });
-
+        doc.fontSize(12).text(conteudo, { align: 'justify' });
         doc.end();
 
-        // 4. Finalização
         stream.on('finish', () => {
-            // Remove a imagem temporária do upload
             if(imagemPath && fs.existsSync(imagemPath)) fs.unlinkSync(imagemPath);
-            
-            // Retorna a URL pública para acessar o PDF
-            // No Railway/Local, isso será acessível via /pdfs/pasta/arquivo.pdf
-            res.json({ 
-                success: true, 
-                url: `/pdfs/${pasta}/${nomeArquivo}`,
-                filename: nomeArquivo
-            });
+            res.json({ success: true, url: `/pdfs/${pasta}/${nomeArquivo}`, filename: nomeArquivo });
         });
-
     } catch (error) {
-        console.error("Erro ao gerar PDF:", error);
-        res.status(500).json({ success: false, message: "Erro interno ao gerar PDF." });
+        res.status(500).json({ success: false, message: "Erro ao gerar PDF" });
     }
+};
+
+// --- NOVAS FUNÇÕES PARA PASTAS ---
+
+// 1. Listar Pastas
+export const listarPastas = (req, res) => {
+    try {
+        // Lê o diretório e retorna apenas o que for pasta
+        const itens = fs.readdirSync(PUBLIC_DIR, { withFileTypes: true });
+        const pastas = itens
+            .filter(item => item.isDirectory())
+            .map(item => item.name);
+        res.json(pastas);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Erro ao listar pastas" });
+    }
+};
+
+// 2. Criar Nova Pasta
+export const criarPasta = (req, res) => {
+    try {
+        const { nome } = req.body;
+        if (!nome) return res.status(400).json({ error: "Nome obrigatório" });
+
+        // Sanitiza o nome (remove caracteres perigosos)
+        const nomeSeguro = nome.replace(/[^a-zA-Z0-9 \-\(\)\.]/g, '').trim().toUpperCase();
+        const novaPastaPath = path.join(PUBLIC_DIR, nomeSeguro);
+
+        if (fs.existsSync(novaPastaPath)) {
+            return res.status(400).json({ error: "Pasta já existe" });
+        }
+
+        fs.mkdirSync(novaPastaPath);
+        res.json({ success: true, nome: nomeSeguro });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Erro ao criar pasta" });
+    }
+};
+
+// 3. Listar Arquivos de uma Pasta (Para o menu funcionar dinamicamente)
+export const listarArquivosDaPasta = (req, res) => {
+    try {
+        const { pastaName } = req.params;
+        const pastaPath = path.join(PUBLIC_DIR, pastaName);
+
+        if (!fs.existsSync(pastaPath)) return res.json([]);
+
+        const arquivos = fs.readdirSync(pastaPath)
+            .filter(file => file.toLowerCase().endsWith('.pdf'))
+            .map(file => ({
+                nome: file,
+                url: `/pdfs/${pastaName}/${file}`
+            }));
+        
+        res.json(arquivos);
+    } catch (error) {
+        res.status(500).json({ error: "Erro ao ler arquivos" });
+    }
+};
+
+// 4. (SEED) Inicializar Pastas Padrão (Da sua imagem)
+// Chame essa função uma vez no início do server.js se quiser, ou deixe aqui para uso manual
+export const inicializarPastasPadrao = () => {
+    const pastasIniciais = [
+        "ARIUS ( PDV )",
+        "BLUESOFT",
+        "BUSCA PREÇO ( LOJA )",
+        "FORMATAÇÃO ( WINDOWS )",
+        "FORMATAÇÃO - PDV ARIUS DO ZERO",
+        "IMPRESSORAS ( MAQUIM )",
+        "MILVUS ( CHAMADO PARA T.I ROSALINA )",
+        "MOB ROSALINA ( APP INTERNO )",
+        "SEFAZ ( SECRETARIA DA FAZENDA )",
+        "ZEBRA"
+    ];
+
+    pastasIniciais.forEach(pasta => {
+        const p = path.join(PUBLIC_DIR, pasta);
+        if (!fs.existsSync(p)) {
+            fs.mkdirSync(p);
+            console.log(`[SEED] Pasta criada: ${pasta}`);
+        }
+    });
 };

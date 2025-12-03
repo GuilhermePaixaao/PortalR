@@ -6,7 +6,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path'; 
 import { fileURLToPath } from 'url';
-
+import * as PdfController from './src/controllers/pdfController.js';
 // --- (NOVO) Importações para Socket.io ---
 import { createServer } from 'http'; // Módulo HTTP nativo
 import { Server } from 'socket.io'; // O Servidor do Socket.io
@@ -36,6 +36,7 @@ const io = new Server(httpServer, {
     methods: ["GET", "POST"]
   }
 });
+PdfController.inicializarPastasPadrao();
 // --- FIM NOVO ---
 
 // =======================================================
