@@ -41,6 +41,10 @@ router.patch('/chamados/:id/status', ChamadoController.atualizarStatus);
 // PATCH /chamados/:id/atendente (Atualizar só o operador/atendente)
 router.patch('/chamados/:id/atendente', ChamadoController.atualizarAtendente);
 
+// (NOVO) PUT /chamados/:id/categoria (Atualizar a categoria)
+// Usamos PUT aqui para alinhar com o código do Frontend gerado anteriormente
+router.put('/chamados/:id/categoria', ChamadoController.atualizarCategoria);
+
 // DELETE /chamados/:id (Deletar um chamado)
 router.delete('/chamados/:id', ChamadoController.deletarChamado);
 
