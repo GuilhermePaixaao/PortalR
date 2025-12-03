@@ -201,4 +201,82 @@ socket.on('novaMensagemWhatsapp', (data) => {
     }
 });
 
+// D. Atendimento Transferido (WhatsApp) - NOVO LISTENER
+socket.on('transferenciaChamado', (data) => {
+    // Apenas executa se NÃO estiver na página do WhatsApp
+    if (!window.location.href.includes('AtendimentoWhatsApp') && !window.location.href.includes('whatsapp')) {
+        console.log("[Global] Processando transferência de chat em background...");
+        
+        const state = getWhatsAppState();
+        const { chatId, novoAgente, antigoAgente, nomeCliente } = data;
+        
+        const chat = state.chatList.find(c => c.numero === chatId);
+
+        // 1. Pega o nome do agente logado
+        let meuNome = "";
+        try { 
+            const userData = JSON.parse(localStorage.getItem("userData"));
+            meuNome = userData?.data?.nomeFuncionario;
+        } catch(e) { console.error("Erro ao ler dados do usuário", e); }
+        
+        const souEu = (novoAgente === meuNome);
+
+        if (chat) {
+            // Atualiza o chat existente
+            chat.nomeAgente = novoAgente;
+            chat.etapa = 'ATENDIMENTO_HUMANO'; 
+            chat.pending = false; 
+            
+            if (souEu) {
+                chat.visivel = true; 
+            } else {
+                chat.visivel = false; // Se não é para mim, fica invisível
+            }
+
+            // Adicionar mensagem de transferência ao histórico
+            if (!state.conversas[chatId]) state.conversas[chatId] = [];
+            const msgTexto = `🔄 Atendimento Transferido para ${novoAgente}.`;
+            state.conversas[chatId].push({ fromMe: true, text: msgTexto, time: new Date(), name: "Sistema" });
+            chat.ultimaMensagem = msgTexto; 
+
+            // Remove e Adiciona no topo da lista (para subir na sidebar)
+            const idx = state.chatList.findIndex(c => c.numero === chatId);
+            if (idx > -1) { state.chatList.splice(idx, 1); }
+            
+            if(chat.visivel) state.chatList.unshift(chat);
+            
+        } else if (souEu) {
+             // Caso o chat não estivesse na minha lista e foi transferido para mim
+             const clienteNome = nomeCliente || chatId;
+             state.contactNames[chatId] = clienteNome;
+
+             const newChat = {
+                numero: chatId,
+                nome: clienteNome,
+                ultimaMensagem: `🔄 Transferido por ${antigoAgente}`,
+                unreadCount: 1, // Marcar como não lida
+                visivel: true, 
+                pending: false, 
+                etapa: 'ATENDIMENTO_HUMANO',
+                nomeAgente: novoAgente
+             };
+             state.chatList.unshift(newChat);
+
+             // Adicionar ao histórico de conversas
+             if (!state.conversas[chatId]) state.conversas[chatId] = [];
+             const msgTexto = `🔄 Atendimento Transferido para ${novoAgente}.`;
+             state.conversas[chatId].push({ fromMe: true, text: msgTexto, time: new Date(), name: "Sistema" });
+        }
+
+        if (souEu) {
+             // Notifica o agente que recebeu
+            const msg = `O chat de ${nomeCliente || chatId} foi transferido para você.`;
+            showToast('🔄 Transferência Recebida', msg, 'info');
+        }
+
+        saveWhatsAppState(state);
+    }
+});
+
+
 console.log("✅ Sistema Global de Notificações Ativo (Background Save)");
