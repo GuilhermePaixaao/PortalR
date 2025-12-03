@@ -14,6 +14,7 @@ import { Server } from 'socket.io'; // O Servidor do Socket.io
 
 import mainRouter from './src/routers/index.js';
 import organizacaoRouter from './src/routers/organizacaoRouter.js';
+import * as PdfController from './src/controllers/pdfController.js';
 // ...
 
 console.log("====================================");

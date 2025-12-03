@@ -34,7 +34,6 @@
         }
 
         .header-left { display: flex; align-items: center; gap: 15px; }
-        
         .logo-text { line-height: 1.2; }
         .logo-text span { font-weight: 900; font-size: 1.5rem; letter-spacing: 1px; }
         .logo-text div { font-size: 0.85rem; opacity: 0.9; }
@@ -129,10 +128,7 @@
         }
         .tree-node:hover { background-color: #f8f9fa; }
         .tree-node i { margin-right: 10px; color: #555; width: 20px; text-align: center; }
-        .toggle-icon { font-size: 12px; transition: transform 0.2s; }
-        .tree-node.expanded .toggle-icon { transform: rotate(90deg); }
-        .tree-node.expanded .folder-icon::before { content: "\f07c"; }
-
+        
         .sub-tree {
             list-style: none;
             padding-left: 25px;
@@ -161,7 +157,7 @@
         }
         .file-node i { margin-right: 8px; font-size: 14px; color: #e74c3c; }
 
-        /* ================= VISUALIZADOR (DIREITA) ================= */
+        /* ================= VISUALIZADOR ================= */
         .content-area {
             flex: 1;
             background: white;
@@ -205,11 +201,7 @@
             position: relative;
         }
 
-        iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
+        iframe { width: 100%; height: 100%; border: none; }
 
         .empty-state {
             display: flex;
@@ -346,6 +338,14 @@
                 </div>
 
                 <div class="form-group">
+                    <label>Posição da Foto</label>
+                    <select name="posicao">
+                        <option value="topo">No Topo (Acima do Texto)</option>
+                        <option value="final">No Final (Abaixo do Texto)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
                     <label>Adicionar Foto (Opcional)</label>
                     <input type="file" name="imagem" accept="image/*">
                 </div>
@@ -379,7 +379,7 @@
             carregarPastas();
         });
 
-        // --- CARREGAR PASTAS E ARQUIVOS ---
+        // --- 1. CARREGAR PASTAS ---
         async function carregarPastas() {
             const treeList = document.getElementById('sidebarTree');
             const selectPasta = document.querySelector('select[name="pasta"]'); // Select do Modal de PDF
@@ -394,7 +394,7 @@
                 pastas.sort();
 
                 for (const pasta of pastas) {
-                    // 1. Adiciona na Sidebar
+                    // Adiciona na Sidebar
                     const li = document.createElement('li');
                     li.innerHTML = `
                         <div class="tree-node" onclick="toggleFolder(this, '${pasta}')">
@@ -406,7 +406,7 @@
                     `;
                     treeList.appendChild(li);
 
-                    // 2. Adiciona no Select do Modal de PDF
+                    // Adiciona no Select do Modal de PDF
                     if(selectPasta) {
                         const option = document.createElement('option');
                         option.value = pasta;
@@ -420,24 +420,22 @@
             }
         }
 
-        // --- ABRIR PASTA (Lazy Loading de Arquivos) ---
+        // --- 2. ABRIR PASTA (Lazy Loading) ---
         async function toggleFolder(element, pastaNome) {
             element.classList.toggle('expanded');
             const subTree = element.nextElementSibling;
             const folderIcon = element.querySelector('.folder-icon');
 
-            // Ícone
             if (element.classList.contains('expanded')) {
                 folderIcon.classList.remove('fa-folder');
                 folderIcon.classList.add('fa-folder-open');
                 subTree.classList.add('show');
                 
-                // Se estiver vazio, carrega os arquivos do servidor
+                // Se estiver vazio, busca arquivos no servidor
                 if (subTree.innerHTML.trim() === '') {
                     subTree.innerHTML = '<li style="padding:5px 15px; color:#999; font-size:12px;">Carregando...</li>';
                     
                     try {
-                        // Codifica o nome da pasta para URL
                         const res = await fetch(`/pastas/${encodeURIComponent(pastaNome)}/arquivos`);
                         const arquivos = await res.json();
                         
@@ -467,7 +465,7 @@
             }
         }
 
-        // --- LÓGICA DE CRIAR NOVA PASTA ---
+        // --- 3. CRIAR NOVA PASTA ---
         function abrirModalPasta() { document.getElementById('modalPasta').style.display = 'flex'; }
         function fecharModalPasta() { document.getElementById('modalPasta').style.display = 'none'; }
 
@@ -503,7 +501,7 @@
             }
         });
 
-        // --- FUNÇÕES DE PDF E MODAL PDF ---
+        // --- 4. FUNÇÕES DE PDF E MODAL PDF ---
         function loadPDF(title, url, element) {
             document.getElementById('pdf-title').innerText = title;
             const downloadBtn = document.getElementById('download-btn');
@@ -546,7 +544,6 @@
                     const ul = document.getElementById(listaId);
                     if(ul) ul.innerHTML = ''; 
                     
-                    // Abre o PDF recém criado na tela
                     loadPDF(result.filename, result.url, null);
                 } else {
                     alert('Erro: ' + result.message);
@@ -560,7 +557,7 @@
             }
         });
         
-        // Busca
+        // Busca Local (Filtra o que já foi carregado na tela)
         document.querySelector('.search-input').addEventListener('keyup', function(e) {
             const term = e.target.value.toLowerCase();
             const items = document.querySelectorAll('.file-node');
@@ -576,5 +573,6 @@
             });
         });
     </script>
+
 </body>
 </html>
