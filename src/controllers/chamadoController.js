@@ -44,7 +44,6 @@ export const criarChamado = async (req, res) => {
         const arquivos = req.files; 
 
         // [ALTERAÇÃO] Extraindo 'loja' e 'departamento' do corpo da requisição
-        // O frontend envia o ID selecionado no <select>
         const {
             assunto, descricao, prioridade, requisitante_id,
             categoria_unificada_id, 
@@ -52,11 +51,12 @@ export const criarChamado = async (req, res) => {
             loja, departamento 
         } = chamado;
 
+        // [CORREÇÃO] Removida a verificação de !email_requisitante_manual para torná-lo opcional
         if (!assunto || !descricao || !requisitante_id ||
-            !nome_requisitante_manual || !email_requisitante_manual || !telefone_requisitante_manual) {
+            !nome_requisitante_manual || !telefone_requisitante_manual) {
             return res.status(400).json({
                 success: false,
-                message: 'Assunto, Descrição, ID do Requisitante e todos os dados de Contato são obrigatórios.'
+                message: 'Assunto, Descrição, ID do Requisitante, Nome e Telefone são obrigatórios.'
             });
         }
 
@@ -69,7 +69,7 @@ export const criarChamado = async (req, res) => {
             requisitanteIdNum: parseInt(requisitante_id),
             categoriaUnificadaIdNum: categoria_unificada_id ? parseInt(categoria_unificada_id) : null,
             nomeRequisitanteManual: nome_requisitante_manual,
-            emailRequisitanteManual: email_requisitante_manual,
+            emailRequisitanteManual: email_requisitante_manual, // Passa o valor (pode ser vazio)
             telefoneRequisitanteManual: telefone_requisitante_manual,
             
             // Salva o ID. Se vier vazio, salva null.
@@ -102,6 +102,7 @@ export const criarChamado = async (req, res) => {
         // =================================================
         // [NOVO] ENVIO DE E-MAIL DE CRIAÇÃO
         // =================================================
+        // Só tenta enviar e-mail se o campo emailRequisitante tiver valor
         if (novoChamado.emailRequisitante) {
             EmailService.enviarNotificacaoCriacao(novoChamado.emailRequisitante, novoChamado)
                 .catch(err => console.error("Falha silenciosa ao enviar e-mail de criação:", err));
