@@ -437,7 +437,7 @@
         .dark-mode .status-badge.aberto { background-color: #5a6268; color: #e0e0e0; }
         .dark-mode .status-badge.concluído { background-color: #0f5132; color: #d1e7dd; }
         .dark-mode .status-badge.em-andamento { background-color: #084298; color: #cfe2ff; }
-        .dark-mode .status-badge.pausado { background-color: #664d03; color: #fff3cd; } /* <-- ATUALIZADO */
+        .dark-mode .status-badge.pausado { background-color: #664d03; color: #fff3cd; } 
         /* Botão de Tema no Modo Escuro */
         .dark-mode .btn-theme-toggle {
             background-color: #333;
@@ -577,7 +577,7 @@
 
                             <div id="editCategoriaContainer" style="display: none;" class="mt-2 p-2 border rounded">
                                 <small class="text-muted d-block mb-2">Selecione a nova categoria:</small>
-                                <div id="cascataEdicaoWrapper"></div>
+                                <div id="cascataEdicaoWrapper"></div> 
                                 
                                 <div class="mt-2 d-flex gap-2 justify-content-end">
                                     <button type="button" class="btn btn-sm btn-secondary" id="btnCancelarEdicaoCategoria">Cancelar</button>
@@ -600,6 +600,7 @@
                             <div id="detalheRequisitante" class="detalhe-valor">...</div>
                         </div>
                     </div>
+                    
                     <div class="col-md-6">
                         <div class="detalhe-grupo">
                             <span class="detalhe-label">Operador (Atendente)</span>
@@ -1096,7 +1097,7 @@
         async function listarChamados() {
             limparMensagem(divRespostaGeral);
             ticketList.querySelectorAll('.data-row').forEach(row => row.remove());
-            loadingIndicator.style.display = 'block';
+            if (loadingIndicator) loadingIndicator.style.display = 'block';
 
             const p = new URLSearchParams();
             if (filtroAssunto.value.trim()) p.append('assunto', filtroAssunto.value.trim());
@@ -1220,7 +1221,7 @@
                 const r = await fetch(`${API_URL}/chamados/${currentTicketId}/status`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: novaStatus, atendenteId: userId })
+                    body: JSON.stringify({ status: novoStatus, atendenteId: userId })
                 });
                 const data = await r.json();
                 if (!r.ok) throw new Error(data.message);
