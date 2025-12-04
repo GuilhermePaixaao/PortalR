@@ -313,7 +313,7 @@ export const handleWebhook = async (req, res) => {
 };
 
 // ==================================================
-// 6. FUNÇÕES ADMINISTRATIVAS
+// 6. FUNÇÕES ADMINISTRATIVAS (Inalteradas)
 // ==================================================
 
 export const atenderAtendimento = async (req, res) => {
@@ -358,12 +358,7 @@ export const handleSendMessage = async (req, res) => {
 
 export const listarConversas = async (req, res) => { 
     try { 
-        // [MELHORIA DE SEGURANÇA] Garante que também não quebre se vier nulo aqui
-        let c = await evolutionService.buscarConversas(); 
-        if (!c || !Array.isArray(c)) {
-             c = c?.data && Array.isArray(c.data) ? c.data : [];
-        }
-
+        const c = await evolutionService.buscarConversas(); 
         const m = c.map(x => {
             const ctx = userContext[x.id] || {};
             const deveAparecer = ctx.mostrarNaFila === true || ctx.etapa === 'ATENDIMENTO_HUMANO';
@@ -381,28 +376,11 @@ export const listarConversas = async (req, res) => {
     } catch (e) { res.status(200).json({ success: true, data: [] }); } 
 };
 
-// ==================================================
-// FUNÇÃO CORRIGIDA (ERRO 500)
-// ==================================================
 export const listarMensagensChat = async (req, res) => {
     const { numero } = req.body;
     if (!numero) return res.status(400).json({ success: false, message: 'Número obrigatório' });
     try {
-        let rawMessages = await evolutionService.buscarMensagensHistorico(numero);
-
-        // --- CORREÇÃO DE SEGURANÇA ---
-        // Se rawMessages for nulo ou não for uma lista, forçamos um array vazio
-        if (!rawMessages || !Array.isArray(rawMessages)) {
-            // Tenta ver se veio dentro de um objeto 'data' (comum em algumas APIs)
-            if (rawMessages && rawMessages.data && Array.isArray(rawMessages.data)) {
-                rawMessages = rawMessages.data;
-            } else {
-                console.warn(`[Mensagens] Formato inválido ou vazio para ${numero}. Retornando lista vazia.`);
-                rawMessages = []; 
-            }
-        }
-        // ------------------------------
-
+        const rawMessages = await evolutionService.buscarMensagensHistorico(numero);
         const formattedMessages = rawMessages.map(msg => {
             const content = msg.message?.conversation || 
                             msg.message?.extendedTextMessage?.text || 
