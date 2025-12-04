@@ -437,7 +437,7 @@
         .dark-mode .status-badge.aberto { background-color: #5a6268; color: #e0e0e0; }
         .dark-mode .status-badge.concluído { background-color: #0f5132; color: #d1e7dd; }
         .dark-mode .status-badge.em-andamento { background-color: #084298; color: #cfe2ff; }
-        .dark-mode .status-badge.pausado { background-color: #664d03; color: #fff3cd; } /* <-- ATUALIZADO */
+        .dark-mode .status-badge.pausado { background-color: #664d03; color: #fff3cd; } 
         /* Botão de Tema no Modo Escuro */
         .dark-mode .btn-theme-toggle {
             background-color: #333;
@@ -449,17 +449,17 @@
         }
 
         /* Para alinhar o ícone e o texto lado a lado e centralizados */
-.logo {
-    display: flex;
-    align-items: center; /* Alinha verticalmente */
-    gap: 10px; /* Cria um espaço entre o ícone e o texto */
-}
+        .logo {
+            display: flex;
+            align-items: center; /* Alinha verticalmente */
+            gap: 10px; /* Cria um espaço entre o ícone e o texto */
+        }
 
-/* Para definir o tamanho do ícone */
-.logo-icon {
-    height: 30px; /* Ajuste a altura conforme necessário */
-    width: auto;  /* Mantém a proporção da imagem */
-}
+        /* Para definir o tamanho do ícone */
+        .logo-icon {
+            height: 30px; /* Ajuste a altura conforme necessário */
+            width: auto;  /* Mantém a proporção da imagem */
+        }
         /* --- FIM MODO ESCURO --- */
 
     </style>
@@ -487,7 +487,7 @@
                     <li><a href="Dashboard.html" title="Início"><span class="icon">🏠</span><span class="text">Início</span></a></li>
                     <li><a href="Imprimir.html" title="Impressão de Preços"><span class="icon">🖨️</span><span class="text">Imprimir</span></a></li>
                     <li id="menu-link-chamado" class="active"><a href="GerenciarChamados.html" title="Gerenciar Chamados"><span class="icon">✔️</span><span class="text">Gerenciar Chamados</span></a></li>
-<li><a href="AtendimentoWhatsApp.html" title="Atendimento WhatsApp"><span class="icon">💬</span><span class="text">WhatsApp</span></a></li>
+                    <li><a href="AtendimentoWhatsApp.html" title="Atendimento WhatsApp"><span class="icon">💬</span><span class="text">WhatsApp</span></a></li>
                     <li><a href="Funcionarios.html" title="Funcionários"><span class="icon">💼</span><span class="text">Funcionários</span></a></li>
                     <li>
                         <a href="Categorias.html" title="Categorias">
@@ -553,13 +553,28 @@
                             <div id="detalheRequisitante" class="detalhe-valor">...</div>
                         </div>
                     </div>
+                    
                     <div class="col-md-6">
                         <div class="detalhe-grupo">
                             <span class="detalhe-label">Categoria</span>
-                            <div id="detalheCategoria" class="detalhe-valor">...</div>
+                            
+                            <div id="viewCategoriaContainer" class="d-flex justify-content-between align-items-center detalhe-valor">
+                                <span id="detalheCategoriaText">...</span>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="btnEditarCategoria" title="Alterar Categoria" style="padding: 0px 5px; font-size: 0.8rem; border: none; background: transparent;">
+                                    ✏️
+                                </button>
+                            </div>
+
+                            <div id="editCategoriaContainer" style="display: none;" class="mt-2 p-2 border rounded bg-light">
+                                <small class="text-muted d-block mb-2">Selecione a nova categoria:</small>
+                                <div id="cascataEdicaoWrapper"></div> <div class="mt-2 d-flex gap-2 justify-content-end">
+                                    <button type="button" class="btn btn-sm btn-secondary" id="btnCancelarEdicaoCategoria">Cancelar</button>
+                                    <button type="button" class="btn btn-sm btn-success" id="btnSalvarCategoria">Salvar</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
+                    </div>
                 
                 <div class="row">
                     <div class="col-md-6">
@@ -680,8 +695,10 @@
         const API_URL = ""; 
         let currentTicketId = null; 
         
-        // --- (NOVO) VARIÁVEL GLOBAL PARA OPERADORES ---
+        // VARIÁVEIS GLOBAIS
         let listaOperadores = [];
+        let allCategories = []; // Armazena todas categorias para a cascata
+        let categoriaSelecionadaEdicaoId = null; // Armazena seleção temporária na edição
 
         // --- FUNÇÃO DE LOGOUT ---
         function fazerLogout() {
@@ -699,7 +716,6 @@
             userCategoriaAtendimento = userData?.data?.categoria_id_atendimento || userData?.categoria_id_atendimento;
 
             console.log("Dados do usuário lidos do Local Storage:", userData);
-            console.log("ID do Usuário (Operador) que foi definido:", userId);
 
             const userNameDisplay = document.getElementById('userNameDisplay');
             if (userNameDisplay && userData?.data?.nomeFuncionario) {
@@ -740,21 +756,29 @@
         const detalheAssunto = document.getElementById("detalheAssunto");
         const detalheDescricao = document.getElementById("detalheDescricao");
         const detalheRequisitante = document.getElementById("detalheRequisitante");
-        const detalheCategoria = document.getElementById("detalheCategoria");
+        
+        // Referência do texto da categoria (agora span dentro do container)
+        const detalheCategoriaText = document.getElementById("detalheCategoriaText");
+        
         const detalheData = document.getElementById("detalheData");
         const detalheStatusSelect = document.getElementById("detalheStatusSelect");
         const detalhePrioridadeSelect = document.getElementById("detalhePrioridadeSelect");
         const listaComentariosContainer = document.getElementById("listaComentariosContainer");
         const btnThemeToggle = document.getElementById("themeToggle");
-        
-        // --- (NOVO) REFERÊNCIA DO DROPDOWN DE ATENDENTE ---
         const detalheAtendenteSelect = document.getElementById("detalheAtendenteSelect");
-
         const btnEnviarComentario = document.getElementById("enviarComentario");
         const textareaComentario = document.getElementById("novoComentario");
         const comentarioResposta = document.getElementById("comentarioResposta");
-        // --- FIM REFERÊNCIAS ---
 
+        // Referências para Edição de Categoria
+        const btnEditarCategoria = document.getElementById("btnEditarCategoria");
+        const btnCancelarEdicaoCategoria = document.getElementById("btnCancelarEdicaoCategoria");
+        const btnSalvarCategoria = document.getElementById("btnSalvarCategoria");
+        const viewCategoriaContainer = document.getElementById("viewCategoriaContainer");
+        const editCategoriaContainer = document.getElementById("editCategoriaContainer");
+        const cascataEdicaoWrapper = document.getElementById("cascataEdicaoWrapper");
+        
+        // --- FIM REFERÊNCIAS ---
 
         function exibirMensagem(el, msg, sucesso = true) {
             el.textContent = msg;
@@ -772,28 +796,29 @@
             if (!d) return 'N/A';
             try {
                 const dt = new Date(d);
-                // Converte diretamente para o fuso horário de São Paulo
                 return dt.toLocaleString('pt-BR', { 
                     timeZone: 'America/Sao_Paulo',
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
+                    day: '2-digit', month: '2-digit', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
                 });
-            } catch {
-                return 'Data inválida';
-            }
+            } catch { return 'Data inválida'; }
         }
 
+        // ====================================================
+        // ======== CARREGAR CATEGORIAS (ATUALIZADO) ========
+        // ====================================================
         async function carregarCategorias() {
             try {
                 filtroCategoria.parentElement.style.display = 'block'; 
                 const r = await fetch(`${API_URL}/categorias`);
                 if (!r.ok) throw new Error("Erro ao carregar categorias.");
-                const categorias = await r.json();
+                
+                // SALVA NA VARIÁVEL GLOBAL PARA USO NA EDIÇÃO
+                allCategories = await r.json(); 
+                
+                // Preenche o filtro da página principal
                 filtroCategoria.innerHTML = '<option value="">Todas</option>';
-                categorias.forEach(cat => {
+                allCategories.forEach(cat => {
                     const opt = document.createElement("option");
                     opt.value = cat.id;
                     opt.textContent = cat.nome;
@@ -804,47 +829,160 @@
             }
         }
 
-        // ====================================================
-        // ======== (MODIFICADO) CARREGAR OPERADORES ========
-        // ====================================================
-        /**
-         * Busca a lista de funcionários (Agentes/Admins) para o dropdown.
-         */
         async function carregarOperadores() {
-            if (listaOperadores.length > 0) return; // Só carrega uma vez
+            if (listaOperadores.length > 0) return; 
 
             try {
-                // --- MODIFICADO ---
-                // Trocando a rota de '/listarUsuarios' para '/usuarios' 
-                // com base no 'funcionarioRouter.js' que você enviou.
                 const response = await fetch(`${API_URL}/usuarios`); 
-                // --- FIM DA MODIFICAÇÃO ---
-                
                 if (!response.ok) throw new Error("Falha ao carregar operadores.");
-                
                 const todosFuncionarios = await response.json();
-                
-                // Filtra para incluir apenas quem pode ser operador
-                // (O controller 'listarUsuarios' já envia o perfil)
                 listaOperadores = todosFuncionarios.filter(f => f.perfil === 'AGENTE' || f.perfil === 'ADMIN');
 
-                // Preenche o dropdown no modal
-                detalheAtendenteSelect.innerHTML = ''; // Limpa o "Carregando..."
-                detalheAtendenteSelect.add(new Option("-- Não Atribuído --", "")); // Opção para desatribuir
-                
+                detalheAtendenteSelect.innerHTML = ''; 
+                detalheAtendenteSelect.add(new Option("-- Não Atribuído --", "")); 
                 listaOperadores.forEach(op => {
                     detalheAtendenteSelect.add(new Option(op.nomeFuncionario, op.id));
                 });
-
             } catch (error) {
-                console.error(error); // Mostra o erro 404 aqui
+                console.error(error); 
                 detalheAtendenteSelect.innerHTML = `<option value="">Erro ao carregar</option>`;
             }
         }
 
         // ====================================================
-        // ======== (INÍCIO) FUNÇÃO RENDERIZAR CHAMADOS ATUALIZADA ========
+        // ======== LÓGICA DE EDIÇÃO DE CATEGORIA (NOVO) ========
         // ====================================================
+        
+        // 1. Ativar modo edição
+        function ativarEdicaoCategoria() {
+            viewCategoriaContainer.style.display = 'none';
+            editCategoriaContainer.style.display = 'block';
+            
+            // Limpa e inicia
+            cascataEdicaoWrapper.innerHTML = '';
+            categoriaSelecionadaEdicaoId = null;
+            
+            // Cria o primeiro nível
+            criarDropdownEdicao(null, 0);
+        }
+
+        // 2. Cancelar modo edição
+        function cancelarEdicaoCategoria() {
+            viewCategoriaContainer.style.display = 'flex'; // Volta a ser flex para alinhar botão e texto
+            editCategoriaContainer.style.display = 'none';
+        }
+
+        // 3. Criar Dropdowns em Cascata
+        function criarDropdownEdicao(parentId, level) {
+            // Filtra filhos do pai atual
+            const children = allCategories.filter(c => c.parent_id == parentId);
+            
+            // Se não tem filhos, significa que chegamos na ponta (folha)
+            if (children.length === 0) {
+                // O ID válido é o próprio pai selecionado anteriormente
+                categoriaSelecionadaEdicaoId = parentId;
+                return;
+            }
+
+            // Se abriu novo nível, o ID atual é inválido até selecionar
+            categoriaSelecionadaEdicaoId = null;
+
+            const div = document.createElement('div');
+            div.className = 'mb-2'; 
+            
+            const select = document.createElement('select');
+            select.className = 'form-select form-select-sm'; 
+            // Se for modo escuro, o CSS global já trata form-select, mas garantimos classes
+            
+            select.dataset.level = level;
+            
+            const placeholder = level === 0 ? '-- Selecione a Categoria --' : '-- Selecione a Subcategoria --';
+            select.add(new Option(placeholder, ""));
+
+            children.forEach(cat => {
+                select.add(new Option(cat.nome, cat.id));
+            });
+
+            // Evento ao mudar
+            select.addEventListener('change', (e) => {
+                const selectedId = e.target.value;
+                const currentLevel = parseInt(e.target.dataset.level);
+
+                // Remove dropdowns de níveis inferiores
+                const allDivs = cascataEdicaoWrapper.querySelectorAll('div');
+                allDivs.forEach(d => {
+                    const s = d.querySelector('select');
+                    if (s && parseInt(s.dataset.level) > currentLevel) {
+                        d.remove();
+                    }
+                });
+
+                if (selectedId) {
+                    criarDropdownEdicao(selectedId, currentLevel + 1);
+                } else {
+                    categoriaSelecionadaEdicaoId = null;
+                }
+            });
+
+            div.appendChild(select);
+            cascataEdicaoWrapper.appendChild(div);
+        }
+
+        // 4. Salvar Alteração
+        async function salvarNovaCategoria() {
+            // Verifica o último ID selecionado nos selects
+            const selects = cascataEdicaoWrapper.querySelectorAll('select');
+            let idFinal = null;
+            // Pega o valor do último select que tiver valor
+            selects.forEach(s => { if(s.value) idFinal = s.value; });
+
+            if (!idFinal) {
+                alert("Por favor, selecione uma categoria válida até o final.");
+                return;
+            }
+            
+            if (!currentTicketId) return;
+
+            limparMensagem(modalDetalhesResposta);
+
+            try {
+                // Rota PUT configurada no passo anterior
+                const r = await fetch(`${API_URL}/chamados/${currentTicketId}/categoria`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ categoriaId: idFinal })
+                });
+
+                const result = await r.json();
+
+                if (r.ok) {
+                    exibirMensagem(modalDetalhesResposta, "Categoria atualizada com sucesso!", true);
+                    
+                    // Atualiza o texto na tela
+                    const catObj = allCategories.find(c => c.id == idFinal);
+                    let nomeExibicao = catObj ? catObj.nome : '...';
+                    
+                    // Se tiver pai, mostra "Pai / Filho" (opcional)
+                    if(catObj && catObj.parent_id) {
+                        const pai = allCategories.find(c => c.id == catObj.parent_id);
+                        if(pai) nomeExibicao = `${pai.nome} / ${nomeExibicao}`;
+                    }
+
+                    detalheCategoriaText.textContent = nomeExibicao;
+                    
+                    cancelarEdicaoCategoria();
+                    listarChamados(); // Atualiza a lista de fundo
+                } else {
+                    exibirMensagem(modalDetalhesResposta, `Erro: ${result.message}`, false);
+                }
+            } catch (error) {
+                console.error(error);
+                exibirMensagem(modalDetalhesResposta, "Erro de comunicação ao salvar categoria.", false);
+            }
+        }
+        
+        // ====================================================
+
         function renderizarChamados(chamados) {
             loadingIndicator.style.display = 'none';
             ticketList.querySelectorAll('.data-row').forEach(r => r.remove());
@@ -863,7 +1001,6 @@
                 const prioridadeClass = (ch.prioridade || 'Média').toLowerCase().replace('é', 'e');
                 const statusClass = (ch.status || 'Aberto').toLowerCase().replace(/\s+/g, '-');
                 
-                // --- INÍCIO DA LÓGICA DE BOTÕES ATUALIZADA ---
                 let actionButtons = `<span class="view-icon" title="Visualizar">👁️</span>`;
 
                 if (ch.status === 'Aberto') {
@@ -874,18 +1011,25 @@
                     actionButtons += ` <button class="btn-action btn-retomar" data-id="${ch.id}" title="Retomar Atendimento">▶️</button>`;
                 }
 
-                // Adiciona o botão de concluir, exceto se já estiver concluído
                 if (ch.status !== 'Concluído') {
                     actionButtons += ` <button class="btn-action btn-concluir" data-id="${ch.id}" title="Marcar como Concluído">✔️</button>`;
                 }
-                // --- FIM DA LÓGICA DE BOTÕES ---
+                
+                // Formata nome da categoria para a lista (ex: Pai / Filho)
+                let nomeCat = 'N/A';
+                if (ch.Categorias) {
+                    nomeCat = ch.Categorias.nome;
+                    if (ch.Categorias.nomePai) {
+                        nomeCat = `${ch.Categorias.nomePai} / ${nomeCat}`;
+                    }
+                }
 
                 ticketList.insertAdjacentHTML('beforeend', `
                 <div class="ticket-row data-row" data-ticket-id="${ch.id}">
                     <div class="ticket-cell ticket-id">#${ch.id}</div>
                     <div class="ticket-cell ticket-priority"><span class="priority-badge ${prioridadeClass}">${escapeHtml(ch.prioridade)}</span></div>
                     <div class="ticket-cell ticket-subject">${escapeHtml(ch.assunto)}</div>
-                    <div class="ticket-cell ticket-category">${escapeHtml(ch.Categorias?.nome || 'N/A')}</div>
+                    <div class="ticket-cell ticket-category">${escapeHtml(nomeCat)}</div>
                     <div class="ticket-cell ticket-status"><span class="status-badge ${statusClass}">${escapeHtml(ch.status)}</span></div>
                     <div class="ticket-cell ticket-requisitante">${escapeHtml(ch.Funcionario?.nomeFuncionario || 'Desconhecido')}</div>
                     <div class="ticket-cell ticket-operator">${escapeHtml(ch.Atendente?.nomeFuncionario || 'N/A')}</div>
@@ -896,10 +1040,6 @@
                 </div>`);
             });
         }
-        // ====================================================
-        // ======== (FIM) FUNÇÃO RENDERIZAR CHAMADOS ATUALIZADA ========
-        // ====================================================
-
 
         async function listarChamados() {
             limparMensagem(divRespostaGeral);
@@ -910,10 +1050,7 @@
             if (filtroAssunto.value.trim()) p.append('assunto', filtroAssunto.value.trim());
             if (filtroPrioridade.value) p.append('prioridade', filtroPrioridade.value);
             if (filtroStatus.value) p.append('status', filtroStatus.value);
-
-            if (filtroCategoria.value) {
-                p.append('categoria_id', filtroCategoria.value);
-            }
+            if (filtroCategoria.value) p.append('categoria_id', filtroCategoria.value);
 
             try {
                 const r = await fetch(`${API_URL}/chamados?${p.toString()}`);
@@ -926,16 +1063,11 @@
         }
 
         async function atualizarStatusChamado(id, status) {
-            console.log(`[Botão Rápido] Enviando ID do Usuário (Operador):`, userId);
-            
             try {
                 const r = await fetch(`${API_URL}/chamados/${id}/status`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        status: status,
-                        atendenteId: userId // <-- A MÁGICA ACONTECE AQUI
-                    })
+                    body: JSON.stringify({ status: status, atendenteId: userId })
                 });
                 const data = await r.json();
                 if (!r.ok) throw new Error(data.message);
@@ -950,19 +1082,20 @@
 
         async function abrirModalDetalhes(chamadoId) {
             limparMensagem(modalDetalhesResposta);
-            
             listaComentariosContainer.innerHTML = '<span class="comment-empty-state">Carregando comentários...</span>';
             textareaComentario.value = '';
             limparMensagem(comentarioResposta);
 
             modalDetalhes.showModal();
             currentTicketId = null; 
-            detalheAtendenteSelect.disabled = true; // Desativa enquanto carrega
+            detalheAtendenteSelect.disabled = true; 
+
+            // Reseta a visualização da categoria (fecha edição se estava aberta)
+            cancelarEdicaoCategoria();
 
             modalDetalhesConteudo.style.opacity = '0.5';
             detalheId.textContent = `#${chamadoId}`;
             detalheAssunto.textContent = 'Carregando...';
-            //... (outros campos de carregamento)
             detalheRequisitante.textContent = 'Carregando...';
 
             try {
@@ -974,21 +1107,25 @@
                 
                 const chamado = await response.json(); 
 
-                // Preenche o modal
                 detalheAssunto.textContent = chamado.assunto;
                 detalheDescricao.textContent = chamado.descricao;
                 detalheRequisitante.textContent = chamado.Funcionario?.nomeFuncionario || 'N/A';
-                detalheCategoria.textContent = chamado.Categorias?.nome || 'N/A';
+                
+                // Exibe Categoria (com Pai se houver)
+                let nomeCat = 'N/A';
+                if (chamado.Categorias) {
+                    nomeCat = chamado.Categorias.nome;
+                    if(chamado.Categorias.nomePai) nomeCat = `${chamado.Categorias.nomePai} / ${nomeCat}`;
+                }
+                detalheCategoriaText.textContent = nomeCat;
+                
                 detalheData.textContent = formatarData(chamado.created_at);
                 
                 detalheStatusSelect.value = chamado.status;
                 detalhePrioridadeSelect.value = chamado.prioridade;
                 
-                // --- (NOVO) PREENCHE O SELECT DO OPERADOR ---
-                // Usa || "" para garantir que o valor "Não Atribuído" (value="") seja selecionado se atendente_id for null
                 detalheAtendenteSelect.value = chamado.atendente_id || ""; 
-                detalheAtendenteSelect.disabled = false; // Ativa o dropdown
-                // --- FIM NOVO ---
+                detalheAtendenteSelect.disabled = false; 
                 
                 currentTicketId = chamadoId; 
                 modalDetalhesConteudo.style.opacity = '1';
@@ -1006,7 +1143,6 @@
             if (!currentTicketId) return;
             const novaPrioridade = detalhePrioridadeSelect.value;
             limparMensagem(modalDetalhesResposta);
-
             try {
                 const r = await fetch(`${API_URL}/chamados/${currentTicketId}/prioridade`, {
                     method: 'PATCH',
@@ -1015,7 +1151,6 @@
                 });
                 const data = await r.json();
                 if (!r.ok) throw new Error(data.message);
-                
                 exibirMensagem(modalDetalhesResposta, "Prioridade atualizada!", true);
                 listarChamados(); 
             } catch (e) {
@@ -1027,28 +1162,16 @@
             if (!currentTicketId) return;
             const novoStatus = detalheStatusSelect.value;
             limparMensagem(modalDetalhesResposta);
-
-            console.log(`[Modal 👁️] Enviando ID do Usuário (Operador):`, userId);
-
             try {
                 const r = await fetch(`${API_URL}/chamados/${currentTicketId}/status`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        status: novoStatus,
-                        atendenteId: userId 
-                    })
+                    body: JSON.stringify({ status: novoStatus, atendenteId: userId })
                 });
                 const data = await r.json();
                 if (!r.ok) throw new Error(data.message);
                 
-                // --- (NOVO) ATUALIZA O DROPDOWN DE ATENDENTE ---
-                // Se o status foi alterado pelo usuário atual, 
-                // atribui o chamado a ele no dropdown
-                if (userId) {
-                    detalheAtendenteSelect.value = userId;
-                }
-                // --- FIM NOVO ---
+                if (userId) detalheAtendenteSelect.value = userId;
                 
                 exibirMensagem(modalDetalhesResposta, "Status atualizado!", true);
                 listarChamados(); 
@@ -1057,20 +1180,11 @@
             }
         }
         
-        // ====================================================
-        // ======== (NOVO) HANDLE ATENDENTE CHANGE ========
-        // ====================================================
         async function handleAtendenteChange() {
             if (!currentTicketId) return;
-            
-            // Pega o valor. Se for "" (Não Atribuído), envia null.
             const novoAtendenteId = detalheAtendenteSelect.value ? parseInt(detalheAtendenteSelect.value) : null;
             limparMensagem(modalDetalhesResposta);
-            
-            console.log(`[Modal 👁️] Trocando atendente para:`, novoAtendenteId);
-
             try {
-                // Chama a nova rota de API
                 const r = await fetch(`${API_URL}/chamados/${currentTicketId}/atendente`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
@@ -1078,45 +1192,34 @@
                 });
                 const data = await r.json();
                 if (!r.ok) throw new Error(data.message);
-                
                 exibirMensagem(modalDetalhesResposta, "Atendente atualizado!", true);
-                
-                // Recarrega a lista principal para mostrar o novo nome do operador
                 listarChamados(); 
             } catch (e) {
                 exibirMensagem(modalDetalhesResposta, `Erro: ${e.message}`, false);
             }
         }
-        // --- FIM NOVO ---
 
         // --- Funções para LER Comentários ---
-        
         function renderizarComentarios(comentarios) {
             listaComentariosContainer.innerHTML = ''; 
             listaComentariosContainer.classList.remove('comment-empty-state');
-
             if (!comentarios || comentarios.length === 0) {
                 listaComentariosContainer.classList.add('comment-empty-state');
                 listaComentariosContainer.innerHTML = '<span>Nenhum comentário encontrado.</span>';
                 return;
             }
-
             comentarios.forEach(comentario => {
                 const nome = comentario.nomeFuncionario || 'Usuário desconhecido';
                 const data = formatarData(comentario.created_at);
                 const texto = escapeHtml(comentario.texto);
-
                 const commentHtml = `
                     <div class="comment-item">
                         <div class="comment-header">
                             ${escapeHtml(nome)}
                             <span class="comment-date">em ${data}</span>
                         </div>
-                        <div class="comment-body">
-                            ${texto}
-                        </div>
-                    </div>
-                `;
+                        <div class="comment-body">${texto}</div>
+                    </div>`;
                 listaComentariosContainer.insertAdjacentHTML('beforeend', commentHtml);
             });
         }
@@ -1130,22 +1233,15 @@
                 }
                 const comentarios = await response.json();
                 renderizarComentarios(comentarios);
-            
             } catch (error) {
-                if (error instanceof SyntaxError) {
-                     listaComentariosContainer.innerHTML = `<span class="comment-empty-state" style="color: red;">Erro de comunicação. A rota de comentários existe?</span>`;
-                } else {
-                     listaComentariosContainer.innerHTML = `<span class="comment-empty-state" style="color: red;">${error.message}</span>`;
-                }
+                listaComentariosContainer.innerHTML = `<span class="comment-empty-state" style="color: red;">${error.message}</span>`;
             }
         }
 
         async function enviarNovoComentario() {
             limparMensagem(comentarioResposta);
-            
             const ticketId = currentTicketId; 
             const texto = textareaComentario.value.trim();
-
             if (!texto) {
                 exibirMensagem(comentarioResposta, "Por favor, digite um comentário.", false);
                 return;
@@ -1154,12 +1250,7 @@
                 exibirMensagem(comentarioResposta, "Erro: ID do chamado não encontrado.", false);
                 return;
             }
-
-            const body = {
-                texto: texto,
-                chamado_id: parseInt(ticketId),
-                user_id: userId 
-            };
+            const body = { texto: texto, chamado_id: parseInt(ticketId), user_id: userId };
 
             try {
                 const response = await fetch(`${API_URL}/chamados/${ticketId}/comentarios`, {
@@ -1167,27 +1258,17 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(body)
                 });
-
                 if (!response.ok) {
                     const erro = await response.json();
                     throw new Error(erro.message || "Falha ao enviar comentário.");
                 }
-
                 textareaComentario.value = ''; 
                 limparMensagem(comentarioResposta); 
-                
                 await carregarComentarios(ticketId); 
-                
             } catch (error) {
-                 if (error instanceof SyntaxError) {
-                     exibirMensagem(comentarioResposta, "Erro de comunicação. A rota POST de comentários existe?", false);
-                } else {
-                     exibirMensagem(comentarioResposta, error.message, false);
-                }
+                exibirMensagem(comentarioResposta, error.message, false);
             }
         }
-        
-        // --- LÓGICA DO TEMA ESCURO ---
         
         function toggleTheme() {
             document.body.classList.toggle("dark-mode");
@@ -1206,90 +1287,71 @@
                 btnThemeToggle.textContent = "🌙";
             }
         }
-        // --- FIM LÓGICA TEMA ---
-
 
         // ====================================================
-        // ======== (INÍCIO) EVENT LISTENERS ATUALIZADOS ========
+        // ======== EVENT LISTENERS ========
         // ====================================================
         btnFiltrar.addEventListener('click', listarChamados);
         btnLogout.addEventListener('click', fazerLogout);
         btnThemeToggle.addEventListener('click', toggleTheme);
-        // (NOVO) Aciona o tema pelo link "Ajustes"
 
-        // --- LISTENER DA LISTA DE TICKETS ATUALIZADO ---
         ticketList.addEventListener('click', e => {
             const t = e.target;
-            const id = t.dataset.id; // Todos os botões de ação terão o data-id
-
-            // Ação de Visualizar (Ícone)
+            const id = t.dataset.id; 
             if (t.classList.contains('view-icon')) {
                 const rowId = t.closest('.ticket-row').dataset.ticketId;
                 abrirModalDetalhes(rowId);
             }
-            // Ação de Iniciar (Botão)
             else if (t.classList.contains('btn-iniciar')) {
                 if (confirm(`Iniciar atendimento do chamado #${id}?\nIsto irá atribuir o chamado a você.`)) {
-                    // Chama a função que já envia o seu userId como atendente
                     atualizarStatusChamado(id, 'Em Andamento');
                 }
             }
-            // Ação de Retomar (Botão)
             else if (t.classList.contains('btn-retomar')) {
                  if (confirm(`Retomar atendimento do chamado #${id}?`)) {
-                    // A lógica é a mesma de "Iniciar"
                     atualizarStatusChamado(id, 'Em Andamento');
                 }
             }
-            // Ação de Pausar (Botão)
             else if (t.classList.contains('btn-pausar')) {
                 if (confirm(`Pausar atendimento do chamado #${id}?`)) {
                     atualizarStatusChamado(id, 'Pausado');
                 }
             }
-            // Ação de Concluir (Botão)
             else if (t.classList.contains('btn-concluir')) {
                 if (confirm(`Deseja realmente marcar o chamado #${id} como "Concluído"?`)) {
                     atualizarStatusChamado(id, 'Concluído');
                 }
             }
         });
-        // --- FIM DO LISTENER ATUALIZADO ---
 
         btnFecharModalDetalhes.addEventListener('click', () => {
             listaComentariosContainer.innerHTML = '';
             textareaComentario.value = '';
             limparMensagem(comentarioResposta);
-            
             modalDetalhes.removeAttribute('data-current-ticket-id'); 
             modalDetalhes.close();
         });
         
         detalhePrioridadeSelect.addEventListener('change', handlePrioridadeChange);
         detalheStatusSelect.addEventListener('change', handleStatusChange);
-
-        // --- (NOVO) LISTENER PARA TROCA DE ATENDENTE ---
         detalheAtendenteSelect.addEventListener('change', handleAtendenteChange);
-
         btnEnviarComentario.addEventListener('click', enviarNovoComentario);
+        
+        // Listeners de Edição de Categoria
+        btnEditarCategoria.addEventListener('click', ativarEdicaoCategoria);
+        btnCancelarEdicaoCategoria.addEventListener('click', cancelarEdicaoCategoria);
+        btnSalvarCategoria.addEventListener('click', salvarNovaCategoria);
 
-
-        // ====================================================
-        // ======== (NOVO) INICIALIZAÇÃO ATUALIZADA ========
-        // ====================================================
         async function init() {
-            loadTheme(); // Carrega o tema primeiro
-            
-            // Carrega categorias e operadores em paralelo
+            loadTheme(); 
             await Promise.all([
                 carregarCategorias(),
                 carregarOperadores() 
             ]);
-            // Só lista os chamados depois que tudo estiver pronto
             await listarChamados(); 
         }
         
-        init(); // Inicia a aplicação
+        init(); 
 
     </script>
 
