@@ -320,7 +320,7 @@
                         <div class="ticket-row header">
                             <div class="ticket-cell ticket-id">Ticket</div>
                             <div class="ticket-cell ticket-priority">Prioridade</div>
-                            <div class="ticket-cell ticket-category">Categoria</div> <div class="ticket-cell ticket-subject">Assunto</div>
+                            <div class="ticket-cell ticket-subject">Assunto</div> <div class="ticket-cell ticket-category">Categoria</div> 
                             <div class="ticket-cell ticket-status">Status</div>
                             <div class="ticket-cell ticket-requisitante">Requisitante</div>
                             <div class="ticket-cell ticket-operator">Operador</div>
@@ -701,8 +701,9 @@
                     <div class="ticket-cell ticket-priority">
                         <span class="priority-badge ${prioridadeClass}">${escapeHtml(chamado.prioridade)}</span>
                     </div>
-                    <div class="ticket-cell ticket-category">${escapeHtml(nomeExibicao)}</div>
+                    
                     <div class="ticket-cell ticket-subject">${escapeHtml(chamado.assunto)}</div>
+                    <div class="ticket-cell ticket-category">${escapeHtml(nomeExibicao)}</div>
                     <div class="ticket-cell ticket-status">
                         <span class="status-badge ${statusClass}">${escapeHtml(chamado.status)}</span>
                     </div>
