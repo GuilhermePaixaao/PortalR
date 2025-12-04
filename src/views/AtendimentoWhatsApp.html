@@ -15,8 +15,7 @@
     <link rel="stylesheet" href="css/dashboard.css">
     <link rel="icon" type="image/png" href="/logo.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
-    <style>
+    <link rel="stylesheet" href="css/whatsapp-style.css"> <style>
         :root {
             --wa-bg-color: #efeae2; --wa-header-bg: #f0f2f5; --wa-sidebar-bg: #ffffff;
             --wa-border: #e9edef; --wa-msg-in: #ffffff; --wa-msg-out: #d9fdd3;
@@ -63,6 +62,7 @@
         .badge-unread { background-color: #25d366; color: white; font-size: 0.75rem; font-weight: bold; min-width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: absolute; right: 15px; top: 50%; transform: translateY(-50%); }
 
         .chat-area { flex: 1; display: flex; flex-direction: column; background-color: var(--wa-bg-color); position: relative; z-index: 0; }
+        /* A imagem de fundo agora vem do CSS externo (whatsapp-style.css) ou pode ficar aqui */
         .chat-area::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png"); opacity: 0.4; z-index: -1; pointer-events: none; }
         body.dark-mode .chat-area::before { opacity: 0.08; }
 
@@ -72,11 +72,11 @@
         .overlay-screen p { margin-top: 10px; color: var(--text-secondary); font-size: 0.9rem; max-width: 500px; }
 
         .messages-container { flex: 1; padding: 20px 60px; overflow-y: auto; display: flex; flex-direction: column; }
+        /* Estilos de mensagem agora vêm do whatsapp-style.css, mas mantemos o básico aqui para garantir */
         .msg { max-width: 65%; padding: 8px 12px; border-radius: 7.5px; margin-bottom: 8px; position: relative; font-size: 0.9rem; line-height: 1.4; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); word-wrap: break-word; color: var(--text-primary); }
         .msg-in { align-self: flex-start; background-color: var(--wa-msg-in); border-top-left-radius: 0; }
         .msg-out { align-self: flex-end; background-color: var(--wa-msg-out); border-top-right-radius: 0; }
         .msg-time { font-size: 0.7rem; color: var(--text-secondary); float: right; margin-top: 5px; margin-left: 10px; }
-        .msg-sender { font-size: 0.75rem; font-weight: bold; color: var(--wa-primary); display: block; margin-bottom: 4px; }
 
         .input-area { height: 60px; background-color: var(--wa-header-bg); padding: 10px 16px; display: flex; align-items: center; gap: 15px; z-index: 20; border-top: 1px solid var(--wa-border); }
         .input-field { flex: 1; background-color: var(--input-bg); color: var(--text-primary); border: none; border-radius: 8px; padding: 12px 15px; font-size: 0.95rem; outline: none; }
@@ -117,103 +117,39 @@
             height: 65px;
         }
 
-        .header-user-info {
-            display: flex;
-            flex-direction: column;
-        }
+        .header-user-info { display: flex; flex-direction: column; }
+        #chatTitle { font-size: 1rem; font-weight: 600; color: var(--text-primary); }
+        .chat-actions-toolbar { display: flex; gap: 10px; }
 
-        #chatTitle {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
+        .action-btn { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #ccc; background-color: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; transition: all 0.2s ease; color: #555; }
+        .action-btn:hover { transform: scale(1.1); background-color: rgba(0,0,0,0.05); }
 
-        .chat-actions-toolbar {
-            display: flex;
-            gap: 10px; /* Espaço entre as bolinhas */
-        }
-
-        /* Estilo Base do Botão Redondo */
-        .action-btn {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            border: 2px solid #ccc;
-            background-color: transparent;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.1rem;
-            transition: all 0.2s ease;
-            color: #555;
-        }
-
-        .action-btn:hover {
-            transform: scale(1.1);
-            background-color: rgba(0,0,0,0.05);
-        }
-
-        /* --- Cores Específicas por Função --- */
-        .btn-history { border-color: #6c757d; color: #6c757d; } /* Histórico (Cinza) */
-        
-        /* [NOVO] Estilos para Associar e Criar */
-        .btn-associar { border-color: #6f42c1; color: #6f42c1; } /* Roxo - Associar */
+        .btn-history { border-color: #6c757d; color: #6c757d; }
+        .btn-associar { border-color: #6f42c1; color: #6f42c1; }
         .btn-associar:hover { background-color: #f3e5f5; }
-        
-        .btn-criar { border-color: #20c997; color: #20c997; } /* Verde Água - Criar */
+        .btn-criar { border-color: #20c997; color: #20c997; }
         .btn-criar:hover { background-color: #e6fffa; }
-
-        .btn-assumir { border-color: #ffc107; color: #ffc107; } /* Assumir (Amarelo) */
+        .btn-assumir { border-color: #ffc107; color: #ffc107; }
         .btn-assumir:hover { background-color: #fff3cd; }
-        .btn-transfer { border-color: #0d6efd; color: #0d6efd; } /* Transferir (Azul) */
-        .btn-close { border-color: #dc3545; color: #dc3545; } /* Encerrar (Vermelho) */
+        .btn-transfer { border-color: #0d6efd; color: #0d6efd; }
+        .btn-close { border-color: #dc3545; color: #dc3545; }
         .btn-close:hover { background-color: #f8d7da; }
 
-        /* --- Estado DESABILITADO (Apagado) --- */
-        .action-btn:disabled,
-        .action-btn.disabled {
-            opacity: 0.3;       
-            cursor: not-allowed;
-            transform: none !important;
-            filter: grayscale(100%); 
-            border-color: #ccc !important;
-        }
+        .action-btn:disabled, .action-btn.disabled { opacity: 0.3; cursor: not-allowed; transform: none !important; filter: grayscale(100%); border-color: #ccc !important; }
 
         /* --- MODAIS GERAIS --- */
-        .modal-overlay {
-            display: none; /* Oculto por padrão */
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0,0,0,0.5);
-            z-index: 2000;
-            align-items: center; justify-content: center;
-        }
-        .modal-content {
-            background-color: #fff;
-            padding: 25px;
-            border-radius: 8px;
-            width: 350px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            display: flex; flex-direction: column; gap: 15px;
-        }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; }
+        .modal-content { background-color: #fff; padding: 25px; border-radius: 8px; width: 350px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 15px; }
         .modal-title { font-size: 1.2rem; font-weight: bold; color: var(--text-primary); margin-bottom: 5px; }
-        
-        /* Estilos de Formulário no Modal */
         .modal-form-group { margin-bottom: 10px; text-align: left; }
         .modal-label { display: block; margin-bottom: 5px; font-weight: 500; color: var(--text-primary); font-size: 0.9rem; }
-        .modal-input, .modal-select, .modal-textarea {
-            width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; 
-            background-color: var(--input-bg); color: var(--text-primary);
-            font-size: 0.95rem; box-sizing: border-box;
-        }
+        .modal-input, .modal-select, .modal-textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; background-color: var(--input-bg); color: var(--text-primary); font-size: 0.95rem; box-sizing: border-box; }
         .modal-textarea { resize: vertical; min-height: 80px; font-family: inherit; }
-
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
         .btn-cancelar { background: #ccc; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; }
         .btn-confirmar-transfer { background: #0d6efd; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; }
         .btn-confirmar-transfer:hover { background: #0b5ed7; }
 
-        /* Ajustes para modo escuro do modal */
         body.dark-mode .modal-content { background-color: var(--wa-sidebar-bg); border: 1px solid var(--wa-border); }
         body.dark-mode .btn-cancelar { background: #444; color: #fff; }
     </style>
@@ -444,8 +380,8 @@
         const btnFinalizar = document.getElementById('btnFinalizar');
         const btnTransferir = document.getElementById('btnTransferir');
         const btnHistorico = document.getElementById('btnHistorico');
-        const btnAssociarTicket = document.getElementById('btnAssociarTicket'); // [NOVO]
-        const btnCriarChamado = document.getElementById('btnCriarChamado'); // [NOVO]
+        const btnAssociarTicket = document.getElementById('btnAssociarTicket'); 
+        const btnCriarChamado = document.getElementById('btnCriarChamado'); 
 
         // Referências ao Modal de Transferência
         const modalTransfer = document.getElementById('modalTransferencia');
@@ -506,25 +442,21 @@
             filaHeader.textContent = `Fila de Atendimento (${chatsFiltrados.length})`;
         }
 
-        // --- LÓGICA DE CONTROLE DA TOOLBAR ---
         function atualizarBotoesToolbar(chat) {
             const chatStatusText = document.getElementById('chatStatusText');
 
-            // Reset inicial: Tudo desabilitado
             btnAssumir.disabled = true;
             btnFinalizar.disabled = true;
             btnTransferir.disabled = true;
-            btnAssociarTicket.disabled = true; // [NOVO]
-            btnCriarChamado.disabled = true;   // [NOVO]
+            btnAssociarTicket.disabled = true; 
+            btnCriarChamado.disabled = true;   
             chatStatusText.textContent = "";
 
             if (!chat) return;
 
-            // Dados do Estado
             const emAtendimentoHumano = chat.etapa === 'ATENDIMENTO_HUMANO';
             const temAgente = !!chat.nomeAgente;
             
-            // Verifica quem é o usuário logado
             let usuarioLogado = "";
             try {
                 const u = JSON.parse(localStorage.getItem("userData"));
@@ -533,36 +465,29 @@
 
             const souOAgente = (chat.nomeAgente === usuarioLogado);
 
-            // 1. Lógica do botão ASSUMIR
             if (!temAgente) {
-                // Ninguém assumiu -> HABILITADO
                 btnAssumir.disabled = false;
                 btnAssumir.title = "Assumir este chamado";
                 chatStatusText.textContent = "Aguardando atendimento...";
-                chatStatusText.style.color = "#ffc107"; // Amarelo
+                chatStatusText.style.color = "#ffc107"; 
             } else {
-                // Já tem agente -> DESABILITADO
                 btnAssumir.disabled = true;
                 chatStatusText.textContent = `Em atendimento por: ${chat.nomeAgente}`;
-                chatStatusText.style.color = "#28a745"; // Verde
+                chatStatusText.style.color = "#28a745"; 
             }
 
-            // 2. Lógica dos botões de AÇÃO (Encerrar/Transferir/Criar/Associar)
-            // Habilitado se EU sou o agente OU (ninguém é e está na fase humana/fila)
             if (souOAgente || (!temAgente && emAtendimentoHumano)) {
                 btnFinalizar.disabled = false;
                 btnTransferir.disabled = false;
-                btnAssociarTicket.disabled = false; // [NOVO]
-                btnCriarChamado.disabled = false;   // [NOVO]
+                btnAssociarTicket.disabled = false; 
+                btnCriarChamado.disabled = false;   
             } 
-            // Se outra pessoa assumiu, desabilita
             else if (temAgente && !souOAgente) {
                 btnFinalizar.disabled = true;
                 btnTransferir.disabled = true;
                 btnAssociarTicket.disabled = true;
                 btnCriarChamado.disabled = true;
             } 
-            // Exceção: Permitir encerrar conversa presa no robô (Menu/Inicio)
             if (chat.etapa === 'MENU' || chat.etapa === 'INICIO') {
                  btnFinalizar.disabled = false; 
             }
@@ -602,6 +527,9 @@
             syncChatsWithServer();
         });
 
+        // =========================================================================
+        // === CORREÇÃO PRINCIPAL: Sincronizar Chats considerando o AGENTE ===
+        // =========================================================================
         async function syncChatsWithServer() {
             try {
                 const rStatus = await fetch('/api/whatsapp/status');
@@ -617,9 +545,16 @@
                 const rChats = await fetch('/api/whatsapp/chats');
                 const json = await rChats.json();
                 
-                if (!json.success || !json.data || json.data.length === 0) {
+                if (!json.success || !json.data) {
                     return; 
                 }
+
+                // 1. Pega o nome do agente logado
+                let meuNome = "";
+                try { 
+                    const userData = JSON.parse(localStorage.getItem("userData"));
+                    meuNome = userData?.data?.nomeFuncionario;
+                } catch(e) { console.error("Erro ao ler dados do usuário", e); }
 
                 const listaServer = json.data;
                 const novosChats = [];
@@ -627,9 +562,23 @@
 
                 listaServer.forEach(serverChat => {
                     const num = serverChat.numero;
+                    
+                    // 2. Lógica para saber se o chat é MEU ou de OUTRO
+                    const souOAgente = (serverChat.nomeAgente === meuNome);
+                    const temOutroAgente = (serverChat.nomeAgente && !souOAgente);
+                    
+                    // 3. Define visibilidade
+                    // Se for MEU, força true. Se for de OUTRO, força false. Senão, usa o do servidor.
+                    let deveAparecer = serverChat.visivel; 
+                    
+                    if (souOAgente) {
+                        deveAparecer = true; 
+                    } else if (temOutroAgente) {
+                        deveAparecer = false; 
+                    }
+
                     const isAtendimentoHumano = serverChat.etapa === 'ATENDIMENTO_HUMANO';
-                    const temAgente = !!serverChat.nomeAgente;
-                    const serverPendingStatus = (serverChat.visivel && !isAtendimentoHumano && !temAgente);
+                    const serverPendingStatus = (deveAparecer && !isAtendimentoHumano && !serverChat.nomeAgente);
 
                     if (mapaLocal.has(num)) {
                         const localChat = mapaLocal.get(num);
@@ -643,7 +592,7 @@
                         localChat.etapa = serverChat.etapa; 
                         localChat.nomeAgente = serverChat.nomeAgente;
                         
-                        // Aplica a visibilidade calculada
+                        // Aplica a visibilidade corrigida
                         localChat.visivel = deveAparecer;
 
                     } else {
@@ -652,12 +601,12 @@
                             nomeFinal = serverChat.nome;
                             AppState.contactNames[num] = serverChat.nome;
                         }
+                        
                         novosChats.push({
                             numero: num,
                             nome: nomeFinal || num,
                             ultimaMensagem: serverChat.ultimaMensagem,
                             unreadCount: serverChat.unreadCount,
-                            visivel: (serverChat.visivel !== undefined) ? serverChat.visivel : true,
                             visivel: deveAparecer, // Usa a visibilidade corrigida
                             pending: serverPendingStatus,
                             etapa: serverChat.etapa,
@@ -675,14 +624,14 @@
                 
                 if (AppState.activeNumber) {
                     const activeChat = AppState.chatList.find(c => c.numero === AppState.activeNumber);
-                    if (activeChat) {
-                        if (!activeChat.visivel) {
-                            // Opcional: Fechar o chat automaticamente se sumir
-                            // showScreen('welcome');
-                            // AppState.activeNumber = null;
-                        } else {
-                            atualizarBotoesToolbar(activeChat);
-                        }
+                    if (!activeChat || !activeChat.visivel) {
+                        // Se sumiu da lista (foi transferido para outro), fecha
+                        // AppState.activeNumber = null;
+                        // saveState();
+                        // showScreen('welcome');
+                    } else {
+                        // Atualiza a toolbar para refletir se ainda sou o dono
+                        atualizarBotoesToolbar(activeChat);
                     }
                 }
 
@@ -756,7 +705,6 @@
             
             saveState();
             renderSidebar();
-            // Se estiver aberto, atualiza a toolbar
             if (AppState.activeNumber === data.chatId) {
                 const chat = AppState.chatList.find(c => c.numero === data.chatId);
                 atualizarBotoesToolbar(chat);
@@ -794,6 +742,7 @@
                     }
                 }
             } else {
+                // Se o chat não existia na minha lista (ex: estava oculto), força sincronização
                 syncChatsWithServer(); 
             }
         });
@@ -885,8 +834,6 @@
                 });
             } catch (e) { console.error(e); }
         }
-
-        // --- FUNÇÕES DE AÇÃO DOS BOTÕES ---
 
         async function finalizarChat() {
             if (!AppState.activeNumber) return;
@@ -998,9 +945,6 @@
             }
         });
 
-        // ========================================================
-        // === LÓGICA BOTÃO ASSOCIAR TICKET ===
-        // ========================================================
         btnAssociarTicket.addEventListener('click', () => {
             if(btnAssociarTicket.disabled) return;
             modalAssociar.style.display = 'flex';
@@ -1031,9 +975,6 @@
                     const t = json.data;
                     associarResult.innerHTML = `✅ <b>Ticket Encontrado:</b><br>#${t.id} - ${t.assunto} (${t.status})`;
                     associarResult.style.color = 'green';
-                    
-                    // Opcional: Se quiser fechar após 2 segundos
-                    // setTimeout(() => modalAssociar.style.display = 'none', 2000);
                 } else {
                     associarResult.innerHTML = '❌ Ticket não encontrado.';
                     associarResult.style.color = 'red';
@@ -1043,27 +984,21 @@
             }
         });
 
-        // ========================================================
-        // === LÓGICA BOTÃO CRIAR CHAMADO ===
-        // ========================================================
         btnCriarChamado.addEventListener('click', async () => {
             if(btnCriarChamado.disabled) return;
             if(!AppState.activeNumber) return;
 
             modalCriar.style.display = 'flex';
-            // Reseta form
             inputAssunto.value = '';
             inputDescricao.value = '';
             selectPrioridade.value = 'Média';
             
-            // Carrega categorias
             if(selectCategoria.options.length <= 1) {
                 try {
-                    const res = await fetch('/api/categorias'); // Rota padrão
-                    const json = await res.json(); // Espera [{id, nome}, ...]
+                    const res = await fetch('/categorias'); 
+                    const json = await res.json(); 
                     selectCategoria.innerHTML = '<option value="">Selecione...</option>';
                     
-                    // Ajuste caso sua API retorne { success:true, data: [] }
                     const lista = Array.isArray(json) ? json : (json.data || []);
                     
                     lista.forEach(cat => {
@@ -1091,7 +1026,6 @@
             if(!confirm("Confirmar criação do chamado?")) return;
 
             try {
-                // Pega ID do agente logado para ser o 'requisitante_id' (criador)
                 const userData = JSON.parse(localStorage.getItem("userData"));
                 const agenteId = userData?.data?.id; 
 
@@ -1101,10 +1035,10 @@
                         descricao,
                         categoria_id: categoriaId,
                         prioridade,
-                        requisitante_id: agenteId, // O agente abre em nome do cliente
+                        requisitante_id: agenteId, 
                         status: 'Aberto'
                     },
-                    numero: AppState.activeNumber // Telefone do cliente
+                    numero: AppState.activeNumber 
                 };
 
                 const res = await fetch('/api/whatsapp/ticket/criar', {
@@ -1128,12 +1062,10 @@
             }
         });
 
-        // Fechar Modal
         btnCancelarTransfer.addEventListener('click', () => {
             modalTransfer.style.display = 'none';
         });
 
-        // Confirmar Transferência
         btnConfirmarTransfer.addEventListener('click', async () => {
             const novoAgente = selectAgentes.value;
             if (!novoAgente) return alert("Selecione um agente!");
