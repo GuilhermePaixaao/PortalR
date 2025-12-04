@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="css/chamado.css">
     <link rel="stylesheet" href="css/ticket.css">
     <style>
-        /* (Estilos CSS originais mantidos) */
+        /* (Estilos CSS originais mantidos e AJUSTADOS) */
         dialog:not([open]) { display: none; }
         dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
         dialog { border: none; border-radius: 8px; padding: 1.5rem; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); max-width: 800px; width: calc(100% - 2rem); }
@@ -45,19 +45,27 @@
         .alert-success { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
         .alert-danger { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
         .alert-warning { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
-        .ticket-list { display: flex; flex-direction: column; }
+        
+        /* --- AJUSTES DA TABELA AQUI --- */
+        .ticket-list { display: flex; flex-direction: column; min-width: 900px; /* Garante largura mínima para não quebrar */ }
         .ticket-row { display: flex; border-bottom: 1px solid #eee; padding: 1rem 0.5rem; align-items: center; }
         .ticket-row.header { background-color: #f8f9fa; font-weight: bold; border-bottom: 2px solid #dee2e6; }
-        .ticket-cell { padding: 0 0.5rem; }
-        .ticket-id { flex: 0 0 80px; text-align: center; }
+        .ticket-cell { padding: 0 0.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        
+        /* Larguras ajustadas */
+        .ticket-id { flex: 0 0 60px; text-align: center; }
         .ticket-priority { flex: 0 0 100px; text-align: center; }
-        .ticket-subject { flex: 1 1 auto; min-width: 200px; }
-        .ticket-category { flex: 0 0 150px; }
-        .ticket-status { flex: 0 0 80px; text-align: center; }
-        .ticket-requisitante { flex: 0 0 120px; }
-        .ticket-operator { flex: 0 0 120px; }
-        .ticket-created { flex: 0 0 100px; text-align: center; }
+        /* Categoria agora tem tamanho fixo maior e fica ao lado da prioridade */
+        .ticket-category { flex: 0 0 180px; text-align: left; } 
+        /* Assunto agora é flex 1 para ocupar o RESTO do espaço */
+        .ticket-subject { flex: 1 1 auto; min-width: 200px; font-weight: 500; color: #212529; }
+        
+        .ticket-status { flex: 0 0 110px; text-align: center; }
+        .ticket-requisitante { flex: 0 0 130px; }
+        .ticket-operator { flex: 0 0 130px; }
+        .ticket-created { flex: 0 0 140px; text-align: center; font-size: 0.9em; }
         .ticket-actions { flex: 0 0 60px; text-align: center; cursor: pointer; }
+
         .priority-badge,
         .status-badge { padding: 0.2em 0.6em; border-radius: 0.25rem; font-size: 0.85em; font-weight: 600; }
         .priority-badge.alta, .priority-badge.high { background-color: #f8d7da; color: #842029; }
