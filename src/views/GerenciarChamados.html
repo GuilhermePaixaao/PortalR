@@ -461,7 +461,27 @@
             width: auto;  /* Mantém a proporção da imagem */
         }
         /* --- FIM MODO ESCURO --- */
+        /* ============================================================ */
+        /* === CORREÇÃO: CONTAINER DE EDIÇÃO (LIGHT vs DARK) === */
+        /* ============================================================ */
+        
+        /* Padrão (Light Mode) - Simula o bg-light que removemos */
+        #editCategoriaContainer {
+            background-color: #f8f9fa;
+            border-color: #dee2e6 !important;
+        }
 
+        /* Modo Escuro (Dark Mode) */
+        .dark-mode #editCategoriaContainer {
+            background-color: #2b2b2b; /* Um tom mais escuro para destacar dentro do modal */
+            border-color: #444 !important;
+            color: #e0e0e0;
+        }
+
+        /* Corrige a cor do texto pequeno "Selecione a nova categoria" no modo escuro */
+        .dark-mode #editCategoriaContainer .text-muted {
+            color: #adb5bd !important; /* Cinza claro legível */
+        }
     </style>
 </head>
 
