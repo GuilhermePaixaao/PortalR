@@ -15,8 +15,13 @@ router.post('/api/whatsapp/send', WhatsappController.handleSendMessage);
 // Frontend chama isso para ver se já está conectado
 router.get('/api/whatsapp/status', WhatsappController.checarStatus);
 
-// Rota para listar conversas
+// Rota para listar conversas (Sidebar)
 router.get('/api/whatsapp/chats', WhatsappController.listarConversas);
+
+// --- [CORREÇÃO] ROTA QUE FALTAVA ---
+// Rota para listar mensagens de um chat específico
+router.post('/api/whatsapp/messages', WhatsappController.listarMensagensChat);
+// -----------------------------------
 
 // Rota para o agente assumir o chamado
 router.post('/api/whatsapp/atender', WhatsappController.atenderAtendimento);
@@ -28,7 +33,7 @@ router.post('/api/whatsapp/finalizar', WhatsappController.finalizarAtendimento);
 router.post('/api/whatsapp/transferir', WhatsappController.transferirAtendimento);
 
 // =========================================================
-// === NOVAS ROTAS (PARTE 1 - TICKETS) ===
+// === NOVAS ROTAS (TICKETS) ===
 // =========================================================
 
 // Validar se um ticket existe (Botão Associar)
