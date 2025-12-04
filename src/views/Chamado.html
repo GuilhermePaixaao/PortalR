@@ -500,7 +500,6 @@
             // Percorre a árvore de categorias subindo pelos pais
             while (currentId && attempts < 20) {
                 // Busca a categoria pelo ID no array carregado
-                // Usamos '==' para evitar problemas de tipo (string vs number)
                 const cat = allCategories.find(c => c.id == currentId);
                 if (cat) {
                     caminho.unshift(cat.nome); // Adiciona ao início do array

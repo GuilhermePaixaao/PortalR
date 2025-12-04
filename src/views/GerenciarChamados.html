@@ -437,7 +437,7 @@
         .dark-mode .status-badge.aberto { background-color: #5a6268; color: #e0e0e0; }
         .dark-mode .status-badge.concluído { background-color: #0f5132; color: #d1e7dd; }
         .dark-mode .status-badge.em-andamento { background-color: #084298; color: #cfe2ff; }
-        .dark-mode .status-badge.pausado { background-color: #664d03; color: #fff3cd; } 
+        .dark-mode .status-badge.pausado { background-color: #664d03; color: #fff3cd; } /* <-- ATUALIZADO */
         /* Botão de Tema no Modo Escuro */
         .dark-mode .btn-theme-toggle {
             background-color: #333;
@@ -1028,7 +1028,7 @@
             if (!chamados?.length) {
                 ticketList.insertAdjacentHTML('beforeend', `
                 <div class="ticket-row data-row">
-                    <div class="ticket-cell" style="grid-column: 1 / -1; text-align:center; padding:1rem;">
+                    <div class="ticket-cell" style="grid-column: 1 / -1; text-align: center; padding: 1rem;">
                     Nenhum chamado encontrado.
                     </div>
                 </div>`);
@@ -1071,10 +1071,14 @@
                 ticketList.insertAdjacentHTML('beforeend', `
                 <div class="ticket-row data-row" data-ticket-id="${ch.id}">
                     <div class="ticket-cell ticket-id">#${ch.id}</div>
-                    <div class="ticket-cell ticket-priority"><span class="priority-badge ${prioridadeClass}">${escapeHtml(ch.prioridade)}</span></div>
+                    <div class="ticket-cell ticket-priority">
+                        <span class="priority-badge ${prioridadeClass}">${escapeHtml(ch.prioridade)}</span>
+                    </div>
                     <div class="ticket-cell ticket-subject">${escapeHtml(ch.assunto)}</div>
                     <div class="ticket-cell ticket-category">${escapeHtml(nomeExibicao)}</div>
-                    <div class="ticket-cell ticket-status"><span class="status-badge ${statusClass}">${escapeHtml(ch.status)}</span></div>
+                    <div class="ticket-cell ticket-status">
+                        <span class="status-badge ${statusClass}">${escapeHtml(ch.status)}</span>
+                    </div>
                     <div class="ticket-cell ticket-requisitante">${escapeHtml(ch.Funcionario?.nomeFuncionario || 'Desconhecido')}</div>
                     <div class="ticket-cell ticket-operator">${escapeHtml(ch.Atendente?.nomeFuncionario || 'N/A')}</div>
                     <div class="ticket-cell ticket-created">${formatarData(ch.created_at)}</div>
@@ -1087,7 +1091,7 @@
 
         async function listarChamados() {
             limparMensagem(divRespostaGeral);
-            ticketList.querySelectorAll('.data-row').forEach(r => r.remove());
+            ticketList.querySelectorAll('.data-row').forEach(row => row.remove());
             loadingIndicator.style.display = 'block';
 
             const p = new URLSearchParams();
@@ -1212,7 +1216,7 @@
                 const r = await fetch(`${API_URL}/chamados/${currentTicketId}/status`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: novaStatus, atendenteId: userId })
+                    body: JSON.stringify({ status: novoStatus, atendenteId: userId })
                 });
                 const data = await r.json();
                 if (!r.ok) throw new Error(data.message);
@@ -1228,7 +1232,7 @@
         
         async function handleAtendenteChange() {
             if (!currentTicketId) return;
-            const novoAtendenteId = detalheAtendenteSelect.value ? parseInt(detalheAtendenteSelect.value) : null;
+            const novaAtendenteId = detalheAtendenteSelect.value ? parseInt(detalheAtendenteSelect.value) : null;
             limparMensagem(modalDetalhesResposta);
             try {
                 const r = await fetch(`${API_URL}/chamados/${currentTicketId}/atendente`, {
