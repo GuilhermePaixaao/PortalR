@@ -490,6 +490,30 @@
             }
         }
         
+        // --- (NOVO) Função para montar o caminho da categoria (Pai > Filho > Neto) ---
+        function montarCaminhoCategoria(categoriaId) {
+            if (!categoriaId) return 'N/A';
+            let caminho = [];
+            let currentId = categoriaId;
+            let attempts = 0;
+
+            // Percorre a árvore de categorias subindo pelos pais
+            while (currentId && attempts < 20) {
+                // Busca a categoria pelo ID no array carregado
+                // Usamos '==' para evitar problemas de tipo (string vs number)
+                const cat = allCategories.find(c => c.id == currentId);
+                if (cat) {
+                    caminho.unshift(cat.nome); // Adiciona ao início do array
+                    currentId = cat.parent_id; // Vai para o pai
+                } else {
+                    break;
+                }
+                attempts++;
+            }
+            return caminho.join(' / ') || 'N/A';
+        }
+        // ----------------------------------------------------------------------------
+        
         function criarProximoDropdown(parentId, level) {
             const children = allCategories.filter(c => c.parent_id == parentId);
             if (children.length === 0) return;
@@ -627,14 +651,20 @@
                 const prioridadeClass = (chamado.prioridade || 'Média').toLowerCase().replace('é', 'e');
                 const statusClass = (chamado.status || 'Aberto').toLowerCase().replace(/\s+/g, '-');
 
+                // --- ATUALIZADO: Lógica de montagem da categoria com caminho completo ---
                 let nomeExibicao = 'N/A';
-                if (chamado.Categorias) {
+                if (chamado.Categorias && chamado.Categorias.id) {
+                    // Tenta montar o caminho usando a árvore carregada
+                    nomeExibicao = montarCaminhoCategoria(chamado.Categorias.id);
+                } else if (chamado.Categorias) {
+                    // Fallback se não tiver ID (exibição simples)
                     if (chamado.Categorias.nomePai) {
                         nomeExibicao = `${chamado.Categorias.nomePai} / ${chamado.Categorias.nome}`;
                     } else {
                         nomeExibicao = chamado.Categorias.nome;
                     }
                 }
+                // -----------------------------------------------------------------------
                 
                 row.innerHTML = `
                     <div class="ticket-cell ticket-id">#${chamado.id}</div>
@@ -669,7 +699,10 @@
                     document.getElementById('detalheDepartamento').textContent = chamado.departamento || 'N/A';
 
                     document.getElementById('detalheRequisitante').textContent = chamado.Funcionario?.nomeFuncionario || 'Desconhecido';
+                    
+                    // Atualizado também no modal
                     document.getElementById('detalheCategoria').textContent = nomeExibicao; 
+                    
                     document.getElementById('detalheData').textContent = formatarData(chamado.created_at);
                     listaComentariosContainer.innerHTML = '<span class="comment-empty-state">Carregando comentários...</span>';
                     carregarComentarios(ticketId); 
