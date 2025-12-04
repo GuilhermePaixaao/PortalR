@@ -347,6 +347,12 @@ export const handleSendMessage = async (req, res) => {
   const { numero, mensagem, nomeAgenteTemporario } = req.body;
   try {
       let mensagemFinal = mensagem;
+      
+      // [CORREÇÃO] Adiciona o nome do agente em negrito se disponível
+      if (nomeAgenteTemporario) {
+          mensagemFinal = `*${nomeAgenteTemporario}*\n${mensagem}`;
+      }
+
       const contexto = userContext[numero];
       if(contexto) contexto.mostrarNaFila = true;
       else if (!contexto) userContext[numero] = { etapa: 'ATENDIMENTO_HUMANO', botPausado: true, mostrarNaFila: true };
