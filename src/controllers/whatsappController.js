@@ -44,8 +44,8 @@ const MENSAGENS = {
 
 Selecione uma opção para prosseguir:
 
-1️⃣ **Reportar Problema** (Falar com T.I.)
-*️⃣ **Consultar Ticket** (Ex: digite *123)
+1️⃣ *Reportar Problema* (Falar com T.I.)
+*️⃣ *Consultar Ticket* (Ex: digite *123)
 
 _Para encerrar a qualquer momento, digite #._`,
 
@@ -53,7 +53,7 @@ _Para encerrar a qualquer momento, digite #._`,
     MENU_TI_COM_FILA: `✅ *Solicitação Iniciada*
     
 Você está na fila de atendimento.
-Por favor, **descreva detalhadamente o problema** abaixo (qual equipamento, mensagem de erro, setor).
+Por favor, *descreva detalhadamente o problema* abaixo (qual equipamento, mensagem de erro, setor).
 _Nossa equipe analisará sua mensagem enquanto um técnico assume._`,
 
     // Mensagem 2: Confirmação Final e Contato de Urgência
@@ -214,7 +214,7 @@ export const handleWebhook = async (req, res) => {
                     // (Código de consulta de ticket mantido igual)
                     let ticketNumeroStr = texto.startsWith('*') ? texto.substring(1).trim() : texto.replace(/\D/g,'');
                     if (!ticketNumeroStr) {
-                        respostaBot = "ℹ️ Digite o número do ticket com asterisco. Ex: ***123**";
+                        respostaBot = "ℹ️ Digite o número do ticket com asterisco. Ex: **123*";
                     } else {
                         const ticketId = parseInt(ticketNumeroStr);
                         const ticket = await chamadoModel.findById(ticketId); 
@@ -267,7 +267,7 @@ export const handleWebhook = async (req, res) => {
                     ctx.mostrarNaFila = false; 
                     delete userContext[idRemoto];
                 } else {
-                    respostaBot = "Digite uma nota de **1 a 5** ou **9** para sair.";
+                    respostaBot = "Digite uma nota de *1 a 5* ou *9* para sair.";
                 }
             }
             else if (ctx.etapa === 'AVALIACAO_MOTIVO') {
