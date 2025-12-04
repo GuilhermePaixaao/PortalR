@@ -4,51 +4,31 @@ import * as EmailService from '../services/emailService.js';
 import { OpenAI } from 'openai';
 
 // ==================================================
-// 1. CONFIGURAÇÕES DA GROQ (IA DE ALTA PERFORMANCE)
+// 1. CONFIGURAÇÕES DA GROQ
 // ==================================================
 const groq = new OpenAI({
     apiKey: process.env.GROQ_API_KEY, 
     baseURL: "https://api.groq.com/openai/v1"
 });
 
-// Modelo rápido para respostas ágeis
 const MODELO_IA = "llama-3.1-8b-instant"; 
 
 // --- CACHE ANTI-DUPLICAÇÃO ---
 const processedMessageIds = new Set();
 
 // ==================================================
-// 2. O CÉREBRO DA IA (PROMPT DE TRIAGEM RESTRITIVA)
+// 2. O CÉREBRO DA IA (APENAS PARA MENU/GERAL)
 // ==================================================
 const gerarPromptSistema = (nomeUsuario) => {
     const nome = nomeUsuario || 'Colaborador';
     return `
 IDENTIDADE:
-Você é o Assistente de Triagem do Suporte Técnico do Supermercado Rosalina.
-Você está atendendo: ${nome}.
-Seu tom é extremamente profissional, corporativo e objetivo.
+Você é o Assistente Virtual do Supermercado Rosalina.
+Atendendo: ${nome}.
 
-MISSÃO CRÍTICA:
-Sua função é APENAS COLETAR INFORMAÇÕES detalhadas sobre o problema para repassar ao técnico humano.
-Você deve fazer perguntas diagnósticas para entender a extensão do problema.
-
-⛔ REGRAS DE OURO (O QUE NÃO FAZER):
-1. VOCÊ É PROIBIDO DE SUGERIR SOLUÇÕES TÉCNICAS. Nunca diga "reinicie", "verifique os cabos", "limpe o cache". Isso é função do técnico presencial.
-2. Não tente resolver o problema. Apenas documente o problema.
-
-DIRETRIZES DE RESPOSTA:
-1. FAÇA PERGUNTAS ESPECÍFICAS:
-   - Se falarem de impressora: Pergunte o modelo ou qual setor, e se exibe mensagem no visor.
-   - Se falarem de sistema lento: Pergunte se é em todos os módulos ou um específico.
-   - Se falarem de erro: Pergunte o que está escrito na mensagem de erro.
-   
-2. RESPOSTA PADRÃO PARA FINALIZAR O TEMA:
-   - "Entendido. Registrei os detalhes para a equipe técnica."
-
-3. ESCOPO:
-   - Se o assunto fugir de T.I. (ex: preço de produto, escala de folga): "Este canal é exclusivo para Suporte Técnico. Por favor, contate o setor responsável."
-
-Resuma suas respostas. Seja breve. Aja como um analista que está preenchendo uma ficha técnica.
+OBJETIVO:
+Apenas saudar e direcionar para o menu. NÃO tente resolver problemas técnicos.
+Se o usuário disser "oi", "olá", devolva a saudação e peça para escolher uma opção do menu.
 `;
 };
 
@@ -56,7 +36,7 @@ Resuma suas respostas. Seja breve. Aja como um analista que está preenchendo um
 const userContext = {};
 
 // ==================================================
-// 3. A "VOZ" DO SISTEMA (MENSAGENS PADRONIZADAS)
+// 3. TEXTOS FIXOS
 // ==================================================
 const MENSAGENS = {
     // Menu Inicial
@@ -69,20 +49,24 @@ Selecione uma opção para prosseguir:
 
 _Para encerrar a qualquer momento, digite #._`,
 
-    // Entrada na Fila
+    // Mensagem 1: Pede a descrição
     MENU_TI_COM_FILA: `✅ *Solicitação Iniciada*
     
 Você está na fila de atendimento.
 Por favor, **descreva detalhadamente o problema** abaixo (qual equipamento, mensagem de erro, setor).
-_Nossa IA fará a triagem das informações enquanto um técnico assume._`,
+_Nossa equipe analisará sua mensagem enquanto um técnico assume._`,
+
+    // Mensagem 2: Confirmação Final e Contato de Urgência
+    CONFIRMACAO_FINAL: `✅ *Você acessou a Fila de Suporte T.I.*
+    
+Opção selecionada: Suporte T.I
+Você entrou na fila, logo você será atendido.
+
+📞 *Em caso de urgência pode nos acionar no número:* (12) 98142-2925`,
 
     OPCAO_INVALIDA: `⚠️ *Opção inválida.*
 Por favor, digite apenas o número correspondente.`,
 
-    FILA_TI: `🔔 *Triagem Realizada.*
-Os dados foram repassados para a equipe técnica. Aguarde o atendimento humano.`,
-
-    // Avaliação
     AVALIACAO_INICIO: `⏹️ *Atendimento Finalizado.*
 
 Por favor, avalie nosso suporte técnico:
@@ -116,15 +100,16 @@ async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
         
         contexto.historico.push({ role: "user", content: textoUsuario });
         
-        if (contexto.historico.length > 12) {
-            contexto.historico = [contexto.historico[0], ...contexto.historico.slice(-10)];
+        // Mantém histórico curto
+        if (contexto.historico.length > 6) {
+            contexto.historico = [contexto.historico[0], ...contexto.historico.slice(-5)];
         }
 
         const completion = await groq.chat.completions.create({
             messages: contexto.historico,
             model: MODELO_IA,
-            temperature: 0.1, // Temperatura baixa para ser estritamente profissional
-            max_tokens: 200,  
+            temperature: 0.1,
+            max_tokens: 150,  
         });
 
         const respostaIA = completion.choices[0]?.message?.content || "";
@@ -220,13 +205,13 @@ export const handleWebhook = async (req, res) => {
             // --- MENU PRINCIPAL ---
             else if (ctx.etapa === 'MENU') {
                 if (texto === '1' || textoMin.includes('problema') || textoMin.includes('suporte')) {
+                    // Manda a mensagem pedindo a descrição e muda para etapa de espera
                     respostaBot = MENSAGENS.MENU_TI_COM_FILA;
-                    ctx.etapa = 'SUBMENU_TI'; 
-                    ctx.botPausado = false;   
-                    ctx.mostrarNaFila = true; 
-                    io.emit('notificacaoChamado', { chatId: idRemoto, nome: nomeAutor, status: 'PENDENTE_TI' });
+                    ctx.etapa = 'AGUARDANDO_DESCRICAO'; // Nova etapa para capturar a resposta
+                    ctx.botPausado = false; // Mantém ativo para ouvir a próxima msg
                 } 
                 else if (texto.startsWith('*') || textoMin.includes('ticket')) {
+                    // (Código de consulta de ticket mantido igual)
                     let ticketNumeroStr = texto.startsWith('*') ? texto.substring(1).trim() : texto.replace(/\D/g,'');
                     if (!ticketNumeroStr) {
                         respostaBot = "ℹ️ Digite o número do ticket com asterisco. Ex: ***123**";
@@ -251,12 +236,25 @@ export const handleWebhook = async (req, res) => {
                 }
             }
 
-            // --- TRIAGEM DE TI (IA ATIVA) ---
-            else if (ctx.etapa === 'SUBMENU_TI') {
-                // Se a IA estiver ativa, ela coleta informações sem tentar resolver
-                if (!ctx.botPausado) {
-                    respostaBot = await processarComGroq(idRemoto, texto, nomeAutor);
-                }
+            // --- CAPTURA DA DESCRIÇÃO E CONFIRMAÇÃO FINAL ---
+            else if (ctx.etapa === 'AGUARDANDO_DESCRICAO') {
+                // O usuário enviou a descrição do problema (texto)
+                
+                // 1. Notifica o painel (Socket)
+                ctx.mostrarNaFila = true; 
+                io.emit('notificacaoChamado', { chatId: idRemoto, nome: nomeAutor, status: 'PENDENTE_TI' });
+
+                // 2. Responde com a mensagem de urgência
+                respostaBot = MENSAGENS.CONFIRMACAO_FINAL;
+
+                // 3. Pausa o bot e aguarda humano
+                ctx.etapa = 'FILA_ESPERA';
+                ctx.botPausado = true; 
+            }
+
+            // --- ESTADO DE FILA (Bot fica mudo) ---
+            else if (ctx.etapa === 'FILA_ESPERA') {
+                // Não faz nada, apenas aguarda atendimento humano
             }
 
             // --- AVALIAÇÃO ---
@@ -280,9 +278,8 @@ export const handleWebhook = async (req, res) => {
 
             // --- FALLBACK (Se digitar texto aleatório no INICIO) ---
             else if (!respostaBot && !ctx.botPausado && ctx.etapa === 'INICIO') {
-                ctx.etapa = 'MENU';
-                ctx.historico = [{ role: "system", content: gerarPromptSistema(nomeAutor) }];
-                respostaBot = MENSAGENS.SAUDACAO(nomeAutor);
+                // Se mandar mensagem solta, usa IA para tentar entender ou saudar
+                respostaBot = await processarComGroq(idRemoto, texto, nomeAutor);
             }
 
             if (respostaBot) {
@@ -307,7 +304,7 @@ export const handleWebhook = async (req, res) => {
 };
 
 // ==================================================
-// 6. FUNÇÕES ADMINISTRATIVAS
+// 6. FUNÇÕES ADMINISTRATIVAS (Inalteradas)
 // ==================================================
 
 export const atenderAtendimento = async (req, res) => {
