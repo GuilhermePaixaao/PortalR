@@ -17,27 +17,19 @@ const MODELO_IA = "llama-3.1-8b-instant";
 const processedMessageIds = new Set();
 
 // ==================================================
-// 2. O CÉREBRO DA IA (TRIAGEM DO MENU)
+// 2. O CÉREBRO DA IA (APENAS PARA O SUBMENU T.I.)
 // ==================================================
 const gerarPromptSistema = (nomeUsuario) => {
     const nome = nomeUsuario || 'Colaborador';
     return `
 IDENTIDADE:
-Você é a Recepcionista Virtual do Suporte Técnico (T.I.) do Supermercado Rosalina.
+Você é o Assistente Virtual do Suporte Técnico do Supermercado Rosalina.
 Atendendo: ${nome}.
 
-CONTEXTO:
-O usuário acabou de mandar uma mensagem inicial. Seu único objetivo é direcioná-lo para o menu oficial.
-
-MENU OFICIAL (ÚNICAS OPÇÕES VÁLIDAS):
-1. Reportar Problema (Suporte T.I., Senhas, Impressoras, Sistema)
-*. Consultar Ticket
-
-REGRAS DE RESPOSTA:
-1. Se o usuário relatou um problema (ex: "estou sem senha", "pdv travou"), NÃO tente resolver.
-2. Responda educadamente: "Entendo. Para que a equipe de T.I. possa te ajudar com esse problema, por favor digite o número 1."
-3. NUNCA invente opções como "verificar estoque", "compras online" ou "falar com atendente". O menu é SÓ T.I.
-4. Seja curta e direta.
+OBJETIVO:
+Coletar informações sobre o problema técnico relatado.
+NÃO tente resolver o problema. NÃO invente menus de compras ou estoque.
+Seja breve e profissional.
 `;
 };
 
@@ -117,7 +109,7 @@ async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
         const completion = await groq.chat.completions.create({
             messages: contexto.historico,
             model: MODELO_IA,
-            temperature: 0.1, // Temperatura baixa para evitar alucinações
+            temperature: 0.1,
             max_tokens: 150,  
         });
 
@@ -130,8 +122,7 @@ async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
 
     } catch (erro) {
         console.error("[GROQ] Erro:", erro);
-        // Fallback caso a IA falhe
-        return "Olá! Para suporte técnico, por favor digite 1."; 
+        return null; 
     }
 }
 
@@ -188,8 +179,10 @@ export const handleWebhook = async (req, res) => {
 
             const gatilhosInicio = ['oi', 'ola', 'menu', 'inicio', 'start', 'bom dia', 'boa tarde', 'ajuda', 'suporte'];
             const textoLimpo = textoMin.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"").trim(); 
-            // Aumentei o limite de caracteres para considerar saudações longas como "Boa tarde, preciso de ajuda"
-            const ehSaudacao = gatilhosInicio.some(s => textoLimpo === s || (textoLimpo.startsWith(s) && textoLimpo.length < 30));
+            
+            // [ALTERAÇÃO] Aumentei o limite de caracteres para 50. 
+            // Assim "Boa tarde e qual a senha..." é reconhecido como saudação e reseta para o Menu.
+            const ehSaudacao = gatilhosInicio.some(s => textoLimpo === s || (textoLimpo.startsWith(s) && textoLimpo.length < 50));
 
             // --- COMANDOS GERAIS ---
             if (texto === '#' || textoMin === 'encerrar' || textoMin === 'sair') {
@@ -199,11 +192,13 @@ export const handleWebhook = async (req, res) => {
                 ctx.nomeAgente = null;
             }
             
-            // --- INÍCIO DE CONVERSA ---
+            // --- INÍCIO DE CONVERSA / RESET ---
             else if (ehSaudacao) {
                 if (ctx.etapa === 'MENU' && textoMin !== 'menu') {
+                    // Se já está no menu e manda "oi" de novo, avisa opção inválida para não ficar repetindo
                     respostaBot = MENSAGENS.OPCAO_INVALIDA;
                 } else {
+                    // Reseta tudo e manda o Menu
                     ctx.etapa = 'MENU';
                     ctx.botPausado = false;
                     ctx.nomeAgente = null;
@@ -216,13 +211,11 @@ export const handleWebhook = async (req, res) => {
             // --- MENU PRINCIPAL ---
             else if (ctx.etapa === 'MENU') {
                 if (texto === '1' || textoMin.includes('problema') || textoMin.includes('suporte')) {
-                    // Manda a mensagem pedindo a descrição e muda para etapa de espera
                     respostaBot = MENSAGENS.MENU_TI_COM_FILA;
-                    ctx.etapa = 'AGUARDANDO_DESCRICAO'; // Nova etapa para capturar a resposta
-                    ctx.botPausado = false; // Mantém ativo para ouvir a próxima msg
+                    ctx.etapa = 'AGUARDANDO_DESCRICAO'; 
+                    ctx.botPausado = false; 
                 } 
                 else if (texto.startsWith('*') || textoMin.includes('ticket')) {
-                    // (Código de consulta de ticket mantido igual)
                     let ticketNumeroStr = texto.startsWith('*') ? texto.substring(1).trim() : texto.replace(/\D/g,'');
                     if (!ticketNumeroStr) {
                         respostaBot = "ℹ️ Digite o número do ticket com asterisco. Ex: ***123**";
@@ -247,25 +240,23 @@ export const handleWebhook = async (req, res) => {
                 }
             }
 
-            // --- CAPTURA DA DESCRIÇÃO E CONFIRMAÇÃO FINAL ---
+            // --- CAPTURA DA DESCRIÇÃO (FLUXO 1) ---
             else if (ctx.etapa === 'AGUARDANDO_DESCRICAO') {
-                // O usuário enviou a descrição do problema (texto)
-                
-                // 1. Notifica o painel (Socket)
+                // Notifica
                 ctx.mostrarNaFila = true; 
                 io.emit('notificacaoChamado', { chatId: idRemoto, nome: nomeAutor, status: 'PENDENTE_TI' });
 
-                // 2. Responde com a mensagem de urgência
+                // Responde
                 respostaBot = MENSAGENS.CONFIRMACAO_FINAL;
 
-                // 3. Pausa o bot e aguarda humano
+                // Pausa
                 ctx.etapa = 'FILA_ESPERA';
                 ctx.botPausado = true; 
             }
 
-            // --- ESTADO DE FILA (Bot fica mudo) ---
+            // --- ESTADO DE FILA ---
             else if (ctx.etapa === 'FILA_ESPERA') {
-                // Não faz nada, apenas aguarda atendimento humano
+                // Silêncio
             }
 
             // --- AVALIAÇÃO ---
@@ -287,10 +278,15 @@ export const handleWebhook = async (req, res) => {
                 delete userContext[idRemoto]; 
             }
 
-            // --- FALLBACK (Se digitar texto aleatório no INICIO) ---
+            // --- FALLBACK (SEGURANÇA CONTRA ALUCINAÇÃO) ---
             else if (!respostaBot && !ctx.botPausado && ctx.etapa === 'INICIO') {
-                // Se mandar mensagem solta, usa IA para tentar entender ou saudar
-                respostaBot = await processarComGroq(idRemoto, texto, nomeAutor);
+                // [IMPORTANTE] Se o usuário mandar texto solto no início e não for saudação curta, 
+                // NÃO mandamos para a IA. Mandamos direto para o MENU.
+                // Isso evita que a IA responda "Não posso ajudar" ou "Menu de Compras".
+                
+                ctx.etapa = 'MENU';
+                ctx.historico = [{ role: "system", content: gerarPromptSistema(nomeAutor) }];
+                respostaBot = MENSAGENS.SAUDACAO(nomeAutor);
             }
 
             if (respostaBot) {
