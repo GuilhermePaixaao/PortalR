@@ -557,9 +557,35 @@
                     </div>
                 </div>
 
-                <div class="detalhe-grupo">
-                    <span class="detalhe-label">Assunto</span>
-                    <div id="detalheAssunto" class="detalhe-valor">...</div>
+                <div class="row">
+                    <div class="col-md-7">
+                        <div class="detalhe-grupo">
+                            <span class="detalhe-label">Assunto</span>
+                            <div id="detalheAssunto" class="detalhe-valor">...</div>
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="detalhe-grupo">
+                            <span class="detalhe-label">Categoria</span>
+                            
+                            <div id="viewCategoriaContainer" class="d-flex justify-content-between align-items-center detalhe-valor">
+                                <span id="detalheCategoriaText">...</span>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="btnEditarCategoria" title="Alterar Categoria" style="padding: 0px 5px; font-size: 0.8rem; border: none; background: transparent;">
+                                    ✏️
+                                </button>
+                            </div>
+
+                            <div id="editCategoriaContainer" style="display: none;" class="mt-2 p-2 border rounded">
+                                <small class="text-muted d-block mb-2">Selecione a nova categoria:</small>
+                                <div id="cascataEdicaoWrapper"></div>
+                                
+                                <div class="mt-2 d-flex gap-2 justify-content-end">
+                                    <button type="button" class="btn btn-sm btn-secondary" id="btnCancelarEdicaoCategoria">Cancelar</button>
+                                    <button type="button" class="btn btn-sm btn-success" id="btnSalvarCategoria">Salvar</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="detalhe-grupo">
@@ -574,32 +600,6 @@
                             <div id="detalheRequisitante" class="detalhe-valor">...</div>
                         </div>
                     </div>
-                    
-                    <div class="col-md-6">
-                        <div class="detalhe-grupo">
-                            <span class="detalhe-label">Categoria</span>
-                            
-                            <div id="viewCategoriaContainer" class="d-flex justify-content-between align-items-center detalhe-valor">
-                                <span id="detalheCategoriaText">...</span>
-                                <button type="button" class="btn btn-sm btn-outline-primary" id="btnEditarCategoria" title="Alterar Categoria" style="padding: 0px 5px; font-size: 0.8rem; border: none; background: transparent;">
-                                    ✏️
-                                </button>
-                            </div>
-
-                            <div id="editCategoriaContainer" style="display: none;" class="mt-2 p-2 border rounded">
-                                <small class="text-muted d-block mb-2">Selecione a nova categoria:</small>
-                                <div id="cascataEdicaoWrapper"></div> 
-                                
-                                <div class="mt-2 d-flex gap-2 justify-content-end">
-                                    <button type="button" class="btn btn-sm btn-secondary" id="btnCancelarEdicaoCategoria">Cancelar</button>
-                                    <button type="button" class="btn btn-sm btn-success" id="btnSalvarCategoria">Salvar</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    </div>
-                
-                <div class="row">
                     <div class="col-md-6">
                         <div class="detalhe-grupo">
                             <span class="detalhe-label">Operador (Atendente)</span>
@@ -608,14 +608,17 @@
                             </select>
                         </div>
                     </div>
-                    <div class="col-md-6">
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-12">
                         <div class="detalhe-grupo">
                             <span class="detalhe-label">Criado em</span>
                             <div id="detalheData" class="detalhe-valor">...</div>
                         </div>
                     </div>
                 </div>
-                </div>
+            </div>
             
             <hr style="margin-top: 1rem; margin-bottom: 1.25rem;">
             

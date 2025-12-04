@@ -13,8 +13,7 @@
         /* (Estilos CSS originais mantidos) */
         dialog:not([open]) { display: none; }
         dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
-        dialog { border: none; border-radius: 8px; padding: 1.5rem; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); max-width: 600px; width: calc(100% - 2rem); }
-        #modalDetalhes { max-width: 800px; }
+        dialog { border: none; border-radius: 8px; padding: 1.5rem; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); max-width: 800px; width: calc(100% - 2rem); }
         .grupo-form { margin-bottom: 1rem; }
         .grupo-form label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
         .grupo-form input[type="text"],
@@ -219,10 +218,22 @@
             <h2 id="modalDetalhesTitle" style="text-transform: uppercase;">Detalhes do Chamado</h2>
             <hr>
             <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;">Dados Gerais</h3>
-            <div class="detalhe-grupo">
-                <span class="detalhe-label">Assunto</span>
-                <div id="detalheAssunto" class="detalhe-valor">...</div>
+            
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="detalhe-grupo">
+                        <span class="detalhe-label">Assunto</span>
+                        <div id="detalheAssunto" class="detalhe-valor">...</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="detalhe-grupo">
+                        <span class="detalhe-label">Categorias</span>
+                        <div id="detalheCategoria" class="detalhe-valor">...</div>
+                    </div>
+                </div>
             </div>
+
             <div class="detalhe-grupo">
                 <span class="detalhe-label">Descrição</span>
                 <div id="detalheDescricao" class="detalhe-descricao">...</div>
@@ -237,16 +248,13 @@
                 </div>
             </div>
             <div class="row">
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="detalhe-grupo"><span class="detalhe-label">Contato</span><span id="detalheRequisitante" class="detalhe-valor">...</span></div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="detalhe-grupo"><span class="detalhe-label">Situação</span><span id="detalheStatus" class="detalhe-valor">...</span></div>
                 </div>
-                <div class="col-md-3">
-                    <div class="detalhe-grupo"><span class="detalhe-label">Categorias</span><span id="detalheCategoria" class="detalhe-valor">...</span></div>
-                </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="detalhe-grupo"><span class="detalhe-label">Prioridade</span><span id="detalhePrioridade" class="detalhe-valor">...</span></div>
                 </div>
             </div>
