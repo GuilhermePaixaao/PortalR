@@ -563,19 +563,25 @@
                 listaServer.forEach(serverChat => {
                     const num = serverChat.numero;
                     
-                    // 2. Lógica para saber se o chat é MEU ou de OUTRO
-                    const souOAgente = (serverChat.nomeAgente === meuNome);
-                    const temOutroAgente = (serverChat.nomeAgente && !souOAgente);
-                    
-                    // 3. Define visibilidade
-                    // Se for MEU, força true. Se for de OUTRO, força false. Senão, usa o do servidor.
-                    let deveAparecer = serverChat.visivel; 
-                    
+                    // --- NOVA LÓGICA DE FILTRAGEM ---
+                    const agenteDoChat = serverChat.nomeAgente; // Quem assumiu?
+                    const souOAgente = (agenteDoChat === meuNome); // É o meu?
+                    const estaLivre = !agenteDoChat; // Ninguém assumiu?
+
+                    let deveAparecer = false;
+
                     if (souOAgente) {
-                        deveAparecer = true; 
-                    } else if (temOutroAgente) {
-                        deveAparecer = false; 
+                        // Se eu assumi, SEMPRE aparece para mim
+                        deveAparecer = true;
+                    } else if (estaLivre) {
+                        // Se está livre, obedece a lógica da fila (visivel=true do server)
+                        // ou forçamos aparecer se for 'ATENDIMENTO_HUMANO' mas sem agente
+                        if (serverChat.visivel !== false) deveAparecer = true;
+                    } else {
+                        // Se tem outro agente e não sou eu -> ESCONDE
+                        deveAparecer = false;
                     }
+                    // --------------------------------
 
                     const isAtendimentoHumano = serverChat.etapa === 'ATENDIMENTO_HUMANO';
                     const serverPendingStatus = (deveAparecer && !isAtendimentoHumano && !serverChat.nomeAgente);
@@ -592,7 +598,7 @@
                         localChat.etapa = serverChat.etapa; 
                         localChat.nomeAgente = serverChat.nomeAgente;
                         
-                        // Aplica a visibilidade corrigida
+                        // Aplica a visibilidade calculada
                         localChat.visivel = deveAparecer;
 
                     } else {
@@ -607,7 +613,7 @@
                             nome: nomeFinal || num,
                             ultimaMensagem: serverChat.ultimaMensagem,
                             unreadCount: serverChat.unreadCount,
-                            visivel: deveAparecer, // Usa a visibilidade corrigida
+                            visivel: deveAparecer, // Aplica visibilidade
                             pending: serverPendingStatus,
                             etapa: serverChat.etapa,
                             nomeAgente: serverChat.nomeAgente
@@ -622,16 +628,17 @@
                 saveState();
                 renderSidebar();
                 
+                // Se eu estava num chat que agora está oculto (foi transferido ou outro pegou)
                 if (AppState.activeNumber) {
                     const activeChat = AppState.chatList.find(c => c.numero === AppState.activeNumber);
-                    if (!activeChat || !activeChat.visivel) {
-                        // Se sumiu da lista (foi transferido para outro), fecha
-                        // AppState.activeNumber = null;
-                        // saveState();
-                        // showScreen('welcome');
-                    } else {
-                        // Atualiza a toolbar para refletir se ainda sou o dono
-                        atualizarBotoesToolbar(activeChat);
+                    if (activeChat) {
+                        if (!activeChat.visivel) {
+                            // Opcional: Fechar o chat automaticamente se sumir
+                            // showScreen('welcome');
+                            // AppState.activeNumber = null;
+                        } else {
+                            atualizarBotoesToolbar(activeChat);
+                        }
                     }
                 }
 
@@ -742,7 +749,6 @@
                     }
                 }
             } else {
-                // Se o chat não existia na minha lista (ex: estava oculto), força sincronização
                 syncChatsWithServer(); 
             }
         });
@@ -899,6 +905,8 @@
                     chat.pending = false;
                     chat.etapa = 'ATENDIMENTO_HUMANO'; 
                     chat.nomeAgente = nomeAgente; 
+                    // [NOVO] Garante que fique visível pra mim
+                    chat.visivel = true;
                 }
                 
                 saveState();
