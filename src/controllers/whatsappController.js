@@ -16,8 +16,12 @@ const MODELO_IA = "llama-3.1-8b-instant";
 // --- CACHE ANTI-DUPLICAÇÃO ---
 const processedMessageIds = new Set();
 
-const SISTEMA_PROMPT = `
+// [CORREÇÃO] Transformei em função para injetar o nome dinamicamente
+const gerarPromptSistema = (nomeUsuario) => {
+    const nome = nomeUsuario || 'Colaborador';
+    return `
 Você é o assistente de triagem do Suporte Técnico (T.I.) do Supermercado Rosalina.
+Você está atendendo o usuário: ${nome}.
 Sua missão é EXCLUSIVAMENTE tirar dúvidas sobre: uso do sistema interno, problemas com impressoras, internet, computadores e abertura de chamados.
 
 REGRAS RÍGIDAS DE COMPORTAMENTO:
@@ -29,6 +33,7 @@ REGRAS RÍGIDAS DE COMPORTAMENTO:
 4. Se não souber a resposta técnica, peça para ele digitar # para falar com um humano.
 5. Se receber mensagens curtas como "ata", "ok", "entendi", responda: "Certo. Algo mais?"
 `;
+};
 
 // Memória local
 const userContext = {};
@@ -75,7 +80,8 @@ async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
 
     try {
         if (!contexto.historico || contexto.historico.length === 0) {
-            contexto.historico = [{ role: "system", content: SISTEMA_PROMPT }];
+            // [CORREÇÃO] Usa a função geradora passando o nome
+            contexto.historico = [{ role: "system", content: gerarPromptSistema(nomeUsuario) }];
         }
         contexto.historico.push({ role: "user", content: textoUsuario });
         if (contexto.historico.length > 12) {
@@ -162,7 +168,9 @@ export const handleWebhook = async (req, res) => {
                     ctx.botPausado = false;
                     ctx.nomeAgente = null;
                     ctx.mostrarNaFila = false;
-                    ctx.historico = [{ role: "system", content: SISTEMA_PROMPT }];
+                    // [CORREÇÃO] Reinicia histórico usando a função com o nome do autor
+                    ctx.historico = [{ role: "system", content: gerarPromptSistema(nomeAutor) }];
+                    
                     const textoSaudacao = MENSAGENS.SAUDACAO(nomeAutor);
                     await evolutionService.enviarTexto(idRemoto, textoSaudacao);
                     io.emit('novaMensagemWhatsapp', { id: 'menu-'+Date.now(), chatId: idRemoto, nome: "Bot", texto: textoSaudacao, fromMe: true });
