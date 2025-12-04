@@ -461,6 +461,7 @@
             width: auto;  /* Mantém a proporção da imagem */
         }
         /* --- FIM MODO ESCURO --- */
+        
         /* ============================================================ */
         /* === CORREÇÃO: CONTAINER DE EDIÇÃO (LIGHT vs DARK) === */
         /* ============================================================ */
@@ -587,7 +588,7 @@
 
                             <div id="editCategoriaContainer" style="display: none;" class="mt-2 p-2 border rounded">
                                 <small class="text-muted d-block mb-2">Selecione a nova categoria:</small>
-                                <div id="cascataEdicaoWrapper"></div>
+                                <div id="cascataEdicaoWrapper"></div> 
                                 
                                 <div class="mt-2 d-flex gap-2 justify-content-end">
                                     <button type="button" class="btn btn-sm btn-secondary" id="btnCancelarEdicaoCategoria">Cancelar</button>
@@ -1216,7 +1217,7 @@
                 const r = await fetch(`${API_URL}/chamados/${currentTicketId}/status`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: novoStatus, atendenteId: userId })
+                    body: JSON.stringify({ status: novaStatus, atendenteId: userId })
                 });
                 const data = await r.json();
                 if (!r.ok) throw new Error(data.message);
