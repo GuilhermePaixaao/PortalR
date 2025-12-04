@@ -17,18 +17,27 @@ const MODELO_IA = "llama-3.1-8b-instant";
 const processedMessageIds = new Set();
 
 // ==================================================
-// 2. O CÉREBRO DA IA (APENAS PARA MENU/GERAL)
+// 2. O CÉREBRO DA IA (TRIAGEM DO MENU)
 // ==================================================
 const gerarPromptSistema = (nomeUsuario) => {
     const nome = nomeUsuario || 'Colaborador';
     return `
 IDENTIDADE:
-Você é o Assistente Virtual do Supermercado Rosalina.
+Você é a Recepcionista Virtual do Suporte Técnico (T.I.) do Supermercado Rosalina.
 Atendendo: ${nome}.
 
-OBJETIVO:
-Apenas saudar e direcionar para o menu. NÃO tente resolver problemas técnicos.
-Se o usuário disser "oi", "olá", devolva a saudação e peça para escolher uma opção do menu.
+CONTEXTO:
+O usuário acabou de mandar uma mensagem inicial. Seu único objetivo é direcioná-lo para o menu oficial.
+
+MENU OFICIAL (ÚNICAS OPÇÕES VÁLIDAS):
+1. Reportar Problema (Suporte T.I., Senhas, Impressoras, Sistema)
+*. Consultar Ticket
+
+REGRAS DE RESPOSTA:
+1. Se o usuário relatou um problema (ex: "estou sem senha", "pdv travou"), NÃO tente resolver.
+2. Responda educadamente: "Entendo. Para que a equipe de T.I. possa te ajudar com esse problema, por favor digite o número 1."
+3. NUNCA invente opções como "verificar estoque", "compras online" ou "falar com atendente". O menu é SÓ T.I.
+4. Seja curta e direta.
 `;
 };
 
@@ -44,8 +53,8 @@ const MENSAGENS = {
 
 Selecione uma opção para prosseguir:
 
-1️⃣ *Reportar Problema* (Falar com T.I.)
-*️⃣ *Consultar Ticket* (Ex: digite *123)
+1️⃣ **Reportar Problema** (Falar com T.I.)
+*️⃣ **Consultar Ticket** (Ex: digite *123)
 
 _Para encerrar a qualquer momento, digite #._`,
 
@@ -53,7 +62,7 @@ _Para encerrar a qualquer momento, digite #._`,
     MENU_TI_COM_FILA: `✅ *Solicitação Iniciada*
     
 Você está na fila de atendimento.
-Por favor, *descreva detalhadamente o problema* abaixo (qual equipamento, mensagem de erro, setor).
+Por favor, **descreva detalhadamente o problema** abaixo (qual equipamento, mensagem de erro, setor).
 _Nossa equipe analisará sua mensagem enquanto um técnico assume._`,
 
     // Mensagem 2: Confirmação Final e Contato de Urgência
@@ -108,7 +117,7 @@ async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
         const completion = await groq.chat.completions.create({
             messages: contexto.historico,
             model: MODELO_IA,
-            temperature: 0.1,
+            temperature: 0.1, // Temperatura baixa para evitar alucinações
             max_tokens: 150,  
         });
 
@@ -121,7 +130,8 @@ async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
 
     } catch (erro) {
         console.error("[GROQ] Erro:", erro);
-        return null; 
+        // Fallback caso a IA falhe
+        return "Olá! Para suporte técnico, por favor digite 1."; 
     }
 }
 
@@ -178,7 +188,8 @@ export const handleWebhook = async (req, res) => {
 
             const gatilhosInicio = ['oi', 'ola', 'menu', 'inicio', 'start', 'bom dia', 'boa tarde', 'ajuda', 'suporte'];
             const textoLimpo = textoMin.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"").trim(); 
-            const ehSaudacao = gatilhosInicio.some(s => textoLimpo === s || (textoLimpo.startsWith(s) && textoLimpo.length < 15));
+            // Aumentei o limite de caracteres para considerar saudações longas como "Boa tarde, preciso de ajuda"
+            const ehSaudacao = gatilhosInicio.some(s => textoLimpo === s || (textoLimpo.startsWith(s) && textoLimpo.length < 30));
 
             // --- COMANDOS GERAIS ---
             if (texto === '#' || textoMin === 'encerrar' || textoMin === 'sair') {
@@ -214,7 +225,7 @@ export const handleWebhook = async (req, res) => {
                     // (Código de consulta de ticket mantido igual)
                     let ticketNumeroStr = texto.startsWith('*') ? texto.substring(1).trim() : texto.replace(/\D/g,'');
                     if (!ticketNumeroStr) {
-                        respostaBot = "ℹ️ Digite o número do ticket com asterisco. Ex: **123*";
+                        respostaBot = "ℹ️ Digite o número do ticket com asterisco. Ex: ***123**";
                     } else {
                         const ticketId = parseInt(ticketNumeroStr);
                         const ticket = await chamadoModel.findById(ticketId); 
@@ -267,7 +278,7 @@ export const handleWebhook = async (req, res) => {
                     ctx.mostrarNaFila = false; 
                     delete userContext[idRemoto];
                 } else {
-                    respostaBot = "Digite uma nota de *1 a 5* ou *9* para sair.";
+                    respostaBot = "Digite uma nota de **1 a 5** ou **9** para sair.";
                 }
             }
             else if (ctx.etapa === 'AVALIACAO_MOTIVO') {
@@ -412,7 +423,7 @@ export const transferirAtendimento = async (req, res) => {
              req.io.emit('transferenciaChamado', { 
                 chatId: numero, 
                 novoAgente: novoAgente, 
-                antigoAgente: oldAgent,
+                antigoAgente: oldAgent, 
                 nomeCliente: nomeCliente, 
                 timestamp: new Date()
              });
