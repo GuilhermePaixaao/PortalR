@@ -36,6 +36,12 @@ Seja breve e profissional.
 // Memória local
 const userContext = {};
 
+// [NOVO] Função auxiliar para contar fila
+const calcularPosicaoFila = () => {
+    // Conta quantos contextos estão parados na etapa 'FILA_ESPERA'
+    return Object.values(userContext).filter(ctx => ctx.etapa === 'FILA_ESPERA').length;
+};
+
 // ==================================================
 // 3. TEXTOS FIXOS
 // ==================================================
@@ -57,10 +63,12 @@ Você está na fila de atendimento.
 Por favor, **descreva detalhadamente o problema** abaixo (qual equipamento, mensagem de erro, setor).
 _Nossa equipe analisará sua mensagem enquanto um técnico assume._`,
 
-    // Mensagem 2: Confirmação Final e Contato de Urgência
-    CONFIRMACAO_FINAL: `✅ *Você acessou a Fila de Suporte T.I.*
+    // [ALTERADO] Mensagem 2: Confirmação Final com POSIÇÃO NA FILA
+    CONFIRMACAO_FINAL: (posicao) => `✅ *Você acessou a Fila de Suporte T.I.*
     
 Opção selecionada: Suporte T.I
+📌 *Sua posição na fila:* ${posicao}º
+
 Você entrou na fila, logo você será atendido.
 
 📞 *Em caso de urgência pode nos acionar no número:* (12) 98142-2925`,
@@ -179,9 +187,6 @@ export const handleWebhook = async (req, res) => {
 
             const gatilhosInicio = ['oi', 'ola', 'menu', 'inicio', 'start', 'bom dia', 'boa tarde', 'ajuda', 'suporte'];
             const textoLimpo = textoMin.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"").trim(); 
-            
-            // [ALTERAÇÃO] Aumentei o limite de caracteres para 50. 
-            // Assim "Boa tarde e qual a senha..." é reconhecido como saudação e reseta para o Menu.
             const ehSaudacao = gatilhosInicio.some(s => textoLimpo === s || (textoLimpo.startsWith(s) && textoLimpo.length < 50));
 
             // --- COMANDOS GERAIS ---
@@ -195,10 +200,8 @@ export const handleWebhook = async (req, res) => {
             // --- INÍCIO DE CONVERSA / RESET ---
             else if (ehSaudacao) {
                 if (ctx.etapa === 'MENU' && textoMin !== 'menu') {
-                    // Se já está no menu e manda "oi" de novo, avisa opção inválida para não ficar repetindo
                     respostaBot = MENSAGENS.OPCAO_INVALIDA;
                 } else {
-                    // Reseta tudo e manda o Menu
                     ctx.etapa = 'MENU';
                     ctx.botPausado = false;
                     ctx.nomeAgente = null;
@@ -242,14 +245,17 @@ export const handleWebhook = async (req, res) => {
 
             // --- CAPTURA DA DESCRIÇÃO (FLUXO 1) ---
             else if (ctx.etapa === 'AGUARDANDO_DESCRICAO') {
-                // Notifica
+                // Notifica o painel
                 ctx.mostrarNaFila = true; 
                 io.emit('notificacaoChamado', { chatId: idRemoto, nome: nomeAutor, status: 'PENDENTE_TI' });
 
-                // Responde
-                respostaBot = MENSAGENS.CONFIRMACAO_FINAL;
+                // [ALTERADO] Calcula a posição na fila (quem já está lá + eu que vou entrar agora)
+                const posicaoAtual = calcularPosicaoFila() + 1;
 
-                // Pausa
+                // [ALTERADO] Responde com a mensagem dinâmica contendo a posição
+                respostaBot = MENSAGENS.CONFIRMACAO_FINAL(posicaoAtual);
+
+                // Pausa o bot e aguarda humano
                 ctx.etapa = 'FILA_ESPERA';
                 ctx.botPausado = true; 
             }
@@ -278,12 +284,8 @@ export const handleWebhook = async (req, res) => {
                 delete userContext[idRemoto]; 
             }
 
-            // --- FALLBACK (SEGURANÇA CONTRA ALUCINAÇÃO) ---
+            // --- FALLBACK ---
             else if (!respostaBot && !ctx.botPausado && ctx.etapa === 'INICIO') {
-                // [IMPORTANTE] Se o usuário mandar texto solto no início e não for saudação curta, 
-                // NÃO mandamos para a IA. Mandamos direto para o MENU.
-                // Isso evita que a IA responda "Não posso ajudar" ou "Menu de Compras".
-                
                 ctx.etapa = 'MENU';
                 ctx.historico = [{ role: "system", content: gerarPromptSistema(nomeAutor) }];
                 respostaBot = MENSAGENS.SAUDACAO(nomeAutor);
