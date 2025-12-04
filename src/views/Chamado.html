@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="css/chamado.css">
     <link rel="stylesheet" href="css/ticket.css">
     <style>
-        /* (Estilos CSS originais mantidos e AJUSTADOS) */
+        /* (Estilos CSS originais mantidos) */
         dialog:not([open]) { display: none; }
         dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
         dialog { border: none; border-radius: 8px; padding: 1.5rem; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); max-width: 800px; width: calc(100% - 2rem); }
@@ -46,26 +46,40 @@
         .alert-danger { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
         .alert-warning { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
         
-        /* --- AJUSTES DA TABELA AQUI --- */
-        .ticket-list { display: flex; flex-direction: column; min-width: 900px; /* Garante largura mínima para não quebrar */ }
+        /* --- ESTILOS DA TABELA AJUSTADOS --- */
+        .ticket-list { display: flex; flex-direction: column; min-width: 900px; }
         .ticket-row { display: flex; border-bottom: 1px solid #eee; padding: 1rem 0.5rem; align-items: center; }
         .ticket-row.header { background-color: #f8f9fa; font-weight: bold; border-bottom: 2px solid #dee2e6; }
         .ticket-cell { padding: 0 0.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        
-        /* Larguras ajustadas */
+
+        /* Larguras das colunas */
         .ticket-id { flex: 0 0 60px; text-align: center; }
         .ticket-priority { flex: 0 0 100px; text-align: center; }
-        /* Categoria agora tem tamanho fixo maior e fica ao lado da prioridade */
-        .ticket-category { flex: 0 0 180px; text-align: left; } 
-        /* Assunto agora é flex 1 para ocupar o RESTO do espaço */
-        .ticket-subject { flex: 1 1 auto; min-width: 200px; font-weight: 500; color: #212529; }
-        
+
+        /* CATEGORIA: Alinhada à direita para ficar visualmente perto do Assunto */
+        .ticket-category { 
+            flex: 0 0 160px; /* Tamanho fixo */
+            text-align: right; /* Joga o texto para a direita (encostando no assunto) */
+            padding-right: 15px; /* Pequeno espaço para não grudar */
+            font-weight: 500; 
+            color: #495057;
+        } 
+
+        /* ASSUNTO: Ocupa o resto do espaço */
+        .ticket-subject { 
+            flex: 1 1 auto; 
+            min-width: 200px; 
+            font-weight: 600; 
+            color: #212529; 
+        }
+
         .ticket-status { flex: 0 0 110px; text-align: center; }
         .ticket-requisitante { flex: 0 0 130px; }
         .ticket-operator { flex: 0 0 130px; }
         .ticket-created { flex: 0 0 140px; text-align: center; font-size: 0.9em; }
         .ticket-actions { flex: 0 0 60px; text-align: center; cursor: pointer; }
 
+        /* Badges */
         .priority-badge,
         .status-badge { padding: 0.2em 0.6em; border-radius: 0.25rem; font-size: 0.85em; font-weight: 600; }
         .priority-badge.alta, .priority-badge.high { background-color: #f8d7da; color: #842029; }
@@ -77,6 +91,7 @@
         .status-badge.em-andamento { background-color: #cfe2ff; color: #084298; }
         .status-badge.pausado { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
         #loadingIndicator { padding: 2rem; text-align: center; color: #6c757d; }
+        
         .header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 2rem; background-color: #ffffff; border-bottom: 1px solid #dee2e6; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); position: sticky; top: 0; z-index: 1030; }
         .logo { font-size: 1.4rem; font-weight: 700; color: #0d6efd; text-transform: uppercase; letter-spacing: 0.5px; margin: 0; white-space: nowrap; }
         .search-bar { margin-left: 2rem; margin-right: 2rem; width: 100%; max-width: 450px; }
@@ -305,8 +320,7 @@
                         <div class="ticket-row header">
                             <div class="ticket-cell ticket-id">Ticket</div>
                             <div class="ticket-cell ticket-priority">Prioridade</div>
-                            <div class="ticket-cell ticket-subject">Assunto</div>
-                            <div class="ticket-cell ticket-category">Categoria</div>
+                            <div class="ticket-cell ticket-category">Categoria</div> <div class="ticket-cell ticket-subject">Assunto</div>
                             <div class="ticket-cell ticket-status">Status</div>
                             <div class="ticket-cell ticket-requisitante">Requisitante</div>
                             <div class="ticket-cell ticket-operator">Operador</div>
@@ -681,13 +695,14 @@
                 }
                 // -----------------------------------------------------------------------
                 
+                // --- ORDEM ALTERADA NO JS TAMBÉM (PRIORIDADE -> CATEGORIA -> ASSUNTO) ---
                 row.innerHTML = `
                     <div class="ticket-cell ticket-id">#${chamado.id}</div>
                     <div class="ticket-cell ticket-priority">
                         <span class="priority-badge ${prioridadeClass}">${escapeHtml(chamado.prioridade)}</span>
                     </div>
-                    <div class="ticket-cell ticket-subject">${escapeHtml(chamado.assunto)}</div>
                     <div class="ticket-cell ticket-category">${escapeHtml(nomeExibicao)}</div>
+                    <div class="ticket-cell ticket-subject">${escapeHtml(chamado.assunto)}</div>
                     <div class="ticket-cell ticket-status">
                         <span class="status-badge ${statusClass}">${escapeHtml(chamado.status)}</span>
                     </div>
