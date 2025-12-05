@@ -308,9 +308,9 @@
 
             <div class="modal-form-group">
                 <label class="modal-label">Categoria</label>
-                <select id="selectCategoria" class="modal-select">
-                    <option value="">Carregando...</option>
-                </select>
+                <div id="containerCascataCategorias">
+                    <span style="font-size:0.9rem; color: #666;">Carregando...</span>
+                </div>
             </div>
 
             <div class="modal-form-group">
@@ -375,6 +375,7 @@
         const filaHeader = document.getElementById('filaHeader');
         const chatTitle = document.getElementById('chatTitle'); 
         
+        // Referências aos botões da Toolbar
         const btnAssumir = document.getElementById('btnAssumir');
         const btnFinalizar = document.getElementById('btnFinalizar');
         const btnTransferir = document.getElementById('btnTransferir');
@@ -382,24 +383,32 @@
         const btnAssociarTicket = document.getElementById('btnAssociarTicket'); 
         const btnCriarChamado = document.getElementById('btnCriarChamado'); 
 
+        // Referências ao Modal de Transferência
         const modalTransfer = document.getElementById('modalTransferencia');
         const selectAgentes = document.getElementById('selectAgentes');
         const btnCancelarTransfer = document.getElementById('btnCancelarTransfer');
         const btnConfirmarTransfer = document.getElementById('btnConfirmarTransfer');
 
+        // Referências ao Modal Associar
         const modalAssociar = document.getElementById('modalAssociarTicket');
         const inputTicketId = document.getElementById('inputTicketId');
         const btnCancelarAssociar = document.getElementById('btnCancelarAssociar');
         const btnConfirmarAssociar = document.getElementById('btnConfirmarAssociar');
         const associarResult = document.getElementById('associarResult');
 
+        // Referências ao Modal Criar Chamado
         const modalCriar = document.getElementById('modalCriarChamado');
         const inputAssunto = document.getElementById('inputAssunto');
-        const selectCategoria = document.getElementById('selectCategoria');
+        // REMOVIDO REFERÊNCIA AO SELECT SIMPLES ANTIGO
+        const containerCascata = document.getElementById('containerCascataCategorias');
         const selectPrioridade = document.getElementById('selectPrioridade');
         const inputDescricao = document.getElementById('inputDescricao');
         const btnCancelarCriar = document.getElementById('btnCancelarCriar');
         const btnSalvarChamado = document.getElementById('btnSalvarChamado');
+
+        // VARIÁVEIS PARA CASCATA
+        let allCategories = []; 
+        let categoriaSelecionadaId = null;
 
         let AppState = {
             activeNumber: null,
@@ -524,7 +533,7 @@
         });
 
         // =========================================================================
-        // === CORREÇÃO PRINCIPAL: Sincronizar Chats com Filtro de Agente ===
+        // === CORREÇÃO PRINCIPAL: Sincronizar Chats considerando o AGENTE ===
         // =========================================================================
         async function syncChatsWithServer() {
             try {
@@ -538,20 +547,19 @@
                 }
                 setConnectedState();
 
+                const rChats = await fetch('/api/whatsapp/chats');
+                const json = await rChats.json();
+                
+                if (!json.success || !json.data) {
+                    return; 
+                }
+
                 // 1. Pega o nome do agente logado
                 let meuNome = "";
                 try { 
                     const userData = JSON.parse(localStorage.getItem("userData"));
                     meuNome = userData?.data?.nomeFuncionario;
                 } catch(e) { console.error("Erro ao ler dados do usuário", e); }
-
-                // [SEGURANÇA] Envia o nome para o backend filtrar a lista
-                const rChats = await fetch('/api/whatsapp/chats?agente=' + encodeURIComponent(meuNome));
-                const json = await rChats.json();
-                
-                if (!json.success || !json.data) {
-                    return; 
-                }
 
                 const listaServer = json.data;
                 const novosChats = [];
@@ -560,12 +568,25 @@
                 listaServer.forEach(serverChat => {
                     const num = serverChat.numero;
                     
-                    const agenteDoChat = serverChat.nomeAgente;
-                    const souOAgente = (agenteDoChat === meuNome);
-                    const estaLivre = !agenteDoChat;
+                    // --- NOVA LÓGICA DE FILTRAGEM ---
+                    const agenteDoChat = serverChat.nomeAgente; // Quem assumiu?
+                    const souOAgente = (agenteDoChat === meuNome); // É o meu?
+                    const estaLivre = !agenteDoChat; // Ninguém assumiu?
 
-                    // Como o backend já filtra, o que chegar aqui é confiável para exibir
-                    const deveAparecer = serverChat.visivel; 
+                    let deveAparecer = false;
+
+                    if (souOAgente) {
+                        // Se eu assumi, SEMPRE aparece para mim
+                        deveAparecer = true;
+                    } else if (estaLivre) {
+                        // Se está livre, obedece a lógica da fila (visivel=true do server)
+                        // ou forçamos aparecer se for 'ATENDIMENTO_HUMANO' mas sem agente
+                        if (serverChat.visivel !== false) deveAparecer = true;
+                    } else {
+                        // Se tem outro agente e não sou eu -> ESCONDE
+                        deveAparecer = false;
+                    }
+                    // --------------------------------
 
                     const isAtendimentoHumano = serverChat.etapa === 'ATENDIMENTO_HUMANO';
                     const serverPendingStatus = (deveAparecer && !isAtendimentoHumano && !serverChat.nomeAgente);
@@ -581,6 +602,8 @@
                         localChat.pending = serverPendingStatus; 
                         localChat.etapa = serverChat.etapa; 
                         localChat.nomeAgente = serverChat.nomeAgente;
+                        
+                        // Aplica a visibilidade calculada
                         localChat.visivel = deveAparecer;
 
                     } else {
@@ -595,7 +618,7 @@
                             nome: nomeFinal || num,
                             ultimaMensagem: serverChat.ultimaMensagem,
                             unreadCount: serverChat.unreadCount,
-                            visivel: deveAparecer,
+                            visivel: deveAparecer, // Aplica visibilidade
                             pending: serverPendingStatus,
                             etapa: serverChat.etapa,
                             nomeAgente: serverChat.nomeAgente
@@ -610,13 +633,14 @@
                 saveState();
                 renderSidebar();
                 
+                // Se eu estava num chat que agora está oculto (foi transferido ou outro pegou)
                 if (AppState.activeNumber) {
                     const activeChat = AppState.chatList.find(c => c.numero === AppState.activeNumber);
                     if (activeChat) {
                         if (!activeChat.visivel) {
-                             // Se não está mais visível (ex: backend não mandou), fecha.
-                             showScreen('welcome');
-                             AppState.activeNumber = null;
+                            // Opcional: Fechar o chat automaticamente se sumir
+                            // showScreen('welcome');
+                            // AppState.activeNumber = null;
                         } else {
                             atualizarBotoesToolbar(activeChat);
                         }
@@ -643,16 +667,6 @@
         });
         
         socket.on('novaMensagemWhatsapp', (data) => {
-            // [SEGURANÇA] Filtra mensagens em tempo real
-            let meuNome = "";
-            try { meuNome = JSON.parse(localStorage.getItem("userData")).data.nomeFuncionario; } catch(e){}
-
-            const temDono = !!data.nomeAgente;
-            const souDono = (data.nomeAgente === meuNome);
-
-            // Se tem dono e não sou eu, IGNORA completamente (não renderiza, não notifica)
-            if (temDono && !souDono) return;
-
             const { chatId, texto, fromMe, nome, mostrarNaFila } = data;
             
             if (!AppState.conversas[chatId]) AppState.conversas[chatId] = [];
@@ -744,12 +758,14 @@
             }
         });
 
+        // [CORREÇÃO] Ouve quando alguém assume um chat e remove da sua fila
         socket.on('atendimentoAssumido', (data) => {
             const chat = AppState.chatList.find(c => c.numero === data.chatId);
             if (chat) {
                 chat.nomeAgente = data.nomeAgente;
                 chat.etapa = 'ATENDIMENTO_HUMANO';
                 
+                // Verifica se fui EU quem assumiu
                 let meuNome = "";
                 try { 
                     const u = JSON.parse(localStorage.getItem("userData"));
@@ -757,22 +773,25 @@
                 } catch(e){}
 
                 if (data.nomeAgente === meuNome) {
-                    chat.visivel = true;
+                    chat.visivel = true; // Mostra pra mim
                 } else {
-                    chat.visivel = false; 
+                    chat.visivel = false; // Esconde dos outros
                 }
                 
                 saveState();
                 renderSidebar();
                 
+                // Se eu estava olhando para esse chat e outro assumiu, me avisa e sai
                 if (AppState.activeNumber === data.chatId && data.nomeAgente !== meuNome) {
                     alert(`O atendente ${data.nomeAgente} acabou de assumir este chamado.`);
-                    showScreen('welcome'); 
+                    showScreen('welcome');
                     AppState.activeNumber = null;
                 } else if (AppState.activeNumber === data.chatId) {
+                    // Atualiza meus botões se fui eu
                     atualizarBotoesToolbar(chat);
                 }
             } else {
+                // Se o chat não existia localmente, sincroniza tudo por garantia
                 syncChatsWithServer();
             }
         });
@@ -801,27 +820,13 @@
             loadingDiv.innerText = 'Sincronizando mensagens...';
             messagesContainer.appendChild(loadingDiv);
 
-            // [SEGURANÇA] Envia o nome de quem solicita para o backend validar
-            let meuNome = "";
-            try { 
-                const u = JSON.parse(localStorage.getItem("userData"));
-                meuNome = u?.data?.nomeFuncionario;
-            } catch(e){}
-
             try {
                 const response = await fetch('/api/whatsapp/messages', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ numero: number, nomeSolicitante: meuNome })
+                    body: JSON.stringify({ numero: number })
                 });
                 
-                if (response.status === 403) {
-                     alert("Acesso Negado: Você não é o responsável por este atendimento.");
-                     showScreen('welcome');
-                     loadingDiv.remove();
-                     return;
-                }
-
                 const json = await response.json();
                 
                 if (json.success && json.data.length > 0) {
@@ -852,7 +857,6 @@
             const text = chatInput.value.trim();
             if (!text || !AppState.activeNumber) return;
             
-            // UI Otimista (mostra antes de enviar)
             appendMessageToView(text, true, null, new Date());
             chatInput.value = '';
             
@@ -873,17 +877,10 @@
 
             try {
                 const user = JSON.parse(localStorage.getItem("userData"));
-                const r = await fetch('/api/whatsapp/send', {
+                await fetch('/api/whatsapp/send', {
                     method: 'POST', headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ numero: AppState.activeNumber, mensagem: text, nomeAgenteTemporario: user?.data?.nomeFuncionario })
                 });
-                
-                if (r.status === 403) {
-                    alert("Erro ao enviar: Você não é o dono deste chat.");
-                    // Remove a mensagem otimista ou recarrega o chat
-                    openChat(AppState.activeNumber);
-                }
-
             } catch (e) { console.error(e); }
         }
 
@@ -933,6 +930,7 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
+        // [CORREÇÃO] Botão Assumir com tratamento de erro (ex: já assumido)
         btnAssumir.addEventListener('click', async () => {
             if (!AppState.activeNumber) return;
             if (btnAssumir.disabled) return;
@@ -1046,46 +1044,139 @@
             }
         });
 
+        // --- 1. ABRIR MODAL COM CASCATA DE CATEGORIAS ---
         btnCriarChamado.addEventListener('click', async () => {
             if(btnCriarChamado.disabled) return;
             if(!AppState.activeNumber) return;
 
             modalCriar.style.display = 'flex';
-            inputAssunto.value = '';
-            inputDescricao.value = '';
-            selectPrioridade.value = 'Média';
             
-            if(selectCategoria.options.length <= 1) {
+            // Define Assunto Padrão
+            const contatoNome = AppState.contactNames[AppState.activeNumber] || AppState.activeNumber;
+            inputAssunto.value = `Atendimento WhatsApp - ${contatoNome}`;
+            
+            selectPrioridade.value = 'Média';
+
+            // Histórico Automático
+            const msgs = AppState.conversas[AppState.activeNumber] || [];
+            const ultimas = msgs.slice(-15); 
+            
+            if (ultimas.length > 0) {
+                const historicoFormatado = ultimas.map(m => {
+                    const hora = new Date(m.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    const autor = m.fromMe ? 'Eu' : (m.name || 'Cliente');
+                    return `[${hora}] ${autor}: ${m.text}`;
+                }).join('\n');
+
+                inputDescricao.value = `Resumo do Atendimento:\n\n${historicoFormatado}\n\n-----------------\nDetalhes adicionais: `;
+            } else {
+                inputDescricao.value = '';
+            }
+            
+            // Carrega categorias se ainda não carregou
+            if(allCategories.length === 0) {
+                containerCascata.innerHTML = 'Carregando...';
                 try {
                     const res = await fetch('/categorias'); 
-                    const json = await res.json(); 
-                    selectCategoria.innerHTML = '<option value="">Selecione...</option>';
-                    
-                    const lista = Array.isArray(json) ? json : (json.data || []);
-                    
-                    lista.forEach(cat => {
-                        const opt = document.createElement('option');
-                        opt.value = cat.id;
-                        opt.textContent = cat.nome;
-                        selectCategoria.appendChild(opt);
-                    });
-                } catch(e) { console.error("Erro ao carregar categorias", e); }
+                    allCategories = await res.json(); 
+                    containerCascata.innerHTML = ''; // Limpa
+                    montarSelectCategoria(null); // Inicia cascata
+                } catch(e) { 
+                    console.error("Erro ao carregar categorias", e); 
+                    containerCascata.innerHTML = '<span style="color:red">Erro ao carregar.</span>';
+                }
+            } else {
+                // Se já tem, reseta a cascata
+                containerCascata.innerHTML = '';
+                categoriaSelecionadaId = null;
+                montarSelectCategoria(null);
             }
         });
+
+        // --- FUNÇÃO PARA CRIAR CASCATA DINÂMICA ---
+        function montarSelectCategoria(parentId) {
+            // Filtra filhos do pai atual
+            const filhos = allCategories.filter(c => c.parent_id == parentId);
+            
+            // Se não tem filhos, significa que é a ponta final.
+            // O ID válido é o próprio pai que foi passado.
+            if (filhos.length === 0) {
+                categoriaSelecionadaId = parentId;
+                return;
+            }
+
+            // Se tem filhos, o ID atual ainda não é o final (precisa descer mais)
+            categoriaSelecionadaId = null;
+
+            // Cria o select
+            const select = document.createElement('select');
+            select.className = 'modal-select';
+            select.style.marginTop = '5px';
+            
+            // Adiciona opção padrão
+            const defaultOption = document.createElement('option');
+            defaultOption.value = "";
+            defaultOption.textContent = parentId === null ? "-- Selecione a Categoria --" : "-- Selecione a Subcategoria --";
+            select.appendChild(defaultOption);
+
+            filhos.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat.id;
+                opt.textContent = cat.nome;
+                select.appendChild(opt);
+            });
+
+            // Evento ao mudar
+            select.addEventListener('change', (e) => {
+                const val = e.target.value;
+                
+                // Remove todos os selects seguintes (irmãos posteriores) para refazer o caminho
+                let next = select.nextElementSibling;
+                while (next) {
+                    const toRemove = next;
+                    next = next.nextElementSibling;
+                    toRemove.remove();
+                }
+
+                if (val) {
+                    montarSelectCategoria(val);
+                } else {
+                    categoriaSelecionadaId = null;
+                }
+            });
+
+            containerCascata.appendChild(select);
+        }
 
         btnCancelarCriar.addEventListener('click', () => {
             modalCriar.style.display = 'none';
         });
 
+        // --- 2. SALVAR COM VALIDAÇÃO DA CASCATA ---
         btnSalvarChamado.addEventListener('click', async () => {
             const assunto = inputAssunto.value.trim();
             const descricao = inputDescricao.value.trim();
-            const categoriaId = selectCategoria.value;
             const prioridade = selectPrioridade.value;
 
-            if(!assunto || !categoriaId) return alert("Preencha Assunto e Categoria.");
+            // Valida se selecionou até o final
+            if(!assunto) return alert("Preencha o Assunto.");
+            
+            // Verifica se tem select vazio (pendente) na tela
+            const selects = containerCascata.querySelectorAll('select');
+            let pendente = false;
+            selects.forEach(s => { if(!s.value) pendente = true; });
 
-            if(!confirm("Confirmar criação do chamado?")) return;
+            if (!categoriaSelecionadaId || pendente) {
+                return alert("Por favor, selecione a categoria até o final (subcategorias).");
+            }
+
+            if(!descricao) return alert("A descrição é obrigatória.");
+
+            // Feedback Visual
+            const btnOriginalText = btnSalvarChamado.textContent;
+            btnSalvarChamado.disabled = true;
+            btnSalvarChamado.textContent = "Criando...";
+            btnSalvarChamado.style.cursor = "wait";
 
             try {
                 const userData = JSON.parse(localStorage.getItem("userData"));
@@ -1095,7 +1186,7 @@
                     chamado: {
                         assunto,
                         descricao,
-                        categoria_id: categoriaId,
+                        categoria_id: categoriaSelecionadaId, // Usa o ID final da cascata
                         prioridade,
                         requisitante_id: agenteId, 
                         status: 'Aberto'
@@ -1111,16 +1202,20 @@
                 const json = await res.json();
 
                 if(json.success) {
-                    alert(`Chamado #${json.id} criado com sucesso!`);
                     modalCriar.style.display = 'none';
-                    appendMessageToView(`🎫 Chamado #${json.id} criado: ${assunto}`, true, "Sistema", new Date());
+                    appendMessageToView(`🎫 Chamado #${json.id} criado com sucesso!\nAssunto: ${assunto}`, true, "Sistema", new Date());
+                    alert(`✅ Chamado #${json.id} criado com sucesso!`);
                 } else {
-                    alert("Erro ao criar: " + json.message);
+                    alert("Erro ao criar chamado: " + (json.message || "Erro desconhecido"));
                 }
 
             } catch(e) {
-                alert("Erro de conexão.");
+                alert("Erro de conexão ao tentar criar o chamado.");
                 console.error(e);
+            } finally {
+                btnSalvarChamado.disabled = false;
+                btnSalvarChamado.textContent = btnOriginalText;
+                btnSalvarChamado.style.cursor = "pointer";
             }
         });
 
