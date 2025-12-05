@@ -2,6 +2,8 @@ import * as evolutionService from '../services/evolutionService.js';
 import * as chamadoModel from '../models/chamadoModel.js'; 
 import * as EmailService from '../services/emailService.js'; 
 import { OpenAI } from 'openai';
+import fs from 'fs';
+import path from 'path';
 
 // ==================================================
 // 1. CONFIGURAÇÕES DA GROQ
@@ -17,7 +19,40 @@ const MODELO_IA = "llama-3.1-8b-instant";
 const processedMessageIds = new Set();
 
 // ==================================================
-// 2. O CÉREBRO DA IA (APENAS PARA O SUBMENU T.I.)
+// 2. PERSISTÊNCIA DE DADOS (CORREÇÃO DA AMNÉSIA)
+// ==================================================
+// Arquivo onde salvaremos quem é dono de qual chat
+const STATE_FILE = path.resolve('whatsappState.json');
+
+// Carrega memória local
+let userContext = {};
+
+function loadStateDisk() {
+    try {
+        if (fs.existsSync(STATE_FILE)) {
+            const raw = fs.readFileSync(STATE_FILE, 'utf-8');
+            userContext = JSON.parse(raw);
+            console.log("💾 [SISTEMA] Memória de atendimentos carregada do disco.");
+        }
+    } catch (e) {
+        console.error("Erro ao carregar estado:", e);
+        userContext = {};
+    }
+}
+
+function saveStateDisk() {
+    try {
+        fs.writeFileSync(STATE_FILE, JSON.stringify(userContext, null, 2));
+    } catch (e) {
+        console.error("Erro ao salvar estado:", e);
+    }
+}
+
+// Carrega ao iniciar
+loadStateDisk();
+
+// ==================================================
+// 3. O CÉREBRO DA IA (APENAS PARA O SUBMENU T.I.)
 // ==================================================
 const gerarPromptSistema = (nomeUsuario) => {
     const nome = nomeUsuario || 'Colaborador';
@@ -33,15 +68,12 @@ Seja breve e profissional.
 `;
 };
 
-// Memória local
-const userContext = {};
-
 const calcularPosicaoFila = () => {
     return Object.values(userContext).filter(ctx => ctx.etapa === 'FILA_ESPERA').length;
 };
 
 // ==================================================
-// 3. TEXTOS FIXOS
+// 4. TEXTOS FIXOS
 // ==================================================
 const MENSAGENS = {
     SAUDACAO: (nome) => `👋 Olá, *${nome}*. Bem-vindo ao Suporte Técnico do *Supermercado Rosalina*.
@@ -91,7 +123,7 @@ _Envie uma mensagem se precisar de novo suporte._`
 };
 
 // ==================================================
-// 4. PROCESSAMENTO DA IA
+// 5. PROCESSAMENTO DA IA
 // ==================================================
 async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
     const contexto = userContext[numeroUsuario];
@@ -129,7 +161,7 @@ async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
 }
 
 // ==================================================
-// 5. WEBHOOK
+// 6. WEBHOOK
 // ==================================================
 export const handleWebhook = async (req, res) => {
   const payload = req.body;
@@ -157,7 +189,7 @@ export const handleWebhook = async (req, res) => {
       if (!isStatus && !isGroup && texto) {
         const ctxAtual = userContext[idRemoto] || {};
         
-        // [CORREÇÃO CRÍTICA] Envia o dono do chat no evento para o frontend filtrar
+        // [SEGURANÇA] Envia o dono do chat para o frontend filtrar
         io.emit('novaMensagemWhatsapp', { 
             id: idMensagem, 
             chatId: idRemoto, 
@@ -165,7 +197,7 @@ export const handleWebhook = async (req, res) => {
             texto: texto, 
             fromMe: isFromMe,
             mostrarNaFila: ctxAtual.mostrarNaFila || false,
-            nomeAgente: ctxAtual.nomeAgente // <--- CAMPO NOVO ESSENCIAL
+            nomeAgente: ctxAtual.nomeAgente 
         });
 
         if (!isFromMe) {
@@ -176,6 +208,7 @@ export const handleWebhook = async (req, res) => {
                     historico: [], 
                     mostrarNaFila: false 
                 };
+                saveStateDisk(); // Salva novo estado
             }
             const ctx = userContext[idRemoto];
             let respostaBot = null;
@@ -191,6 +224,7 @@ export const handleWebhook = async (req, res) => {
                 ctx.etapa = 'AVALIACAO_NOTA';
                 ctx.botPausado = true; 
                 ctx.nomeAgente = null;
+                saveStateDisk(); // Atualiza
             }
             else if (ehSaudacao) {
                 if (ctx.etapa === 'MENU' && textoMin !== 'menu') {
@@ -202,13 +236,16 @@ export const handleWebhook = async (req, res) => {
                     ctx.mostrarNaFila = false;
                     ctx.historico = [{ role: "system", content: gerarPromptSistema(nomeAutor) }];
                     respostaBot = MENSAGENS.SAUDACAO(nomeAutor);
+                    saveStateDisk(); // Atualiza
                 }
             }
+            // --- MENU PRINCIPAL ---
             else if (ctx.etapa === 'MENU') {
                 if (texto === '1' || textoMin.includes('problema') || textoMin.includes('suporte')) {
                     respostaBot = MENSAGENS.MENU_TI_COM_FILA;
                     ctx.etapa = 'AGUARDANDO_DESCRICAO'; 
                     ctx.botPausado = false; 
+                    saveStateDisk();
                 } 
                 else if (texto.startsWith('*') || textoMin.includes('ticket')) {
                     let ticketNumeroStr = texto.startsWith('*') ? texto.substring(1).trim() : texto.replace(/\D/g,'');
@@ -229,6 +266,7 @@ export const handleWebhook = async (req, res) => {
                     respostaBot = MENSAGENS.OPCAO_INVALIDA;
                 }
             }
+            // --- FILA ---
             else if (ctx.etapa === 'AGUARDANDO_DESCRICAO') {
                 ctx.mostrarNaFila = true; 
                 io.emit('notificacaoChamado', { chatId: idRemoto, nome: nomeAutor, status: 'PENDENTE_TI' });
@@ -236,15 +274,19 @@ export const handleWebhook = async (req, res) => {
                 respostaBot = MENSAGENS.CONFIRMACAO_FINAL(posicaoAtual);
                 ctx.etapa = 'FILA_ESPERA';
                 ctx.botPausado = true; 
+                saveStateDisk();
             }
+            // --- AVALIAÇÃO ---
             else if (ctx.etapa === 'AVALIACAO_NOTA') {
                 if (['1', '2', '3', '4', '5'].includes(texto)) {
                     respostaBot = MENSAGENS.AVALIACAO_MOTIVO;
                     ctx.etapa = 'AVALIACAO_MOTIVO';
+                    saveStateDisk();
                 } else if (texto === '9') {
                     respostaBot = MENSAGENS.ENCERRAMENTO_FINAL;
                     ctx.mostrarNaFila = false; 
                     delete userContext[idRemoto];
+                    saveStateDisk();
                 } else {
                     respostaBot = "Digite uma nota de **1 a 5** ou **9** para sair.";
                 }
@@ -253,11 +295,13 @@ export const handleWebhook = async (req, res) => {
                 respostaBot = MENSAGENS.ENCERRAMENTO_FINAL;
                 ctx.mostrarNaFila = false; 
                 delete userContext[idRemoto]; 
+                saveStateDisk();
             }
             else if (!respostaBot && !ctx.botPausado && ctx.etapa === 'INICIO') {
                 ctx.etapa = 'MENU';
                 ctx.historico = [{ role: "system", content: gerarPromptSistema(nomeAutor) }];
                 respostaBot = MENSAGENS.SAUDACAO(nomeAutor);
+                saveStateDisk();
             }
 
             if (respostaBot) {
@@ -269,7 +313,7 @@ export const handleWebhook = async (req, res) => {
                     texto: respostaBot, 
                     fromMe: true,
                     mostrarNaFila: ctx.mostrarNaFila,
-                    nomeAgente: ctx.nomeAgente // Envia também nas respostas do bot
+                    nomeAgente: ctx.nomeAgente
                 });
             }
         }
@@ -283,7 +327,7 @@ export const handleWebhook = async (req, res) => {
 };
 
 // ==================================================
-// 6. FUNÇÕES ADMINISTRATIVAS (BLINDADAS)
+// 7. FUNÇÕES ADMINISTRATIVAS (BLINDADAS)
 // ==================================================
 
 export const atenderAtendimento = async (req, res) => {
@@ -304,6 +348,8 @@ export const atenderAtendimento = async (req, res) => {
         userContext[numero].etapa = 'ATENDIMENTO_HUMANO';
         userContext[numero].mostrarNaFila = true; 
         
+        saveStateDisk(); // Salva no disco
+
         const msg = `👨‍💻 *Atendimento Humano Iniciado*\n\nO técnico *${nomeAgente}* assumiu o chamado.`;
         await evolutionService.enviarTexto(numero, msg);
         
@@ -326,6 +372,9 @@ export const finalizarAtendimento = async (req, res) => {
         userContext[numero].botPausado = true;
         userContext[numero].nomeAgente = null;
         userContext[numero].mostrarNaFila = false; 
+        
+        saveStateDisk(); // Salva
+
         await evolutionService.enviarTexto(numero, MENSAGENS.AVALIACAO_INICIO);
         res.status(200).json({ success: true });
     } catch (error) { res.status(500).json({ success: false }); }
@@ -341,7 +390,6 @@ export const handleSendMessage = async (req, res) => {
       if (contexto && contexto.nomeAgente) {
           // 2. Se tem dono, OBRIGA que seja quem está enviando
           if (contexto.nomeAgente !== nomeAgenteTemporario) {
-              // RETORNA ERRO 403 (PROIBIDO)
               return res.status(403).json({ 
                   success: false, 
                   message: `⛔ ACESSO NEGADO: Este chat pertence a ${contexto.nomeAgente}.` 
@@ -357,6 +405,8 @@ export const handleSendMessage = async (req, res) => {
       if(contexto) contexto.mostrarNaFila = true;
       else if (!contexto) userContext[numero] = { etapa: 'ATENDIMENTO_HUMANO', botPausado: true, mostrarNaFila: true };
       
+      saveStateDisk(); // Salva se mudar algo
+
       const r = await evolutionService.enviarTexto(numero, mensagemFinal);
       res.status(200).json({ success: true, data: r });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
@@ -365,29 +415,25 @@ export const handleSendMessage = async (req, res) => {
 // [SEGURANÇA TOTAL] Listagem filtrada no servidor
 export const listarConversas = async (req, res) => { 
     try { 
-        // Pega o nome do agente que está pedindo (vem da Query String)
         const agenteSolicitante = req.query.agente;
-
         const todosChats = await evolutionService.buscarConversas(); 
         
-        // FILTRO RÍGIDO: O servidor decide o que você pode ver
         const chatsFiltrados = todosChats.filter(chat => {
              const ctx = userContext[chat.id] || {};
              const temDono = !!ctx.nomeAgente;
              
-             // 1. Se não tem dono (Fila de espera), qualquer um vê.
+             // 1. Sem dono = TODOS vêem (Fila)
              if (!temDono) return true; 
              
-             // 2. Se tem dono, SÓ O DONO VÊ.
+             // 2. Com dono = SÓ O DONO vê
              if (temDono && ctx.nomeAgente === agenteSolicitante) return true; 
              
-             // 3. Caso contrário, esconde (não envia o dado).
+             // 3. Caso contrário = INVISÍVEL
              return false; 
         });
 
         const m = chatsFiltrados.map(x => {
             const ctx = userContext[x.id] || {};
-            // Visibilidade aqui é redundante pois já filtramos, mas mantemos true
             const deveAparecer = ctx.mostrarNaFila === true || ctx.etapa === 'ATENDIMENTO_HUMANO';
             return { 
                 numero: x.id, 
@@ -404,17 +450,14 @@ export const listarConversas = async (req, res) => {
     } catch (e) { res.status(200).json({ success: true, data: [] }); } 
 };
 
-// [SEGURANÇA TOTAL] Leitura de histórico com validação
 export const listarMensagensChat = async (req, res) => {
-    const { numero, nomeSolicitante } = req.body; // Exige quem está pedindo
+    const { numero, nomeSolicitante } = req.body; 
     
     if (!numero) return res.status(400).json({ success: false, message: 'Número obrigatório' });
     
     try {
-        // Validação de Segurança
         const contexto = userContext[numero];
         if (contexto && contexto.nomeAgente) {
-             // Se o chat tem dono e não é o solicitante, NEGA o acesso
              if (contexto.nomeAgente !== nomeSolicitante) {
                  return res.status(403).json({ 
                      success: false, 
@@ -459,6 +502,9 @@ export const transferirAtendimento = async (req, res) => {
         userContext[numero].etapa = 'ATENDIMENTO_HUMANO'; 
         userContext[numero].botPausado = true;
         userContext[numero].mostrarNaFila = true; 
+        
+        saveStateDisk(); // Salva
+
         const msgTransferencia = `🔄 *Transferência*\n\nChamado repassado de *${oldAgent}* para *${novoAgente}*.`;
         await evolutionService.enviarTexto(numero, msgTransferencia);
         if(req.io) {
@@ -493,6 +539,9 @@ export const criarChamadoDoChat = async (req, res) => {
         await evolutionService.enviarTexto(numero, msgZap);
         if(userContext[numero]) userContext[numero].ultimoTicketId = novoId;
         if (ticketCriado.emailRequisitante) EmailService.enviarNotificacaoCriacao(ticketCriado.emailRequisitante, ticketCriado).catch(console.error);
+        
+        saveStateDisk();
+
         if (req.io) {
             req.io.emit('novoChamadoInterno', {
                 id: novoId,
