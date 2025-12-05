@@ -116,10 +116,12 @@ async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
         });
 
         const respostaIA = completion.choices[0]?.message?.content || "";
+        
         if (respostaIA) {
             contexto.historico.push({ role: "assistant", content: respostaIA });
         }
         return respostaIA;
+
     } catch (erro) {
         console.error("[GROQ] Erro:", erro);
         return null; 
@@ -154,13 +156,16 @@ export const handleWebhook = async (req, res) => {
 
       if (!isStatus && !isGroup && texto) {
         const ctxAtual = userContext[idRemoto] || {};
+        
+        // [CORREÇÃO CRÍTICA] Envia o dono do chat no evento para o frontend filtrar
         io.emit('novaMensagemWhatsapp', { 
             id: idMensagem, 
             chatId: idRemoto, 
             nome: nomeAutor, 
             texto: texto, 
             fromMe: isFromMe,
-            mostrarNaFila: ctxAtual.mostrarNaFila || false 
+            mostrarNaFila: ctxAtual.mostrarNaFila || false,
+            nomeAgente: ctxAtual.nomeAgente // <--- CAMPO NOVO ESSENCIAL
         });
 
         if (!isFromMe) {
@@ -263,7 +268,8 @@ export const handleWebhook = async (req, res) => {
                     nome: "Bot", 
                     texto: respostaBot, 
                     fromMe: true,
-                    mostrarNaFila: ctx.mostrarNaFila
+                    mostrarNaFila: ctx.mostrarNaFila,
+                    nomeAgente: ctx.nomeAgente // Envia também nas respostas do bot
                 });
             }
         }
@@ -277,7 +283,7 @@ export const handleWebhook = async (req, res) => {
 };
 
 // ==================================================
-// 6. FUNÇÕES ADMINISTRATIVAS (Blindadas)
+// 6. FUNÇÕES ADMINISTRATIVAS (BLINDADAS)
 // ==================================================
 
 export const atenderAtendimento = async (req, res) => {
@@ -325,7 +331,7 @@ export const finalizarAtendimento = async (req, res) => {
     } catch (error) { res.status(500).json({ success: false }); }
 };
 
-// [SEGURANÇA] Envio de mensagem com validação de dono
+// [SEGURANÇA TOTAL] Envio de mensagem com validação rígida de dono
 export const handleSendMessage = async (req, res) => {
   const { numero, mensagem, nomeAgenteTemporario } = req.body;
   try {
@@ -333,8 +339,9 @@ export const handleSendMessage = async (req, res) => {
       const contexto = userContext[numero];
       
       if (contexto && contexto.nomeAgente) {
-          // 2. Se tem dono, verifica se é quem está pedindo
+          // 2. Se tem dono, OBRIGA que seja quem está enviando
           if (contexto.nomeAgente !== nomeAgenteTemporario) {
+              // RETORNA ERRO 403 (PROIBIDO)
               return res.status(403).json({ 
                   success: false, 
                   message: `⛔ ACESSO NEGADO: Este chat pertence a ${contexto.nomeAgente}.` 
@@ -355,31 +362,32 @@ export const handleSendMessage = async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };
 
-// [SEGURANÇA] Listagem de conversas filtrada no backend
+// [SEGURANÇA TOTAL] Listagem filtrada no servidor
 export const listarConversas = async (req, res) => { 
     try { 
-        // Pega o nome do agente que está solicitando a lista (via Query Param)
+        // Pega o nome do agente que está pedindo (vem da Query String)
         const agenteSolicitante = req.query.agente;
 
         const todosChats = await evolutionService.buscarConversas(); 
         
-        // Filtra ANTES de enviar para o frontend
+        // FILTRO RÍGIDO: O servidor decide o que você pode ver
         const chatsFiltrados = todosChats.filter(chat => {
              const ctx = userContext[chat.id] || {};
              const temDono = !!ctx.nomeAgente;
              
-             // Regra de Visibilidade Blindada:
-             // 1. Se não tem dono (Fila), MOSTRA.
-             // 2. Se tem dono E o dono sou eu, MOSTRA.
-             // 3. Se tem dono e NÃO sou eu, ESCONDE (retorna false).
+             // 1. Se não tem dono (Fila de espera), qualquer um vê.
+             if (!temDono) return true; 
              
-             if (!temDono) return true; // Fila
-             if (temDono && ctx.nomeAgente === agenteSolicitante) return true; // Meus
-             return false; // Dos outros
+             // 2. Se tem dono, SÓ O DONO VÊ.
+             if (temDono && ctx.nomeAgente === agenteSolicitante) return true; 
+             
+             // 3. Caso contrário, esconde (não envia o dado).
+             return false; 
         });
 
         const m = chatsFiltrados.map(x => {
             const ctx = userContext[x.id] || {};
+            // Visibilidade aqui é redundante pois já filtramos, mas mantemos true
             const deveAparecer = ctx.mostrarNaFila === true || ctx.etapa === 'ATENDIMENTO_HUMANO';
             return { 
                 numero: x.id, 
@@ -396,9 +404,9 @@ export const listarConversas = async (req, res) => {
     } catch (e) { res.status(200).json({ success: true, data: [] }); } 
 };
 
-// [SEGURANÇA] Listagem de mensagens de um chat específico
+// [SEGURANÇA TOTAL] Leitura de histórico com validação
 export const listarMensagensChat = async (req, res) => {
-    const { numero, nomeSolicitante } = req.body; // Agora exige nomeSolicitante
+    const { numero, nomeSolicitante } = req.body; // Exige quem está pedindo
     
     if (!numero) return res.status(400).json({ success: false, message: 'Número obrigatório' });
     
@@ -406,7 +414,7 @@ export const listarMensagensChat = async (req, res) => {
         // Validação de Segurança
         const contexto = userContext[numero];
         if (contexto && contexto.nomeAgente) {
-             // Se o chat tem dono e não é o solicitante, NEGA o histórico
+             // Se o chat tem dono e não é o solicitante, NEGA o acesso
              if (contexto.nomeAgente !== nomeSolicitante) {
                  return res.status(403).json({ 
                      success: false, 

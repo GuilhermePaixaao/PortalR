@@ -62,6 +62,7 @@
         .badge-unread { background-color: #25d366; color: white; font-size: 0.75rem; font-weight: bold; min-width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: absolute; right: 15px; top: 50%; transform: translateY(-50%); }
 
         .chat-area { flex: 1; display: flex; flex-direction: column; background-color: var(--wa-bg-color); position: relative; z-index: 0; }
+        /* A imagem de fundo agora vem do CSS externo (whatsapp-style.css) ou pode ficar aqui */
         .chat-area::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png"); opacity: 0.4; z-index: -1; pointer-events: none; }
         body.dark-mode .chat-area::before { opacity: 0.08; }
 
@@ -71,6 +72,7 @@
         .overlay-screen p { margin-top: 10px; color: var(--text-secondary); font-size: 0.9rem; max-width: 500px; }
 
         .messages-container { flex: 1; padding: 20px 60px; overflow-y: auto; display: flex; flex-direction: column; }
+        /* Estilos de mensagem agora vêm do whatsapp-style.css, mas mantemos o básico aqui para garantir */
         .msg { max-width: 65%; padding: 8px 12px; border-radius: 7.5px; margin-bottom: 8px; position: relative; font-size: 0.9rem; line-height: 1.4; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); word-wrap: break-word; color: var(--text-primary); }
         .msg-in { align-self: flex-start; background-color: var(--wa-msg-in); border-top-left-radius: 0; }
         .msg-out { align-self: flex-end; background-color: var(--wa-msg-out); border-top-right-radius: 0; }
@@ -641,6 +643,16 @@
         });
         
         socket.on('novaMensagemWhatsapp', (data) => {
+            // [SEGURANÇA] Filtra mensagens em tempo real
+            let meuNome = "";
+            try { meuNome = JSON.parse(localStorage.getItem("userData")).data.nomeFuncionario; } catch(e){}
+
+            const temDono = !!data.nomeAgente;
+            const souDono = (data.nomeAgente === meuNome);
+
+            // Se tem dono e não sou eu, IGNORA completamente (não renderiza, não notifica)
+            if (temDono && !souDono) return;
+
             const { chatId, texto, fromMe, nome, mostrarNaFila } = data;
             
             if (!AppState.conversas[chatId]) AppState.conversas[chatId] = [];
