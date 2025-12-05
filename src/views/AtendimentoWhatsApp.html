@@ -753,7 +753,7 @@
             }
         });
 
-        // [CORREÇÃO] Ouve quando alguém assume um chat e remove da sua fila
+        // [CORREÇÃO] Ouve quando alguém assume um chat e remove da sua fila (SUMIR)
         socket.on('atendimentoAssumido', (data) => {
             const chat = AppState.chatList.find(c => c.numero === data.chatId);
             if (chat) {
@@ -770,7 +770,7 @@
                 if (data.nomeAgente === meuNome) {
                     chat.visivel = true; // Mostra pra mim
                 } else {
-                    chat.visivel = false; // Esconde dos outros
+                    chat.visivel = false; // Esconde dos outros (SOME DA VISTA)
                 }
                 
                 saveState();
@@ -779,7 +779,7 @@
                 // Se eu estava olhando para esse chat e outro assumiu, me avisa e sai
                 if (AppState.activeNumber === data.chatId && data.nomeAgente !== meuNome) {
                     alert(`O atendente ${data.nomeAgente} acabou de assumir este chamado.`);
-                    showScreen('welcome');
+                    showScreen('welcome'); // FECHA A TELA IMEDIATAMENTE
                     AppState.activeNumber = null;
                 } else if (AppState.activeNumber === data.chatId) {
                     // Atualiza meus botões se fui eu
