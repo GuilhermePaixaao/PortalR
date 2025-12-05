@@ -320,12 +320,31 @@ export const atenderAtendimento = async (req, res) => {
     const { numero, nomeAgente } = req.body;
     try {
         if (!userContext[numero]) userContext[numero] = { historico: [] };
+
+        // [CORREÇÃO BUG CONCORRÊNCIA] Verifica se já tem dono
+        if (userContext[numero].nomeAgente && userContext[numero].nomeAgente !== nomeAgente) {
+             return res.status(409).json({ 
+                 success: false, 
+                 message: `Atendimento já assumido por ${userContext[numero].nomeAgente}.` 
+             });
+        }
+
         userContext[numero].nomeAgente = nomeAgente;
         userContext[numero].botPausado = true; 
         userContext[numero].etapa = 'ATENDIMENTO_HUMANO';
         userContext[numero].mostrarNaFila = true; 
+        
         const msg = `👨‍💻 *Atendimento Humano Iniciado*\n\nO técnico *${nomeAgente}* assumiu o chamado.`;
         await evolutionService.enviarTexto(numero, msg);
+        
+        // [CORREÇÃO BUG CONCORRÊNCIA] Emite evento para remover da fila dos outros
+        if (req.io) {
+            req.io.emit('atendimentoAssumido', {
+                chatId: numero,
+                nomeAgente: nomeAgente
+            });
+        }
+
         res.status(200).json({ success: true });
     } catch (error) { res.status(500).json({ success: false }); }
 };
@@ -470,4 +489,4 @@ export const criarChamadoDoChat = async (req, res) => {
 export const handleDisconnect = async (req, res) => { try { await evolutionService.desconectarInstancia(); res.status(200).json({ success: true }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
 export const connectInstance = async (req, res) => { try { const r = await evolutionService.criarInstancia(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
 export const checarStatus = async (req, res) => { try { const r = await evolutionService.consultarStatus(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
-export const configurarUrlWebhook = async (req, res) => { try { const h = req.get('host'); const p = h.includes('localhost') ? 'http' : 'https'; await evolutionService.configurarWebhook(`${p}://${h}/api/evolution/webhook`); res.status(200).json({ success: true }); } catch (e) { res.status(500).json({ success: false }); } };
+export const configurarUrlWebhook = async (req, res) => { try { const h = req.get('host'); const p = h.includes('localhost') ? 'http' : 'https'; await evolutionService.configurarWebhook(`${p}://${h}/api/evolution/webhook`); res.status(200).json({ success: true }); } catch (e) { res.status(500).json({ success: false }); } };                                                                                                                                                                                                                                                   
