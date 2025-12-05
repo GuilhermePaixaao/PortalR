@@ -188,7 +188,7 @@
         .ticket-operator { flex: 0 0 120px; }
         
         .ticket-created { flex: 0 0 100px; text-align: center; }
-        .ticket-actions { flex: 0 0 60px; text-align: center; cursor: pointer; }
+        .ticket-actions { flex: 0 0 90px; text-align: center; cursor: pointer; } /* Aumentei um pouco para caber a lixeira */
 
         .priority-badge, .status-badge {
             padding: 0.2em 0.6em;
@@ -223,6 +223,13 @@
         }
         .btn-pausar {
             color: #fd7e14; /* Laranja */
+        }
+        /* --- (NOVO) BOTÃO EXCLUIR --- */
+        .btn-excluir {
+            color: #dc3545; /* Vermelho Bootstrap */
+        }
+        .btn-excluir:hover {
+            color: #bb2d3b;
         }
         /* --- (FIM) CSS DOS NOVOS BOTÕES --- */
 
@@ -1058,6 +1065,10 @@
                     actionButtons += ` <button class="btn-action btn-concluir" data-id="${ch.id}" title="Marcar como Concluído">✔️</button>`;
                 }
                 
+                // --- BOTÃO DE EXCLUIR ADICIONADO AQUI ---
+                actionButtons += ` <button class="btn-action btn-excluir" data-id="${ch.id}" title="Excluir Chamado">🗑️</button>`;
+                // ----------------------------------------
+                
                 // --- ATUALIZADO: Lógica de montagem da categoria com caminho completo ---
                 let nomeExibicao = 'N/A';
                 if (ch.Categorias && ch.Categorias.id) {
@@ -1130,6 +1141,24 @@
                 exibirMensagem(divRespostaGeral, `Erro: ${e.message}`, false);
             }
         }
+        
+        // --- FUNÇÃO PARA EXCLUIR CHAMADO ---
+        async function excluirChamado(id) {
+            try {
+                const r = await fetch(`${API_URL}/chamados/${id}`, {
+                    method: 'DELETE'
+                });
+                const data = await r.json();
+                
+                if (!r.ok) throw new Error(data.message || "Erro ao excluir.");
+                
+                exibirMensagem(divRespostaGeral, "Chamado excluído permanentemente!", true);
+                listarChamados(); 
+            } catch (e) {
+                exibirMensagem(divRespostaGeral, `Erro ao excluir: ${e.message}`, false);
+            }
+        }
+        // ------------------------------------
 
         // --- FUNÇÕES DO MODAL ---
 
@@ -1375,6 +1404,12 @@
             else if (t.classList.contains('btn-concluir')) {
                 if (confirm(`Deseja realmente marcar o chamado #${id} como "Concluído"?`)) {
                     atualizarStatusChamado(id, 'Concluído');
+                }
+            }
+            // --- EVENTO DE EXCLUIR ---
+            else if (t.classList.contains('btn-excluir')) {
+                if (confirm(`ATENÇÃO: Deseja realmente EXCLUIR o chamado #${id}?\n\nEsta ação é irreversível e apagará todos os comentários vinculados.`)) {
+                    excluirChamado(id);
                 }
             }
         });
