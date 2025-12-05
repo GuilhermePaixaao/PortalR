@@ -1044,7 +1044,7 @@
             }
         });
 
-        // --- 1. ABRIR MODAL COM CASCATA DE CATEGORIAS ---
+        // --- 1. ABRIR MODAL COM CASCATA DE CATEGORIAS (MODIFICADO) ---
         btnCriarChamado.addEventListener('click', async () => {
             if(btnCriarChamado.disabled) return;
             if(!AppState.activeNumber) return;
@@ -1055,24 +1055,11 @@
             const contatoNome = AppState.contactNames[AppState.activeNumber] || AppState.activeNumber;
             inputAssunto.value = `Atendimento WhatsApp - ${contatoNome}`;
             
-            selectPrioridade.value = 'Média';
-
-            // Histórico Automático
-            const msgs = AppState.conversas[AppState.activeNumber] || [];
-            const ultimas = msgs.slice(-15); 
+            // [MODIFICAÇÃO 1] Campo Descrição começa vazio
+            inputDescricao.value = '';
             
-            if (ultimas.length > 0) {
-                const historicoFormatado = ultimas.map(m => {
-                    const hora = new Date(m.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                    const autor = m.fromMe ? 'Eu' : (m.name || 'Cliente');
-                    return `[${hora}] ${autor}: ${m.text}`;
-                }).join('\n');
+            selectPrioridade.value = 'Média'; // Padrão inicial
 
-                inputDescricao.value = `Resumo do Atendimento:\n\n${historicoFormatado}\n\n-----------------\nDetalhes adicionais: `;
-            } else {
-                inputDescricao.value = '';
-            }
-            
             // Carrega categorias se ainda não carregou
             if(allCategories.length === 0) {
                 containerCascata.innerHTML = 'Carregando...';
@@ -1093,27 +1080,35 @@
             }
         });
 
-        // --- FUNÇÃO PARA CRIAR CASCATA DINÂMICA ---
+        // --- FUNÇÃO PARA CRIAR CASCATA DINÂMICA (MODIFICADO) ---
         function montarSelectCategoria(parentId) {
-            // Filtra filhos do pai atual
             const filhos = allCategories.filter(c => c.parent_id == parentId);
             
-            // Se não tem filhos, significa que é a ponta final.
-            // O ID válido é o próprio pai que foi passado.
             if (filhos.length === 0) {
                 categoriaSelecionadaId = parentId;
+                
+                // [MODIFICAÇÃO 2] Atualizar Prioridade baseado na categoria final
+                const cat = allCategories.find(c => c.id == parentId);
+                if (cat && cat.prioridade_padrao) {
+                    const map = {
+                        'BAIXA': 'Baixa', 'LOW': 'Baixa', 'baixa': 'Baixa',
+                        'MEDIA': 'Média', 'MÉDIA': 'Média', 'MEDIUM': 'Média', 'media': 'Média',
+                        'ALTA': 'Alta', 'HIGH': 'Alta', 'alta': 'Alta',
+                        'CRITICA': 'Crítica', 'CRÍTICA': 'Crítica', 'CRITICAL': 'Crítica', 'critica': 'Crítica'
+                    };
+                    const p = cat.prioridade_padrao.toUpperCase();
+                    if (map[p]) selectPrioridade.value = map[p];
+                    else selectPrioridade.value = cat.prioridade_padrao;
+                }
                 return;
             }
 
-            // Se tem filhos, o ID atual ainda não é o final (precisa descer mais)
             categoriaSelecionadaId = null;
 
-            // Cria o select
             const select = document.createElement('select');
             select.className = 'modal-select';
             select.style.marginTop = '5px';
             
-            // Adiciona opção padrão
             const defaultOption = document.createElement('option');
             defaultOption.value = "";
             defaultOption.textContent = parentId === null ? "-- Selecione a Categoria --" : "-- Selecione a Subcategoria --";
@@ -1126,11 +1121,9 @@
                 select.appendChild(opt);
             });
 
-            // Evento ao mudar
             select.addEventListener('change', (e) => {
                 const val = e.target.value;
                 
-                // Remove todos os selects seguintes (irmãos posteriores) para refazer o caminho
                 let next = select.nextElementSibling;
                 while (next) {
                     const toRemove = next;
@@ -1158,10 +1151,8 @@
             const descricao = inputDescricao.value.trim();
             const prioridade = selectPrioridade.value;
 
-            // Valida se selecionou até o final
             if(!assunto) return alert("Preencha o Assunto.");
             
-            // Verifica se tem select vazio (pendente) na tela
             const selects = containerCascata.querySelectorAll('select');
             let pendente = false;
             selects.forEach(s => { if(!s.value) pendente = true; });
@@ -1172,7 +1163,6 @@
 
             if(!descricao) return alert("A descrição é obrigatória.");
 
-            // Feedback Visual
             const btnOriginalText = btnSalvarChamado.textContent;
             btnSalvarChamado.disabled = true;
             btnSalvarChamado.textContent = "Criando...";
@@ -1186,7 +1176,7 @@
                     chamado: {
                         assunto,
                         descricao,
-                        categoria_id: categoriaSelecionadaId, // Usa o ID final da cascata
+                        categoria_id: categoriaSelecionadaId, 
                         prioridade,
                         requisitante_id: agenteId, 
                         status: 'Aberto'
