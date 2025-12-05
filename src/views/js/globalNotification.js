@@ -141,8 +141,6 @@ socket.on('novaMensagemWhatsapp', (data) => {
 
     // LÓGICA DE SALVAMENTO EM SEGUNDO PLANO
     // Verifica se NÃO estamos na página do WhatsApp.
-    // Se estivermos lá, o script da própria página já cuida de tudo em tempo real.
-    // Se estivermos no Dashboard/Outros, este script assume a responsabilidade de salvar.
     if (!window.location.href.includes('AtendimentoWhatsApp') && !window.location.href.includes('whatsapp')) {
         console.log("[Global] Salvando mensagem em background...");
         
@@ -180,9 +178,6 @@ socket.on('novaMensagemWhatsapp', (data) => {
         let isPending = (mostrarNaFila === true);
         if (currentChat && !currentChat.pending && isVisivel) isPending = false;
 
-        // Calcula contagem de não lidas
-        // Se a mensagem não é minha, incrementa. Se for minha, zera ou mantém? Normalmente mantém o do outro.
-        // Aqui vamos somar 1 se não for minha.
         let newUnread = (currentChat ? currentChat.unreadCount : 0);
         if (!fromMe) newUnread++;
 
@@ -201,9 +196,8 @@ socket.on('novaMensagemWhatsapp', (data) => {
     }
 });
 
-// D. Atendimento Transferido (WhatsApp) - NOVO LISTENER
+// D. Atendimento Transferido (WhatsApp)
 socket.on('transferenciaChamado', (data) => {
-    // Apenas executa se NÃO estiver na página do WhatsApp
     if (!window.location.href.includes('AtendimentoWhatsApp') && !window.location.href.includes('whatsapp')) {
         console.log("[Global] Processando transferência de chat em background...");
         
@@ -222,16 +216,11 @@ socket.on('transferenciaChamado', (data) => {
         const souEu = (novoAgente === meuNome);
 
         if (chat) {
-            // Atualiza o chat existente
             chat.nomeAgente = novoAgente;
             chat.etapa = 'ATENDIMENTO_HUMANO'; 
             chat.pending = false; 
             
-            if (souEu) {
-                chat.visivel = true; 
-            } else {
-                chat.visivel = false; // Se não é para mim, fica invisível
-            }
+            chat.visivel = souEu; // Se é pra mim, aparece; se não, some.
 
             // Adicionar mensagem de transferência ao histórico
             if (!state.conversas[chatId]) state.conversas[chatId] = [];
@@ -239,14 +228,14 @@ socket.on('transferenciaChamado', (data) => {
             state.conversas[chatId].push({ fromMe: true, text: msgTexto, time: new Date(), name: "Sistema" });
             chat.ultimaMensagem = msgTexto; 
 
-            // Remove e Adiciona no topo da lista (para subir na sidebar)
+            // Reordena
             const idx = state.chatList.findIndex(c => c.numero === chatId);
             if (idx > -1) { state.chatList.splice(idx, 1); }
             
             if(chat.visivel) state.chatList.unshift(chat);
             
         } else if (souEu) {
-             // Caso o chat não estivesse na minha lista e foi transferido para mim
+             // Entra na lista se foi transferido para mim e eu não tinha
              const clienteNome = nomeCliente || chatId;
              state.contactNames[chatId] = clienteNome;
 
@@ -254,22 +243,19 @@ socket.on('transferenciaChamado', (data) => {
                 numero: chatId,
                 nome: clienteNome,
                 ultimaMensagem: `🔄 Transferido por ${antigoAgente}`,
-                unreadCount: 1, // Marcar como não lida
+                unreadCount: 1, 
                 visivel: true, 
                 pending: false, 
                 etapa: 'ATENDIMENTO_HUMANO',
                 nomeAgente: novoAgente
              };
              state.chatList.unshift(newChat);
-
-             // Adicionar ao histórico de conversas
+             
              if (!state.conversas[chatId]) state.conversas[chatId] = [];
-             const msgTexto = `🔄 Atendimento Transferido para ${novoAgente}.`;
-             state.conversas[chatId].push({ fromMe: true, text: msgTexto, time: new Date(), name: "Sistema" });
+             state.conversas[chatId].push({ fromMe: true, text: `🔄 Atendimento Transferido para ${novoAgente}.`, time: new Date(), name: "Sistema" });
         }
 
         if (souEu) {
-             // Notifica o agente que recebeu
             const msg = `O chat de ${nomeCliente || chatId} foi transferido para você.`;
             showToast('🔄 Transferência Recebida', msg, 'info');
         }
@@ -278,5 +264,39 @@ socket.on('transferenciaChamado', (data) => {
     }
 });
 
+// [NOVO] E. Atendimento Assumido (Sincronização em background)
+socket.on('atendimentoAssumido', (data) => {
+    // Só roda se NÃO estiver na página do WhatsApp (lá o script local já cuida)
+    if (!window.location.href.includes('AtendimentoWhatsApp') && !window.location.href.includes('whatsapp')) {
+        console.log("[Global] Processando atendimento assumido em background...");
+        
+        const state = getWhatsAppState();
+        const { chatId, nomeAgente } = data;
+        
+        const chat = state.chatList.find(c => c.numero === chatId);
+
+        if (chat) {
+            chat.nomeAgente = nomeAgente;
+            chat.etapa = 'ATENDIMENTO_HUMANO';
+            chat.pending = false;
+
+            // Quem sou eu?
+            let meuNome = "";
+            try { 
+                const userData = JSON.parse(localStorage.getItem("userData"));
+                meuNome = userData?.data?.nomeFuncionario;
+            } catch(e) {}
+
+            // Se fui eu que assumi (em outra aba?), visível. Se foi outro, invisível.
+            if (nomeAgente === meuNome) {
+                chat.visivel = true;
+            } else {
+                chat.visivel = false; // Remove da minha lista de pendentes
+            }
+
+            saveWhatsAppState(state);
+        }
+    }
+});
 
 console.log("✅ Sistema Global de Notificações Ativo (Background Save)");
