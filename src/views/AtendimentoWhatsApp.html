@@ -753,6 +753,44 @@
             }
         });
 
+        // [CORREÇÃO] Ouve quando alguém assume um chat e remove da sua fila
+        socket.on('atendimentoAssumido', (data) => {
+            const chat = AppState.chatList.find(c => c.numero === data.chatId);
+            if (chat) {
+                chat.nomeAgente = data.nomeAgente;
+                chat.etapa = 'ATENDIMENTO_HUMANO';
+                
+                // Verifica se fui EU quem assumiu
+                let meuNome = "";
+                try { 
+                    const u = JSON.parse(localStorage.getItem("userData"));
+                    meuNome = u?.data?.nomeFuncionario;
+                } catch(e){}
+
+                if (data.nomeAgente === meuNome) {
+                    chat.visivel = true; // Mostra pra mim
+                } else {
+                    chat.visivel = false; // Esconde dos outros
+                }
+                
+                saveState();
+                renderSidebar();
+                
+                // Se eu estava olhando para esse chat e outro assumiu, me avisa e sai
+                if (AppState.activeNumber === data.chatId && data.nomeAgente !== meuNome) {
+                    alert(`O atendente ${data.nomeAgente} acabou de assumir este chamado.`);
+                    showScreen('welcome');
+                    AppState.activeNumber = null;
+                } else if (AppState.activeNumber === data.chatId) {
+                    // Atualiza meus botões se fui eu
+                    atualizarBotoesToolbar(chat);
+                }
+            } else {
+                // Se o chat não existia localmente, sincroniza tudo por garantia
+                syncChatsWithServer();
+            }
+        });
+
         async function openChat(number) {
             AppState.activeNumber = number;
             const chat = AppState.chatList.find(c => c.numero === number);
@@ -887,6 +925,7 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
+        // [CORREÇÃO] Botão Assumir com tratamento de erro (ex: já assumido)
         btnAssumir.addEventListener('click', async () => {
             if (!AppState.activeNumber) return;
             if (btnAssumir.disabled) return;
@@ -895,27 +934,35 @@
                 const user = JSON.parse(localStorage.getItem("userData"));
                 const nomeAgente = user?.data?.nomeFuncionario || "Suporte";
 
-                await fetch('/api/whatsapp/atender', {
-                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                const response = await fetch('/api/whatsapp/atender', {
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ numero: AppState.activeNumber, nomeAgente: nomeAgente })
                 });
+                
+                const json = await response.json();
+
+                if (!response.ok || !json.success) {
+                    throw new Error(json.message || "Erro desconhecido ao assumir.");
+                }
                 
                 const chat = AppState.chatList.find(c => c.numero === AppState.activeNumber);
                 if(chat) {
                     chat.pending = false;
                     chat.etapa = 'ATENDIMENTO_HUMANO'; 
                     chat.nomeAgente = nomeAgente; 
-                    // [NOVO] Garante que fique visível pra mim
                     chat.visivel = true;
                 }
                 
                 saveState();
                 renderSidebar();
-                
                 atualizarBotoesToolbar(chat);
 
                 appendMessageToView("✅ Você assumiu este chamado.", true, "Sistema", new Date());
-            } catch (e) { alert("Erro ao assumir."); }
+            } catch (e) { 
+                alert(`Não foi possível assumir: ${e.message}`);
+                syncChatsWithServer();
+            }
         });
 
         btnFinalizar.addEventListener('click', finalizarChat);
