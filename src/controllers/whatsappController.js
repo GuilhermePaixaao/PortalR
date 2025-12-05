@@ -36,9 +36,7 @@ Seja breve e profissional.
 // Memória local
 const userContext = {};
 
-// [NOVO] Função auxiliar para contar fila
 const calcularPosicaoFila = () => {
-    // Conta quantos contextos estão parados na etapa 'FILA_ESPERA'
     return Object.values(userContext).filter(ctx => ctx.etapa === 'FILA_ESPERA').length;
 };
 
@@ -46,7 +44,6 @@ const calcularPosicaoFila = () => {
 // 3. TEXTOS FIXOS
 // ==================================================
 const MENSAGENS = {
-    // Menu Inicial
     SAUDACAO: (nome) => `👋 Olá, *${nome}*. Bem-vindo ao Suporte Técnico do *Supermercado Rosalina*.
 
 Selecione uma opção para prosseguir:
@@ -56,14 +53,12 @@ Selecione uma opção para prosseguir:
 
 _Para encerrar a qualquer momento, digite #._`,
 
-    // Mensagem 1: Pede a descrição
     MENU_TI_COM_FILA: `✅ *Solicitação Iniciada*
     
 Você está na fila de atendimento.
 Por favor, **descreva detalhadamente o problema** abaixo (qual equipamento, mensagem de erro, setor).
 _Nossa equipe analisará sua mensagem enquanto um técnico assume._`,
 
-    // [ALTERADO] Mensagem 2: Confirmação Final com POSIÇÃO NA FILA
     CONFIRMACAO_FINAL: (posicao) => `✅ *Você acessou a Fila de Suporte T.I.*
     
 Opção selecionada: Suporte T.I
@@ -109,7 +104,6 @@ async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
         
         contexto.historico.push({ role: "user", content: textoUsuario });
         
-        // Mantém histórico curto
         if (contexto.historico.length > 6) {
             contexto.historico = [contexto.historico[0], ...contexto.historico.slice(-5)];
         }
@@ -122,12 +116,10 @@ async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
         });
 
         const respostaIA = completion.choices[0]?.message?.content || "";
-        
         if (respostaIA) {
             contexto.historico.push({ role: "assistant", content: respostaIA });
         }
         return respostaIA;
-
     } catch (erro) {
         console.error("[GROQ] Erro:", erro);
         return null; 
@@ -172,7 +164,6 @@ export const handleWebhook = async (req, res) => {
         });
 
         if (!isFromMe) {
-            // Inicializa contexto
             if (!userContext[idRemoto]) {
                 userContext[idRemoto] = { 
                     etapa: 'INICIO', 
@@ -196,8 +187,6 @@ export const handleWebhook = async (req, res) => {
                 ctx.botPausado = true; 
                 ctx.nomeAgente = null;
             }
-            
-            // --- INÍCIO DE CONVERSA / RESET ---
             else if (ehSaudacao) {
                 if (ctx.etapa === 'MENU' && textoMin !== 'menu') {
                     respostaBot = MENSAGENS.OPCAO_INVALIDA;
@@ -210,8 +199,6 @@ export const handleWebhook = async (req, res) => {
                     respostaBot = MENSAGENS.SAUDACAO(nomeAutor);
                 }
             }
-
-            // --- MENU PRINCIPAL ---
             else if (ctx.etapa === 'MENU') {
                 if (texto === '1' || textoMin.includes('problema') || textoMin.includes('suporte')) {
                     respostaBot = MENSAGENS.MENU_TI_COM_FILA;
@@ -226,12 +213,7 @@ export const handleWebhook = async (req, res) => {
                         const ticketId = parseInt(ticketNumeroStr);
                         const ticket = await chamadoModel.findById(ticketId); 
                         if (ticket) {
-                            const categoria = ticket.nomeCategoriaPai ? `${ticket.nomeCategoriaPai} > ${ticket.nomeCategoria}` : ticket.nomeCategoria;
-                            respostaBot = `🎫 *Ticket #${ticket.id}*\n\n` +
-                                          `📌 *Assunto:* ${ticket.assunto}\n` +
-                                          `🚦 *Status:* ${ticket.status.toUpperCase()}\n` +
-                                          `🔧 *Técnico:* ${ticket.nomeAtendente || '---'}\n\n` +
-                                          `_Digite menu para retornar._`;
+                            respostaBot = `🎫 *Ticket #${ticket.id}*\nStatus: ${ticket.status}\n\n_Digite menu para retornar._`;
                             ctx.botPausado = true;
                             setTimeout(() => { ctx.botPausado = false; }, 30000); 
                         } else {
@@ -242,30 +224,14 @@ export const handleWebhook = async (req, res) => {
                     respostaBot = MENSAGENS.OPCAO_INVALIDA;
                 }
             }
-
-            // --- CAPTURA DA DESCRIÇÃO (FLUXO 1) ---
             else if (ctx.etapa === 'AGUARDANDO_DESCRICAO') {
-                // Notifica o painel
                 ctx.mostrarNaFila = true; 
                 io.emit('notificacaoChamado', { chatId: idRemoto, nome: nomeAutor, status: 'PENDENTE_TI' });
-
-                // [ALTERADO] Calcula a posição na fila (quem já está lá + eu que vou entrar agora)
                 const posicaoAtual = calcularPosicaoFila() + 1;
-
-                // [ALTERADO] Responde com a mensagem dinâmica contendo a posição
                 respostaBot = MENSAGENS.CONFIRMACAO_FINAL(posicaoAtual);
-
-                // Pausa o bot e aguarda humano
                 ctx.etapa = 'FILA_ESPERA';
                 ctx.botPausado = true; 
             }
-
-            // --- ESTADO DE FILA ---
-            else if (ctx.etapa === 'FILA_ESPERA') {
-                // Silêncio
-            }
-
-            // --- AVALIAÇÃO ---
             else if (ctx.etapa === 'AVALIACAO_NOTA') {
                 if (['1', '2', '3', '4', '5'].includes(texto)) {
                     respostaBot = MENSAGENS.AVALIACAO_MOTIVO;
@@ -283,8 +249,6 @@ export const handleWebhook = async (req, res) => {
                 ctx.mostrarNaFila = false; 
                 delete userContext[idRemoto]; 
             }
-
-            // --- FALLBACK ---
             else if (!respostaBot && !ctx.botPausado && ctx.etapa === 'INICIO') {
                 ctx.etapa = 'MENU';
                 ctx.historico = [{ role: "system", content: gerarPromptSistema(nomeAutor) }];
@@ -313,7 +277,7 @@ export const handleWebhook = async (req, res) => {
 };
 
 // ==================================================
-// 6. FUNÇÕES ADMINISTRATIVAS (Inalteradas)
+// 6. FUNÇÕES ADMINISTRATIVAS (Blindadas)
 // ==================================================
 
 export const atenderAtendimento = async (req, res) => {
@@ -321,7 +285,7 @@ export const atenderAtendimento = async (req, res) => {
     try {
         if (!userContext[numero]) userContext[numero] = { historico: [] };
 
-        // [CORREÇÃO BUG CONCORRÊNCIA] Verifica se já tem dono
+        // [SEGURANÇA] Bloqueio de Concorrência
         if (userContext[numero].nomeAgente && userContext[numero].nomeAgente !== nomeAgente) {
              return res.status(409).json({ 
                  success: false, 
@@ -337,7 +301,6 @@ export const atenderAtendimento = async (req, res) => {
         const msg = `👨‍💻 *Atendimento Humano Iniciado*\n\nO técnico *${nomeAgente}* assumiu o chamado.`;
         await evolutionService.enviarTexto(numero, msg);
         
-        // [CORREÇÃO BUG CONCORRÊNCIA] Emite evento para remover da fila dos outros
         if (req.io) {
             req.io.emit('atendimentoAssumido', {
                 chatId: numero,
@@ -362,17 +325,28 @@ export const finalizarAtendimento = async (req, res) => {
     } catch (error) { res.status(500).json({ success: false }); }
 };
 
+// [SEGURANÇA] Envio de mensagem com validação de dono
 export const handleSendMessage = async (req, res) => {
   const { numero, mensagem, nomeAgenteTemporario } = req.body;
   try {
-      let mensagemFinal = mensagem;
+      // 1. Verifica se o chat tem dono
+      const contexto = userContext[numero];
       
-      // [CORREÇÃO] Adiciona o nome do agente em negrito se disponível
+      if (contexto && contexto.nomeAgente) {
+          // 2. Se tem dono, verifica se é quem está pedindo
+          if (contexto.nomeAgente !== nomeAgenteTemporario) {
+              return res.status(403).json({ 
+                  success: false, 
+                  message: `⛔ ACESSO NEGADO: Este chat pertence a ${contexto.nomeAgente}.` 
+              });
+          }
+      }
+
+      let mensagemFinal = mensagem;
       if (nomeAgenteTemporario) {
           mensagemFinal = `*${nomeAgenteTemporario}*\n${mensagem}`;
       }
 
-      const contexto = userContext[numero];
       if(contexto) contexto.mostrarNaFila = true;
       else if (!contexto) userContext[numero] = { etapa: 'ATENDIMENTO_HUMANO', botPausado: true, mostrarNaFila: true };
       
@@ -381,10 +355,30 @@ export const handleSendMessage = async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };
 
+// [SEGURANÇA] Listagem de conversas filtrada no backend
 export const listarConversas = async (req, res) => { 
     try { 
-        const c = await evolutionService.buscarConversas(); 
-        const m = c.map(x => {
+        // Pega o nome do agente que está solicitando a lista (via Query Param)
+        const agenteSolicitante = req.query.agente;
+
+        const todosChats = await evolutionService.buscarConversas(); 
+        
+        // Filtra ANTES de enviar para o frontend
+        const chatsFiltrados = todosChats.filter(chat => {
+             const ctx = userContext[chat.id] || {};
+             const temDono = !!ctx.nomeAgente;
+             
+             // Regra de Visibilidade Blindada:
+             // 1. Se não tem dono (Fila), MOSTRA.
+             // 2. Se tem dono E o dono sou eu, MOSTRA.
+             // 3. Se tem dono e NÃO sou eu, ESCONDE (retorna false).
+             
+             if (!temDono) return true; // Fila
+             if (temDono && ctx.nomeAgente === agenteSolicitante) return true; // Meus
+             return false; // Dos outros
+        });
+
+        const m = chatsFiltrados.map(x => {
             const ctx = userContext[x.id] || {};
             const deveAparecer = ctx.mostrarNaFila === true || ctx.etapa === 'ATENDIMENTO_HUMANO';
             return { 
@@ -397,14 +391,31 @@ export const listarConversas = async (req, res) => {
                 nomeAgente: ctx.nomeAgente || null 
             };
         }); 
+        
         res.status(200).json({ success: true, data: m }); 
     } catch (e) { res.status(200).json({ success: true, data: [] }); } 
 };
 
+// [SEGURANÇA] Listagem de mensagens de um chat específico
 export const listarMensagensChat = async (req, res) => {
-    const { numero } = req.body;
+    const { numero, nomeSolicitante } = req.body; // Agora exige nomeSolicitante
+    
     if (!numero) return res.status(400).json({ success: false, message: 'Número obrigatório' });
+    
     try {
+        // Validação de Segurança
+        const contexto = userContext[numero];
+        if (contexto && contexto.nomeAgente) {
+             // Se o chat tem dono e não é o solicitante, NEGA o histórico
+             if (contexto.nomeAgente !== nomeSolicitante) {
+                 return res.status(403).json({ 
+                     success: false, 
+                     message: "⛔ Você não tem permissão para ver este chat.",
+                     data: [] 
+                 });
+             }
+        }
+
         const rawMessages = await evolutionService.buscarMensagensHistorico(numero);
         const formattedMessages = rawMessages.map(msg => {
             const content = msg.message?.conversation || 

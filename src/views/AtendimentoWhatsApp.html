@@ -62,7 +62,6 @@
         .badge-unread { background-color: #25d366; color: white; font-size: 0.75rem; font-weight: bold; min-width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: absolute; right: 15px; top: 50%; transform: translateY(-50%); }
 
         .chat-area { flex: 1; display: flex; flex-direction: column; background-color: var(--wa-bg-color); position: relative; z-index: 0; }
-        /* A imagem de fundo agora vem do CSS externo (whatsapp-style.css) ou pode ficar aqui */
         .chat-area::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: url("https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png"); opacity: 0.4; z-index: -1; pointer-events: none; }
         body.dark-mode .chat-area::before { opacity: 0.08; }
 
@@ -72,7 +71,6 @@
         .overlay-screen p { margin-top: 10px; color: var(--text-secondary); font-size: 0.9rem; max-width: 500px; }
 
         .messages-container { flex: 1; padding: 20px 60px; overflow-y: auto; display: flex; flex-direction: column; }
-        /* Estilos de mensagem agora vêm do whatsapp-style.css, mas mantemos o básico aqui para garantir */
         .msg { max-width: 65%; padding: 8px 12px; border-radius: 7.5px; margin-bottom: 8px; position: relative; font-size: 0.9rem; line-height: 1.4; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); word-wrap: break-word; color: var(--text-primary); }
         .msg-in { align-self: flex-start; background-color: var(--wa-msg-in); border-top-left-radius: 0; }
         .msg-out { align-self: flex-end; background-color: var(--wa-msg-out); border-top-right-radius: 0; }
@@ -375,7 +373,6 @@
         const filaHeader = document.getElementById('filaHeader');
         const chatTitle = document.getElementById('chatTitle'); 
         
-        // Referências aos botões da Toolbar
         const btnAssumir = document.getElementById('btnAssumir');
         const btnFinalizar = document.getElementById('btnFinalizar');
         const btnTransferir = document.getElementById('btnTransferir');
@@ -383,20 +380,17 @@
         const btnAssociarTicket = document.getElementById('btnAssociarTicket'); 
         const btnCriarChamado = document.getElementById('btnCriarChamado'); 
 
-        // Referências ao Modal de Transferência
         const modalTransfer = document.getElementById('modalTransferencia');
         const selectAgentes = document.getElementById('selectAgentes');
         const btnCancelarTransfer = document.getElementById('btnCancelarTransfer');
         const btnConfirmarTransfer = document.getElementById('btnConfirmarTransfer');
 
-        // Referências ao Modal Associar
         const modalAssociar = document.getElementById('modalAssociarTicket');
         const inputTicketId = document.getElementById('inputTicketId');
         const btnCancelarAssociar = document.getElementById('btnCancelarAssociar');
         const btnConfirmarAssociar = document.getElementById('btnConfirmarAssociar');
         const associarResult = document.getElementById('associarResult');
 
-        // Referências ao Modal Criar Chamado
         const modalCriar = document.getElementById('modalCriarChamado');
         const inputAssunto = document.getElementById('inputAssunto');
         const selectCategoria = document.getElementById('selectCategoria');
@@ -528,7 +522,7 @@
         });
 
         // =========================================================================
-        // === CORREÇÃO PRINCIPAL: Sincronizar Chats considerando o AGENTE ===
+        // === CORREÇÃO PRINCIPAL: Sincronizar Chats com Filtro de Agente ===
         // =========================================================================
         async function syncChatsWithServer() {
             try {
@@ -542,19 +536,20 @@
                 }
                 setConnectedState();
 
-                const rChats = await fetch('/api/whatsapp/chats');
-                const json = await rChats.json();
-                
-                if (!json.success || !json.data) {
-                    return; 
-                }
-
                 // 1. Pega o nome do agente logado
                 let meuNome = "";
                 try { 
                     const userData = JSON.parse(localStorage.getItem("userData"));
                     meuNome = userData?.data?.nomeFuncionario;
                 } catch(e) { console.error("Erro ao ler dados do usuário", e); }
+
+                // [SEGURANÇA] Envia o nome para o backend filtrar a lista
+                const rChats = await fetch('/api/whatsapp/chats?agente=' + encodeURIComponent(meuNome));
+                const json = await rChats.json();
+                
+                if (!json.success || !json.data) {
+                    return; 
+                }
 
                 const listaServer = json.data;
                 const novosChats = [];
@@ -563,25 +558,12 @@
                 listaServer.forEach(serverChat => {
                     const num = serverChat.numero;
                     
-                    // --- NOVA LÓGICA DE FILTRAGEM ---
-                    const agenteDoChat = serverChat.nomeAgente; // Quem assumiu?
-                    const souOAgente = (agenteDoChat === meuNome); // É o meu?
-                    const estaLivre = !agenteDoChat; // Ninguém assumiu?
+                    const agenteDoChat = serverChat.nomeAgente;
+                    const souOAgente = (agenteDoChat === meuNome);
+                    const estaLivre = !agenteDoChat;
 
-                    let deveAparecer = false;
-
-                    if (souOAgente) {
-                        // Se eu assumi, SEMPRE aparece para mim
-                        deveAparecer = true;
-                    } else if (estaLivre) {
-                        // Se está livre, obedece a lógica da fila (visivel=true do server)
-                        // ou forçamos aparecer se for 'ATENDIMENTO_HUMANO' mas sem agente
-                        if (serverChat.visivel !== false) deveAparecer = true;
-                    } else {
-                        // Se tem outro agente e não sou eu -> ESCONDE
-                        deveAparecer = false;
-                    }
-                    // --------------------------------
+                    // Como o backend já filtra, o que chegar aqui é confiável para exibir
+                    const deveAparecer = serverChat.visivel; 
 
                     const isAtendimentoHumano = serverChat.etapa === 'ATENDIMENTO_HUMANO';
                     const serverPendingStatus = (deveAparecer && !isAtendimentoHumano && !serverChat.nomeAgente);
@@ -597,8 +579,6 @@
                         localChat.pending = serverPendingStatus; 
                         localChat.etapa = serverChat.etapa; 
                         localChat.nomeAgente = serverChat.nomeAgente;
-                        
-                        // Aplica a visibilidade calculada
                         localChat.visivel = deveAparecer;
 
                     } else {
@@ -613,7 +593,7 @@
                             nome: nomeFinal || num,
                             ultimaMensagem: serverChat.ultimaMensagem,
                             unreadCount: serverChat.unreadCount,
-                            visivel: deveAparecer, // Aplica visibilidade
+                            visivel: deveAparecer,
                             pending: serverPendingStatus,
                             etapa: serverChat.etapa,
                             nomeAgente: serverChat.nomeAgente
@@ -628,14 +608,13 @@
                 saveState();
                 renderSidebar();
                 
-                // Se eu estava num chat que agora está oculto (foi transferido ou outro pegou)
                 if (AppState.activeNumber) {
                     const activeChat = AppState.chatList.find(c => c.numero === AppState.activeNumber);
                     if (activeChat) {
                         if (!activeChat.visivel) {
-                            // Opcional: Fechar o chat automaticamente se sumir
-                            // showScreen('welcome');
-                            // AppState.activeNumber = null;
+                             // Se não está mais visível (ex: backend não mandou), fecha.
+                             showScreen('welcome');
+                             AppState.activeNumber = null;
                         } else {
                             atualizarBotoesToolbar(activeChat);
                         }
@@ -753,14 +732,12 @@
             }
         });
 
-        // [CORREÇÃO] Ouve quando alguém assume um chat e remove da sua fila (SUMIR)
         socket.on('atendimentoAssumido', (data) => {
             const chat = AppState.chatList.find(c => c.numero === data.chatId);
             if (chat) {
                 chat.nomeAgente = data.nomeAgente;
                 chat.etapa = 'ATENDIMENTO_HUMANO';
                 
-                // Verifica se fui EU quem assumiu
                 let meuNome = "";
                 try { 
                     const u = JSON.parse(localStorage.getItem("userData"));
@@ -768,25 +745,22 @@
                 } catch(e){}
 
                 if (data.nomeAgente === meuNome) {
-                    chat.visivel = true; // Mostra pra mim
+                    chat.visivel = true;
                 } else {
-                    chat.visivel = false; // Esconde dos outros (SOME DA VISTA)
+                    chat.visivel = false; 
                 }
                 
                 saveState();
                 renderSidebar();
                 
-                // Se eu estava olhando para esse chat e outro assumiu, me avisa e sai
                 if (AppState.activeNumber === data.chatId && data.nomeAgente !== meuNome) {
                     alert(`O atendente ${data.nomeAgente} acabou de assumir este chamado.`);
-                    showScreen('welcome'); // FECHA A TELA IMEDIATAMENTE
+                    showScreen('welcome'); 
                     AppState.activeNumber = null;
                 } else if (AppState.activeNumber === data.chatId) {
-                    // Atualiza meus botões se fui eu
                     atualizarBotoesToolbar(chat);
                 }
             } else {
-                // Se o chat não existia localmente, sincroniza tudo por garantia
                 syncChatsWithServer();
             }
         });
@@ -815,13 +789,27 @@
             loadingDiv.innerText = 'Sincronizando mensagens...';
             messagesContainer.appendChild(loadingDiv);
 
+            // [SEGURANÇA] Envia o nome de quem solicita para o backend validar
+            let meuNome = "";
+            try { 
+                const u = JSON.parse(localStorage.getItem("userData"));
+                meuNome = u?.data?.nomeFuncionario;
+            } catch(e){}
+
             try {
                 const response = await fetch('/api/whatsapp/messages', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ numero: number })
+                    body: JSON.stringify({ numero: number, nomeSolicitante: meuNome })
                 });
                 
+                if (response.status === 403) {
+                     alert("Acesso Negado: Você não é o responsável por este atendimento.");
+                     showScreen('welcome');
+                     loadingDiv.remove();
+                     return;
+                }
+
                 const json = await response.json();
                 
                 if (json.success && json.data.length > 0) {
@@ -852,6 +840,7 @@
             const text = chatInput.value.trim();
             if (!text || !AppState.activeNumber) return;
             
+            // UI Otimista (mostra antes de enviar)
             appendMessageToView(text, true, null, new Date());
             chatInput.value = '';
             
@@ -872,10 +861,17 @@
 
             try {
                 const user = JSON.parse(localStorage.getItem("userData"));
-                await fetch('/api/whatsapp/send', {
+                const r = await fetch('/api/whatsapp/send', {
                     method: 'POST', headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ numero: AppState.activeNumber, mensagem: text, nomeAgenteTemporario: user?.data?.nomeFuncionario })
                 });
+                
+                if (r.status === 403) {
+                    alert("Erro ao enviar: Você não é o dono deste chat.");
+                    // Remove a mensagem otimista ou recarrega o chat
+                    openChat(AppState.activeNumber);
+                }
+
             } catch (e) { console.error(e); }
         }
 
@@ -925,7 +921,6 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
-        // [CORREÇÃO] Botão Assumir com tratamento de erro (ex: já assumido)
         btnAssumir.addEventListener('click', async () => {
             if (!AppState.activeNumber) return;
             if (btnAssumir.disabled) return;
