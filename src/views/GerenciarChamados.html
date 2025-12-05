@@ -617,6 +617,21 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="detalhe-grupo">
+                            <span class="detalhe-label">Loja</span>
+                            <div id="detalheLoja" class="detalhe-valor">...</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detalhe-grupo">
+                            <span class="detalhe-label">Departamento</span>
+                            <div id="detalheDepartamento" class="detalhe-valor">...</div>
+                        </div>
+                    </div>
+                </div>
                 
                 <div class="row">
                     <div class="col-md-12">
@@ -793,6 +808,10 @@
         
         // Referência do texto da categoria (agora span dentro do container)
         const detalheCategoriaText = document.getElementById("detalheCategoriaText");
+        
+        // Referências para Loja e Departamento (NOVO)
+        const detalheLoja = document.getElementById("detalheLoja");
+        const detalheDepartamento = document.getElementById("detalheDepartamento");
         
         const detalheData = document.getElementById("detalheData");
         const detalheStatusSelect = document.getElementById("detalheStatusSelect");
@@ -1171,14 +1190,18 @@
             modalDetalhes.showModal();
             currentTicketId = null; 
             detalheAtendenteSelect.disabled = true; 
+            
+            // RESET DOS CAMPOS
+            detalheId.textContent = `#${chamadoId}`;
+            detalheAssunto.textContent = 'Carregando...';
+            detalheRequisitante.textContent = 'Carregando...';
+            detalheLoja.textContent = 'Carregando...';        // Reset Loja
+            detalheDepartamento.textContent = 'Carregando...';  // Reset Depto
 
             // Reseta a visualização da categoria (fecha edição se estava aberta)
             cancelarEdicaoCategoria();
 
             modalDetalhesConteudo.style.opacity = '0.5';
-            detalheId.textContent = `#${chamadoId}`;
-            detalheAssunto.textContent = 'Carregando...';
-            detalheRequisitante.textContent = 'Carregando...';
 
             try {
                 const response = await fetch(`${API_URL}/chamados/${chamadoId}`);
@@ -1191,9 +1214,26 @@
 
                 detalheAssunto.textContent = chamado.assunto;
                 detalheDescricao.textContent = chamado.descricao;
-                detalheRequisitante.textContent = chamado.Funcionario?.nomeFuncionario || 'N/A';
                 
-                // Exibe Categoria (com Pai se houver) -> AGORA CAMINHO COMPLETO
+                // --- PREENCHIMENTO MELHORADO DO REQUISITANTE ---
+                const reqNome = chamado.Funcionario?.nomeFuncionario || 'Desconhecido';
+                const reqTel = chamado.Funcionario?.telefone;
+                const reqEmail = chamado.Funcionario?.email;
+                
+                let reqTexto = reqNome;
+                if (reqTel) reqTexto += ` - Tel: ${reqTel}`;
+                if (reqEmail) reqTexto += `\n(${reqEmail})`; // Quebra de linha para o email se precisar
+                
+                detalheRequisitante.textContent = reqTexto;
+                detalheRequisitante.style.whiteSpace = 'pre-line'; // Permite quebra de linha no nome/email
+                // -----------------------------------------------
+
+                // --- PREENCHIMENTO DE LOJA E DEPARTAMENTO ---
+                detalheLoja.textContent = chamado.loja || 'N/A';
+                detalheDepartamento.textContent = chamado.departamento || 'N/A';
+                // --------------------------------------------
+
+                // Exibe Categoria (com Pai se houver) -> CAMINHO COMPLETO
                 let nomeCat = 'N/A';
                 if (chamado.Categorias && chamado.Categorias.id) {
                      nomeCat = montarCaminhoCategoria(chamado.Categorias.id);
