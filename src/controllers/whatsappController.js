@@ -1,11 +1,12 @@
-import { OpenAI } from 'openai';
-import pool from '../config/database.js'; // Importa conexão MySQL
 import * as evolutionService from '../services/evolutionService.js';
 import * as chamadoModel from '../models/chamadoModel.js'; 
 import * as EmailService from '../services/emailService.js'; 
+import { OpenAI } from 'openai';
+import fs from 'fs';
+import path from 'path';
 
 // ==================================================
-// CONFIGURAÇÕES
+// 1. CONFIGURAÇÕES DA GROQ
 // ==================================================
 const groq = new OpenAI({
     apiKey: process.env.GROQ_API_KEY, 
@@ -13,80 +14,96 @@ const groq = new OpenAI({
 });
 
 const MODELO_IA = "llama-3.1-8b-instant"; 
+
+// --- CACHE ANTI-DUPLICAÇÃO ---
 const processedMessageIds = new Set();
 
 // ==================================================
-// GERENCIAMENTO DE SESSÃO (VIA MYSQL)
+// 2. PERSISTÊNCIA DE DADOS (CORREÇÃO DA AMNÉSIA)
 // ==================================================
-async function getSession(numero) {
+// Arquivo onde salvaremos quem é dono de qual chat
+const STATE_FILE = path.resolve('whatsappState.json');
+
+// Carrega memória local
+let userContext = {};
+
+function loadStateDisk() {
     try {
-        const [rows] = await pool.query('SELECT * FROM whatsapp_sessions WHERE numero = ?', [numero]);
-        if (rows.length > 0) {
-            const s = rows[0];
-            return {
-                numero: s.numero,
-                nome: s.nome,
-                etapa: s.etapa,
-                nomeAgente: s.nome_agente,
-                mostrarNaFila: !!s.mostrar_na_fila,
-                botPausado: !!s.bot_pausado,
-                ultimaMensagem: s.ultima_mensagem,
-                unreadCount: s.unread_count,
-                historico: s.historico_json ? JSON.parse(s.historico_json) : []
-            };
+        if (fs.existsSync(STATE_FILE)) {
+            const raw = fs.readFileSync(STATE_FILE, 'utf-8');
+            userContext = JSON.parse(raw);
+            console.log("💾 [SISTEMA] Memória de atendimentos carregada do disco.");
         }
-        return null; 
     } catch (e) {
-        console.error("Erro ao buscar sessão no DB:", e);
-        return null;
+        console.error("Erro ao carregar estado:", e);
+        userContext = {};
     }
 }
 
-async function saveSession(data) {
+function saveStateDisk() {
     try {
-        const historicoStr = JSON.stringify(data.historico || []);
-        const mostrar = data.mostrarNaFila ? 1 : 0;
-        const pausado = data.botPausado ? 1 : 0;
-
-        await pool.query(`
-            INSERT INTO whatsapp_sessions 
-            (numero, nome, etapa, nome_agente, mostrar_na_fila, bot_pausado, ultima_mensagem, unread_count, historico_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-            nome=?, etapa=?, nome_agente=?, mostrar_na_fila=?, bot_pausado=?, ultima_mensagem=?, unread_count=?, historico_json=?
-        `, [
-            data.numero, data.nome, data.etapa, data.nomeAgente, mostrar, pausado, data.ultimaMensagem, data.unreadCount, historicoStr,
-            data.nome, data.etapa, data.nomeAgente, mostrar, pausado, data.ultimaMensagem, data.unreadCount, historicoStr
-        ]);
+        fs.writeFileSync(STATE_FILE, JSON.stringify(userContext, null, 2));
     } catch (e) {
-        console.error("Erro ao salvar sessão no DB:", e);
+        console.error("Erro ao salvar estado:", e);
     }
 }
 
+// Carrega ao iniciar
+loadStateDisk();
+
 // ==================================================
-// LÓGICA E TEXTOS DO BOT
+// 3. O CÉREBRO DA IA (APENAS PARA O SUBMENU T.I.)
 // ==================================================
-const gerarPromptSistema = (nome) => `Seja o Assistente do Suporte Rosalina para ${nome || 'Cliente'}. Colete dados do problema.`;
-const calcularPosicaoFila = async () => {
-    try {
-        const [rows] = await pool.query("SELECT COUNT(*) as total FROM whatsapp_sessions WHERE etapa = 'FILA_ESPERA'");
-        return rows[0].total;
-    } catch (e) { return 0; }
+const gerarPromptSistema = (nomeUsuario) => {
+    const nome = nomeUsuario || 'Colaborador';
+    return `
+IDENTIDADE:
+Você é o Assistente Virtual do Suporte Técnico do Supermercado Rosalina.
+Atendendo: ${nome}.
+
+OBJETIVO:
+Coletar informações sobre o problema técnico relatado.
+NÃO tente resolver o problema. NÃO invente menus de compras ou estoque.
+Seja breve e profissional.
+`;
 };
 
+const calcularPosicaoFila = () => {
+    return Object.values(userContext).filter(ctx => ctx.etapa === 'FILA_ESPERA').length;
+};
+
+// ==================================================
+// 4. TEXTOS FIXOS
+// ==================================================
 const MENSAGENS = {
-    SAUDACAO: (n) => `👋 Olá *${n}*. Bem-vindo ao Suporte Técnico do *Supermercado Rosalina*.\n\n1️⃣ **Reportar Problema** (Falar com T.I.)\n*️⃣ **Consultar Ticket**\n\n_Para encerrar a qualquer momento, digite #._`,
-    MENU_TI: `✅ *Solicitação Iniciada*\n\nVocê entrou na fila. Por favor, descreva brevemente seu problema abaixo.`,
-    FILA: (p) => `✅ Você acessou a Fila de Suporte T.I.
+    SAUDACAO: (nome) => `👋 Olá, *${nome}*. Bem-vindo ao Suporte Técnico do *Supermercado Rosalina*.
+
+Selecione uma opção para prosseguir:
+
+1️⃣ **Reportar Problema** (Falar com T.I.)
+*️⃣ **Consultar Ticket** (Ex: digite *123)
+
+_Para encerrar a qualquer momento, digite #._`,
+
+    MENU_TI_COM_FILA: `✅ *Solicitação Iniciada*
+    
+Você está na fila de atendimento.
+Por favor, **descreva detalhadamente o problema** abaixo (qual equipamento, mensagem de erro, setor).
+_Nossa equipe analisará sua mensagem enquanto um técnico assume._`,
+
+    CONFIRMACAO_FINAL: (posicao) => `✅ *Você acessou a Fila de Suporte T.I.*
     
 Opção selecionada: Suporte T.I
-📌 Sua posição na fila: 1º
+📌 *Sua posição na fila:* ${posicao}º
 
 Você entrou na fila, logo você será atendido.
 
-📞 Em caso de urgência pode nos acionar no número: (12) 98142-2925`,
-    INVALIDO: `⚠️ Opção inválida.`,
-    AVALIACAO: `⏹️ Atendimento Finalizado.
+📞 *Em caso de urgência pode nos acionar no número:* (12) 98142-2925`,
+
+    OPCAO_INVALIDA: `⚠️ *Opção inválida.*
+Por favor, digite apenas o número correspondente.`,
+
+    AVALIACAO_INICIO: `⏹️ *Atendimento Finalizado.*
 
 Por favor, avalie nosso suporte técnico:
 
@@ -97,311 +114,525 @@ Por favor, avalie nosso suporte técnico:
 5️⃣ 🤩 Excelente
 
 9️⃣ ❌ Pular`,
-    FIM: `✅ *Chamado Encerrado.*\nObrigado.`
+
+    AVALIACAO_MOTIVO: `Obrigado. Se houver alguma observação sobre o atendimento, digite abaixo (ou 9 para sair).`,
+
+    ENCERRAMENTO_FINAL: `✅ *Chamado Encerrado.*
+O Supermercado Rosalina agradece.
+_Envie uma mensagem se precisar de novo suporte._`
 };
 
 // ==================================================
-// WEBHOOK
+// 5. PROCESSAMENTO DA IA
+// ==================================================
+async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
+    const contexto = userContext[numeroUsuario];
+    if (!contexto || contexto.botPausado) return null;
+
+    try {
+        if (!contexto.historico || contexto.historico.length === 0) {
+            contexto.historico = [{ role: "system", content: gerarPromptSistema(nomeUsuario) }];
+        }
+        
+        contexto.historico.push({ role: "user", content: textoUsuario });
+        
+        if (contexto.historico.length > 6) {
+            contexto.historico = [contexto.historico[0], ...contexto.historico.slice(-5)];
+        }
+
+        const completion = await groq.chat.completions.create({
+            messages: contexto.historico,
+            model: MODELO_IA,
+            temperature: 0.1,
+            max_tokens: 150,  
+        });
+
+        const respostaIA = completion.choices[0]?.message?.content || "";
+        
+        if (respostaIA) {
+            contexto.historico.push({ role: "assistant", content: respostaIA });
+        }
+        return respostaIA;
+
+    } catch (erro) {
+        console.error("[GROQ] Erro:", erro);
+        return null; 
+    }
+}
+
+// ==================================================
+// 6. WEBHOOK
 // ==================================================
 export const handleWebhook = async (req, res) => {
-  const { event, data } = req.body;
+  const payload = req.body;
   const io = req.io;
 
   try {
-    if (event === 'qrcode.updated') io.emit('qrCodeRecebido', { qr: data?.qrcode?.base64 });
-    if (event === 'connection.update') io.emit('statusConexao', { status: data.state });
+    if (payload.event === 'qrcode.updated') io.emit('qrCodeRecebido', { qr: payload.data?.qrcode?.base64 });
+    if (payload.event === 'connection.update') io.emit('statusConexao', { status: payload.data.state });
 
-    if (event === 'messages.upsert' && data?.message) {
-      const msg = data;
-      const id = msg.key.id; 
-      const remoteJid = msg.key.remoteJid;
-      const fromMe = msg.key.fromMe;
+    if (payload.event === 'messages.upsert' && payload.data?.message) {
+      const msg = payload.data;
+      const idMensagem = msg.key.id; 
+      const idRemoto = msg.key.remoteJid;
+      const isFromMe = msg.key.fromMe;
       
-      if (processedMessageIds.has(id)) return res.json({ success: true });
-      processedMessageIds.add(id);
-      setTimeout(() => processedMessageIds.delete(id), 10000);
+      if (processedMessageIds.has(idMensagem)) return res.status(200).json({ success: true });
+      processedMessageIds.add(idMensagem);
+      setTimeout(() => processedMessageIds.delete(idMensagem), 10000);
 
-      const nome = msg.pushName || remoteJid.split('@')[0];
+      const nomeAutor = msg.pushName || idRemoto.split('@')[0];
       const texto = (msg.message?.conversation || msg.message?.extendedTextMessage?.text || "").trim();
-      
-      // Ignora grupos e status broadcast
-      if (!remoteJid.includes('@g.us') && remoteJid !== 'status@broadcast' && texto) {
-        
-        // 1. Recupera ou cria sessão do banco
-        let session = await getSession(remoteJid);
-        
-        if (!session) {
-            session = { 
-                numero: remoteJid, nome, etapa: 'INICIO', nomeAgente: null, 
-                mostrarNaFila: false, botPausado: false, historico: [], 
-                ultimaMensagem: texto, unreadCount: 0 
-            };
-        } else {
-            session.ultimaMensagem = texto;
-            session.nome = nome; // Atualiza nome caso tenha mudado
-            if (!fromMe) session.unreadCount += 1;
-        }
+      const isGroup = idRemoto.includes('@g.us'); 
+      const isStatus = idRemoto === 'status@broadcast'; 
 
-        // Emite para o frontend em tempo real
+      if (!isStatus && !isGroup && texto) {
+        const ctxAtual = userContext[idRemoto] || {};
+        
+        // [SEGURANÇA] Envia o dono do chat para o frontend filtrar
         io.emit('novaMensagemWhatsapp', { 
-            id, chatId: remoteJid, nome, texto, fromMe,
-            mostrarNaFila: session.mostrarNaFila,
-            nomeAgente: session.nomeAgente 
+            id: idMensagem, 
+            chatId: idRemoto, 
+            nome: nomeAutor, 
+            texto: texto, 
+            fromMe: isFromMe,
+            mostrarNaFila: ctxAtual.mostrarNaFila || false,
+            nomeAgente: ctxAtual.nomeAgente 
         });
 
-        if (!fromMe) {
-            let resp = null;
-            const txt = texto.toLowerCase();
+        if (!isFromMe) {
+            if (!userContext[idRemoto]) {
+                userContext[idRemoto] = { 
+                    etapa: 'INICIO', 
+                    botPausado: false, 
+                    historico: [], 
+                    mostrarNaFila: false 
+                };
+                saveStateDisk(); // Salva novo estado
+            }
+            const ctx = userContext[idRemoto];
+            let respostaBot = null;
+            const textoMin = texto.toLowerCase();
 
-            // Comandos Globais
-            if (['#','sair','encerrar'].includes(txt)) {
-                resp = MENSAGENS.AVALIACAO;
-                session.etapa = 'AVALIACAO_NOTA';
-                session.botPausado = true;
-                session.nomeAgente = null;
+            const gatilhosInicio = ['oi', 'ola', 'menu', 'inicio', 'start', 'bom dia', 'boa tarde', 'ajuda', 'suporte'];
+            const textoLimpo = textoMin.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"").trim(); 
+            const ehSaudacao = gatilhosInicio.some(s => textoLimpo === s || (textoLimpo.startsWith(s) && textoLimpo.length < 50));
+
+            // --- COMANDOS GERAIS ---
+            if (texto === '#' || textoMin === 'encerrar' || textoMin === 'sair') {
+                respostaBot = MENSAGENS.AVALIACAO_INICIO;
+                ctx.etapa = 'AVALIACAO_NOTA';
+                ctx.botPausado = true; 
+                ctx.nomeAgente = null;
+                saveStateDisk(); // Atualiza
             }
-            // Início / Saudação
-            else if (['oi','ola','menu','inicio','ajuda'].some(x => txt.startsWith(x))) {
-                session.etapa = 'MENU';
-                session.botPausado = false;
-                session.nomeAgente = null;
-                session.mostrarNaFila = false;
-                session.historico = [{role:"system", content:gerarPromptSistema(nome)}];
-                resp = MENSAGENS.SAUDACAO(nome);
-            }
-            // Menu Principal
-            else if (session.etapa === 'MENU') {
-                if (txt.includes('1') || txt.includes('problema') || txt.includes('suporte')) {
-                    resp = MENSAGENS.MENU_TI;
-                    session.etapa = 'AGUARDANDO_DESCRICAO';
-                } 
-                else if (txt.includes('*') || txt.includes('ticket')) {
-                    resp = "ℹ️ Digite o número do ticket com asterisco (ex: *123).";
+            else if (ehSaudacao) {
+                if (ctx.etapa === 'MENU' && textoMin !== 'menu') {
+                    respostaBot = MENSAGENS.OPCAO_INVALIDA;
                 } else {
-                    resp = MENSAGENS.INVALIDO;
+                    ctx.etapa = 'MENU';
+                    ctx.botPausado = false;
+                    ctx.nomeAgente = null;
+                    ctx.mostrarNaFila = false;
+                    ctx.historico = [{ role: "system", content: gerarPromptSistema(nomeAutor) }];
+                    respostaBot = MENSAGENS.SAUDACAO(nomeAutor);
+                    saveStateDisk(); // Atualiza
                 }
             }
-            // Entrando na Fila
-            else if (session.etapa === 'AGUARDANDO_DESCRICAO') {
-                session.mostrarNaFila = true; // SINALIZA PARA APARECER NO FRONT
-                io.emit('notificacaoChamado', { chatId: remoteJid, nome, status: 'PENDENTE' });
-                
-                const posicao = await calcularPosicaoFila() + 1;
-                resp = MENSAGENS.FILA(posicao);
-                
-                session.etapa = 'FILA_ESPERA';
-                session.botPausado = true;
+            // --- MENU PRINCIPAL ---
+            else if (ctx.etapa === 'MENU') {
+                if (texto === '1' || textoMin.includes('problema') || textoMin.includes('suporte')) {
+                    respostaBot = MENSAGENS.MENU_TI_COM_FILA;
+                    ctx.etapa = 'AGUARDANDO_DESCRICAO'; 
+                    ctx.botPausado = false; 
+                    saveStateDisk();
+                } 
+                else if (texto.startsWith('*') || textoMin.includes('ticket')) {
+                    let ticketNumeroStr = texto.startsWith('*') ? texto.substring(1).trim() : texto.replace(/\D/g,'');
+                    if (!ticketNumeroStr) {
+                        respostaBot = "ℹ️ Digite o número do ticket com asterisco. Ex: ***123**";
+                    } else {
+                        const ticketId = parseInt(ticketNumeroStr);
+                        const ticket = await chamadoModel.findById(ticketId); 
+                        if (ticket) {
+                            respostaBot = `🎫 *Ticket #${ticket.id}*\nStatus: ${ticket.status}\n\n_Digite menu para retornar._`;
+                            ctx.botPausado = true;
+                            setTimeout(() => { ctx.botPausado = false; }, 30000); 
+                        } else {
+                            respostaBot = `🚫 *Ticket #${ticketId} não localizado.*`;
+                        }
+                    }
+                } else {
+                    respostaBot = MENSAGENS.OPCAO_INVALIDA;
+                }
             }
-            // Avaliação
-            else if (session.etapa === 'AVALIACAO_NOTA' || session.etapa === 'AVALIACAO_MOTIVO') {
-                resp = MENSAGENS.FIM;
-                session.etapa = 'FINALIZADO';
-                session.mostrarNaFila = false;
-                session.botPausado = false;
+            // --- FILA ---
+            else if (ctx.etapa === 'AGUARDANDO_DESCRICAO') {
+                ctx.mostrarNaFila = true; 
+                io.emit('notificacaoChamado', { chatId: idRemoto, nome: nomeAutor, status: 'PENDENTE_TI' });
+                const posicaoAtual = calcularPosicaoFila() + 1;
+                respostaBot = MENSAGENS.CONFIRMACAO_FINAL(posicaoAtual);
+                ctx.etapa = 'FILA_ESPERA';
+                ctx.botPausado = true; 
+                saveStateDisk();
             }
-            // Fallback
-            else if (!resp && !session.botPausado && session.etapa === 'INICIO') {
-                session.etapa = 'MENU';
-                resp = MENSAGENS.SAUDACAO(nome);
+            // --- AVALIAÇÃO ---
+            else if (ctx.etapa === 'AVALIACAO_NOTA') {
+                if (['1', '2', '3', '4', '5'].includes(texto)) {
+                    respostaBot = MENSAGENS.AVALIACAO_MOTIVO;
+                    ctx.etapa = 'AVALIACAO_MOTIVO';
+                    saveStateDisk();
+                } else if (texto === '9') {
+                    respostaBot = MENSAGENS.ENCERRAMENTO_FINAL;
+                    ctx.mostrarNaFila = false; 
+                    delete userContext[idRemoto];
+                    saveStateDisk();
+                } else {
+                    respostaBot = "Digite uma nota de **1 a 5** ou **9** para sair.";
+                }
+            }
+            else if (ctx.etapa === 'AVALIACAO_MOTIVO') {
+                respostaBot = MENSAGENS.ENCERRAMENTO_FINAL;
+                ctx.mostrarNaFila = false; 
+                delete userContext[idRemoto]; 
+                saveStateDisk();
+            }
+            else if (!respostaBot && !ctx.botPausado && ctx.etapa === 'INICIO') {
+                ctx.etapa = 'MENU';
+                ctx.historico = [{ role: "system", content: gerarPromptSistema(nomeAutor) }];
+                respostaBot = MENSAGENS.SAUDACAO(nomeAutor);
+                saveStateDisk();
             }
 
-            // Salva sessão atualizada no banco
-            await saveSession(session);
-
-            if (resp) {
-                await evolutionService.enviarTexto(remoteJid, resp);
+            if (respostaBot) {
+                await evolutionService.enviarTexto(idRemoto, respostaBot);
                 io.emit('novaMensagemWhatsapp', { 
-                    id: 'bot-'+Date.now(), chatId: remoteJid, nome: "Bot", texto: resp, fromMe: true 
+                    id: 'bot-'+Date.now(), 
+                    chatId: idRemoto, 
+                    nome: "Bot", 
+                    texto: respostaBot, 
+                    fromMe: true,
+                    mostrarNaFila: ctx.mostrarNaFila,
+                    nomeAgente: ctx.nomeAgente
                 });
             }
-        } else {
-            // Se foi mensagem enviada pelo agente (via celular), só salva
-            await saveSession(session);
         }
       }
     }
-    res.json({ success: true });
-  } catch (e) { console.error("Erro Webhook:", e); res.status(500).json({ success: false }); }
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('[WEBHOOK] Erro:', error);
+    res.status(500).json({ success: false });
+  }
 };
 
 // ==================================================
-// API: LISTAR CONVERSAS (FILTRO CORRETO VIA DB)
-// ==================================================
-export const listarConversas = async (req, res) => { 
-    try { 
-        const agente = req.query.agente;
-        const mode = req.query.mode;
-        
-        let query = "SELECT * FROM whatsapp_sessions";
-        let params = [];
-
-        // Filtra a lista
-        if (mode === 'history') {
-            // Histórico: Pega tudo que NÃO seja apenas um "Oi" (INICIO) ou "Menu"
-            query += " WHERE etapa NOT IN ('INICIO', 'MENU')";
-        } else {
-            // Fila de Atendimento (Sidebar):
-            // - Deve estar marcado como mostrar_na_fila
-            // - OU estar em ATENDIMENTO_HUMANO (livre ou com o agente atual)
-            query += " WHERE mostrar_na_fila = 1 OR (etapa = 'ATENDIMENTO_HUMANO' AND (nome_agente IS NULL OR nome_agente = ?))";
-            params.push(agente);
-        }
-
-        query += " ORDER BY updated_at DESC";
-
-        const [rows] = await pool.query(query, params);
-
-        // Mapeia para o formato esperado pelo front
-        const chats = rows.map(r => ({
-            numero: r.numero,
-            nome: r.nome || r.numero,
-            ultimaMensagem: r.ultima_mensagem,
-            unreadCount: r.unread_count,
-            visivel: true,
-            etapa: r.etapa,
-            nomeAgente: r.nome_agente,
-            pending: (r.mostrar_na_fila === 1 && !r.nome_agente) // Ícone amarelo se na fila e sem agente
-        }));
-
-        res.json({ success: true, data: chats });
-    } catch (e) { 
-        console.error("Erro listarConversas:", e); 
-        res.json({ success: true, data: [] }); 
-    } 
-};
-
-// ==================================================
-// API: LISTAR MENSAGENS (COM RESET DE UNREAD)
-// ==================================================
-export const listarMensagensChat = async (req, res) => {
-    const { numero, limit } = req.body;
-    if (!numero) return res.status(400).json({ success: false });
-
-    try {
-        // Zera contador de não lidas no banco ao abrir
-        await pool.query("UPDATE whatsapp_sessions SET unread_count = 0 WHERE numero = ?", [numero]);
-
-        // Busca histórico na API Evolution
-        const qtd = limit || 50;
-        let raw = await evolutionService.buscarMensagensHistorico(numero, qtd);
-
-        let msgsArray = [];
-        if (Array.isArray(raw)) msgsArray = raw;
-        else if (raw && Array.isArray(raw.messages)) msgsArray = raw.messages;
-        else if (raw && Array.isArray(raw.data)) msgsArray = raw.data;
-
-        const formatadas = msgsArray
-            .filter(m => m.message) 
-            .map(m => {
-                const txt = m.message.conversation || m.message.extendedTextMessage?.text || 
-                           (m.message.imageMessage ? "📷 Imagem" : null) || 
-                           (m.message.audioMessage ? "🎤 Áudio" : null) || "Conteúdo";
-                const ts = m.messageTimestamp ? (typeof m.messageTimestamp==='number'?m.messageTimestamp*1000:m.messageTimestamp) : Date.now();
-                return {
-                    fromMe: m.key.fromMe,
-                    text: txt,
-                    time: ts,
-                    name: m.pushName || (m.key.fromMe ? "Eu" : "Cliente")
-                };
-            });
-            
-        formatadas.sort((a,b) => new Date(a.time) - new Date(b.time));
-        res.json({ success: true, data: formatadas });
-    } catch (e) {
-        console.error("Erro listarMensagens:", e);
-        res.status(500).json({ success: false, data: [] });
-    }
-};
-
-// ==================================================
-// AÇÕES DO AGENTE
+// 7. FUNÇÕES ADMINISTRATIVAS (BLINDADAS)
 // ==================================================
 
 export const atenderAtendimento = async (req, res) => {
     const { numero, nomeAgente } = req.body;
     try {
-        const session = await getSession(numero);
-        if (session && session.nomeAgente && session.nomeAgente !== nomeAgente) {
-            return res.status(409).json({success:false, message:"Já em atendimento."});
-        }
-        
-        await pool.query(`
-            UPDATE whatsapp_sessions SET nome_agente = ?, etapa = 'ATENDIMENTO_HUMANO', bot_pausado = 1, mostrar_na_fila = 1 
-            WHERE numero = ?
-        `, [nomeAgente, numero]);
+        if (!userContext[numero]) userContext[numero] = { historico: [] };
 
-        await evolutionService.enviarTexto(numero, `👨‍💻 *${nomeAgente}* assumiu o atendimento.`);
-        req.io.emit('atendimentoAssumido', { chatId: numero, nomeAgente });
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({success:false}); }
+        // [SEGURANÇA] Bloqueio de Concorrência
+        if (userContext[numero].nomeAgente && userContext[numero].nomeAgente !== nomeAgente) {
+             return res.status(409).json({ 
+                 success: false, 
+                 message: `Atendimento já assumido por ${userContext[numero].nomeAgente}.` 
+             });
+        }
+
+        userContext[numero].nomeAgente = nomeAgente;
+        userContext[numero].botPausado = true; 
+        userContext[numero].etapa = 'ATENDIMENTO_HUMANO';
+        userContext[numero].mostrarNaFila = true; 
+        
+        saveStateDisk(); // Salva no disco
+
+        const msg = `👨‍💻 *Atendimento Humano Iniciado*\n\nO técnico *${nomeAgente}* assumiu o chamado.`;
+        await evolutionService.enviarTexto(numero, msg);
+        
+        if (req.io) {
+            req.io.emit('atendimentoAssumido', {
+                chatId: numero,
+                nomeAgente: nomeAgente
+            });
+        }
+
+        res.status(200).json({ success: true });
+    } catch (error) { res.status(500).json({ success: false }); }
 };
 
 export const finalizarAtendimento = async (req, res) => {
     const { numero } = req.body;
     try {
-        await pool.query(`
-            UPDATE whatsapp_sessions SET etapa = 'FINALIZADO', mostrar_na_fila = 0, nome_agente = NULL, bot_pausado = 0 
-            WHERE numero = ?
-        `, [numero]);
+        if (!userContext[numero]) userContext[numero] = {};
+        userContext[numero].etapa = 'AVALIACAO_NOTA';
+        userContext[numero].botPausado = true;
+        userContext[numero].nomeAgente = null;
+        userContext[numero].mostrarNaFila = false; 
+        
+        saveStateDisk(); // Salva
 
-        await evolutionService.enviarTexto(numero, MENSAGENS.AVALIACAO);
-        res.json({ success: true });
-    } catch (e) { res.status(500).json({success:false}); }
+        await evolutionService.enviarTexto(numero, MENSAGENS.AVALIACAO_INICIO);
+        res.status(200).json({ success: true });
+    } catch (error) { res.status(500).json({ success: false }); }
 };
 
+// [SEGURANÇA TOTAL] Envio de mensagem com validação rígida de dono
 export const handleSendMessage = async (req, res) => {
-    const { numero, mensagem, nomeAgenteTemporario } = req.body;
-    try {
-        const session = await getSession(numero);
-        if (session && session.nomeAgente && session.nomeAgente !== nomeAgenteTemporario) {
-            return res.status(403).json({success:false, message:"Chat de outro agente"});
+  const { numero, mensagem, nomeAgenteTemporario } = req.body;
+  try {
+      // 1. Verifica se o chat tem dono
+      const contexto = userContext[numero];
+      
+      if (contexto && contexto.nomeAgente) {
+          // 2. Se tem dono, OBRIGA que seja quem está enviando
+          if (contexto.nomeAgente !== nomeAgenteTemporario) {
+              return res.status(403).json({ 
+                  success: false, 
+                  message: `⛔ ACESSO NEGADO: Este chat pertence a ${contexto.nomeAgente}.` 
+              });
+          }
+      }
+
+      let mensagemFinal = mensagem;
+      if (nomeAgenteTemporario) {
+          mensagemFinal = `*${nomeAgenteTemporario}*\n${mensagem}`;
+      }
+
+      if(contexto) contexto.mostrarNaFila = true;
+      else if (!contexto) userContext[numero] = { etapa: 'ATENDIMENTO_HUMANO', botPausado: true, mostrarNaFila: true };
+      
+      saveStateDisk(); // Salva se mudar algo
+
+      const r = await evolutionService.enviarTexto(numero, mensagemFinal);
+      res.status(200).json({ success: true, data: r });
+  } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+};
+
+// [SEGURANÇA TOTAL] Listagem filtrada no servidor
+export const listarConversas = async (req, res) => { 
+    try { 
+        const agenteSolicitante = req.query.agente;
+        const mode = req.query.mode; 
+        const todosChats = await evolutionService.buscarConversas() || []; 
+
+        if (!Array.isArray(todosChats)) {
+             return res.status(200).json({ success: true, data: [] });
         }
         
-        // Reabre sessão se necessário
-        await pool.query(`
-            INSERT INTO whatsapp_sessions (numero, etapa, nome_agente, mostrar_na_fila, bot_pausado, ultima_mensagem)
-            VALUES (?, 'ATENDIMENTO_HUMANO', ?, 1, 1, ?)
-            ON DUPLICATE KEY UPDATE etapa='ATENDIMENTO_HUMANO', mostrar_na_fila=1, bot_pausado=1, nome_agente=?, ultima_mensagem=?
-        `, [numero, nomeAgenteTemporario, mensagem, nomeAgenteTemporario, mensagem]);
+        // --- NOVO: MODO HISTÓRICO (Retorna TUDO) ---
+        if (mode === 'history') {
+             const m = todosChats
+                .filter(x => x && x.id) // CORREÇÃO: Remove chats nulos ou sem ID
+                .map(x => {
+                    const ctx = userContext[x.id] || {};
+                    return { 
+                        numero: x.id, 
+                        nome: x.pushName || (x.id ? x.id.split('@')[0] : 'Desconhecido'), // CORREÇÃO: Verifica x.id
+                        ultimaMensagem: x.conversation || "...", 
+                        unread: false,
+                        visivel: true, 
+                        etapa: ctx.etapa || 'FINALIZADO', 
+                        nomeAgente: ctx.nomeAgente || null
+                    };
+                });
+            return res.status(200).json({ success: true, data: m }); 
+        }
 
-        const txtFinal = nomeAgenteTemporario ? `*${nomeAgenteTemporario}*\n${mensagem}` : mensagem;
-        const r = await evolutionService.enviarTexto(numero, txtFinal);
-        res.json({ success: true, data: r });
-    } catch (e) { res.status(500).json({success:false}); }
+        // --- MODO PADRÃO: FILA DE ATENDIMENTO ---
+        const chatsFiltrados = todosChats
+            .filter(x => x && x.id) // CORREÇÃO: Remove chats nulos
+            .filter(chat => {
+                 const ctx = userContext[chat.id] || {};
+                 const temDono = !!ctx.nomeAgente;
+                 
+                 if (!temDono) return true; 
+                 if (temDono && ctx.nomeAgente === agenteSolicitante) return true; 
+                 return false; 
+            });
+
+        const m = chatsFiltrados.map(x => {
+            const ctx = userContext[x.id] || {};
+            const deveAparecer = ctx.mostrarNaFila === true || ctx.etapa === 'ATENDIMENTO_HUMANO';
+            return { 
+                numero: x.id, 
+                nome: x.pushName || (x.id ? x.id.split('@')[0] : 'Desconhecido'),
+                ultimaMensagem: x.conversation || "...", 
+                unread: x.unreadCount > 0,
+                visivel: deveAparecer, 
+                etapa: ctx.etapa || 'INICIO', 
+                nomeAgente: ctx.nomeAgente || null 
+            };
+        }); 
+        
+        res.status(200).json({ success: true, data: m }); 
+    } catch (e) { 
+        console.error("Erro ao listar conversas:", e);
+        res.status(200).json({ success: true, data: [] }); 
+    } 
+};
+
+export const listarMensagensChat = async (req, res) => {
+    // 1. Aceita o parâmetro LIMIT
+    const { numero, nomeSolicitante, limit } = req.body; 
+    
+    if (!numero) return res.status(400).json({ success: false, message: 'Número obrigatório' });
+    
+    try {
+        const contexto = userContext[numero];
+        // Validação de permissão relaxada para leitura simples ou mantida se necessário
+        if (contexto && contexto.nomeAgente && limit < 60) {
+             if (contexto.nomeAgente !== nomeSolicitante) {
+                 return res.status(403).json({ 
+                     success: false, 
+                     message: "⛔ Você não tem permissão para ver este chat.",
+                     data: [] 
+                 });
+             }
+        }
+
+        const qtdMensagens = limit || 50;
+        let rawMessages = await evolutionService.buscarMensagensHistorico(numero, qtdMensagens);
+        
+        // CORREÇÃO: Garante que rawMessages seja um array
+        if (!Array.isArray(rawMessages)) {
+            // Tenta recuperar array de dentro de objetos comuns da Evolution
+            if (rawMessages && Array.isArray(rawMessages.messages)) {
+                rawMessages = rawMessages.messages;
+            } else if (rawMessages && Array.isArray(rawMessages.data)) {
+                rawMessages = rawMessages.data;
+            } else {
+                // Se não achou array, retorna vazio para não quebrar
+                rawMessages = [];
+            }
+        }
+
+        const formattedMessages = rawMessages.map(msg => {
+            const content = msg.message?.conversation || 
+                            msg.message?.extendedTextMessage?.text || 
+                            msg.message?.imageMessage?.caption ||
+                            (msg.message?.imageMessage ? "📷 [Imagem]" : null) ||
+                            (msg.message?.audioMessage ? "🎤 [Áudio]" : null) ||
+                            "Conteúdo não suportado";
+            const timestamp = msg.messageTimestamp 
+                ? (typeof msg.messageTimestamp === 'number' ? msg.messageTimestamp * 1000 : msg.messageTimestamp)
+                : Date.now();
+            return {
+                fromMe: msg.key.fromMe,
+                text: content,
+                time: timestamp, 
+                name: msg.pushName || (msg.key.fromMe ? "Eu" : "Cliente")
+            };
+        });
+        formattedMessages.sort((a, b) => new Date(a.time) - new Date(b.time));
+        res.status(200).json({ success: true, data: formattedMessages });
+    } catch (e) {
+        console.error("Erro ao listar mensagens:", e);
+        res.status(500).json({ success: false, data: [] });
+    }
 };
 
 export const transferirAtendimento = async (req, res) => {
-    const { numero, novoAgente, nomeAgenteAtual } = req.body;
+    const { numero, novoAgente, nomeAgenteAtual, nomeCliente } = req.body; 
     try {
-        await pool.query("UPDATE whatsapp_sessions SET nome_agente = ? WHERE numero = ?", [novoAgente, numero]);
-        await evolutionService.enviarTexto(numero, `🔄 Transferido para *${novoAgente}*.`);
-        req.io.emit('transferenciaChamado', { chatId: numero, novoAgente, antigoAgente: nomeAgenteAtual });
-        res.json({ success: true });
-    } catch(e) { res.status(500).json({success:false}); }
+        if (!userContext[numero]) return res.status(404).json({ success: false, message: "Chat não encontrado." });
+        const oldAgent = nomeAgenteAtual || userContext[numero].nomeAgente || "Atendente";
+        userContext[numero].nomeAgente = novoAgente;
+        userContext[numero].etapa = 'ATENDIMENTO_HUMANO'; 
+        userContext[numero].botPausado = true;
+        userContext[numero].mostrarNaFila = true; 
+        
+        saveStateDisk(); // Salva
+
+        const msgTransferencia = `🔄 *Transferência*\n\nChamado repassado de *${oldAgent}* para *${novoAgente}*.`;
+        await evolutionService.enviarTexto(numero, msgTransferencia);
+        if(req.io) {
+             req.io.emit('transferenciaChamado', { 
+                chatId: numero, 
+                novoAgente: novoAgente, 
+                antigoAgente: oldAgent, 
+                nomeCliente: nomeCliente, 
+                timestamp: new Date()
+             });
+        }
+        res.status(200).json({ success: true });
+    } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };
 
 export const verificarTicket = async (req, res) => {
     const { id } = req.body;
+    if(!id) return res.status(400).json({success:false, message: "ID obrigatório"});
     try {
         const ticket = await chamadoModel.findById(id);
-        res.json(ticket ? {success:true, data:ticket} : {success:false});
-    } catch(e){ res.status(500).json({success:false}); }
+        if(ticket) res.json({ success: true, data: ticket });
+        else res.json({ success: false, message: "Ticket não encontrado" });
+    } catch(e) { res.status(500).json({ success: false, message: e.message }); }
 };
 
 export const criarChamadoDoChat = async (req, res) => {
+    // req.body.chamado traz { requisitante_id, categoria_id, assunto ... }
     const { chamado, numero } = req.body; 
+    
     try {
+        // Validação
         const reqId = parseInt(chamado.requisitante_id);
-        const novoId = await chamadoModel.create({
-            assunto: chamado.assunto, descricao: chamado.descricao, prioridade: chamado.prioridade,
-            status: 'Aberto', requisitanteIdNum: reqId, categoriaUnificadaIdNum: parseInt(chamado.categoria_id)
-        });
-        await evolutionService.enviarTexto(numero, `🎫 Ticket #${novoId} criado.`);
-        res.json({success:true, id:novoId});
-    } catch(e){ res.status(500).json({success:false, message:e.message}); }
-};
+        if (isNaN(reqId) || reqId <= 0) {
+            return res.status(400).json({ success: false, message: 'ID do Requisitante inválido ou não fornecido.' });
+        }
 
-export const handleDisconnect = async (req,res) => { try{await evolutionService.desconectarInstancia();res.json({success:true});}catch(e){res.status(500).json({success:false});} };
-export const connectInstance = async (req,res) => { try{const r=await evolutionService.criarInstancia();res.json({success:true,data:r});}catch(e){res.status(500).json({success:false});} };
-export const checarStatus = async (req,res) => { try{const r=await evolutionService.consultarStatus();res.json({success:true,data:r});}catch(e){res.status(500).json({success:false});} };
-export const configurarUrlWebhook = async (req,res) => { try{const h=req.get('host');const p=h.includes('localhost')?'http':'https';await evolutionService.configurarWebhook(`${p}://${h}/api/evolution/webhook`);res.json({success:true});}catch(e){res.status(500).json({success:false});} };
+        // Mapeamento para o formato do Model (camelCase e sufixos Num)
+        const dadosParaModel = {
+            assunto: chamado.assunto,
+            descricao: chamado.descricao,
+            prioridade: chamado.prioridade || 'Média',
+            status: 'Aberto',
+            
+            requisitanteIdNum: reqId, // Mapeia requisitante_id -> requisitanteIdNum
+            categoriaUnificadaIdNum: chamado.categoria_id ? parseInt(chamado.categoria_id) : null,
+            
+            // Campos opcionais que não vêm do chat, mas o model pode esperar
+            loja_id: null,
+            departamento_id: null,
+            nomeRequisitanteManual: null,
+            emailRequisitanteManual: null,
+            telefoneRequisitanteManual: null
+        };
+
+        const novoId = await chamadoModel.create(dadosParaModel);
+        
+        // Pós-criação
+        const ticketCriado = await chamadoModel.findById(novoId);
+        const msgZap = `🎫 *Ticket Aberto: #${novoId}*\nAssunto: ${ticketCriado.assunto}\n\nAguarde nosso retorno.`;
+        
+        await evolutionService.enviarTexto(numero, msgZap);
+        
+        if(userContext[numero]) {
+            userContext[numero].ultimoTicketId = novoId;
+            saveStateDisk();
+        }
+
+        if (ticketCriado.emailRequisitante) {
+            EmailService.enviarNotificacaoCriacao(ticketCriado.emailRequisitante, ticketCriado).catch(console.error);
+        }
+
+        if (req.io) {
+            req.io.emit('novoChamadoInterno', {
+                id: novoId,
+                assunto: ticketCriado.assunto,
+                requisitante: ticketCriado.nomeRequisitante || "WhatsApp",
+                prioridade: ticketCriado.prioridade
+            });
+        }
+        res.status(201).json({ success: true, id: novoId });
+    } catch (e) { 
+        console.error("Erro criarChamadoDoChat:", e);
+        res.status(500).json({ success: false, message: e.message }); 
+    }
+};
+export const handleDisconnect = async (req, res) => { try { await evolutionService.desconectarInstancia(); res.status(200).json({ success: true }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
+export const connectInstance = async (req, res) => { try { const r = await evolutionService.criarInstancia(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
+export const checarStatus = async (req, res) => { try { const r = await evolutionService.consultarStatus(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
+export const configurarUrlWebhook = async (req, res) => { try { const h = req.get('host'); const p = h.includes('localhost') ? 'http' : 'https'; await evolutionService.configurarWebhook(`${p}://${h}/api/evolution/webhook`); res.status(200).json({ success: true }); } catch (e) { res.status(500).json({ success: false }); } };
