@@ -1,6 +1,7 @@
 import * as evolutionService from '../services/evolutionService.js';
 import * as chamadoModel from '../models/chamadoModel.js'; 
 import * as EmailService from '../services/emailService.js'; 
+import * as contatoModel from '../models/contatoModel.js'; // <--- IMPORT ADICIONADO
 import { OpenAI } from 'openai';
 import fs from 'fs';
 import path from 'path';
@@ -187,6 +188,19 @@ export const handleWebhook = async (req, res) => {
       const isStatus = idRemoto === 'status@broadcast'; 
 
       if (!isStatus && !isGroup && texto) {
+        
+        // =================================================================
+        // [NOVO] LÓGICA DE HISTÓRICO DE CONTATOS
+        // =================================================================
+        try {
+            // Salva ou atualiza o contato no banco de dados
+            await contatoModel.salvarContato(idRemoto, nomeAutor);
+        } catch (err) {
+            // Loga o erro mas NÃO para o fluxo do bot
+            console.error("Erro ao salvar histórico de contato:", err.message);
+        }
+        // =================================================================
+
         const ctxAtual = userContext[idRemoto] || {};
         
         // [SEGURANÇA] Envia o dono do chat para o frontend filtrar
