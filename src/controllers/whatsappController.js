@@ -367,48 +367,64 @@ export const handleSendMessage = async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };
 
-// [MODIFICADO] LISTAR CONVERSAS COM FILTRO DE HISTÓRICO CORRETO
+// [MODIFICADO] LISTAR CONVERSAS - FILTRO INTELIGENTE DE INTERAÇÃO
 export const listarConversas = async (req, res) => { 
     try { 
         const agenteSolicitante = req.query.agente;
         const mode = req.query.mode; 
+        
+        // 1. Busca TUDO que está no celular (API Evolution)
         const todosChats = await evolutionService.buscarConversas() || []; 
 
         if (!Array.isArray(todosChats)) return res.status(200).json({ success: true, data: [] });
         
-        // --- MODO HISTÓRICO: Puxa SÓ quem entrou na fila ---
+        // --- MODO HISTÓRICO: Lógica de "Quem Interagiu" ---
         if (mode === 'history') {
              const m = todosChats
-                .filter(x => x && x.id) 
-                .filter(x => {
-                    const ctx = userContext[x.id];
-                    // 1. Deve existir no userContext (ser conhecido pelo sistema)
-                    if (!ctx) return false;
-                    
-                    // 2. Deve ter interagido além do "Oi" (INICIO) ou apenas ver o "Menu"
-                    //    Se estiver em: FILA_ESPERA, ATENDIMENTO_HUMANO, AGUARDANDO_DESCRICAO, AVALIACAO..., FINALIZADO
-                    //    então é relevante.
-                    const etapa = ctx.etapa;
-                    if (etapa === 'INICIO' || etapa === 'MENU') return false;
-
-                    return true;
-                })
+                .filter(x => x && x.id)
                 .map(x => {
                     const ctx = userContext[x.id] || {};
+                    
+                    // Normaliza a última mensagem
+                    let lastMsg = x.conversation || "";
+                    if (x.messages && x.messages.length > 0) {
+                        const msgObj = x.messages[0];
+                        if (msgObj.message?.conversation) lastMsg = msgObj.message.conversation;
+                        else if (msgObj.message?.extendedTextMessage?.text) lastMsg = msgObj.message.extendedTextMessage.text;
+                    }
+
                     return { 
                         numero: x.id, 
-                        nome: x.pushName || (x.id ? x.id.split('@')[0] : 'Desconhecido'),
-                        ultimaMensagem: x.conversation || "...", 
+                        nome: x.pushName || x.name || (x.id ? x.id.split('@')[0] : 'Desconhecido'),
+                        ultimaMensagem: lastMsg,
                         unread: false,
-                        visivel: true, 
-                        etapa: ctx.etapa || 'FINALIZADO', 
+                        visivel: true,
+                        etapa: ctx.etapa || 'HISTORICO', 
                         nomeAgente: ctx.nomeAgente || null
                     };
+                })
+                .filter(chat => {
+                    // FILTRO DE INTERAÇÃO:
+                    
+                    // 1. Se temos certeza que está no INICIO ou MENU (memória ativa), ocultamos.
+                    if (chat.etapa === 'INICIO' || chat.etapa === 'MENU') return false;
+
+                    // 2. Se a memória se perdeu (etapa 'HISTORICO'), olhamos a mensagem:
+                    // Se a última mensagem for a saudação do bot, significa que parou no menu -> Oculta.
+                    const msg = chat.ultimaMensagem.toLowerCase();
+                    if (msg.includes('bem-vindo ao suporte') || msg.includes('selecione uma opção') || msg.includes('para encerrar a qualquer momento')) {
+                        return false;
+                    }
+                    
+                    // 3. Caso contrário (conversa real, finalizada, ou dúvida), mostramos.
+                    return true;
                 });
+            
             return res.status(200).json({ success: true, data: m }); 
         }
 
-        // --- MODO PADRÃO (Sidebar) ---
+        // --- MODO PADRÃO (Sidebar Lateral - Fila) ---
+        // Mantém apenas quem está ativo ou na fila agora
         const chatsFiltrados = todosChats
             .filter(x => x && x.id)
             .filter(chat => {
@@ -440,12 +456,10 @@ export const listarConversas = async (req, res) => {
     } 
 };
 
-// ... Resto das funções (listarMensagensChat, transferir, etc) mantidas igual à versão corrigida anterior ...
 export const listarMensagensChat = async (req, res) => {
     const { numero, limit } = req.body; 
     if (!numero) return res.status(400).json({ success: false, message: 'Número obrigatório' });
     try {
-        // ... (Mesma lógica segura de lista)
         const qtdMensagens = limit || 50;
         let rawMessages = await evolutionService.buscarMensagensHistorico(numero, qtdMensagens);
         if (!Array.isArray(rawMessages)) {
