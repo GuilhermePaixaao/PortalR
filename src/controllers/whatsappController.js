@@ -531,16 +531,50 @@ export const verificarTicket = async (req, res) => {
 };
 
 export const criarChamadoDoChat = async (req, res) => {
+    // req.body.chamado traz { requisitante_id, categoria_id, assunto ... }
     const { chamado, numero } = req.body; 
+    
     try {
-        const novoId = await chamadoModel.create(chamado);
+        // Validação
+        const reqId = parseInt(chamado.requisitante_id);
+        if (isNaN(reqId) || reqId <= 0) {
+            return res.status(400).json({ success: false, message: 'ID do Requisitante inválido ou não fornecido.' });
+        }
+
+        // Mapeamento para o formato do Model (camelCase e sufixos Num)
+        const dadosParaModel = {
+            assunto: chamado.assunto,
+            descricao: chamado.descricao,
+            prioridade: chamado.prioridade || 'Média',
+            status: 'Aberto',
+            
+            requisitanteIdNum: reqId, // Mapeia requisitante_id -> requisitanteIdNum
+            categoriaUnificadaIdNum: chamado.categoria_id ? parseInt(chamado.categoria_id) : null,
+            
+            // Campos opcionais que não vêm do chat, mas o model pode esperar
+            loja_id: null,
+            departamento_id: null,
+            nomeRequisitanteManual: null,
+            emailRequisitanteManual: null,
+            telefoneRequisitanteManual: null
+        };
+
+        const novoId = await chamadoModel.create(dadosParaModel);
+        
+        // Pós-criação
         const ticketCriado = await chamadoModel.findById(novoId);
         const msgZap = `🎫 *Ticket Aberto: #${novoId}*\nAssunto: ${ticketCriado.assunto}\n\nAguarde nosso retorno.`;
-        await evolutionService.enviarTexto(numero, msgZap);
-        if(userContext[numero]) userContext[numero].ultimoTicketId = novoId;
-        if (ticketCriado.emailRequisitante) EmailService.enviarNotificacaoCriacao(ticketCriado.emailRequisitante, ticketCriado).catch(console.error);
         
-        saveStateDisk();
+        await evolutionService.enviarTexto(numero, msgZap);
+        
+        if(userContext[numero]) {
+            userContext[numero].ultimoTicketId = novoId;
+            saveStateDisk();
+        }
+
+        if (ticketCriado.emailRequisitante) {
+            EmailService.enviarNotificacaoCriacao(ticketCriado.emailRequisitante, ticketCriado).catch(console.error);
+        }
 
         if (req.io) {
             req.io.emit('novoChamadoInterno', {
@@ -551,7 +585,10 @@ export const criarChamadoDoChat = async (req, res) => {
             });
         }
         res.status(201).json({ success: true, id: novoId });
-    } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+    } catch (e) { 
+        console.error("Erro criarChamadoDoChat:", e);
+        res.status(500).json({ success: false, message: e.message }); 
+    }
 };
 
 export const handleDisconnect = async (req, res) => { try { await evolutionService.desconectarInstancia(); res.status(200).json({ success: true }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };

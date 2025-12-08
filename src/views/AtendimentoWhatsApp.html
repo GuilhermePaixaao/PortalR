@@ -89,6 +89,7 @@
         .header-actions { display: flex; align-items: center; gap: 1rem; }
         #userNameDisplay { font-weight: 500; color: #495057; white-space: nowrap; }
         .btn-logout { background-color: #dc3545; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500; cursor: pointer; transition: background-color 0.2s ease; }
+        .btn-logout:hover { background-color: #bb2d3b; }
         .sidebar nav ul li a { display: flex; align-items: center; text-decoration: none; padding: 10px 15px; width: 100%; height: auto; }
         .sidebar .icon { margin-right: 10px; min-width: 20px; text-align: center; flex-shrink: 0; align-self: center; }
         .sidebar .text { flex-grow: 1; white-space: normal; line-height: 1.2; }
@@ -1169,8 +1170,22 @@
             btnSalvarChamado.style.cursor = "wait";
 
             try {
-                const userData = JSON.parse(localStorage.getItem("userData"));
-                const agenteId = userData?.data?.id; 
+                // [CORREÇÃO] Recuperação mais robusta do ID do Agente
+                const userDataString = localStorage.getItem("userData");
+                let agenteId = 1; // Fallback para ID 1 (Admin/Padrão)
+
+                if (userDataString) {
+                    const userData = JSON.parse(userDataString);
+                    // Tenta encontrar o ID em diferentes estruturas possíveis
+                    if (userData.data && userData.data.id) {
+                        agenteId = userData.data.id;
+                    } else if (userData.id) {
+                        agenteId = userData.id;
+                    }
+                }
+
+                // Log para debug
+                console.log("Enviando requisitante_id:", agenteId);
 
                 const payload = {
                     chamado: {
@@ -1178,7 +1193,7 @@
                         descricao,
                         categoria_id: categoriaSelecionadaId, 
                         prioridade,
-                        requisitante_id: agenteId, 
+                        requisitante_id: agenteId, // ID Garantido
                         status: 'Aberto'
                     },
                     numero: AppState.activeNumber 
