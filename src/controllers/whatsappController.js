@@ -76,10 +76,27 @@ const calcularPosicaoFila = async () => {
 
 const MENSAGENS = {
     SAUDACAO: (n) => `👋 Olá *${n}*. Bem-vindo ao Suporte Técnico do *Supermercado Rosalina*.\n\n1️⃣ **Reportar Problema** (Falar com T.I.)\n*️⃣ **Consultar Ticket**\n\n_Para encerrar a qualquer momento, digite #._`,
-    MENU_TI: `✅ *Solicitação Iniciada*\n\nVocê entrou na fila. Por favor, descreva seu problema abaixo.`,
-    FILA: (p) => `✅ *Fila de Suporte T.I.*\n\n📌 Sua posição: ${p}º.\nAguarde, um técnico irá te atender.`,
+    MENU_TI: `✅ *Solicitação Iniciada*\n\nVocê entrou na fila. Por favor, descreva brevemente seu problema abaixo.`,
+    FILA: (p) => `✅ Você acessou a Fila de Suporte T.I.
+    
+Opção selecionada: Suporte T.I
+📌 Sua posição na fila: 1º
+
+Você entrou na fila, logo você será atendido.
+
+📞 Em caso de urgência pode nos acionar no número: (12) 98142-2925`,
     INVALIDO: `⚠️ Opção inválida.`,
-    AVALIACAO: `⏹️ *Atendimento Finalizado.*\n\nAvalie (1-5) ou digite 9 para sair.`,
+    AVALIACAO: `⏹️ Atendimento Finalizado.
+
+Por favor, avalie nosso suporte técnico:
+
+1️⃣ 😡 Insatisfeito
+2️⃣ 🙁 Ruim
+3️⃣ 😐 Regular
+4️⃣ 🙂 Bom
+5️⃣ 🤩 Excelente
+
+9️⃣ ❌ Pular`,
     FIM: `✅ *Chamado Encerrado.*\nObrigado.`
 };
 
