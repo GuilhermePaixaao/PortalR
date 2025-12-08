@@ -673,8 +673,8 @@
                     <div class="t-cell t-category" title="${escapeHtml(nomeExibicao)}">${escapeHtml(nomeExibicao)}</div>
                     <div class="t-cell text-center">${getStatusIcon(chamado.status)}</div>
                     <div class="t-cell t-operator">
-                        <span class="op-name">${escapeHtml(chamado.Funcionario?.nomeFuncionario || 'Anônimo')}</span>
-                        <span class="op-role">${escapeHtml(chamado.Atendente?.nomeFuncionario || 'Pendente')}</span>
+                        <span class="op-name">${escapeHtml(chamado.Atendente?.nomeFuncionario || 'Pendente')}</span>
+                        <span class="op-role">${escapeHtml(chamado.Funcionario?.nomeFuncionario || 'Anônimo')}</span>
                     </div>
                     <div class="t-cell t-date">${timeAgo(chamado.created_at)}</div>
                     <div class="t-cell text-center">
