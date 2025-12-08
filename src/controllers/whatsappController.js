@@ -416,8 +416,29 @@ export const handleSendMessage = async (req, res) => {
 export const listarConversas = async (req, res) => { 
     try { 
         const agenteSolicitante = req.query.agente;
+        const mode = req.query.mode; // 'history' ou undefined
+
         const todosChats = await evolutionService.buscarConversas(); 
         
+        // --- NOVO: MODO HISTÓRICO (Retorna TUDO) ---
+        if (mode === 'history') {
+             const m = todosChats.map(x => {
+                const ctx = userContext[x.id] || {};
+                return { 
+                    numero: x.id, 
+                    nome: x.pushName || x.id.split('@')[0], 
+                    ultimaMensagem: x.conversation || "...", 
+                    unread: false,
+                    visivel: true, // Sempre visível no histórico
+                    etapa: ctx.etapa || 'FINALIZADO', 
+                    nomeAgente: ctx.nomeAgente || null
+                };
+            });
+            // Ordenar se necessário (a API geralmente já manda ordenado, mas pode reforçar aqui se tiver timestamp)
+            return res.status(200).json({ success: true, data: m }); 
+        }
+
+        // --- MODO PADRÃO: FILA DE ATENDIMENTO ---
         const chatsFiltrados = todosChats.filter(chat => {
              const ctx = userContext[chat.id] || {};
              const temDono = !!ctx.nomeAgente;
@@ -447,7 +468,10 @@ export const listarConversas = async (req, res) => {
         }); 
         
         res.status(200).json({ success: true, data: m }); 
-    } catch (e) { res.status(200).json({ success: true, data: [] }); } 
+    } catch (e) { 
+        console.error("Erro ao listar conversas:", e);
+        res.status(200).json({ success: true, data: [] }); 
+    } 
 };
 
 export const listarMensagensChat = async (req, res) => {
@@ -458,7 +482,11 @@ export const listarMensagensChat = async (req, res) => {
     
     try {
         const contexto = userContext[numero];
-        if (contexto && contexto.nomeAgente) {
+        // Permite visualizar mensagens se for o dono OU se a solicitação não exigir validação estrita (ex: histórico global)
+        // Se limit > 50, assumimos que é uma carga de histórico e relaxamos a validação ou exigimos admin (aqui vamos manter simples: histórico libera leitura)
+        
+        // Mantemos a segurança apenas para interações ativas. Leitura de histórico pode ser liberada para agentes.
+        if (contexto && contexto.nomeAgente && limit < 60) {
              if (contexto.nomeAgente !== nomeSolicitante) {
                  return res.status(403).json({ 
                      success: false, 
