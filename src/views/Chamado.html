@@ -40,7 +40,7 @@
         /* Card da Tabela Principal */
         .card-table { background: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); overflow: hidden; min-height: 400px; display: flex; flex-direction: column; }
         
-        /* --- GRID DA TABELA (Substituindo o Flex antigo para alinhar colunas perfeitamente) --- */
+        /* --- GRID DA TABELA --- */
         .ticket-list { width: 100%; display: flex; flex-direction: column; }
         
         /* Definição das Colunas: ID | Prioridade | Assunto (largo) | Categoria | Status | Operador | Criado | Ação */
@@ -72,8 +72,16 @@
         .t-subject { font-weight: 700; font-size: 0.9rem; color: #000; margin-bottom: 1px; }
         .t-desc { font-size: 0.75rem; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
-        /* Categoria */
-        .t-category { font-weight: 700; text-transform: uppercase; font-size: 0.75rem; color: #000; letter-spacing: 0.5px; }
+        /* Categoria (ATUALIZADO: white-space normal para exibir tudo) */
+        .t-category { 
+            font-weight: 700; 
+            text-transform: uppercase; 
+            font-size: 0.75rem; 
+            color: #000; 
+            letter-spacing: 0.5px;
+            white-space: normal; /* Permite quebra de linha para ver tudo */
+            line-height: 1.2;
+        }
 
         /* Operador/Requisitante */
         .t-operator { display: flex; flex-direction: column; line-height: 1.1; font-size: 0.8rem; }
@@ -83,7 +91,7 @@
         /* Data */
         .t-date { font-weight: 600; font-size: 0.8rem; color: #000; }
 
-        /* --- NOVOS BADGES (Outline / Borda Colorida) --- */
+        /* --- BADGES --- */
         .badge-outline {
             display: inline-block; padding: 3px 0; border-radius: 50px; 
             font-size: 0.7rem; font-weight: 700; text-align: center;
@@ -94,7 +102,7 @@
         .bdg-alta { border-color: #dc3545; color: #dc3545; }
         .bdg-baixa { border-color: #0d6efd; color: #0d6efd; }
 
-        /* --- ÍCONES DE STATUS (Circulares) --- */
+        /* --- ÍCONES DE STATUS --- */
         .status-icon {
             width: 28px; height: 28px; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; 
@@ -109,7 +117,7 @@
         .btn-view { color: #999; cursor: pointer; font-size: 1.2rem; border: none; background: none; transition: 0.2s; display: flex; align-items: center; justify-content: center; width: 100%; }
         .btn-view:hover { color: #000; transform: scale(1.1); }
 
-        /* Footer e Paginação Clean */
+        /* Footer e Paginação */
         .table-footer { padding: 10px 25px; display: flex; justify-content: flex-end; align-items: center; border-top: 1px solid #f0f0f0; margin-top: auto; background-color: #fff; }
         .pagination-controls { display: flex; gap: 4px; }
         .pagination-controls button {
@@ -150,7 +158,7 @@
         .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #eee; }
         .form-actions button { padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: 600; cursor: pointer; border: none; }
         #fecharModal, #fecharModalDetalhes { background: #f1f3f5; color: #495057; }
-        #fecharModal:hover, #fecharModalDetalhes:hover { background: #ff0000; }
+        #fecharModal:hover, #fecharModalDetalhes:hover { background: #e9ecef; }
         #criarTicket { background: #198754; color: white; }
         #criarTicket:hover { background: #157347; }
 
@@ -182,7 +190,11 @@
                 <img src="/img.png" alt="Logo Portal" class="logo-icon">              
                 PORTAL SUPERMERCADO ROSALINA
             </div>
-           
+            <div style="font-size: 0.85rem; color: #666;">
+                <span id="userNameDisplay"><strong>Usuário</strong></span>
+                <span style="margin: 0 10px;">|</span>
+                <button class="btn btn-sm btn-outline-danger" style="border:none; font-size:0.8rem;">Sair</button>
+            </div>
         </header>
 
         <div class="filters-card">
@@ -413,7 +425,6 @@
             const userData = JSON.parse(userDataString);
             const idLogado = userData?.data?.id || userData?.id;
             if (idLogado) userId = idLogado;
-            // Tenta atualizar nome no header se existir no storage
             if (userData?.data?.nomeFuncionario) {
                 const el = document.getElementById('userNameDisplay');
                 if(el) el.innerHTML = `<strong>${userData.data.nomeFuncionario}</strong>`;
@@ -445,7 +456,7 @@
         const filtroStatus = document.getElementById("filtroStatus");
         const btnFiltrar = document.getElementById("btnFiltrar");
         
-        // Inputs Específicos
+        // Inputs
         const inputTelefone = document.getElementById("telefoneRequisitante");
         const listaComentariosContainer = document.getElementById("listaComentariosContainer");
         const paginationControls = document.getElementById("paginationControls");
@@ -454,12 +465,12 @@
         const selectLoja = document.getElementById("loja");
         const selectDepartamento = document.getElementById("departamento");
 
-        // --- Helpers Visuais (Novo Design) ---
+        // --- Helpers Visuais ---
         const timeAgo = (dateStr) => {
             if(!dateStr) return '';
             const date = new Date(dateStr);
             const now = new Date();
-            const diff = (now - date) / 1000; // segundos
+            const diff = (now - date) / 1000; 
             if(diff < 60) return 'agora';
             if(diff < 3600) return `há ${Math.floor(diff/60)} min`;
             if(diff < 86400) return `há ${Math.floor(diff/3600)} h`;
@@ -482,7 +493,7 @@
             return 'bdg-medio';
         };
 
-        // --- Funções Auxiliares Comuns ---
+        // --- Funções Auxiliares ---
         function exibirMensagem(elemento, mensagem, sucesso = true) {
             elemento.textContent = mensagem;
             elemento.className = sucesso ? 'alert alert-success' : 'alert alert-danger';
@@ -512,7 +523,7 @@
             input.value = valor;
         }
 
-        // --- Lógica de Dados (API e Cascata) ---
+        // --- Lógica de Dados ---
 
         async function carregarLojasSelect() {
             try {
@@ -626,7 +637,7 @@
             }
         }
 
-        // --- Renderização da Tabela (Estilo Grid Compacto) ---
+        // --- Renderização da Tabela ---
         function renderizarChamados(chamados) {
             if (loadingIndicator) loadingIndicator.style.display = 'none';
             ticketList.querySelectorAll('.data-row').forEach(row => row.remove());
@@ -645,7 +656,7 @@
                 row.className = 'ticket-row data-row';
                 row.setAttribute('data-ticket-id', chamado.id);
 
-                // Lógica de exibição da categoria (caminho completo ou pai/filho)
+                // Lógica de exibição da categoria
                 let nomeExibicao = 'N/A';
                 if (chamado.Categorias && chamado.Categorias.id) {
                     nomeExibicao = montarCaminhoCategoria(chamado.Categorias.id);
@@ -653,11 +664,8 @@
                     nomeExibicao = chamado.Categorias.nomePai ? `${chamado.Categorias.nomePai} / ${chamado.Categorias.nome}` : chamado.Categorias.nome;
                 }
                 
-                // Formatação visual da categoria (truncar se for muito longa)
-                if(nomeExibicao.length > 25) {
-                    nomeExibicao = "..." + nomeExibicao.substring(nomeExibicao.length - 22);
-                }
-
+                // Sem truncamento, mas o CSS trata a quebra de linha
+                
                 row.innerHTML = `
                     <div class="t-cell text-center t-id">#${chamado.id}</div>
                     <div class="t-cell text-center">
@@ -670,8 +678,8 @@
                     <div class="t-cell t-category" title="${escapeHtml(nomeExibicao)}">${escapeHtml(nomeExibicao)}</div>
                     <div class="t-cell text-center">${getStatusIcon(chamado.status)}</div>
                     <div class="t-cell t-operator">
-                        <span class="op-name">${escapeHtml(chamado.Atendente?.nomeFuncionario || 'Pendente')}</span>
-                        <span class="op-role">${escapeHtml(chamado.Funcionario?.nomeFuncionario || 'Anônimo')}</span>
+                        <span class="op-name">${escapeHtml(chamado.Funcionario?.nomeFuncionario || 'Anônimo')}</span>
+                        <span class="op-role">${escapeHtml(chamado.Atendente?.nomeFuncionario || 'Pendente')}</span>
                     </div>
                     <div class="t-cell t-date">${timeAgo(chamado.created_at)}</div>
                     <div class="t-cell text-center">
@@ -679,7 +687,6 @@
                     </div>
                 `;
 
-                // Evento Visualizar Detalhes
                 row.querySelector('.btn-view').addEventListener('click', (e) => {
                     e.stopPropagation();
                     const ticketId = chamado.id; 
@@ -693,7 +700,6 @@
                     document.getElementById('detalheDepartamento').textContent = chamado.departamento || 'N/A';
                     document.getElementById('detalheRequisitante').textContent = chamado.Funcionario?.nomeFuncionario || 'Desconhecido';
                     
-                    // Recalcula categoria completa para o modal de detalhes (sem truncar)
                     let catFull = 'N/A';
                     if (chamado.Categorias && chamado.Categorias.id) catFull = montarCaminhoCategoria(chamado.Categorias.id);
                     else if (chamado.Categorias) catFull = chamado.Categorias.nome;
@@ -709,7 +715,7 @@
             });
         }
 
-        // --- Paginação Atualizada ---
+        // --- Paginação ---
         function renderPaginationControls(totalItems, currentPage) {
             paginationControls.innerHTML = '';
             const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
@@ -727,13 +733,10 @@
             createBtn('<i class="bi bi-chevron-double-left"></i>', 1, currentPage === 1, false);
             createBtn('<i class="bi bi-chevron-left"></i>', currentPage - 1, currentPage === 1, false);
             
-            // Renderiza números de página (lógica simples: mostra atual, anterior e próxima se existirem)
             for (let i = 1; i <= totalPages; i++) {
-                 // Mostra todas se forem poucas, ou lógica simplificada
                  if(totalPages <= 7 || i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
                      createBtn(i, i, false, i === currentPage);
                  } else if (i === currentPage - 2 || i === currentPage + 2) {
-                     // Pontinhos
                      const span = document.createElement('span');
                      span.textContent = '...';
                      span.style.padding = '5px';
@@ -771,8 +774,6 @@
                 if (!response.ok) throw new Error("Erro ao buscar chamados.");
                 
                 allTickets = await response.json();
-                
-                // Ordenação padrão: mais recentes primeiro (assumindo ID incremental)
                 allTickets.sort((a, b) => b.id - a.id);
 
                 currentPage = 1;
@@ -797,7 +798,6 @@
             const loja = selectLoja.value;
             const depto = selectDepartamento.value;
 
-            // Busca categoria selecionada na cascata
             let categoriaUnificadaId = null;
             const allSelects = cascataWrapper.querySelectorAll('select');
             for (const select of allSelects) {
@@ -893,7 +893,6 @@
 
         btnAbrir.addEventListener('click', () => {
             resetarModalForm();
-            // Pre-fill user data
             try {
                 const uStr = localStorage.getItem("userData");
                 const u = JSON.parse(uStr);
