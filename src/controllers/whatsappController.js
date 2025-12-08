@@ -416,49 +416,50 @@ export const handleSendMessage = async (req, res) => {
 export const listarConversas = async (req, res) => { 
     try { 
         const agenteSolicitante = req.query.agente;
-        const mode = req.query.mode; // 'history' ou undefined
+        const mode = req.query.mode; 
+        const todosChats = await evolutionService.buscarConversas() || []; 
 
-        const todosChats = await evolutionService.buscarConversas(); 
+        if (!Array.isArray(todosChats)) {
+             return res.status(200).json({ success: true, data: [] });
+        }
         
         // --- NOVO: MODO HISTÓRICO (Retorna TUDO) ---
         if (mode === 'history') {
-             const m = todosChats.map(x => {
-                const ctx = userContext[x.id] || {};
-                return { 
-                    numero: x.id, 
-                    nome: x.pushName || x.id.split('@')[0], 
-                    ultimaMensagem: x.conversation || "...", 
-                    unread: false,
-                    visivel: true, // Sempre visível no histórico
-                    etapa: ctx.etapa || 'FINALIZADO', 
-                    nomeAgente: ctx.nomeAgente || null
-                };
-            });
-            // Ordenar se necessário (a API geralmente já manda ordenado, mas pode reforçar aqui se tiver timestamp)
+             const m = todosChats
+                .filter(x => x && x.id) // CORREÇÃO: Remove chats nulos ou sem ID
+                .map(x => {
+                    const ctx = userContext[x.id] || {};
+                    return { 
+                        numero: x.id, 
+                        nome: x.pushName || (x.id ? x.id.split('@')[0] : 'Desconhecido'), // CORREÇÃO: Verifica x.id
+                        ultimaMensagem: x.conversation || "...", 
+                        unread: false,
+                        visivel: true, 
+                        etapa: ctx.etapa || 'FINALIZADO', 
+                        nomeAgente: ctx.nomeAgente || null
+                    };
+                });
             return res.status(200).json({ success: true, data: m }); 
         }
 
         // --- MODO PADRÃO: FILA DE ATENDIMENTO ---
-        const chatsFiltrados = todosChats.filter(chat => {
-             const ctx = userContext[chat.id] || {};
-             const temDono = !!ctx.nomeAgente;
-             
-             // 1. Sem dono = TODOS vêem (Fila)
-             if (!temDono) return true; 
-             
-             // 2. Com dono = SÓ O DONO vê
-             if (temDono && ctx.nomeAgente === agenteSolicitante) return true; 
-             
-             // 3. Caso contrário = INVISÍVEL
-             return false; 
-        });
+        const chatsFiltrados = todosChats
+            .filter(x => x && x.id) // CORREÇÃO: Remove chats nulos
+            .filter(chat => {
+                 const ctx = userContext[chat.id] || {};
+                 const temDono = !!ctx.nomeAgente;
+                 
+                 if (!temDono) return true; 
+                 if (temDono && ctx.nomeAgente === agenteSolicitante) return true; 
+                 return false; 
+            });
 
         const m = chatsFiltrados.map(x => {
             const ctx = userContext[x.id] || {};
             const deveAparecer = ctx.mostrarNaFila === true || ctx.etapa === 'ATENDIMENTO_HUMANO';
             return { 
                 numero: x.id, 
-                nome: x.pushName || x.id.split('@')[0], 
+                nome: x.pushName || (x.id ? x.id.split('@')[0] : 'Desconhecido'),
                 ultimaMensagem: x.conversation || "...", 
                 unread: x.unreadCount > 0,
                 visivel: deveAparecer, 
@@ -482,10 +483,7 @@ export const listarMensagensChat = async (req, res) => {
     
     try {
         const contexto = userContext[numero];
-        // Permite visualizar mensagens se for o dono OU se a solicitação não exigir validação estrita (ex: histórico global)
-        // Se limit > 50, assumimos que é uma carga de histórico e relaxamos a validação ou exigimos admin (aqui vamos manter simples: histórico libera leitura)
-        
-        // Mantemos a segurança apenas para interações ativas. Leitura de histórico pode ser liberada para agentes.
+        // Validação de permissão relaxada para leitura simples ou mantida se necessário
         if (contexto && contexto.nomeAgente && limit < 60) {
              if (contexto.nomeAgente !== nomeSolicitante) {
                  return res.status(403).json({ 
@@ -496,10 +494,22 @@ export const listarMensagensChat = async (req, res) => {
              }
         }
 
-        // 2. Usa o limite informado ou 50 por padrão
         const qtdMensagens = limit || 50;
+        let rawMessages = await evolutionService.buscarMensagensHistorico(numero, qtdMensagens);
+        
+        // CORREÇÃO: Garante que rawMessages seja um array
+        if (!Array.isArray(rawMessages)) {
+            // Tenta recuperar array de dentro de objetos comuns da Evolution
+            if (rawMessages && Array.isArray(rawMessages.messages)) {
+                rawMessages = rawMessages.messages;
+            } else if (rawMessages && Array.isArray(rawMessages.data)) {
+                rawMessages = rawMessages.data;
+            } else {
+                // Se não achou array, retorna vazio para não quebrar
+                rawMessages = [];
+            }
+        }
 
-        const rawMessages = await evolutionService.buscarMensagensHistorico(numero, qtdMensagens);
         const formattedMessages = rawMessages.map(msg => {
             const content = msg.message?.conversation || 
                             msg.message?.extendedTextMessage?.text || 
