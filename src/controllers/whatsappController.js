@@ -451,7 +451,8 @@ export const listarConversas = async (req, res) => {
 };
 
 export const listarMensagensChat = async (req, res) => {
-    const { numero, nomeSolicitante } = req.body; 
+    // 1. Aceita o parâmetro LIMIT
+    const { numero, nomeSolicitante, limit } = req.body; 
     
     if (!numero) return res.status(400).json({ success: false, message: 'Número obrigatório' });
     
@@ -467,7 +468,10 @@ export const listarMensagensChat = async (req, res) => {
              }
         }
 
-        const rawMessages = await evolutionService.buscarMensagensHistorico(numero);
+        // 2. Usa o limite informado ou 50 por padrão
+        const qtdMensagens = limit || 50;
+
+        const rawMessages = await evolutionService.buscarMensagensHistorico(numero, qtdMensagens);
         const formattedMessages = rawMessages.map(msg => {
             const content = msg.message?.conversation || 
                             msg.message?.extendedTextMessage?.text || 

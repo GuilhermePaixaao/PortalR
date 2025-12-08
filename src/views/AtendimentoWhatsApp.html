@@ -150,6 +150,30 @@
         .btn-cancelar { background: #ccc; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; }
         .btn-confirmar-transfer { background: #0d6efd; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer; }
         .btn-confirmar-transfer:hover { background: #0b5ed7; }
+        
+        /* NOVO CSS PARA O HISTÓRICO */
+        #historyContainer {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid var(--wa-border);
+            padding: 10px;
+            background: var(--wa-bg-color); 
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .hist-msg {
+            padding: 8px 12px;
+            border-radius: 7.5px;
+            font-size: 0.9rem;
+            max-width: 80%;
+            word-wrap: break-word;
+            box-shadow: 0 1px 0.5px rgba(0,0,0,0.13);
+        }
+        .hist-in { align-self: flex-start; background-color: var(--wa-msg-in); border-top-left-radius: 0; color: var(--text-primary); }
+        .hist-out { align-self: flex-end; background-color: var(--wa-msg-out); border-top-right-radius: 0; color: var(--text-primary); }
+        .hist-time { font-size: 0.7rem; color: var(--text-secondary); display: block; text-align: right; margin-top: 3px; }
 
         body.dark-mode .modal-content { background-color: var(--wa-sidebar-bg); border: 1px solid var(--wa-border); }
         body.dark-mode .btn-cancelar { background: #444; color: #fff; }
@@ -336,6 +360,21 @@
         </div>
     </div>
 
+    <div id="modalHistorico" class="modal-overlay">
+        <div class="modal-content" style="width: 500px; max-width: 90%;">
+            <div class="modal-title">📜 Histórico da Conversa</div>
+            <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:5px;">Últimas 200 mensagens trocadas.</p>
+            
+            <div id="historyContainer">
+                <div style="text-align: center; padding: 20px;">Carregando...</div>
+            </div>
+
+            <div class="modal-actions">
+                <button id="btnFecharHistorico" class="btn-cancelar">Fechar</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
     <script src="js/globalNotification.js"></script>
 
@@ -406,6 +445,11 @@
         const inputDescricao = document.getElementById('inputDescricao');
         const btnCancelarCriar = document.getElementById('btnCancelarCriar');
         const btnSalvarChamado = document.getElementById('btnSalvarChamado');
+        
+        // Referências ao Modal Histórico
+        const modalHistorico = document.getElementById('modalHistorico');
+        const historyContainer = document.getElementById('historyContainer');
+        const btnFecharHistorico = document.getElementById('btnFecharHistorico');
 
         // VARIÁVEIS PARA CASCATA
         let allCategories = []; 
@@ -1273,8 +1317,54 @@
             }
         });
 
-        btnHistorico.addEventListener('click', () => {
-            alert("Visualização de histórico completo em breve.");
+        // --- LÓGICA DO BOTÃO HISTÓRICO (NOVO) ---
+        btnHistorico.addEventListener('click', async () => {
+            if(!AppState.activeNumber) return;
+            
+            // Abre Modal
+            modalHistorico.style.display = 'flex';
+            historyContainer.innerHTML = '<div style="text-align: center; padding: 20px;">Carregando histórico antigo...</div>';
+            
+            try {
+                const response = await fetch('/api/whatsapp/messages', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        numero: AppState.activeNumber,
+                        limit: 200 // Traz mais mensagens para o histórico
+                    })
+                });
+                
+                const json = await response.json();
+                
+                if (json.success) {
+                    historyContainer.innerHTML = '';
+                    if (json.data.length === 0) {
+                         historyContainer.innerHTML = '<div style="text-align: center;">Nenhum histórico encontrado.</div>';
+                         return;
+                    }
+                    
+                    json.data.forEach(msg => {
+                        const div = document.createElement('div');
+                        div.className = `hist-msg ${msg.fromMe ? 'hist-out' : 'hist-in'}`;
+                        const hora = new Date(msg.time).toLocaleString('pt-BR');
+                        div.innerHTML = `<div>${msg.text}</div><span class="hist-time">${hora}</span>`;
+                        historyContainer.appendChild(div);
+                    });
+                    
+                    // Rola para o final do container
+                    historyContainer.scrollTop = historyContainer.scrollHeight;
+                } else {
+                    historyContainer.innerHTML = '<div style="color:red; text-align:center;">Erro ao carregar mensagens.</div>';
+                }
+            } catch(e) {
+                console.error(e);
+                historyContainer.innerHTML = '<div style="color:red; text-align:center;">Erro de conexão.</div>';
+            }
+        });
+
+        btnFecharHistorico.addEventListener('click', () => {
+            modalHistorico.style.display = 'none';
         });
 
         function resetConnectionState() {
