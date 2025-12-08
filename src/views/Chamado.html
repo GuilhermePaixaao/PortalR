@@ -7,133 +7,170 @@
     
     <link rel="icon" type="image/png" href="/logo.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="css/chamado.css">
-    <link rel="stylesheet" href="css/ticket.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
     <style>
-        /* (Estilos CSS originais mantidos) */
-        dialog:not([open]) { display: none; }
-        dialog::backdrop { background: rgba(0, 0, 0, 0.6); }
-        dialog { border: none; border-radius: 8px; padding: 1.5rem; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2); max-width: 800px; width: calc(100% - 2rem); }
-        .grupo-form { margin-bottom: 1rem; }
-        .grupo-form label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
-        .grupo-form input[type="text"],
-        .grupo-form input[type="tel"],
-        .grupo-form input[type="email"],
-        .grupo-form textarea,
-        .grupo-form select,
-        .grupo-form input[type="file"] { width: 100%; padding: 0.75rem; border: 1px solid #ced4da; border-radius: 4px; font-size: 1rem; }
-        .form-actions { margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 0.5rem; }
-        .form-actions button { padding: 0.75rem 1.5rem; border: none; border-radius: 4px; cursor: pointer; }
-        #fecharModal, #fecharModalDetalhes { background-color: #6c757d; color: white; }
-        #criarTicket { background-color: #198754; color: white; }
-        #modalDetalhes .detalhe-grupo { margin-bottom: 1rem; }
-        #modalDetalhes .detalhe-label { font-weight: 600; color: #495057; font-size: 0.9rem; text-transform: uppercase; margin-bottom: 0.25rem; display: block; }
-        #modalDetalhes .detalhe-valor { font-size: 1rem; padding: 0.5rem; background-color: #f8f9fa; border-radius: 4px; word-wrap: break-word; }
-        #modalDetalhes .detalhe-descricao { font-size: 1rem; padding: 0.5rem; background-color: #f8f9fa; border-radius: 4px; white-space: pre-wrap; min-height: 100px; max-height: 250px; overflow-y: auto; }
-        #listaComentariosContainer { background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 5px; padding: 1rem; min-height: 100px; max-height: 300px; overflow-y: auto; }
-        .comment-item { border-bottom: 1px solid #dee2e6; padding-bottom: 0.75rem; margin-bottom: 0.75rem; }
-        .comment-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
-        .comment-header { font-size: 0.9rem; font-weight: 600; color: #495057; margin-bottom: 0.25rem; }
-        .comment-header .comment-date { font-weight: 400; color: #6c757d; margin-left: 0.5rem; }
-        .comment-body { font-size: 1rem; white-space: pre-wrap; word-wrap: break-word; }
-        .comment-empty-state { color: #6c757d; font-style: italic; }
-        .main-content { grid-area: main; overflow-y: auto; padding: 2rem; background-color: #f8f9fa; }
-        .page-actions { position: fixed; bottom: 2rem; right: 2rem; z-index: 1050; }
-        .btn-new-ticket { background-color: #0d6efd; color: white; padding: 1rem 1.5rem; border: none; border-radius: 50px; font-size: 1.1rem; font-weight: 600; cursor: pointer; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); transition: background-color 0.2s ease; }
-        .btn-new-ticket:hover { background-color: #0b5ed7; }
-        .alert { padding: 1rem; margin-top: 1rem; border-radius: 4px; }
-        .alert-success { background-color: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
-        .alert-danger { background-color: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
-        .alert-warning { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
-        
-        /* --- ESTILOS DA TABELA (AJUSTADOS PARA DIVIDIR ESPAÇO) --- */
-        .ticket-list { display: flex; flex-direction: column; min-width: 900px; }
-        .ticket-row { display: flex; border-bottom: 1px solid #eee; padding: 1rem 0.5rem; align-items: center; }
-        .ticket-row.header { background-color: #f8f9fa; font-weight: bold; border-bottom: 2px solid #dee2e6; }
-        .ticket-cell { padding: 0 0.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-        .ticket-id { flex: 0 0 60px; text-align: center; }
-        .ticket-priority { flex: 0 0 100px; text-align: center; }
-
-        /* Assunto: flex 2 (ocupa 2 partes do espaço livre) */
-        .ticket-subject { 
-            flex: 2; 
-            min-width: 150px; 
-            font-weight: 600; 
-            color: #212529; 
+        /* --- ESTILO VISUAL NOVO (COMPACTO E CLEAN) --- */
+        :root {
+            --bg-body: #f4f6f8;
+            --text-main: #212529;
+            --text-muted: #6c757d;
+            --primary-green: #00cba9; /* Verde do botão da imagem */
+            --primary-green-hover: #00b395;
+            --ticket-id-color: #00dbb5;
         }
 
-        /* Categoria: flex 1 (ocupa 1 parte do espaço livre, logo após o assunto) */
-        .ticket-category { 
-            flex: 3; 
-            min-width: 120px;
-            text-align: left; /* Alinhado a esquerda padrão */
-            font-weight: 500; 
-            color: #495057;
-        } 
-
-        .ticket-status { flex: 0 0 110px; text-align: center; }
-        .ticket-requisitante { flex: 0 0 130px; }
-        .ticket-operator { flex: 0 0 130px; }
-        .ticket-created { flex: 0 0 140px; text-align: center; font-size: 0.9em; }
-        .ticket-actions { flex: 0 0 60px; text-align: center; cursor: pointer; }
-
-        .priority-badge,
-        .status-badge { padding: 0.2em 0.6em; border-radius: 0.25rem; font-size: 0.85em; font-weight: 600; }
-        .priority-badge.alta, .priority-badge.high { background-color: #f8d7da; color: #842029; }
-        .priority-badge.média, .priority-badge.medium, .priority-badge.media { background-color: #fff3cd; color: #664d03; }
-        .priority-badge.baixa, .priority-badge.low { background-color: #cfe2ff; color: #084298; }
-        .priority-badge.planejado { background-color: #898989; color: #000000; } 
-        .status-badge.aberto, .status-badge.open { background-color: #7d7d7d; color: #3f3f3f; }
-        .status-badge.concluído, .status-badge.completed { background-color: #d1e7dd; color: #0f5132; }
-        .status-badge.em-andamento { background-color: #cfe2ff; color: #084298; }
-        .status-badge.pausado { background-color: #fff3cd; color: #664d03; border: 1px solid #ffecb5; }
-        #loadingIndicator { padding: 2rem; text-align: center; color: #6c757d; }
-        .header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 2rem; background-color: #ffffff; border-bottom: 1px solid #dee2e6; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); position: sticky; top: 0; z-index: 1030; }
-        .logo { font-size: 1.4rem; font-weight: 700; color: #0d6efd; text-transform: uppercase; letter-spacing: 0.5px; margin: 0; white-space: nowrap; }
-        .search-bar { margin-left: 2rem; margin-right: 2rem; width: 100%; max-width: 450px; }
-        .search-bar input { width: 100%; padding: 0.6rem 1rem; border: 1px solid #ced4da; border-radius: 20px; font-size: 0.95rem; }
-        .search-bar input:focus { border-color: #86b7fe; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, .25); outline: none; }
-        .header-actions { display: flex; align-items: center; gap: 1rem; }
-        #userNameDisplay { font-weight: 500; color: #495057; white-space: nowrap; }
-        .btn-logout { background-color: #dc3545; color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 500; cursor: pointer; transition: background-color 0.2s ease; }
-        .btn-logout:hover { background-color: #bb2d3b; }
-        .logo { display: flex; align-items: center; gap: 10px; }
+        body { background-color: var(--bg-body); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 0.85rem; color: var(--text-main); }
+        
+        /* Layout Geral */
+        .dashboard-container { padding: 20px; max-width: 1600px; margin: 0 auto; padding-bottom: 80px; }
+        
+        /* Header */
+        .header { 
+            background: #fff; padding: 12px 25px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); 
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;
+        }
+        .logo { font-size: 1.1rem; font-weight: 700; color: #0d6efd; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
         .logo-icon { height: 30px; width: auto; }
+
+        /* Card de Filtros */
+        .filters-card { background: #fff; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); }
+        .form-control-sm, .form-select-sm, .btn-sm { font-size: 0.85rem; }
+
+        /* Card da Tabela Principal */
+        .card-table { background: #fff; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); overflow: hidden; min-height: 400px; display: flex; flex-direction: column; }
         
-        #categoriaCascataWrapper .grupo-form {
-            margin-bottom: 0; 
+        /* --- GRID DA TABELA (Substituindo o Flex antigo para alinhar colunas perfeitamente) --- */
+        .ticket-list { width: 100%; display: flex; flex-direction: column; }
+        
+        /* Definição das Colunas: ID | Prioridade | Assunto (largo) | Categoria | Status | Operador | Criado | Ação */
+        .ticket-row { 
+            display: grid; 
+            grid-template-columns: 70px 100px 2fr 1.5fr 60px 140px 110px 50px; 
+            align-items: center; 
+            border-bottom: 1px solid #f0f0f0; 
+            padding: 10px 15px; 
+            transition: background 0.2s; 
+            gap: 10px;
         }
-
-        .pagination-controls {
-            display: flex;
-            justify-content: flex-end; 
-            align-items: center;
-            gap: 5px;
-            margin-top: 20px;
+        .ticket-row:hover:not(.header) { background-color: #fcfcfc; }
+        
+        /* Header da Tabela */
+        .ticket-row.header { 
+            background: #fff; border-bottom: 2px solid #f0f0f0; 
+            font-weight: 700; color: #000; font-size: 0.8rem; 
+            padding-top: 15px; padding-bottom: 15px;
         }
+        
+        /* Tipografia da Tabela */
+        .t-cell { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .text-center { text-align: center; }
+        .t-id { color: var(--ticket-id-color); font-weight: 700; font-size: 0.9rem; }
+        
+        /* Assunto e Descrição Empilhados */
+        .t-subject-wrapper { display: flex; flex-direction: column; justify-content: center; overflow: hidden; }
+        .t-subject { font-weight: 700; font-size: 0.9rem; color: #000; margin-bottom: 1px; }
+        .t-desc { font-size: 0.75rem; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        /* Categoria */
+        .t-category { font-weight: 700; text-transform: uppercase; font-size: 0.75rem; color: #000; letter-spacing: 0.5px; }
 
+        /* Operador/Requisitante */
+        .t-operator { display: flex; flex-direction: column; line-height: 1.1; font-size: 0.8rem; }
+        .op-name { font-weight: 700; color: #000; }
+        .op-role { font-size: 0.7rem; color: #999; }
+
+        /* Data */
+        .t-date { font-weight: 600; font-size: 0.8rem; color: #000; }
+
+        /* --- NOVOS BADGES (Outline / Borda Colorida) --- */
+        .badge-outline {
+            display: inline-block; padding: 3px 0; border-radius: 50px; 
+            font-size: 0.7rem; font-weight: 700; text-align: center;
+            background: #fff; border: 1px solid #ccc; width: 100%;
+        }
+        .bdg-planejado { border-color: #55b0b0; color: #55b0b0; }
+        .bdg-medio, .bdg-media, .bdg-média { border-color: #ffaa00; color: #ffaa00; }
+        .bdg-alta { border-color: #dc3545; color: #dc3545; }
+        .bdg-baixa { border-color: #0d6efd; color: #0d6efd; }
+
+        /* --- ÍCONES DE STATUS (Circulares) --- */
+        .status-icon {
+            width: 28px; height: 28px; border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; 
+            margin: 0 auto; font-size: 0.9rem;
+        }
+        .st-pausado { background-color: #ffda00; color: #fff; } /* Amarelo */
+        .st-concluido, .st-concluído { background-color: #000; color: #fff; } /* Preto */
+        .st-aberto { background-color: #ccc; color: #fff; }
+        .st-andamento, .st-em-andamento { background-color: #0d6efd; color: #fff; }
+
+        /* Ações */
+        .btn-view { color: #999; cursor: pointer; font-size: 1.2rem; border: none; background: none; transition: 0.2s; display: flex; align-items: center; justify-content: center; width: 100%; }
+        .btn-view:hover { color: #000; transform: scale(1.1); }
+
+        /* Footer e Paginação Clean */
+        .table-footer { padding: 10px 25px; display: flex; justify-content: flex-end; align-items: center; border-top: 1px solid #f0f0f0; margin-top: auto; background-color: #fff; }
+        .pagination-controls { display: flex; gap: 4px; }
         .pagination-controls button {
-            background-color: #fff;
-            color: #0d6efd;
-            border: 1px solid #0d6efd;
-            padding: 8px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.2s;
+            border: 1px solid #eee; background: #fff; color: #0d6efd; 
+            width: 30px; height: 30px; border-radius: 4px; 
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: 0.2s; font-size: 0.8rem;
         }
+        .pagination-controls button.active { background-color: #0d6efd; color: #fff; border-color: #0d6efd; }
+        .pagination-controls button:disabled { color: #ccc; cursor: default; }
+        .pagination-controls button:hover:not(:disabled):not(.active) { background-color: #f9f9f9; }
 
-        .pagination-controls button.active {
-            background-color: #0d6efd;
-            color: white;
+        /* Botão Novo Ticket (Verde Flutuante) */
+        .page-actions { position: fixed; bottom: 30px; right: 30px; z-index: 100; }
+        .btn-new-ticket {
+            background-color: var(--primary-green); color: white; border: none; 
+            padding: 12px 30px; border-radius: 6px; font-weight: 700; font-size: 1rem; 
+            box-shadow: 0 4px 12px rgba(0,203,169, 0.4); transition: 0.2s; cursor: pointer;
         }
+        .btn-new-ticket:hover { background-color: var(--primary-green-hover); transform: translateY(-2px); }
 
-        .pagination-controls button:disabled {
-            color: #adb5bd;
-            border-color: #adb5bd;
-            cursor: not-allowed;
-            background-color: #f8f9fa;
-        }
+        /* Loading */
+        #loadingIndicator { padding: 3rem; text-align: center; color: #ccc; font-style: italic; }
+
+        /* --- MODAIS ESTILIZADOS --- */
+        dialog { border: none; border-radius: 10px; padding: 0; box-shadow: 0 10px 40px rgba(0,0,0,0.2); width: 100%; max-width: 750px; background: #fff; }
+        dialog::backdrop { background: rgba(0,0,0,0.5); backdrop-filter: blur(2px); }
+        .modal-content-wrapper { padding: 2rem; }
+        .modal-header { margin-bottom: 1.5rem; border-bottom: 1px solid #eee; padding-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h2 { font-size: 1.4rem; font-weight: 700; margin: 0; color: #333; }
+        
+        /* Estilos de Formulário no Modal */
+        .grupo-form { margin-bottom: 1rem; }
+        .grupo-form label { font-size: 0.85rem; font-weight: 600; color: #555; margin-bottom: 0.4rem; display: block; }
+        .grupo-form .form-select, .grupo-form input, .grupo-form textarea { font-size: 0.95rem; padding: 0.6rem; border-radius: 6px; border: 1px solid #dee2e6; width: 100%; box-sizing: border-box; }
+        .grupo-form .form-select:focus, .grupo-form input:focus { border-color: #86b7fe; outline: none; box-shadow: 0 0 0 0.25rem rgba(13,110,253,.15); }
+
+        .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #eee; }
+        .form-actions button { padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: 600; cursor: pointer; border: none; }
+        #fecharModal, #fecharModalDetalhes { background: #f1f3f5; color: #495057; }
+        #fecharModal:hover, #fecharModalDetalhes:hover { background: #e9ecef; }
+        #criarTicket { background: #198754; color: white; }
+        #criarTicket:hover { background: #157347; }
+
+        /* Estilos do Modal de Detalhes */
+        .detalhe-grupo { margin-bottom: 0.8rem; background: #f8f9fa; padding: 10px; border-radius: 6px; }
+        .detalhe-label { font-size: 0.75rem; text-transform: uppercase; color: #888; font-weight: 700; display: block; margin-bottom: 2px; }
+        .detalhe-valor { font-weight: 500; color: #212529; font-size: 0.95rem; }
+        .detalhe-descricao { white-space: pre-wrap; font-size: 0.95rem; line-height: 1.5; color: #444; }
+
+        /* Comentários */
+        .comment-item { border-bottom: 1px solid #eee; padding: 10px 0; }
+        .comment-header { font-weight: 700; font-size: 0.85rem; color: #333; margin-bottom: 4px; }
+        .comment-date { font-weight: 400; color: #999; font-size: 0.75rem; margin-left: 5px; }
+        .comment-body { font-size: 0.9rem; color: #555; }
+        .comment-empty-state { color: #999; font-style: italic; text-align: center; padding: 10px; }
+        
+        /* Alertas */
+        .alert { padding: 10px; margin-top: 10px; border-radius: 6px; font-size: 0.9rem; }
+        .alert-success { background-color: #d1e7dd; color: #0f5132; }
+        .alert-danger { background-color: #f8d7da; color: #842029; }
     </style>
 </head>
 <body>
@@ -142,20 +179,89 @@
 
         <header class="header">
             <div class="logo">
-                <img src="/img.png" alt="Logo Portal Supermercado" class="logo-icon">              
+                <img src="/img.png" alt="Logo Portal" class="logo-icon">              
                 PORTAL SUPERMERCADO ROSALINA
+            </div>
+            <div style="font-size: 0.85rem; color: #666;">
+                <span id="userNameDisplay"><strong>Usuário</strong></span>
+                <span style="margin: 0 10px;">|</span>
+                <button class="btn btn-sm btn-outline-danger" style="border:none; font-size:0.8rem;">Sair</button>
             </div>
         </header>
 
-        <dialog id="modalTicket" aria-labelledby="modalTitle">
-            <form id="ticketForm">
-                <h2 id="modalTitle">Novo Chamado</h2>
-                <hr>
+        <div class="filters-card">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-5">
+                    <label for="filtroAssunto" class="form-label small fw-bold text-muted mb-1">Buscar Assunto</label>
+                    <input type="text" id="filtroAssunto" class="form-control form-control-sm" placeholder="Digite o assunto...">
+                </div>
+                <div class="col-md-3">
+                    <label for="filtroPrioridade" class="form-label small fw-bold text-muted mb-1">Prioridade</label>
+                    <select id="filtroPrioridade" class="form-select form-select-sm">
+                        <option value="">Todas</option>
+                        <option value="Alta">Alta</option>
+                        <option value="Média">Média</option>
+                        <option value="Baixa">Baixa</option>
+                        <option value="Planejado">Planejado</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="filtroStatus" class="form-label small fw-bold text-muted mb-1">Status</label>
+                    <select id="filtroStatus" class="form-select form-select-sm">
+                        <option value="">Todos</option>
+                        <option value="Aberto">Aberto</option>
+                        <option value="Em Andamento">Em Andamento</option>
+                        <option value="Pausado">Pausado</option> 
+                        <option value="Concluído">Concluído</option>
+                    </select>
+                </div>
+                <div class="col-md-1">
+                    <button id="btnFiltrar" class="btn btn-sm btn-primary w-100 fw-bold">Filtrar</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="divRespostaGeral"></div>
+
+        <div class="card-table">
+            <div id="ticketList" class="ticket-list">
+                <div class="ticket-row header">
+                    <div class="t-cell text-center">Ticket</div>
+                    <div class="t-cell text-center">Prioridade</div>
+                    <div class="t-cell">Assunto <span style="font-weight:400; color:#999; font-size:0.75rem;">/ Descrição</span></div>
+                    <div class="t-cell">Categorias</div>
+                    <div class="t-cell text-center">St.</div>
+                    <div class="t-cell">Operador</div>
+                    <div class="t-cell">Criado</div>
+                    <div class="t-cell text-center"><i class="bi bi-gear-fill text-muted"></i></div>
+                </div>
                 
+                <div id="loadingIndicator">Carregando chamados...</div>
+            </div>
+            
+            <div class="table-footer">
+                <div id="paginationControls" class="pagination-controls"></div>
+            </div>
+        </div>
+
+        <div class="page-actions">
+            <button id="newTicketButton" class="btn-new-ticket">
+                Novo Ticket
+            </button>
+        </div>
+
+    </div>
+
+    <dialog id="modalTicket" aria-labelledby="modalTitle">
+        <div class="modal-content-wrapper">
+            <div class="modal-header">
+                <h2 id="modalTitle">Novo Chamado</h2>
+            </div>
+            <form id="ticketForm">
                 <div class="row">
                     <div class="col-md-6">
                         <div class="grupo-form">
-                            <label for="nomeRequisitante">Seu Nome <span aria-hidden="true" style="color:red;">*</span></label>
+                            <label for="nomeRequisitante">Seu Nome <span style="color:red;">*</span></label>
                             <input type="text" id="nomeRequisitante" name="nomeRequisitante" required>
                         </div>
                     </div>
@@ -167,14 +273,14 @@
                     </div>
                 </div>
                 <div class="grupo-form">
-                    <label for="telefoneRequisitante">Seu Telefone <span aria-hidden="true" style="color:red;">*</span></label>
+                    <label for="telefoneRequisitante">Seu Telefone <span style="color:red;">*</span></label>
                     <input type="tel" id="telefoneRequisitante" name="telefoneRequisitante" placeholder="(XX) XXXXX-XXXX" required>
                 </div>
                 
                 <div class="row">
                     <div class="col-md-6">
                         <div class="grupo-form">
-                            <label for="loja">Loja <span aria-hidden="true" style="color:red;">*</span></label>
+                            <label for="loja">Loja <span style="color:red;">*</span></label>
                             <select id="loja" name="loja" class="form-select" required>
                                 <option value="">-- Carregando... --</option>
                             </select>
@@ -182,23 +288,23 @@
                     </div>
                     <div class="col-md-6">
                         <div class="grupo-form">
-                            <label for="departamento">Departamento <span aria-hidden="true" style="color:red;">*</span></label>
+                            <label for="departamento">Departamento <span style="color:red;">*</span></label>
                             <select id="departamento" name="departamento" class="form-select" disabled required>
-                                <option value="">-- Selecione primeiro a Loja --</option>
+                                <option value="">-- Selecione Loja Primeiro --</option>
                             </select>
                         </div>
                     </div>
                 </div>
-                <hr>
+                <hr style="margin: 1.5rem 0; opacity: 0.1;">
 
                 <div class="grupo-form">
-                    <label for="assunto">Assunto <span aria-hidden="true" style="color:red;">*</span></label>
+                    <label for="assunto">Assunto <span style="color:red;">*</span></label>
                     <input type="text" id="assunto" name="assunto" required>
                 </div>
 
                 <div class="grupo-form">
-                    <label for="descricao">Descrição <span aria-hidden="true" style="color:red;">*</span></label>
-                    <textarea id="descricao" name="descricao" rows="5" required></textarea>
+                    <label for="descricao">Descrição <span style="color:red;">*</span></label>
+                    <textarea id="descricao" name="descricao" rows="4" required></textarea>
                 </div>
 
                 <div class="row">
@@ -213,31 +319,31 @@
                             </select>
                         </div>
                     </div>
-                    
                     <div class="col-md-6">
                         <div id="categoriaCascataWrapper">
                             </div>
                     </div>
                 </div>
                 <div class="grupo-form">
-                    <label for="anexo">Anexar Arquivos (Opcional)</label>
+                    <label for="anexo">Anexar Arquivos (Opcional - Máx 20MB)</label>
                     <input type="file" id="anexo" name="anexos" multiple>
-                    <small class="form-text text-muted">Limite máximo total: 20MB.</small>
                 </div>
 
-                <div id="modalResposta" class="mt-3"></div>
+                <div id="modalResposta"></div>
 
                 <div class="form-actions">
                     <button type="button" id="fecharModal">Cancelar</button>
                     <button type="submit" id="criarTicket">Criar Chamado</button>
                 </div>
             </form>
-        </dialog>
-        
-        <dialog id="modalDetalhes" aria-labelledby="modalDetalhesTitle">
-            <h2 id="modalDetalhesTitle" style="text-transform: uppercase;">Detalhes do Chamado</h2>
-            <hr>
-            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;">Dados Gerais</h3>
+        </div>
+    </dialog>
+    
+    <dialog id="modalDetalhes" aria-labelledby="modalDetalhesTitle">
+        <div class="modal-content-wrapper">
+            <div class="modal-header">
+                <h2 id="modalDetalhesTitle">DETALHES DO CHAMADO</h2>
+            </div>
             
             <div class="row">
                 <div class="col-md-8">
@@ -248,7 +354,7 @@
                 </div>
                 <div class="col-md-4">
                     <div class="detalhe-grupo">
-                        <span class="detalhe-label">Categorias</span>
+                        <span class="detalhe-label">Categoria</span>
                         <div id="detalheCategoria" class="detalhe-valor">...</div>
                     </div>
                 </div>
@@ -268,77 +374,37 @@
                 </div>
             </div>
             <div class="row">
-                <div class="col-md-4">
+                <div class="col-4">
                     <div class="detalhe-grupo"><span class="detalhe-label">Contato</span><span id="detalheRequisitante" class="detalhe-valor">...</span></div>
                 </div>
-                <div class="col-md-4">
-                    <div class="detalhe-grupo"><span class="detalhe-label">Situação</span><span id="detalheStatus" class="detalhe-valor">...</span></div>
+                <div class="col-4">
+                    <div class="detalhe-grupo"><span class="detalhe-label">Status</span><span id="detalheStatus" class="detalhe-valor">...</span></div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-4">
                     <div class="detalhe-grupo"><span class="detalhe-label">Prioridade</span><span id="detalhePrioridade" class="detalhe-valor">...</span></div>
                 </div>
             </div>
             <div class="row">
-                <div class="col-md-4">
-                    <div class="detalhe-grupo"><span class="detalhe-label">Ticket ID</span><span id="detalheId" class="detalhe-valor">#...</span></div>
+                <div class="col-6">
+                    <div class="detalhe-grupo"><span class="detalhe-label">ID do Ticket</span><span id="detalheId" class="detalhe-valor">...</span></div>
                 </div>
-                <div class="col-md-4">
-                    <div class="detalhe-grupo"><span class="detalhe-label">Criado em</span><span id="detalheData" class="detalhe-valor">...</span></div>
+                <div class="col-6">
+                    <div class="detalhe-grupo"><span class="detalhe-label">Data Criação</span><span id="detalheData" class="detalhe-valor">...</span></div>
                 </div>
             </div>
-            <hr style="margin-top: 1rem; margin-bottom: 1.25rem;">
-            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1rem;">Histórico de Comentários</h3>
-            <div id="listaComentariosContainer" class="comment-empty-state">
-                Carregando comentários...
-            </div>
-            <div class="form-actions"><button type="button" id="fecharModalDetalhes">Fechar</button></div>
-        </dialog>
-        
-        <main class="main-content">
-            <hr>
-            <div id="divRespostaGeral" class="mb-3"></div>
-            <div class="widget card shadow-sm">
-                <div class="card-body">
-                    <div class="filters mb-3 row g-2">
-                        <div class="col-md-4"><label for="filtroAssunto" class="form-label">Filtrar por Assunto</label><input type="text" id="filtroAssunto" class="form-control" placeholder="Digite o assunto..."></div>
-                        <div class="col-md-3"><label for="filtroPrioridade" class="form-label">Prioridade</label><select id="filtroPrioridade" class="form-select"><option value="">Todas</option><option value="Alta">Alta</option><option value="Média">Média</option><option value="Baixa">Baixa</option><option value="Planejado">Planejado</option></select></div>
-                        <div class="col-md-3"><label for="filtroStatus" class="form-label">Status</label>
-                            <select id="filtroStatus" class="form-select">
-                                <option value="">Todos</option>
-                                <option value="Aberto">Aberto</option>
-                                <option value="Em Andamento">Em Andamento</option>
-                                <option value="Pausado">Pausado</option> <option value="Concluído">Concluído</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2 d-flex align-items-end"><button id="btnFiltrar" class="btn btn-primary w-100">Filtrar</button></div>
-                    </div>
-                    <div id="ticketList" class="ticket-list">
-                        <div class="ticket-row header">
-                            <div class="ticket-cell ticket-id">Ticket</div>
-                            <div class="ticket-cell ticket-priority">Prioridade</div>
-                            <div class="ticket-cell ticket-subject">Assunto</div>
-                            <div class="ticket-cell ticket-category">Categoria</div> <div class="ticket-cell ticket-status">Status</div>
-                            <div class="ticket-cell ticket-requisitante">Requisitante</div>
-                            <div class="ticket-cell ticket-operator">Operador</div>
-                            <div class="ticket-cell ticket-created">Criado em</div>
-                            <div class="ticket-cell ticket-actions">Ação</div>
-                        </div>
-                        <div id="loadingIndicator"><p>Carregando chamados...</p></div>
-                    </div>
-                    
-                    <div id="paginationControls" class="pagination-controls">
-                        </div>
-                    </div>
-            </div>
-        </main>
 
-        <div class="page-actions">
-            <button id="newTicketButton" class="btn-new-ticket">
-                Novo Chamado
-            </button>
+            <hr style="margin: 1.5rem 0; opacity: 0.1;">
+            <h3 style="font-size: 1rem; font-weight: 700; margin-bottom: 1rem; color: #555;">HISTÓRICO DE COMENTÁRIOS</h3>
+            
+            <div id="listaComentariosContainer" style="max-height: 250px; overflow-y: auto;">
+                <span class="comment-empty-state">Carregando comentários...</span>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" id="fecharModalDetalhes">Fechar</button>
+            </div>
         </div>
-
-    </div>
+    </dialog>
 
     <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
     <script src="js/globalNotification.js"></script>
@@ -351,20 +417,21 @@
             const userData = JSON.parse(userDataString);
             const idLogado = userData?.data?.id || userData?.id;
             if (idLogado) userId = idLogado;
+            // Tenta atualizar nome no header se existir no storage
+            if (userData?.data?.nomeFuncionario) {
+                const el = document.getElementById('userNameDisplay');
+                if(el) el.innerHTML = `<strong>${userData.data.nomeFuncionario}</strong>`;
+            }
         } catch (e) {
             console.error("Erro ao ler localStorage. Usando ID=1 padrão.", e);
         }
 
-        // --- Variáveis Globais de Paginação ---
-        let allTickets = []; // Armazena todos os tickets carregados (simulação de frontend)
+        let allTickets = [];
         const ITEMS_PER_PAGE = 5;
         let currentPage = 1;
-        // ------------------------------------
-
-        // Armazenamento local de categorias para a cascata
         let allCategories = [];
 
-        // --- Referências ---
+        // Referências DOM
         const modal = document.getElementById("modalTicket");
         const btnAbrir = document.getElementById("newTicketButton");
         const btnFechar = document.getElementById("fecharModal");
@@ -375,23 +442,51 @@
         const divRespostaGeral = document.getElementById("divRespostaGeral");
         const modalDetalhes = document.getElementById("modalDetalhes");
         const btnFecharModalDetalhes = document.getElementById("fecharModalDetalhes");
+        
+        // Filtros
         const filtroAssunto = document.getElementById("filtroAssunto");
         const filtroPrioridade = document.getElementById("filtroPrioridade");
         const filtroStatus = document.getElementById("filtroStatus");
         const btnFiltrar = document.getElementById("btnFiltrar");
+        
+        // Inputs Específicos
         const inputTelefone = document.getElementById("telefoneRequisitante");
         const listaComentariosContainer = document.getElementById("listaComentariosContainer");
         const paginationControls = document.getElementById("paginationControls");
         const selectPrioridade = document.getElementById("prioridade"); 
-
-        // Referência para o container da cascata de categorias
         const cascataWrapper = document.getElementById("categoriaCascataWrapper");
-
-        // [MUDANÇA] Referências para os selects de Loja e Departamento
         const selectLoja = document.getElementById("loja");
         const selectDepartamento = document.getElementById("departamento");
 
-        // --- Funções Auxiliares ---
+        // --- Helpers Visuais (Novo Design) ---
+        const timeAgo = (dateStr) => {
+            if(!dateStr) return '';
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diff = (now - date) / 1000; // segundos
+            if(diff < 60) return 'agora';
+            if(diff < 3600) return `há ${Math.floor(diff/60)} min`;
+            if(diff < 86400) return `há ${Math.floor(diff/3600)} h`;
+            return `há ${Math.floor(diff/86400)} dias`;
+        };
+
+        const getStatusIcon = (status) => {
+            const s = (status || '').toLowerCase();
+            if(s.includes('pausa')) return `<div class="status-icon st-pausado" title="Pausado"><i class="bi bi-pause-fill"></i></div>`;
+            if(s.includes('conclu')) return `<div class="status-icon st-concluido" title="Concluído"><i class="bi bi-check-lg"></i></div>`;
+            if(s.includes('aberto')) return `<div class="status-icon st-aberto" title="Aberto"><i class="bi bi-three-dots"></i></div>`;
+            return `<div class="status-icon st-andamento" title="Em Andamento"><i class="bi bi-play-fill"></i></div>`;
+        };
+
+        const getBadgeClass = (prio) => {
+            const p = (prio || 'Media').toLowerCase();
+            if(p.includes('planej')) return 'bdg-planejado';
+            if(p.includes('alta')) return 'bdg-alta';
+            if(p.includes('baixa')) return 'bdg-baixa';
+            return 'bdg-medio';
+        };
+
+        // --- Funções Auxiliares Comuns ---
         function exibirMensagem(elemento, mensagem, sucesso = true) {
             elemento.textContent = mensagem;
             elemento.className = sucesso ? 'alert alert-success' : 'alert alert-danger';
@@ -402,8 +497,7 @@
         }
         function escapeHtml(text) {
             if (!text) return '';
-            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-            return text.replace(/[&<>"']/g, m => map[m]);
+            return text.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[m]);
         }
         function formatarData(isoString) {
             if (!isoString) return 'Aguardando...';
@@ -412,137 +506,86 @@
                 const data = dt.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
                 const hora = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
                 return `${data} ${hora}`;
-            } catch (e) {
-                return 'Data inválida';
-            }
+            } catch (e) { return 'Data inválida'; }
         }
         function aplicarMascaraTelefone(input) {
             let valor = input.value.replace(/\D/g, "").substring(0, 11);
-            if (valor.length > 6) {
-                valor = valor.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, '($1) $2-$3');
-            } else if (valor.length > 2) {
-                valor = valor.replace(/^(\d{2})(\d{0,5}).*/, '($1) $2');
-            } else if (valor.length > 0) {
-                valor = valor.replace(/^(\d{0,2}).*/, '($1');
-            }
+            if (valor.length > 6) valor = valor.replace(/^(\d{2})(\d{5})(\d{0,4}).*/, '($1) $2-$3');
+            else if (valor.length > 2) valor = valor.replace(/^(\d{2})(\d{0,5}).*/, '($1) $2');
+            else if (valor.length > 0) valor = valor.replace(/^(\d{0,2}).*/, '($1');
             input.value = valor;
         }
 
-        // =======================================================
-        // [MUDANÇA] FUNÇÕES PARA CARREGAR DADOS DOS SELECTS (LOJAS/DEPTOS)
-        // =======================================================
+        // --- Lógica de Dados (API e Cascata) ---
 
-        // 1. Carrega as Lojas ao iniciar a página
         async function carregarLojasSelect() {
             try {
                 const response = await fetch(`${API_URL}/chamados/dados/lojas`);
                 if (!response.ok) throw new Error("Erro ao carregar lojas.");
                 const lojas = await response.json();
-
                 selectLoja.innerHTML = '<option value="">-- Selecione a Loja --</option>';
-                
-                lojas.forEach(loja => {
-                    const option = document.createElement("option");
-                    option.value = loja.id; // Envia o ID
-                    option.textContent = loja.nome;
-                    selectLoja.appendChild(option);
-                });
+                lojas.forEach(loja => selectLoja.add(new Option(loja.nome, loja.id)));
             } catch (error) {
-                console.error("Erro lojas:", error);
+                console.error(error);
                 selectLoja.innerHTML = '<option value="">Erro ao carregar</option>';
             }
         }
 
-        // 2. Carrega Departamentos baseado na Loja escolhida
         async function carregarDepartamentosSelect(lojaId) {
             selectDepartamento.innerHTML = '<option value="">Carregando...</option>';
             selectDepartamento.disabled = true;
-
             if (!lojaId) {
-                selectDepartamento.innerHTML = '<option value="">-- Selecione primeiro a Loja --</option>';
+                selectDepartamento.innerHTML = '<option value="">-- Selecione Loja Primeiro --</option>';
                 return;
             }
-
             try {
                 const response = await fetch(`${API_URL}/chamados/dados/lojas/${lojaId}/departamentos`);
                 if (!response.ok) throw new Error("Erro ao carregar departamentos.");
                 const departamentos = await response.json();
-
                 selectDepartamento.innerHTML = '<option value="">-- Selecione o Departamento --</option>';
-                
-                if (departamentos.length === 0) {
-                    const opt = document.createElement("option");
-                    opt.text = "Nenhum departamento vinculado";
-                    selectDepartamento.add(opt);
-                } else {
-                    departamentos.forEach(dept => {
-                        const option = document.createElement("option");
-                        option.value = dept.id; // Envia o ID
-                        option.textContent = dept.nome;
-                        selectDepartamento.appendChild(option);
-                    });
-                }
+                if (departamentos.length === 0) selectDepartamento.add(new Option("Nenhum vinculado", ""));
+                else departamentos.forEach(dept => selectDepartamento.add(new Option(dept.nome, dept.id)));
                 selectDepartamento.disabled = false; 
-
             } catch (error) {
-                console.error("Erro departamentos:", error);
+                console.error(error);
                 selectDepartamento.innerHTML = '<option value="">Erro ao carregar</option>';
             }
         }
 
-        // --- Event Listener para o efeito cascata ---
-        selectLoja.addEventListener('change', () => {
-            const lojaId = selectLoja.value;
-            carregarDepartamentosSelect(lojaId);
-        });
-
-        // =======================================================
+        selectLoja.addEventListener('change', () => carregarDepartamentosSelect(selectLoja.value));
 
         async function carregarDadosIniciais() {
             try {
                 const response = await fetch(`${API_URL}/categorias`);
                 if (!response.ok) throw new Error("Erro ao carregar categorias.");
-
                 allCategories = await response.json(); 
-                
                 cascataWrapper.innerHTML = ''; 
                 criarProximoDropdown(null, 0); 
-
             } catch (error) {
                 console.error(error);
-                exibirMensagem(modal.open ? modalResposta : divRespostaGeral, error.message, false);
                 cascataWrapper.innerHTML = '<p class="text-danger">Erro ao carregar categorias.</p>';
-                throw error;
             }
         }
         
-        // --- (NOVO) Função para montar o caminho da categoria (Pai > Filho > Neto) ---
         function montarCaminhoCategoria(categoriaId) {
             if (!categoriaId) return 'N/A';
             let caminho = [];
             let currentId = categoriaId;
             let attempts = 0;
-
-            // Percorre a árvore de categorias subindo pelos pais
             while (currentId && attempts < 20) {
-                // Busca a categoria pelo ID no array carregado
                 const cat = allCategories.find(c => c.id == currentId);
                 if (cat) {
-                    caminho.unshift(cat.nome); // Adiciona ao início do array
-                    currentId = cat.parent_id; // Vai para o pai
-                } else {
-                    break;
-                }
+                    caminho.unshift(cat.nome);
+                    currentId = cat.parent_id;
+                } else break;
                 attempts++;
             }
             return caminho.join(' / ') || 'N/A';
         }
-        // ----------------------------------------------------------------------------
         
         function criarProximoDropdown(parentId, level) {
             const children = allCategories.filter(c => c.parent_id == parentId);
             if (children.length === 0) return;
-
             const div = document.createElement('div');
             div.className = 'grupo-form';
             const label = document.createElement('label');
@@ -550,14 +593,8 @@
             const select = document.createElement('select');
             select.className = 'form-select';
             select.dataset.level = level; 
-            
-            const placeholder = level === 0 ? '-- Selecione uma Categoria --' : '-- Selecione uma Subcategoria --';
-            select.add(new Option(placeholder, ""));
-
-            children.forEach(cat => {
-                select.add(new Option(cat.nome, cat.id));
-            });
-            
+            select.add(new Option(level === 0 ? '-- Selecione uma Categoria --' : '-- Selecione uma Subcategoria --', ""));
+            children.forEach(cat => select.add(new Option(cat.nome, cat.id)));
             div.appendChild(label);
             div.appendChild(select);
             cascataWrapper.appendChild(div);
@@ -566,32 +603,23 @@
         function handleCascataChange(event) {
             const select = event.target;
             if (select.tagName !== 'SELECT') return;
-
             const selectedId = select.value;
             const level = parseInt(select.dataset.level);
-
-            const allDropdowns = cascataWrapper.querySelectorAll('.grupo-form');
-            allDropdowns.forEach(div => {
-                const sel = div.querySelector('select');
-                if (parseInt(sel.dataset.level) > level) {
-                    div.remove();
-                }
+            cascataWrapper.querySelectorAll('.grupo-form').forEach(div => {
+                if (parseInt(div.querySelector('select').dataset.level) > level) div.remove();
             });
-
             if (selectedId) {
                 criarProximoDropdown(selectedId, level + 1);
-
                 const categoriaSelecionada = allCategories.find(c => c.id == selectedId);
-                
                 if (categoriaSelecionada && categoriaSelecionada.prioridade_padrao) {
-                    let p = categoriaSelecionada.prioridade_padrao;
-                    if (p === 'URGENTE') p = 'Alta'; 
-                    if (p === 'MEDIA') p = 'Média';
-                    if (p === 'BAIXA') p = 'Baixa';
-                    if (p === 'ALTA') p = 'Alta';
-
+                    let p = categoriaSelecionada.prioridade_padrao.toUpperCase();
+                    let valorSelect = 'Média';
+                    if (p === 'URGENTE' || p === 'ALTA') valorSelect = 'Alta';
+                    if (p === 'BAIXA') valorSelect = 'Baixa';
+                    if (p === 'MEDIA') valorSelect = 'Média';
+                    
                     for (let i = 0; i < selectPrioridade.options.length; i++) {
-                        if (selectPrioridade.options[i].value.toLowerCase() === p.toLowerCase()) {
+                        if (selectPrioridade.options[i].value === valorSelect) {
                             selectPrioridade.selectedIndex = i;
                             selectPrioridade.style.backgroundColor = "#fff3cd";
                             setTimeout(() => selectPrioridade.style.backgroundColor = "", 500);
@@ -602,59 +630,7 @@
             }
         }
 
-        // --- Paginação no Frontend ---
-        function renderPaginationControls(totalItems, currentPage) {
-            paginationControls.innerHTML = '';
-            const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
-
-            if (totalPages <= 1) return;
-
-            const btnFirst = document.createElement('button');
-            btnFirst.textContent = '«';
-            btnFirst.disabled = currentPage === 1;
-            btnFirst.addEventListener('click', () => setPage(1));
-            paginationControls.appendChild(btnFirst);
-
-            const btnPrev = document.createElement('button');
-            btnPrev.textContent = '<';
-            btnPrev.disabled = currentPage === 1;
-            btnPrev.addEventListener('click', () => setPage(currentPage - 1));
-            paginationControls.appendChild(btnPrev);
-
-            for (let i = 1; i <= totalPages; i++) {
-                const btnPage = document.createElement('button');
-                btnPage.textContent = i;
-                btnPage.classList.add('page-number');
-                if (i === currentPage) {
-                    btnPage.classList.add('active');
-                }
-                btnPage.addEventListener('click', () => setPage(i));
-                paginationControls.appendChild(btnPage);
-            }
-
-            const btnNext = document.createElement('button');
-            btnNext.textContent = '>';
-            btnNext.disabled = currentPage === totalPages;
-            btnNext.addEventListener('click', () => setPage(currentPage + 1));
-            paginationControls.appendChild(btnNext);
-
-            const btnLast = document.createElement('button');
-            btnLast.textContent = '»';
-            btnLast.disabled = currentPage === totalPages;
-            btnLast.addEventListener('click', () => setPage(totalPages));
-            paginationControls.appendChild(btnLast);
-        }
-
-        function setPage(page) {
-            currentPage = page;
-            const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-            const endIndex = startIndex + ITEMS_PER_PAGE;
-            const ticketsToRender = allTickets.slice(startIndex, endIndex);
-            
-            renderizarChamados(ticketsToRender);
-            renderPaginationControls(allTickets.length, currentPage);
-        }
-
+        // --- Renderização da Tabela (Estilo Grid Compacto) ---
         function renderizarChamados(chamados) {
             if (loadingIndicator) loadingIndicator.style.display = 'none';
             ticketList.querySelectorAll('.data-row').forEach(row => row.remove());
@@ -662,7 +638,7 @@
             if (!chamados || chamados.length === 0) {
                 const noDataRow = document.createElement('div');
                 noDataRow.className = 'ticket-row data-row';
-                noDataRow.innerHTML = `<div class="ticket-cell" style="grid-column: 1 / -1; text-align: center; padding: 1rem;">Nenhum chamado encontrado.</div>`;
+                noDataRow.innerHTML = `<div class="t-cell text-center" style="grid-column: 1 / -1; padding: 2rem;">Nenhum chamado encontrado.</div>`;
                 ticketList.appendChild(noDataRow);
                 paginationControls.innerHTML = '';
                 return;
@@ -673,60 +649,59 @@
                 row.className = 'ticket-row data-row';
                 row.setAttribute('data-ticket-id', chamado.id);
 
-                const prioridadeClass = (chamado.prioridade || 'Média').toLowerCase().replace('é', 'e');
-                const statusClass = (chamado.status || 'Aberto').toLowerCase().replace(/\s+/g, '-');
-
-                // --- ATUALIZADO: Lógica de montagem da categoria com caminho completo ---
+                // Lógica de exibição da categoria (caminho completo ou pai/filho)
                 let nomeExibicao = 'N/A';
                 if (chamado.Categorias && chamado.Categorias.id) {
-                    // Tenta montar o caminho usando a árvore carregada
                     nomeExibicao = montarCaminhoCategoria(chamado.Categorias.id);
                 } else if (chamado.Categorias) {
-                    // Fallback se não tiver ID (exibição simples)
-                    if (chamado.Categorias.nomePai) {
-                        nomeExibicao = `${chamado.Categorias.nomePai} / ${chamado.Categorias.nome}`;
-                    } else {
-                        nomeExibicao = chamado.Categorias.nome;
-                    }
+                    nomeExibicao = chamado.Categorias.nomePai ? `${chamado.Categorias.nomePai} / ${chamado.Categorias.nome}` : chamado.Categorias.nome;
                 }
-                // -----------------------------------------------------------------------
                 
-                // ORDEM NO JS: ASSUNTO -> CATEGORIA
+                // Formatação visual da categoria (truncar se for muito longa)
+                if(nomeExibicao.length > 25) {
+                    nomeExibicao = "..." + nomeExibicao.substring(nomeExibicao.length - 22);
+                }
+
                 row.innerHTML = `
-                    <div class="ticket-cell ticket-id">#${chamado.id}</div>
-                    <div class="ticket-cell ticket-priority">
-                        <span class="priority-badge ${prioridadeClass}">${escapeHtml(chamado.prioridade)}</span>
+                    <div class="t-cell text-center t-id">#${chamado.id}</div>
+                    <div class="t-cell text-center">
+                        <span class="badge-outline ${getBadgeClass(chamado.prioridade)}">${escapeHtml(chamado.prioridade)}</span>
                     </div>
-                    <div class="ticket-cell ticket-subject">${escapeHtml(chamado.assunto)}</div>
-                    <div class="ticket-cell ticket-category">${escapeHtml(nomeExibicao)}</div> <div class="ticket-cell ticket-status">
-                        <span class="status-badge ${statusClass}">${escapeHtml(chamado.status)}</span>
+                    <div class="t-cell t-subject-wrapper">
+                        <div class="t-subject" title="${escapeHtml(chamado.assunto)}">${escapeHtml(chamado.assunto)}</div>
+                        <div class="t-desc" title="${escapeHtml(chamado.descricao)}">${escapeHtml(chamado.descricao)}</div>
                     </div>
-                    <div class="ticket-cell ticket-requisitante">${escapeHtml(chamado.Funcionario?.nomeFuncionario || 'Desconhecido')}</div>
-                    <div class="ticket-cell ticket-operator">${escapeHtml(chamado.Atendente?.nomeFuncionario || 'N/A')}</div>
-                    <div class="ticket-cell ticket-created">${formatarData(chamado.created_at)}</div>
-                    <div class="ticket-cell ticket-actions">
-                        <span class="view-icon" title="Visualizar">👁️</span>
+                    <div class="t-cell t-category" title="${escapeHtml(nomeExibicao)}">${escapeHtml(nomeExibicao)}</div>
+                    <div class="t-cell text-center">${getStatusIcon(chamado.status)}</div>
+                    <div class="t-cell t-operator">
+                        <span class="op-name">${escapeHtml(chamado.Funcionario?.nomeFuncionario || 'Anônimo')}</span>
+                        <span class="op-role">${escapeHtml(chamado.Atendente?.nomeFuncionario || 'Pendente')}</span>
+                    </div>
+                    <div class="t-cell t-date">${timeAgo(chamado.created_at)}</div>
+                    <div class="t-cell text-center">
+                        <button class="btn-view" title="Visualizar"><i class="bi bi-eye-fill"></i></button>
                     </div>
                 `;
 
-                row.querySelector('.view-icon').addEventListener('click', (e) => {
+                // Evento Visualizar Detalhes
+                row.querySelector('.btn-view').addEventListener('click', (e) => {
                     e.stopPropagation();
                     const ticketId = chamado.id; 
                     modalDetalhes.setAttribute('data-current-ticket-id', ticketId);
-                    document.getElementById('modalDetalhesTitle').textContent = `#${ticketId} - ${chamado.assunto || 'SEM ASSUNTO'}`;
                     document.getElementById('detalheId').textContent = `#${ticketId}`;
                     document.getElementById('detalheStatus').textContent = chamado.status;
                     document.getElementById('detalhePrioridade').textContent = chamado.prioridade;
                     document.getElementById('detalheAssunto').textContent = chamado.assunto;
                     document.getElementById('detalheDescricao').textContent = chamado.descricao;
-                    
                     document.getElementById('detalheLoja').textContent = chamado.loja || 'N/A';
                     document.getElementById('detalheDepartamento').textContent = chamado.departamento || 'N/A';
-
                     document.getElementById('detalheRequisitante').textContent = chamado.Funcionario?.nomeFuncionario || 'Desconhecido';
                     
-                    // Atualizado também no modal
-                    document.getElementById('detalheCategoria').textContent = nomeExibicao; 
+                    // Recalcula categoria completa para o modal de detalhes (sem truncar)
+                    let catFull = 'N/A';
+                    if (chamado.Categorias && chamado.Categorias.id) catFull = montarCaminhoCategoria(chamado.Categorias.id);
+                    else if (chamado.Categorias) catFull = chamado.Categorias.nome;
+                    document.getElementById('detalheCategoria').textContent = catFull; 
                     
                     document.getElementById('detalheData').textContent = formatarData(chamado.created_at);
                     listaComentariosContainer.innerHTML = '<span class="comment-empty-state">Carregando comentários...</span>';
@@ -738,6 +713,52 @@
             });
         }
 
+        // --- Paginação Atualizada ---
+        function renderPaginationControls(totalItems, currentPage) {
+            paginationControls.innerHTML = '';
+            const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+            if (totalPages <= 1) return;
+
+            const createBtn = (text, page, disabled, isActive) => {
+                const btn = document.createElement('button');
+                btn.innerHTML = text;
+                if(disabled) btn.disabled = true;
+                if(isActive) btn.classList.add('active');
+                btn.onclick = () => setPage(page);
+                paginationControls.appendChild(btn);
+            };
+
+            createBtn('<i class="bi bi-chevron-double-left"></i>', 1, currentPage === 1, false);
+            createBtn('<i class="bi bi-chevron-left"></i>', currentPage - 1, currentPage === 1, false);
+            
+            // Renderiza números de página (lógica simples: mostra atual, anterior e próxima se existirem)
+            for (let i = 1; i <= totalPages; i++) {
+                 // Mostra todas se forem poucas, ou lógica simplificada
+                 if(totalPages <= 7 || i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                     createBtn(i, i, false, i === currentPage);
+                 } else if (i === currentPage - 2 || i === currentPage + 2) {
+                     // Pontinhos
+                     const span = document.createElement('span');
+                     span.textContent = '...';
+                     span.style.padding = '5px';
+                     span.style.color = '#ccc';
+                     paginationControls.appendChild(span);
+                 }
+            }
+
+            createBtn('<i class="bi bi-chevron-right"></i>', currentPage + 1, currentPage === totalPages, false);
+            createBtn('<i class="bi bi-chevron-double-right"></i>', totalPages, currentPage === totalPages, false);
+        }
+
+        function setPage(page) {
+            currentPage = page;
+            const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+            const endIndex = startIndex + ITEMS_PER_PAGE;
+            const ticketsToRender = allTickets.slice(startIndex, endIndex);
+            renderizarChamados(ticketsToRender);
+            renderPaginationControls(allTickets.length, currentPage);
+        }
+
         async function listarChamados() {
             limparMensagem(divRespostaGeral);
             ticketList.querySelectorAll('.data-row').forEach(row => row.remove());
@@ -747,108 +768,86 @@
             if (filtroAssunto.value.trim()) params.append('assunto', filtroAssunto.value.trim());
             if (filtroPrioridade.value) params.append('prioridade', filtroPrioridade.value);
             if (filtroStatus.value) params.append('status', filtroStatus.value);
-            
-            // if (userId) params.append('requisitante_id', userId); // Exibe todos, conforme sua solicitação
-
-            const url = `${API_URL}/chamados?${params.toString()}`;
 
             try {
+                const url = `${API_URL}/chamados?${params.toString()}`;
                 const response = await fetch(url);
                 if (!response.ok) throw new Error("Erro ao buscar chamados.");
                 
                 allTickets = await response.json();
                 
+                // Ordenação padrão: mais recentes primeiro (assumindo ID incremental)
+                allTickets.sort((a, b) => b.id - a.id);
+
                 currentPage = 1;
                 const initialTickets = allTickets.slice(0, ITEMS_PER_PAGE);
 
                 renderizarChamados(initialTickets);
                 renderPaginationControls(allTickets.length, currentPage);
-                
             } catch (error) {
                 exibirMensagem(divRespostaGeral, error.message, false);
                 if (loadingIndicator) loadingIndicator.innerHTML = '<p style="color:red;">Falha ao carregar.</p>';
             }
         }
 
-        // --- (ATUALIZADO) Criar Novo Chamado ---
         async function criarChamado(event) {
             event.preventDefault();
             limparMensagem(modalResposta);
 
-            const nomeRequisitante = ticketForm.nomeRequisitante.value.trim();
-            const emailRequisitante = ticketForm.emailRequisitante.value.trim(); 
-            const telefoneRequisitante = ticketForm.telefoneRequisitante.value.trim();
+            const nome = ticketForm.nomeRequisitante.value.trim();
+            const tel = ticketForm.telefoneRequisitante.value.trim();
             const assunto = ticketForm.assunto.value.trim();
-            const descricao = ticketForm.descricao.value.trim();
-            const prioridade = ticketForm.prioridade.value || 'Média';
-            
-            // [MUDANÇA] Agora pegamos o valor do Select (que é o ID)
+            const desc = ticketForm.descricao.value.trim();
             const loja = selectLoja.value;
-            const departamento = selectDepartamento.value;
+            const depto = selectDepartamento.value;
 
-            const allSelects = cascataWrapper.querySelectorAll('select');
+            // Busca categoria selecionada na cascata
             let categoriaUnificadaId = null;
-            
+            const allSelects = cascataWrapper.querySelectorAll('select');
             for (const select of allSelects) {
-                if (select.value) {
-                    categoriaUnificadaId = select.value;
-                } else {
-                    break;
-                }
+                if (select.value) categoriaUnificadaId = select.value;
+                else break;
             }
             
-            // [MUDANÇA] Validação ajustada para os novos Selects e Campos Obrigatórios
-            if (!nomeRequisitante || !telefoneRequisitante || !loja || !departamento || !assunto || !descricao) {
-                exibirMensagem(modalResposta, 'Preencha os campos obrigatórios: Nome, Telefone, Loja, Departamento, Assunto e Descrição.', false);
+            if (!nome || !tel || !loja || !depto || !assunto || !desc) {
+                exibirMensagem(modalResposta, 'Preencha os campos obrigatórios (*).', false);
                 return;
             }
-            
             if (!categoriaUnificadaId) {
-                exibirMensagem(modalResposta, 'Por favor, selecione uma Categoria.', false);
+                exibirMensagem(modalResposta, 'Selecione a categoria final.', false);
                 return;
             }
 
-            const anexoInput = document.getElementById('anexo');
-            const files = anexoInput.files;
+            const files = document.getElementById('anexo').files;
             let totalSize = 0;
-            const maxSize = 20 * 1024 * 1024; // 20 MB
-            for (let i = 0; i < files.length; i++) { totalSize += files[i].size; }
-            if (totalSize > maxSize) {
-                exibirMensagem(modalResposta, `Erro: O tamanho total dos arquivos (${(totalSize / 1024 / 1024).toFixed(2)} MB) excede o limite de 20 MB.`, false);
+            for (let i = 0; i < files.length; i++) totalSize += files[i].size;
+            if (totalSize > 20 * 1024 * 1024) {
+                exibirMensagem(modalResposta, 'Tamanho total excede 20MB.', false);
                 return;
             }
 
             const formData = new FormData();
-            const dadosChamado = {
+            const dados = {
                 chamado: {
-                    nome_requisitante_manual: nomeRequisitante,
-                    email_requisitante_manual: emailRequisitante, 
-                    telefone_requisitante_manual: telefoneRequisitante,
+                    nome_requisitante_manual: nome,
+                    email_requisitante_manual: ticketForm.emailRequisitante.value,
+                    telefone_requisitante_manual: tel,
                     assunto: assunto,
-                    descricao: descricao,
-                    prioridade: prioridade,
+                    descricao: desc,
+                    prioridade: ticketForm.prioridade.value,
                     requisitante_id: userId,
                     categoria_unificada_id: parseInt(categoriaUnificadaId),
-                    loja: loja,               
-                    departamento: departamento 
+                    loja: loja,
+                    departamento: depto
                 }
             };
-            
-            formData.append('chamado', JSON.stringify(dadosChamado.chamado));
-            for (let i = 0; i < files.length; i++) {
-                formData.append('anexos', files[i]);
-            }
+            formData.append('chamado', JSON.stringify(dados.chamado));
+            for (let i = 0; i < files.length; i++) formData.append('anexos', files[i]);
 
             try {
-                const response = await fetch(`${API_URL}/chamados`, {
-                    method: 'POST',
-                    body: formData 
-                });
-                
-                const respostaAPI = await response.json();
-                if (!response.ok) {
-                    throw new Error(respostaAPI.message || "Erro ao criar chamado.");
-                }
+                const response = await fetch(`${API_URL}/chamados`, { method: 'POST', body: formData });
+                const resAPI = await response.json();
+                if (!response.ok) throw new Error(resAPI.message || "Erro ao criar.");
 
                 exibirMensagem(divRespostaGeral, "Chamado criado com sucesso!", true);
                 modal.close();
@@ -857,103 +856,70 @@
                 exibirMensagem(modalResposta, error.message, false);
             }
         }
-        
+
         function renderizarComentarios(comentarios) {
             listaComentariosContainer.innerHTML = ''; 
-            listaComentariosContainer.classList.remove('comment-empty-state');
             if (!comentarios || comentarios.length === 0) {
-                listaComentariosContainer.classList.add('comment-empty-state');
-                listaComentariosContainer.innerHTML = '<span>Nenhum comentário encontrado.</span>';
+                listaComentariosContainer.innerHTML = '<div class="comment-empty-state">Nenhum comentário.</div>';
                 return;
             }
-            comentarios.forEach(comentario => {
-                const nome = comentario.nomeFuncionario || 'Usuário desconhecido'; 
-                const data = formatarData(comentario.created_at);
-                const texto = escapeHtml(comentario.texto);
-                const commentHtml = `
+            comentarios.forEach(c => {
+                const nome = escapeHtml(c.nomeFuncionario || 'Usuário');
+                const html = `
                     <div class="comment-item">
-                        <div class="comment-header">
-                            ${escapeHtml(nome)}
-                            <span class="comment-date">em ${data}</span>
-                        </div>
-                        <div class="comment-body">
-                            ${texto}
-                        </div>
-                    </div>
-                `;
-                listaComentariosContainer.insertAdjacentHTML('beforeend', commentHtml);
+                        <div class="comment-header">${nome} <span class="comment-date">${formatarData(c.created_at)}</span></div>
+                        <div class="comment-body">${escapeHtml(c.texto)}</div>
+                    </div>`;
+                listaComentariosContainer.insertAdjacentHTML('beforeend', html);
             });
         }
+        
         async function carregarComentarios(ticketId) {
             try {
                 const response = await fetch(`${API_URL}/chamados/${ticketId}/comentarios`); 
-                if (!response.ok) {
-                    const err = await response.json();
-                    throw new Error(err.message || "Falha ao carregar comentários.");
-                }
+                if (!response.ok) throw new Error("Erro comentários");
                 const comentarios = await response.json();
                 renderizarComentarios(comentarios);
             } catch (error) {
-                 listaComentariosContainer.innerHTML = `<span class="comment-empty-state" style="color: red;">${error.message}</span>`;
+                listaComentariosContainer.innerHTML = `<span style="color:red;">Erro: ${error.message}</span>`;
             }
         }
-        
+
         function resetarModalForm() {
             ticketForm.reset();
             limparMensagem(modalResposta);
             cascataWrapper.innerHTML = '';
             criarProximoDropdown(null, 0); 
-            
-            // [MUDANÇA] Reseta os selects de Loja e Departamento
             selectLoja.value = "";
-            selectDepartamento.innerHTML = '<option value="">-- Selecione primeiro a Loja --</option>';
+            selectDepartamento.innerHTML = '<option value="">-- Selecione Loja Primeiro --</option>';
             selectDepartamento.disabled = true;
         }
 
         btnAbrir.addEventListener('click', () => {
             resetarModalForm();
-            
+            // Pre-fill user data
             try {
-                const userDataString = localStorage.getItem("userData");
-                const userData = JSON.parse(userDataString);
-                document.getElementById('nomeRequisitante').value = userData?.data?.nomeFuncionario || ''; 
-                document.getElementById('emailRequisitante').value = userData?.data?.email || ''; 
-            } catch(e) {
-                console.warn("Não foi possível pré-preencher dados do usuário.");
-                document.getElementById('nomeRequisitante').value = ''; 
-                document.getElementById('emailRequisitante').value = ''; 
-            }
-
+                const uStr = localStorage.getItem("userData");
+                const u = JSON.parse(uStr);
+                if(u?.data?.nomeFuncionario) document.getElementById('nomeRequisitante').value = u.data.nomeFuncionario;
+                if(u?.data?.email) document.getElementById('emailRequisitante').value = u.data.email;
+            } catch(e){}
             if (typeof modal.showModal === 'function') modal.showModal();
             else modal.setAttribute('open', '');
-            document.getElementById('assunto').focus();
         });
         
-        btnFechar.addEventListener('click', () => { modal.close(); });
-        modal.addEventListener('close', () => { resetarModalForm(); }); 
-        
-        btnFecharModalDetalhes.addEventListener('click', () => {
-            listaComentariosContainer.innerHTML = '';
-            modalDetalhes.removeAttribute('data-current-ticket-id');
-            modalDetalhes.close();
-        });
-
+        btnFechar.addEventListener('click', () => modal.close());
+        btnFecharModalDetalhes.addEventListener('click', () => modalDetalhes.close());
         ticketForm.addEventListener('submit', criarChamado);
-        btnFiltrar.addEventListener('click', () => listarChamados(1)); 
-        if(inputTelefone) {
-            inputTelefone.addEventListener('input', () => aplicarMascaraTelefone(inputTelefone));
-        }
-        
+        btnFiltrar.addEventListener('click', () => listarChamados()); 
+        if(inputTelefone) inputTelefone.addEventListener('input', () => aplicarMascaraTelefone(inputTelefone));
         cascataWrapper.addEventListener('change', handleCascataChange);
         
-        // --- (MUDANÇA) Inicialização ---
         async function init() {
-            // Carrega dados iniciais em paralelo (Categorias e Lojas)
             await Promise.all([
-                carregarDadosIniciais().catch(e => console.error(e)),
-                carregarLojasSelect().catch(e => console.error(e)) 
+                carregarDadosIniciais().catch(console.error),
+                carregarLojasSelect().catch(console.error) 
             ]);
-            
             await listarChamados(); 
         }
         init();
