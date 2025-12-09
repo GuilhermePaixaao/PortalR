@@ -1,7 +1,7 @@
 import * as evolutionService from '../services/evolutionService.js';
 import * as chamadoModel from '../models/chamadoModel.js'; 
 import * as EmailService from '../services/emailService.js'; 
-import * as contatoModel from '../models/contatoModel.js'; // <--- IMPORT ADICIONADO
+import * as contatoModel from '../models/contatoModel.js'; 
 import { OpenAI } from 'openai';
 import fs from 'fs';
 import path from 'path';
@@ -184,11 +184,16 @@ export const handleWebhook = async (req, res) => {
 
       // Tenta pegar o nome do pushName (padrão) ou pushname (banco)
       const nomeAutor = msg.pushName || msg.pushname || idRemoto.split('@')[0];
-      const texto = (msg.message?.conversation || msg.message?.extendedTextMessage?.text || "").trim();
+      
+      // [ATUALIZAÇÃO] Pega texto OU legenda da imagem
+      const texto = (msg.message?.conversation || msg.message?.extendedTextMessage?.text || msg.message?.imageMessage?.caption || "").trim();
+      const isImage = !!msg.message?.imageMessage;
+
       const isGroup = idRemoto.includes('@g.us'); 
       const isStatus = idRemoto === 'status@broadcast'; 
 
-      if (!isStatus && !isGroup && texto) {
+      // Processa se tiver texto OU for imagem
+      if (!isStatus && !isGroup && (texto || isImage)) {
         
         // =================================================================
         // [NOVO] LÓGICA DE HISTÓRICO DE CONTATOS
@@ -209,7 +214,7 @@ export const handleWebhook = async (req, res) => {
             id: idMensagem, 
             chatId: idRemoto, 
             nome: nomeAutor, 
-            texto: texto, 
+            texto: texto || (isImage ? "📷 [Imagem]" : ""), 
             fromMe: isFromMe,
             mostrarNaFila: ctxAtual.mostrarNaFila || false,
             nomeAgente: ctxAtual.nomeAgente 
@@ -227,109 +232,113 @@ export const handleWebhook = async (req, res) => {
             }
             const ctx = userContext[idRemoto];
             let respostaBot = null;
-            const textoMin = texto.toLowerCase();
+            
+            // Lógica do BOT (apenas se tiver texto para interpretar)
+            if (texto) {
+                const textoMin = texto.toLowerCase();
 
-            const gatilhosInicio = ['oi', 'ola', 'menu', 'inicio', 'start', 'bom dia', 'boa tarde', 'ajuda', 'suporte'];
-            const textoLimpo = textoMin.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"").trim(); 
-            const ehSaudacao = gatilhosInicio.some(s => textoLimpo === s || (textoLimpo.startsWith(s) && textoLimpo.length < 50));
+                const gatilhosInicio = ['oi', 'ola', 'menu', 'inicio', 'start', 'bom dia', 'boa tarde', 'ajuda', 'suporte'];
+                const textoLimpo = textoMin.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"").trim(); 
+                const ehSaudacao = gatilhosInicio.some(s => textoLimpo === s || (textoLimpo.startsWith(s) && textoLimpo.length < 50));
 
-            // --- COMANDOS GERAIS ---
-            if (texto === '#' || textoMin === 'encerrar' || textoMin === 'sair') {
-                respostaBot = MENSAGENS.AVALIACAO_INICIO;
-                ctx.etapa = 'AVALIACAO_NOTA';
-                ctx.botPausado = true; 
-                ctx.nomeAgente = null;
-                saveStateDisk(); // Atualiza
-            }
-            else if (ehSaudacao) {
-                if (ctx.etapa === 'MENU' && textoMin !== 'menu') {
-                    respostaBot = MENSAGENS.OPCAO_INVALIDA;
-                } else {
-                    ctx.etapa = 'MENU';
-                    ctx.botPausado = false;
+                // --- COMANDOS GERAIS ---
+                if (texto === '#' || textoMin === 'encerrar' || textoMin === 'sair') {
+                    respostaBot = MENSAGENS.AVALIACAO_INICIO;
+                    ctx.etapa = 'AVALIACAO_NOTA';
+                    ctx.botPausado = true; 
                     ctx.nomeAgente = null;
-                    ctx.mostrarNaFila = false;
-                    ctx.historico = [{ role: "system", content: gerarPromptSistema(nomeAutor) }];
-                    respostaBot = MENSAGENS.SAUDACAO(nomeAutor);
                     saveStateDisk(); // Atualiza
                 }
-            }
-            // --- MENU PRINCIPAL ---
-            else if (ctx.etapa === 'MENU') {
-                if (texto === '1' || textoMin.includes('problema') || textoMin.includes('suporte')) {
-                    respostaBot = MENSAGENS.MENU_TI_COM_FILA;
-                    ctx.etapa = 'AGUARDANDO_DESCRICAO'; 
-                    ctx.botPausado = false; 
-                    saveStateDisk();
-                } 
-                else if (texto.startsWith('*') || textoMin.includes('ticket')) {
-                    let ticketNumeroStr = texto.startsWith('*') ? texto.substring(1).trim() : texto.replace(/\D/g,'');
-                    if (!ticketNumeroStr) {
-                        respostaBot = "ℹ️ Digite o número do ticket com asterisco. Ex: ***123**";
+                else if (ehSaudacao) {
+                    if (ctx.etapa === 'MENU' && textoMin !== 'menu') {
+                        respostaBot = MENSAGENS.OPCAO_INVALIDA;
                     } else {
-                        const ticketId = parseInt(ticketNumeroStr);
-                        const ticket = await chamadoModel.findById(ticketId); 
-                        if (ticket) {
-                            respostaBot = `🎫 *Ticket #${ticket.id}*\nStatus: ${ticket.status}\n\n_Digite menu para retornar._`;
-                            ctx.botPausado = true;
-                            setTimeout(() => { ctx.botPausado = false; }, 30000); 
-                        } else {
-                            respostaBot = `🚫 *Ticket #${ticketId} não localizado.*`;
-                        }
+                        ctx.etapa = 'MENU';
+                        ctx.botPausado = false;
+                        ctx.nomeAgente = null;
+                        ctx.mostrarNaFila = false;
+                        ctx.historico = [{ role: "system", content: gerarPromptSistema(nomeAutor) }];
+                        respostaBot = MENSAGENS.SAUDACAO(nomeAutor);
+                        saveStateDisk(); // Atualiza
                     }
-                } else {
-                    respostaBot = MENSAGENS.OPCAO_INVALIDA;
                 }
-            }
-            // --- FILA ---
-            else if (ctx.etapa === 'AGUARDANDO_DESCRICAO') {
-                ctx.mostrarNaFila = true; 
-                io.emit('notificacaoChamado', { chatId: idRemoto, nome: nomeAutor, status: 'PENDENTE_TI' });
-                const posicaoAtual = calcularPosicaoFila() + 1;
-                respostaBot = MENSAGENS.CONFIRMACAO_FINAL(posicaoAtual);
-                ctx.etapa = 'FILA_ESPERA';
-                ctx.botPausado = true; 
-                saveStateDisk();
-            }
-            // --- AVALIAÇÃO ---
-            else if (ctx.etapa === 'AVALIACAO_NOTA') {
-                if (['1', '2', '3', '4', '5'].includes(texto)) {
-                    respostaBot = MENSAGENS.AVALIACAO_MOTIVO;
-                    ctx.etapa = 'AVALIACAO_MOTIVO';
+                // --- MENU PRINCIPAL ---
+                else if (ctx.etapa === 'MENU') {
+                    if (texto === '1' || textoMin.includes('problema') || textoMin.includes('suporte')) {
+                        respostaBot = MENSAGENS.MENU_TI_COM_FILA;
+                        ctx.etapa = 'AGUARDANDO_DESCRICAO'; 
+                        ctx.botPausado = false; 
+                        saveStateDisk();
+                    } 
+                    else if (texto.startsWith('*') || textoMin.includes('ticket')) {
+                        let ticketNumeroStr = texto.startsWith('*') ? texto.substring(1).trim() : texto.replace(/\D/g,'');
+                        if (!ticketNumeroStr) {
+                            respostaBot = "ℹ️ Digite o número do ticket com asterisco. Ex: ***123**";
+                        } else {
+                            const ticketId = parseInt(ticketNumeroStr);
+                            const ticket = await chamadoModel.findById(ticketId); 
+                            if (ticket) {
+                                respostaBot = `🎫 *Ticket #${ticket.id}*\nStatus: ${ticket.status}\n\n_Digite menu para retornar._`;
+                                ctx.botPausado = true;
+                                setTimeout(() => { ctx.botPausado = false; }, 30000); 
+                            } else {
+                                respostaBot = `🚫 *Ticket #${ticketId} não localizado.*`;
+                            }
+                        }
+                    } else {
+                        respostaBot = MENSAGENS.OPCAO_INVALIDA;
+                    }
+                }
+                // --- FILA ---
+                else if (ctx.etapa === 'AGUARDANDO_DESCRICAO') {
+                    ctx.mostrarNaFila = true; 
+                    io.emit('notificacaoChamado', { chatId: idRemoto, nome: nomeAutor, status: 'PENDENTE_TI' });
+                    const posicaoAtual = calcularPosicaoFila() + 1;
+                    respostaBot = MENSAGENS.CONFIRMACAO_FINAL(posicaoAtual);
+                    ctx.etapa = 'FILA_ESPERA';
+                    ctx.botPausado = true; 
                     saveStateDisk();
-                } else if (texto === '9') {
+                }
+                // --- AVALIAÇÃO ---
+                else if (ctx.etapa === 'AVALIACAO_NOTA') {
+                    if (['1', '2', '3', '4', '5'].includes(texto)) {
+                        respostaBot = MENSAGENS.AVALIACAO_MOTIVO;
+                        ctx.etapa = 'AVALIACAO_MOTIVO';
+                        saveStateDisk();
+                    } else if (texto === '9') {
+                        respostaBot = MENSAGENS.ENCERRAMENTO_FINAL;
+                        ctx.mostrarNaFila = false; 
+                        delete userContext[idRemoto];
+                        saveStateDisk();
+                    } else {
+                        respostaBot = "Digite uma nota de **1 a 5** ou **9** para sair.";
+                    }
+                }
+                else if (ctx.etapa === 'AVALIACAO_MOTIVO') {
                     respostaBot = MENSAGENS.ENCERRAMENTO_FINAL;
                     ctx.mostrarNaFila = false; 
-                    delete userContext[idRemoto];
+                    delete userContext[idRemoto]; 
                     saveStateDisk();
-                } else {
-                    respostaBot = "Digite uma nota de **1 a 5** ou **9** para sair.";
                 }
-            }
-            else if (ctx.etapa === 'AVALIACAO_MOTIVO') {
-                respostaBot = MENSAGENS.ENCERRAMENTO_FINAL;
-                ctx.mostrarNaFila = false; 
-                delete userContext[idRemoto]; 
-                saveStateDisk();
-            }
-            else if (!respostaBot && !ctx.botPausado && ctx.etapa === 'INICIO') {
-                ctx.etapa = 'MENU';
-                ctx.historico = [{ role: "system", content: gerarPromptSistema(nomeAutor) }];
-                respostaBot = MENSAGENS.SAUDACAO(nomeAutor);
-                saveStateDisk();
-            }
+                else if (!respostaBot && !ctx.botPausado && ctx.etapa === 'INICIO') {
+                    ctx.etapa = 'MENU';
+                    ctx.historico = [{ role: "system", content: gerarPromptSistema(nomeAutor) }];
+                    respostaBot = MENSAGENS.SAUDACAO(nomeAutor);
+                    saveStateDisk();
+                }
 
-            if (respostaBot) {
-                await evolutionService.enviarTexto(idRemoto, respostaBot);
-                io.emit('novaMensagemWhatsapp', { 
-                    id: 'bot-'+Date.now(), 
-                    chatId: idRemoto, 
-                    nome: "Bot", 
-                    texto: respostaBot, 
-                    fromMe: true,
-                    mostrarNaFila: ctx.mostrarNaFila,
-                    nomeAgente: ctx.nomeAgente
-                });
+                if (respostaBot) {
+                    await evolutionService.enviarTexto(idRemoto, respostaBot);
+                    io.emit('novaMensagemWhatsapp', { 
+                        id: 'bot-'+Date.now(), 
+                        chatId: idRemoto, 
+                        nome: "Bot", 
+                        texto: respostaBot, 
+                        fromMe: true,
+                        mostrarNaFila: ctx.mostrarNaFila,
+                        nomeAgente: ctx.nomeAgente
+                    });
+                }
             }
         }
       }
@@ -425,6 +434,39 @@ export const handleSendMessage = async (req, res) => {
       const r = await evolutionService.enviarTexto(numero, mensagemFinal);
       res.status(200).json({ success: true, data: r });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+};
+
+// [NOVO] Controlador para Envio de Mídia
+export const enviarMidiaController = async (req, res) => {
+    const { numero, midia, nomeArquivo, legenda, nomeAgenteTemporario } = req.body;
+    
+    try {
+        const contexto = userContext[numero];
+        // Verifica se quem está enviando é o dono do chat
+        if (contexto && contexto.nomeAgente) {
+            if (contexto.nomeAgente !== nomeAgenteTemporario && nomeAgenteTemporario) {
+                // Se o agente temporário foi enviado, valida. Se não, permite (pode ser bot ou auto)
+                 return res.status(403).json({ 
+                     success: false, 
+                     message: `⛔ ACESSO NEGADO: Este chat pertence a ${contexto.nomeAgente}.` 
+                 });
+            }
+        }
+
+        if(contexto) contexto.mostrarNaFila = true;
+        
+        // Se tem legenda, adiciona a assinatura do agente
+        let legendaFinal = legenda || "";
+        if (nomeAgenteTemporario) {
+            legendaFinal = `*${nomeAgenteTemporario}*\n${legendaFinal}`;
+        }
+
+        const r = await evolutionService.enviarMidia(numero, midia, nomeArquivo, legendaFinal);
+        res.status(200).json({ success: true, data: r });
+    } catch (e) { 
+        console.error("Erro controller midia:", e);
+        res.status(500).json({ success: false, message: e.message }); 
+    }
 };
 
 // [SEGURANÇA TOTAL] Listagem filtrada no servidor
@@ -549,11 +591,12 @@ export const listarMensagensChat = async (req, res) => {
                 }
             }
 
+            // [ATUALIZAÇÃO] Melhoria na detecção de Mídia e Legenda
             const content = messageObj?.conversation || 
                             messageObj?.extendedTextMessage?.text || 
                             messageObj?.imageMessage?.caption ||
-                            (messageObj?.imageMessage ? "📷 [Imagem]" : null) ||
-                            (messageObj?.audioMessage ? "🎤 [Áudio]" : null) ||
+                            (messageObj?.imageMessage ? "📷 [Imagem Recebida]" : null) ||
+                            (messageObj?.audioMessage ? "🎤 [Áudio Recebido]" : null) ||
                             "Conteúdo não suportado";
             
             const timestamp = msg.messageTimestamp 

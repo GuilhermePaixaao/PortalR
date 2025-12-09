@@ -67,6 +67,28 @@ export const enviarTexto = async (numero, mensagem) => {
   }
 };
 
+// [NOVO] Função para Enviar Mídia (Imagem/Foto)
+export const enviarMidia = async (numero, midiaBase64, nomeArquivo, legenda) => {
+    try {
+        // console.log(`[EVOLUTION] Enviando Mídia para: ${numero}`);
+        const response = await apiClient.post(`/message/sendMedia/${INSTANCE_NAME}`, {
+            number: numero,
+            mediaMessage: {
+                mediatype: "image",
+                fileName: nomeArquivo || "imagem.png",
+                media: midiaBase64, 
+                caption: legenda || ""
+            },
+            options: { delay: 1200, presence: 'composing' }
+        });
+        return response.data;
+    } catch (error) {
+        const erroDetalhado = error.response?.data || error.message;
+        console.error("❌ ERRO AO ENVIAR MÍDIA:", JSON.stringify(erroDetalhado, null, 2));
+        throw new Error(error.response?.data?.message || 'Falha técnica ao enviar mídia.');
+    }
+};
+
 export const consultarStatus = async () => {
   try {
     const response = await apiClient.get(`/instance/connectionState/${INSTANCE_NAME}`);
