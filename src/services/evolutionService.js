@@ -40,17 +40,13 @@ export const conectarInstancia = async () => {
     }
 }
 
-// === CORREÇÃO: Usando DELETE /instance/delete/ para forçar a desconexão/remoção ===
 export const desconectarInstancia = async () => {
     try {
         console.log(`[EVOLUTION] Tentando DELETAR/DESCONECTAR (DELETE /instance/delete/) instância: ${INSTANCE_NAME}`);
-        // MUDANÇA: DELETE é o método HTTP correto para a rota de exclusão de instância
         const response = await apiClient.delete(`/instance/delete/${INSTANCE_NAME}`);
         return response.data;
     } catch (error) {
-        // Lógica robusta para capturar a mensagem de erro da API ou de rede
         const evolutionMessage = error.response?.data?.message || error.message || "Erro desconhecido de rede/API ao desconectar.";
-        // Retorna a mensagem de erro detalhada da Evolution para o frontend
         throw new Error(`Falha Evolution API ao Desconectar: ${evolutionMessage}. Verifique se o nome da instância (${INSTANCE_NAME}) está correto.`);
     }
 };
@@ -72,7 +68,6 @@ export const enviarTexto = async (numero, mensagem) => {
   } catch (error) {
     const erroDetalhado = error.response?.data || error.message;
     console.error("❌ ERRO CRÍTICO AO ENVIAR MENSAGEM:", JSON.stringify(erroDetalhado, null, 2));
-    
     throw new Error(error.response?.data?.message || 'Falha técnica ao enviar mensagem.');
   }
 };
@@ -86,12 +81,11 @@ export const consultarStatus = async () => {
   }
 };
 
-// === CORREÇÃO APLICADA: Parâmetros limit e offset adicionados ===
 export const buscarConversas = async (limit = 50, offset = 0) => {
   try {
     const response = await apiClient.post(`/chat/findChats/${INSTANCE_NAME}`, {
         where: {},
-        limit: limit,   // Agora usa corretamente o parâmetro recebido
+        limit: limit,
         offset: offset
     });
     return response.data;
@@ -118,15 +112,30 @@ export const configurarWebhook = async (urlWebhook) => {
     }
 };
 
-// [NOVO] Função para buscar histórico de mensagens
+// === CORREÇÃO: TENTATIVA DE BUSCA MAIS ABRANGENTE ===
 export const buscarMensagensHistorico = async (numero, quantidade = 50) => {
   try {
-    const response = await apiClient.post(`/chat/findMessages/${INSTANCE_NAME}`, {
-        where: {
-            key: { remoteJid: numero }
-        },
+    // Tenta buscar usando o formato padrão (key -> remoteJid)
+    let payload = {
+        where: { key: { remoteJid: numero } },
         limit: quantidade
-    });
+    };
+
+    // DEBUG: Se quiser testar o outro formato, descomente a linha abaixo e comente a de cima
+    // payload = { where: { remoteJid: numero }, limit: quantidade };
+
+    const response = await apiClient.post(`/chat/findMessages/${INSTANCE_NAME}`, payload);
+    
+    // Se não retornou nada, tenta o fallback (outro formato de query comum em algumas versões)
+    if (!response.data || (Array.isArray(response.data) && response.data.length === 0) || (response.data.messages && response.data.messages.length === 0)) {
+         console.log("[EVOLUTION] Tentando fallback de busca por remoteJid direto...");
+         const responseFallback = await apiClient.post(`/chat/findMessages/${INSTANCE_NAME}`, {
+            where: { remoteJid: numero },
+            limit: quantidade
+         });
+         return responseFallback.data;
+    }
+
     return response.data; 
   } catch (error) {
     console.error("Erro ao buscar histórico de mensagens:", error.message);
