@@ -69,7 +69,7 @@ router.get('/api/fix-history', async (req, res) => {
             "alwaysOnline": true,
             "readMessages": false,
             "readStatus": false,
-            "syncFullHistory": true 
+            "syncFullHistory": false 
         };
 
         // Envia o comando para a Evolution API
