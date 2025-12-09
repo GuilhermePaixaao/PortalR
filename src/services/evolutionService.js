@@ -86,11 +86,12 @@ export const consultarStatus = async () => {
   }
 };
 
+// === CORREÇÃO APLICADA: Parâmetros limit e offset adicionados ===
 export const buscarConversas = async (limit = 50, offset = 0) => {
   try {
     const response = await apiClient.post(`/chat/findChats/${INSTANCE_NAME}`, {
         where: {},
-        limit: limit,
+        limit: limit,   // Agora usa corretamente o parâmetro recebido
         offset: offset
     });
     return response.data;
