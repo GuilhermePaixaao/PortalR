@@ -90,8 +90,8 @@ export const buscarConversas = async () => {
   try {
     const response = await apiClient.post(`/chat/findChats/${INSTANCE_NAME}`, {
         where: {},
-        limit: 50,
-        offset: 0
+        limit: limit,
+        offset: offset
     });
     return response.data;
   } catch (error) {

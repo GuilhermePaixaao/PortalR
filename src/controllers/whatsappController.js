@@ -1,7 +1,7 @@
 import * as evolutionService from '../services/evolutionService.js';
 import * as chamadoModel from '../models/chamadoModel.js'; 
 import * as EmailService from '../services/emailService.js'; 
-import * as contatoModel from '../models/contatoModel.js'; 
+import * as contatoModel from '../models/contatoModel.js'; // <--- IMPORT ADICIONADO
 import { OpenAI } from 'openai';
 import fs from 'fs';
 import path from 'path';
@@ -182,8 +182,8 @@ export const handleWebhook = async (req, res) => {
       processedMessageIds.add(idMensagem);
       setTimeout(() => processedMessageIds.delete(idMensagem), 10000);
 
-      // --- MODIFICAÇÃO: Tenta pegar o nome do pushName (padrão API) ou pushname (banco)
-      const nomeAutor = msg.pushname || msg.pushName || idRemoto.split('@')[0];
+      // Tenta pegar o nome do pushName (padrão) ou pushname (banco)
+      const nomeAutor = msg.pushName || msg.pushname || idRemoto.split('@')[0];
       const texto = (msg.message?.conversation || msg.message?.extendedTextMessage?.text || "").trim();
       const isGroup = idRemoto.includes('@g.us'); 
       const isStatus = idRemoto === 'status@broadcast'; 
@@ -191,12 +191,13 @@ export const handleWebhook = async (req, res) => {
       if (!isStatus && !isGroup && texto) {
         
         // =================================================================
-        // LÓGICA DE HISTÓRICO DE CONTATOS
+        // [NOVO] LÓGICA DE HISTÓRICO DE CONTATOS
         // =================================================================
         try {
             // Salva ou atualiza o contato no banco de dados usando o pushname correto
             await contatoModel.salvarContato(idRemoto, nomeAutor);
         } catch (err) {
+            // Loga o erro mas NÃO para o fluxo do bot
             console.error("Erro ao salvar histórico de contato:", err.message);
         }
         // =================================================================
@@ -431,20 +432,26 @@ export const listarConversas = async (req, res) => {
     try { 
         const agenteSolicitante = req.query.agente;
         const mode = req.query.mode; 
-        const todosChats = await evolutionService.buscarConversas() || []; 
+        
+        // --- DEFINIÇÃO DE LIMITES ---
+        // Se for modo histórico, busca mais (ex: 200 ou 500).
+        // Se for normal (fila), busca pelo menos 100 ou 200 para garantir que ninguém suma.
+        const limiteBusca = mode === 'history' ? 500 : 200; 
+
+        // Agora passamos o limite para o serviço
+        const todosChats = await evolutionService.buscarConversas(limiteBusca, 0) || []; 
 
         if (!Array.isArray(todosChats)) {
              return res.status(200).json({ success: true, data: [] });
-        }
-        
+        }  
         // --- NOVO: MODO HISTÓRICO (Retorna TUDO) ---
         if (mode === 'history') {
              const m = todosChats
                 .filter(x => x && x.id) 
                 .map(x => {
                     const ctx = userContext[x.id] || {};
-                    // --- MODIFICAÇÃO: Usa o pushname (banco) ou pushName (API)
-                    const nomeContato = x.pushname || x.pushName || x.nome || (x.id ? x.id.split('@')[0] : 'Desconhecido');
+                    // AQUI: Usa o pushname (banco) ou pushName (API)
+                    const nomeContato = x.pushname || x.pushName || (x.id ? x.id.split('@')[0] : 'Desconhecido');
                     return { 
                         numero: x.id, 
                         nome: nomeContato, 
@@ -473,8 +480,8 @@ export const listarConversas = async (req, res) => {
         const m = chatsFiltrados.map(x => {
             const ctx = userContext[x.id] || {};
             const deveAparecer = ctx.mostrarNaFila === true || ctx.etapa === 'ATENDIMENTO_HUMANO';
-            // --- MODIFICAÇÃO: Garante o uso do pushname
-            const nomeContato = x.pushname || x.pushName || x.nome || (x.id ? x.id.split('@')[0] : 'Desconhecido');
+            // AQUI TAMBÉM: Garante o uso do pushname
+            const nomeContato = x.pushname || x.pushName || (x.id ? x.id.split('@')[0] : 'Desconhecido');
             
             return { 
                 numero: x.id, 
@@ -513,7 +520,7 @@ export const listarMensagensChat = async (req, res) => {
              }
         }
 
-        const qtdMensagens = limit || 200;
+        const qtdMensagens = limit || 50;
         let rawMessages = await evolutionService.buscarMensagensHistorico(numero, qtdMensagens);
         
         // CORREÇÃO: Garante que rawMessages seja um array
@@ -530,7 +537,7 @@ export const listarMensagensChat = async (req, res) => {
         }
 
         const formattedMessages = rawMessages.map(msg => {
-            // --- MODIFICAÇÃO: TRATAMENTO DO JSON DA MENSAGEM DO POSTGRES ---
+            // AQUI: TRATAMENTO DO JSON DA MENSAGEM DO POSTGRES
             let messageObj = msg.message;
             
             // Se vier como string do banco, faz o parse
@@ -538,7 +545,6 @@ export const listarMensagensChat = async (req, res) => {
                 try {
                     messageObj = JSON.parse(messageObj);
                 } catch (e) {
-                    // console.error("Falha ao parsear message JSON:", e);
                     messageObj = {};
                 }
             }
@@ -558,7 +564,7 @@ export const listarMensagensChat = async (req, res) => {
                 fromMe: msg.key.fromMe,
                 text: content,
                 time: timestamp, 
-                // --- MODIFICAÇÃO: Usa pushname (banco) ou pushName (API)
+                // AQUI: Usa pushname (banco) ou pushName (API)
                 name: msg.pushname || msg.pushName || (msg.key.fromMe ? "Eu" : "Cliente")
             };
         });
