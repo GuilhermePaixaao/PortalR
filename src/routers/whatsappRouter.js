@@ -48,7 +48,7 @@ router.get('/api/whatsapp/configure-webhook', WhatsappController.configurarUrlWe
 router.post('/api/whatsapp/disconnect', WhatsappController.handleDisconnect);
 
 // =========================================================
-// === ROTA DE CORREÇÃO DO HISTÓRICO (CORRIGIDA) ===
+// === ROTA DE CORREÇÃO DO HISTÓRICO (CORRIGIDA v2) ===
 // =========================================================
 router.get('/api/fix-history', async (req, res) => {
     try {
@@ -60,17 +60,16 @@ router.get('/api/fix-history', async (req, res) => {
 
         console.log(`[FIX] Tentando ativar histórico para: ${instanceName} em ${baseUrl}`);
 
-        // --- CORREÇÃO 1: Rota ajustada para /settings/set/ ---
         const url = `${baseUrl}/settings/set/${instanceName}`;
         
-        // --- CORREÇÃO 2: Payload compatível com V2 ---
+        // --- CORREÇÃO: Usando camelCase conforme exigido pelo erro 400 ---
         const settingsPayload = {
-            "reject_call": false,
-            "groups_ignore": false,
-            "always_online": true,
-            "read_messages": false,
-            "read_status": false,
-            "sync_full_history": true  // Isso força a baixar mensagens antigas se possível
+            "rejectCall": false,
+            "groupsIgnore": false,
+            "alwaysOnline": true,
+            "readMessages": false,
+            "readStatus": false,
+            "syncFullHistory": true 
         };
 
         // Envia o comando para a Evolution API
@@ -83,23 +82,31 @@ router.get('/api/fix-history', async (req, res) => {
 
         res.send(`
             <div style="font-family: sans-serif; padding: 20px;">
-                <h1 style="color: green;">✅ SUCESSO (Código 200)</h1>
+                <h1 style="color: green;">✅ SUCESSO!</h1>
                 <p>Configuração aplicada na Evolution API!</p>
-                <p><b>Importante:</b> Se mesmo assim as mensagens não aparecerem, você precisa ativar as variáveis de ambiente no Railway (veja abaixo).</p>
+                <p>O recurso <b>syncFullHistory</b> foi ativado.</p>
                 <hr>
+                <p><b>Próximos passos:</b></p>
+                <ol>
+                    <li>Envie uma mensagem NOVA para o bot.</li>
+                    <li>Verifique se ela aparece no Histórico Global.</li>
+                </ol>
                 <details>
-                    <summary>Ver resposta da API</summary>
+                    <summary>Ver resposta técnica da API</summary>
                     <pre>${JSON.stringify(response.data, null, 2)}</pre>
                 </details>
             </div>
         `);
     } catch (error) {
         console.error("Erro ao ativar histórico:", error);
+        
+        // Exibe o erro detalhado da API na tela para facilitar
+        const errorDetails = error.response?.data || error.message;
+
         res.status(500).send(`
             <h1 style="color: red;">❌ Erro ${error.response?.status || 500}</h1>
-            <p>${error.message}</p>
-            <p>Verifique se o nome da instância <b>${process.env.EVOLUTION_INSTANCE_NAME}</b> está correto.</p>
-            <pre>${JSON.stringify(error.response?.data || {}, null, 2)}</pre>
+            <p>A API rejeitou o comando novamente.</p>
+            <pre>${JSON.stringify(errorDetails, null, 2)}</pre>
         `);
     }
 });
