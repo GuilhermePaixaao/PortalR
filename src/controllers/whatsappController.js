@@ -1,7 +1,7 @@
 import * as evolutionService from '../services/evolutionService.js';
 import * as chamadoModel from '../models/chamadoModel.js'; 
 import * as EmailService from '../services/emailService.js'; 
-import * as contatoModel from '../models/contatoModel.js'; // <--- IMPORT ADICIONADO
+import * as contatoModel from '../models/contatoModel.js'; 
 import { OpenAI } from 'openai';
 import fs from 'fs';
 import path from 'path';
@@ -182,7 +182,8 @@ export const handleWebhook = async (req, res) => {
       processedMessageIds.add(idMensagem);
       setTimeout(() => processedMessageIds.delete(idMensagem), 10000);
 
-      const nomeAutor = msg.pushName || idRemoto.split('@')[0];
+      // --- MODIFICAÇÃO: Tenta pegar o nome do pushName (padrão API) ou pushname (banco)
+      const nomeAutor = msg.pushname || msg.pushName || idRemoto.split('@')[0];
       const texto = (msg.message?.conversation || msg.message?.extendedTextMessage?.text || "").trim();
       const isGroup = idRemoto.includes('@g.us'); 
       const isStatus = idRemoto === 'status@broadcast'; 
@@ -190,13 +191,12 @@ export const handleWebhook = async (req, res) => {
       if (!isStatus && !isGroup && texto) {
         
         // =================================================================
-        // [NOVO] LÓGICA DE HISTÓRICO DE CONTATOS
+        // LÓGICA DE HISTÓRICO DE CONTATOS
         // =================================================================
         try {
-            // Salva ou atualiza o contato no banco de dados
+            // Salva ou atualiza o contato no banco de dados usando o pushname correto
             await contatoModel.salvarContato(idRemoto, nomeAutor);
         } catch (err) {
-            // Loga o erro mas NÃO para o fluxo do bot
             console.error("Erro ao salvar histórico de contato:", err.message);
         }
         // =================================================================
@@ -440,12 +440,14 @@ export const listarConversas = async (req, res) => {
         // --- NOVO: MODO HISTÓRICO (Retorna TUDO) ---
         if (mode === 'history') {
              const m = todosChats
-                .filter(x => x && x.id) // CORREÇÃO: Remove chats nulos ou sem ID
+                .filter(x => x && x.id) 
                 .map(x => {
                     const ctx = userContext[x.id] || {};
+                    // --- MODIFICAÇÃO: Usa o pushname (banco) ou pushName (API)
+                    const nomeContato = x.pushname || x.pushName || x.nome || (x.id ? x.id.split('@')[0] : 'Desconhecido');
                     return { 
                         numero: x.id, 
-                        nome: x.pushName || (x.id ? x.id.split('@')[0] : 'Desconhecido'), // CORREÇÃO: Verifica x.id
+                        nome: nomeContato, 
                         ultimaMensagem: x.conversation || "...", 
                         unread: false,
                         visivel: true, 
@@ -458,7 +460,7 @@ export const listarConversas = async (req, res) => {
 
         // --- MODO PADRÃO: FILA DE ATENDIMENTO ---
         const chatsFiltrados = todosChats
-            .filter(x => x && x.id) // CORREÇÃO: Remove chats nulos
+            .filter(x => x && x.id) 
             .filter(chat => {
                  const ctx = userContext[chat.id] || {};
                  const temDono = !!ctx.nomeAgente;
@@ -471,9 +473,12 @@ export const listarConversas = async (req, res) => {
         const m = chatsFiltrados.map(x => {
             const ctx = userContext[x.id] || {};
             const deveAparecer = ctx.mostrarNaFila === true || ctx.etapa === 'ATENDIMENTO_HUMANO';
+            // --- MODIFICAÇÃO: Garante o uso do pushname
+            const nomeContato = x.pushname || x.pushName || x.nome || (x.id ? x.id.split('@')[0] : 'Desconhecido');
+            
             return { 
                 numero: x.id, 
-                nome: x.pushName || (x.id ? x.id.split('@')[0] : 'Desconhecido'),
+                nome: nomeContato,
                 ultimaMensagem: x.conversation || "...", 
                 unread: x.unreadCount > 0,
                 visivel: deveAparecer, 
@@ -525,20 +530,36 @@ export const listarMensagensChat = async (req, res) => {
         }
 
         const formattedMessages = rawMessages.map(msg => {
-            const content = msg.message?.conversation || 
-                            msg.message?.extendedTextMessage?.text || 
-                            msg.message?.imageMessage?.caption ||
-                            (msg.message?.imageMessage ? "📷 [Imagem]" : null) ||
-                            (msg.message?.audioMessage ? "🎤 [Áudio]" : null) ||
+            // --- MODIFICAÇÃO: TRATAMENTO DO JSON DA MENSAGEM DO POSTGRES ---
+            let messageObj = msg.message;
+            
+            // Se vier como string do banco, faz o parse
+            if (typeof messageObj === 'string') {
+                try {
+                    messageObj = JSON.parse(messageObj);
+                } catch (e) {
+                    // console.error("Falha ao parsear message JSON:", e);
+                    messageObj = {};
+                }
+            }
+
+            const content = messageObj?.conversation || 
+                            messageObj?.extendedTextMessage?.text || 
+                            messageObj?.imageMessage?.caption ||
+                            (messageObj?.imageMessage ? "📷 [Imagem]" : null) ||
+                            (messageObj?.audioMessage ? "🎤 [Áudio]" : null) ||
                             "Conteúdo não suportado";
+            
             const timestamp = msg.messageTimestamp 
                 ? (typeof msg.messageTimestamp === 'number' ? msg.messageTimestamp * 1000 : msg.messageTimestamp)
                 : Date.now();
+                
             return {
                 fromMe: msg.key.fromMe,
                 text: content,
                 time: timestamp, 
-                name: msg.pushName || (msg.key.fromMe ? "Eu" : "Cliente")
+                // --- MODIFICAÇÃO: Usa pushname (banco) ou pushName (API)
+                name: msg.pushname || msg.pushName || (msg.key.fromMe ? "Eu" : "Cliente")
             };
         });
         formattedMessages.sort((a, b) => new Date(a.time) - new Date(b.time));
