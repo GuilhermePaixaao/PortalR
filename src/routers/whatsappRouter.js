@@ -18,10 +18,8 @@ router.get('/api/whatsapp/status', WhatsappController.checarStatus);
 // Rota para listar conversas (Sidebar)
 router.get('/api/whatsapp/chats', WhatsappController.listarConversas);
 
-// --- [CORREÇÃO] ROTA QUE FALTAVA ---
 // Rota para listar mensagens de um chat específico
 router.post('/api/whatsapp/messages', WhatsappController.listarMensagensChat);
-// -----------------------------------
 
 // Rota para o agente assumir o chamado
 router.post('/api/whatsapp/atender', WhatsappController.atenderAtendimento);
@@ -50,11 +48,10 @@ router.get('/api/whatsapp/configure-webhook', WhatsappController.configurarUrlWe
 router.post('/api/whatsapp/disconnect', WhatsappController.handleDisconnect);
 
 // =========================================================
-// === ROTA DE CORREÇÃO DO HISTÓRICO (RAILWAY) ===
+// === ROTA DE CORREÇÃO DO HISTÓRICO (CORRIGIDA) ===
 // =========================================================
 router.get('/api/fix-history', async (req, res) => {
     try {
-        // Importação dinâmica do Axios para não quebrar se faltar no topo
         const axios = await import('axios');
         
         const instanceName = process.env.EVOLUTION_INSTANCE_NAME || "portal_whatsapp_v1";
@@ -63,18 +60,21 @@ router.get('/api/fix-history', async (req, res) => {
 
         console.log(`[FIX] Tentando ativar histórico para: ${instanceName} em ${baseUrl}`);
 
-        // Payload para ativar o armazenamento de mensagens
+        // --- CORREÇÃO 1: Rota ajustada para /settings/set/ ---
+        const url = `${baseUrl}/settings/set/${instanceName}`;
+        
+        // --- CORREÇÃO 2: Payload compatível com V2 ---
         const settingsPayload = {
-            store: {
-                enabled: true,
-                messages: true,
-                messageContent: true,
-                contacts: true
-            }
+            "reject_call": false,
+            "groups_ignore": false,
+            "always_online": true,
+            "read_messages": false,
+            "read_status": false,
+            "sync_full_history": true  // Isso força a baixar mensagens antigas se possível
         };
 
         // Envia o comando para a Evolution API
-        await axios.default.post(`${baseUrl}/instance/settings/${instanceName}`, settingsPayload, {
+        const response = await axios.default.post(url, settingsPayload, {
             headers: { 
                 'apikey': apiKey,
                 'Content-Type': 'application/json'
@@ -83,23 +83,22 @@ router.get('/api/fix-history', async (req, res) => {
 
         res.send(`
             <div style="font-family: sans-serif; padding: 20px;">
-                <h1 style="color: green;">✅ SUCESSO!</h1>
-                <p>O histórico foi ativado na configuração da sua Evolution API.</p>
+                <h1 style="color: green;">✅ SUCESSO (Código 200)</h1>
+                <p>Configuração aplicada na Evolution API!</p>
+                <p><b>Importante:</b> Se mesmo assim as mensagens não aparecerem, você precisa ativar as variáveis de ambiente no Railway (veja abaixo).</p>
                 <hr>
-                <p><b>O que fazer agora?</b></p>
-                <ol>
-                    <li>Envie uma mensagem <b>NOVA</b> do seu celular para o Bot (ex: "Teste 123").</li>
-                    <li>Volte no painel e abra o Histórico Global.</li>
-                    <li>A mensagem nova deve aparecer.</li>
-                </ol>
-                <p style="color: gray; font-size: 0.9em;">Nota: Mensagens antigas (de antes de agora) continuarão invisíveis pois não foram salvas na época.</p>
+                <details>
+                    <summary>Ver resposta da API</summary>
+                    <pre>${JSON.stringify(response.data, null, 2)}</pre>
+                </details>
             </div>
         `);
     } catch (error) {
         console.error("Erro ao ativar histórico:", error);
         res.status(500).send(`
-            <h1 style="color: red;">❌ Erro</h1>
+            <h1 style="color: red;">❌ Erro ${error.response?.status || 500}</h1>
             <p>${error.message}</p>
+            <p>Verifique se o nome da instância <b>${process.env.EVOLUTION_INSTANCE_NAME}</b> está correto.</p>
             <pre>${JSON.stringify(error.response?.data || {}, null, 2)}</pre>
         `);
     }
