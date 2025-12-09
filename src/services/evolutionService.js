@@ -53,21 +53,16 @@ export const desconectarInstancia = async () => {
 
 export const enviarTexto = async (numero, mensagem) => {
   try {
-    console.log(`[EVOLUTION] Tentando enviar mensagem...`);
-    console.log(`   > Instância: ${INSTANCE_NAME}`);
-    console.log(`   > Número: ${numero}`);
-
+    // console.log(`[EVOLUTION] Enviando para: ${numero}`);
     const response = await apiClient.post(`/message/sendText/${INSTANCE_NAME}`, {
       number: numero,
       options: { delay: 1200, presence: 'composing' },
       text: mensagem 
     });
-    
     return response.data;
-
   } catch (error) {
     const erroDetalhado = error.response?.data || error.message;
-    console.error("❌ ERRO CRÍTICO AO ENVIAR MENSAGEM:", JSON.stringify(erroDetalhado, null, 2));
+    console.error("❌ ERRO AO ENVIAR MENSAGEM:", JSON.stringify(erroDetalhado, null, 2));
     throw new Error(error.response?.data?.message || 'Falha técnica ao enviar mensagem.');
   }
 };
@@ -112,33 +107,66 @@ export const configurarWebhook = async (urlWebhook) => {
     }
 };
 
-// === CORREÇÃO: TENTATIVA DE BUSCA MAIS ABRANGENTE ===
+// ==============================================================================
+// === FUNÇÃO DE BUSCA DE MENSAGENS BLINDADA E COM LOGS DETALHADOS ===
+// ==============================================================================
 export const buscarMensagensHistorico = async (numero, quantidade = 50) => {
   try {
-    // Tenta buscar usando o formato padrão (key -> remoteJid)
-    let payload = {
-        where: { key: { remoteJid: numero } },
+    if (!numero) return [];
+
+    // 1. CORREÇÃO DE FORMATO: Garante que o número tenha @s.whatsapp.net ou @g.us
+    let remoteJid = numero;
+    if (!remoteJid.includes('@') && remoteJid !== 'status@broadcast') {
+        remoteJid = `${remoteJid}@s.whatsapp.net`;
+    }
+
+    console.log(`🔍 [EVOLUTION] Buscando mensagens para: ${remoteJid} (Limit: ${quantidade})`);
+
+    // 2. TENTATIVA 1: Payload Padrão (Mais comum)
+    const payloadPadrao = {
+        where: {
+            key: { remoteJid: remoteJid }
+        },
         limit: quantidade
     };
 
-    // DEBUG: Se quiser testar o outro formato, descomente a linha abaixo e comente a de cima
-    // payload = { where: { remoteJid: numero }, limit: quantidade };
+    const response = await apiClient.post(`/chat/findMessages/${INSTANCE_NAME}`, payloadPadrao);
+    const dados = response.data;
 
-    const response = await apiClient.post(`/chat/findMessages/${INSTANCE_NAME}`, payload);
-    
-    // Se não retornou nada, tenta o fallback (outro formato de query comum em algumas versões)
-    if (!response.data || (Array.isArray(response.data) && response.data.length === 0) || (response.data.messages && response.data.messages.length === 0)) {
-         console.log("[EVOLUTION] Tentando fallback de busca por remoteJid direto...");
-         const responseFallback = await apiClient.post(`/chat/findMessages/${INSTANCE_NAME}`, {
-            where: { remoteJid: numero },
-            limit: quantidade
-         });
-         return responseFallback.data;
+    // Verifica se retornou dados válidos
+    let mensagensEncontradas = [];
+    if (Array.isArray(dados)) mensagensEncontradas = dados;
+    else if (dados && Array.isArray(dados.messages)) mensagensEncontradas = dados.messages;
+    else if (dados && Array.isArray(dados.data)) mensagensEncontradas = dados.data;
+
+    if (mensagensEncontradas.length > 0) {
+        // console.log(`✅ [EVOLUTION] ${mensagensEncontradas.length} mensagens encontradas na Tentativa 1.`);
+        return mensagensEncontradas;
     }
 
-    return response.data; 
+    // 3. TENTATIVA 2: Fallback (Para versões diferentes da API)
+    console.log("⚠️ [EVOLUTION] Tentativa 1 vazia. Tentando modo de compatibilidade (remoteJid direto)...");
+    
+    const payloadFallback = {
+        where: { remoteJid: remoteJid },
+        limit: quantidade
+    };
+
+    const responseFallback = await apiClient.post(`/chat/findMessages/${INSTANCE_NAME}`, payloadFallback);
+    const dadosFallback = responseFallback.data;
+
+    if (Array.isArray(dadosFallback)) return dadosFallback;
+    if (dadosFallback && Array.isArray(dadosFallback.messages)) return dadosFallback.messages;
+    if (dadosFallback && Array.isArray(dadosFallback.data)) return dadosFallback.data;
+
+    console.log("❌ [EVOLUTION] Nenhuma mensagem encontrada em nenhuma tentativa.");
+    return []; 
+
   } catch (error) {
-    console.error("Erro ao buscar histórico de mensagens:", error.message);
+    console.error(`❌ [EVOLUTION] Erro na busca de mensagens: ${error.message}`);
+    if (error.response) {
+        console.error("   Detalhes API:", JSON.stringify(error.response.data, null, 2));
+    }
     return []; 
   }
 };
