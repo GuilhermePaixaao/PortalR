@@ -513,7 +513,7 @@ export const listarMensagensChat = async (req, res) => {
              }
         }
 
-        const qtdMensagens = limit || 50;
+        const qtdMensagens = limit || 200;
         let rawMessages = await evolutionService.buscarMensagensHistorico(numero, qtdMensagens);
         
         // CORREÇÃO: Garante que rawMessages seja um array
