@@ -86,7 +86,7 @@ export const consultarStatus = async () => {
   }
 };
 
-export const buscarConversas = async () => {
+export const buscarConversas = async (limit = 50, offset = 0) => {
   try {
     const response = await apiClient.post(`/chat/findChats/${INSTANCE_NAME}`, {
         where: {},
