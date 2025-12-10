@@ -285,9 +285,14 @@ export const gerarRelatorioChamados = async (req, res) => {
 };
 
 // 2. Relatório Completo (Gráfico + Estrutura do Prompt)
+// ====================================================
+// 2. Relatório Completo (COM DOIS GRÁFICOS)
+// ====================================================
+
 export const gerarRelatorioCompleto = async (req, res) => {
     try {
-        const { filtros, chartImage, resumoTexto } = req.body; 
+        // MUDANÇA 1: Recebendo duas imagens distintas do front-end
+        const { filtros, chartImageCategoria, chartImageTempo, resumoTexto } = req.body; 
         const chamados = await ChamadoModel.findAll(filtros || {});
 
         const doc = new PDFDocument({ margin: 30, size: 'A4' });
@@ -298,20 +303,44 @@ export const gerarRelatorioCompleto = async (req, res) => {
         res.setHeader('Content-type', 'application/pdf');
         doc.pipe(res);
 
+        // --- FUNÇÃO AUXILIAR INTERNA PARA DESENHAR GRÁFICOS ---
+        // Isso evita repetir código e trata erros de imagem corrompida
+        const adicionarGraficoAoPDF = (doc, base64String, posY, titulo) => {
+            if (!base64String) return posY;
+
+            doc.fontSize(12).font('Helvetica-Bold').fillColor('#0d6efd').text(titulo, 30, posY);
+            posY += 20;
+
+            try {
+                // Remove prefixo se existir (data:image/png;base64,)
+                const cleanBase64 = base64String.replace(/^data:image\/\w+;base64,/, "");
+                const imgBuffer = Buffer.from(cleanBase64, 'base64');
+                
+                // Configurações de tamanho
+                const chartWidth = 480; 
+                const chartHeight = 220; 
+                const xChart = (doc.page.width - chartWidth) / 2; // Centralizado
+
+                doc.image(imgBuffer, xChart, posY, { width: chartWidth, height: chartHeight });
+                return posY + chartHeight + 30; // Retorna nova posição Y
+            } catch (e) {
+                doc.fontSize(10).fillColor('red').text("[Erro ao renderizar gráfico]", 30, posY);
+                return posY + 30;
+            }
+        };
+
         // ====================================================
         // 1. CABEÇALHO E DADOS GERAIS
         // ====================================================
         
-        // Logo
         if (fs.existsSync(logoPath)) {
             doc.image(logoPath, 30, 30, { width: 80 }); 
         }
 
-        // Título e Cliente
-        doc.fontSize(18).font('Helvetica-Bold').text('Relatório de Gestão', 120, 35);
+        doc.fontSize(18).font('Helvetica-Bold').fillColor('black').text('Relatório de Gestão', 120, 35);
         doc.fontSize(11).font('Helvetica-Bold').text('Cliente: Supermercado Rosalina', 120, 58);
         
-        // Período (Calculado automaticamente dos dados)
+        // Período
         let periodoTexto = "N/A";
         if (chamados.length > 0) {
             const datas = chamados.map(c => new Date(c.created_at));
@@ -321,56 +350,52 @@ export const gerarRelatorioCompleto = async (req, res) => {
         }
         doc.font('Helvetica').fontSize(10).text(`Período: ${periodoTexto}`, 120, 72);
 
-        // Box de Totais (Direita)
+        // Box de Totais
         doc.fontSize(10).text(`Total de Tickets: ${chamados.length}`, 400, 58, { align: 'right' });
         doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 400, 72, { align: 'right' });
 
         doc.moveDown(4);
         let yPos = doc.y;
         doc.strokeColor('#aaaaaa').lineWidth(1).moveTo(30, yPos).lineTo(565, yPos).stroke();
-        yPos += 15;
+        yPos += 20;
 
         // ====================================================
-        // 2. ESTATÍSTICAS E MÉTRICAS (GRÁFICO)
-        // ====================================================
-        
-        doc.fontSize(14).font('Helvetica-Bold').fillColor('#0d6efd').text('2. Estatísticas e Métricas', 30, yPos);
-        yPos += 25;
-
-        if (chartImage) {
-            try {
-                const base64Data = chartImage.replace(/^data:image\/\w+;base64,/, "");
-                const imgBuffer = Buffer.from(base64Data, 'base64');
-                
-                // Centraliza gráfico
-                const chartWidth = 450;
-                const chartHeight = 220;
-                const xChart = (doc.page.width - chartWidth) / 2;
-
-                doc.image(imgBuffer, xChart, yPos, { width: chartWidth, height: chartHeight });
-                yPos += chartHeight + 20;
-            } catch (e) {
-                doc.fontSize(10).fillColor('red').text("[Erro ao renderizar gráfico]", 30, yPos);
-                yPos += 20;
-            }
-        }
-        
-        // Texto descritivo das estatísticas (Se houver lógica de texto, insira aqui)
-        doc.font('Helvetica').fontSize(10).fillColor('black');
-        doc.text("Abaixo apresentamos a distribuição dos chamados conforme o período selecionado.", 30, yPos);
-        yPos += 30;
-
-        // ====================================================
-        // 3. RESUMO DOS CHAMADOS (LISTAGEM DE PROBLEMAS)
+        // 2. PRIMEIRO GRÁFICO: CATEGORIAS (BARRAS)
         // ====================================================
         
-        // Verifica se cabe na página, senão quebra
+        // Se a posição estiver muito baixa, cria nova página
+        if (yPos > 500) { doc.addPage(); yPos = 40; }
+
+        yPos = adicionarGraficoAoPDF(
+            doc, 
+            chartImageCategoria, 
+            yPos, 
+            '2. Tickets por Categoria (Principais Ofensores)'
+        );
+
+        // ====================================================
+        // 3. SEGUNDO GRÁFICO: TEMPORAL (LINHA)
+        // ====================================================
+
+        // Verifica quebra de página
+        if (yPos > 500) { doc.addPage(); yPos = 40; }
+
+        yPos = adicionarGraficoAoPDF(
+            doc, 
+            chartImageTempo, 
+            yPos, 
+            '3. Evolução Temporal (Volume Diário)'
+        );
+
+        // ====================================================
+        // 4. RESUMO DOS CHAMADOS (TEXTO)
+        // ====================================================
+        
         if (yPos > 650) { doc.addPage(); yPos = 40; }
 
-        doc.fontSize(14).font('Helvetica-Bold').fillColor('#0d6efd').text('3. Resumo dos Chamados (Categorias)', 30, yPos);
+        doc.fontSize(14).font('Helvetica-Bold').fillColor('#0d6efd').text('4. Resumo Quantitativo', 30, yPos);
         yPos += 25;
 
-        // Monta um resumo automático das categorias principais
         const categoriasCount = {};
         chamados.forEach(c => {
             const catNome = c.nomeCategoriaPai ? c.nomeCategoriaPai : (c.nomeCategoria || 'Outros');
@@ -387,28 +412,13 @@ export const gerarRelatorioCompleto = async (req, res) => {
         yPos += 20;
 
         // ====================================================
-        // 4. LOCAIS DE ATENDIMENTO
-        // ====================================================
-        
-        if (yPos > 650) { doc.addPage(); yPos = 40; }
-
-        doc.fontSize(14).font('Helvetica-Bold').fillColor('#0d6efd').text('4. Locais de Atendimento', 30, yPos);
-        yPos += 25;
-
-        const locaisUnicos = [...new Set(chamados.map(c => c.loja || 'Não identificado'))].sort();
-        doc.font('Helvetica').fontSize(10).fillColor('black');
-        doc.text(`Unidades atendidas neste período: ${locaisUnicos.join(', ')}.`, 30, yPos, { width: 500 });
-        
-        yPos += 40;
-
-        // ====================================================
         // 5. DETALHAMENTO (LISTA DE TICKETS)
         // ====================================================
         
-        doc.addPage(); // Começa lista em nova página para organização
+        doc.addPage(); 
         yPos = 40;
 
-        doc.fontSize(14).font('Helvetica-Bold').fillColor('#0d6efd').text('5. Estrutura dos Tickets (Detalhamento)', 30, yPos);
+        doc.fontSize(14).font('Helvetica-Bold').fillColor('#0d6efd').text('5. Detalhamento dos Chamados', 30, yPos);
         yPos += 30;
 
         chamados.forEach((ch) => {
@@ -418,7 +428,7 @@ export const gerarRelatorioCompleto = async (req, res) => {
         });
 
         // Rodapé Final
-        doc.fillColor('black').fontSize(8).text(`Fim do relatório - Documento confidencial.`, 30, 780, { align: 'center' });
+        doc.fillColor('black').fontSize(8).text(`Relatório confidencial - Supermercado Rosalina`, 30, 780, { align: 'center' });
 
         doc.end();
 
