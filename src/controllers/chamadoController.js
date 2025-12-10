@@ -43,7 +43,7 @@ export const listarDepartamentosDaLoja = async (req, res) => {
 export const criarChamado = async (req, res) => {
     try {
         if (!req.body.chamado) {
-            return res.status(400).json({ success: false, message: "Dados do 'chamado' não encontrados." });
+            return res.status(400).json({ success: false, message: "Dados não encontrados." });
         }
 
         const chamado = JSON.parse(req.body.chamado);
@@ -58,10 +58,7 @@ export const criarChamado = async (req, res) => {
 
         if (!assunto || !descricao || !requisitante_id ||
             !nome_requisitante_manual || !telefone_requisitante_manual) {
-            return res.status(400).json({
-                success: false,
-                message: 'Campos obrigatórios faltando (Assunto, Descrição, ID, Nome, Telefone).'
-            });
+            return res.status(400).json({ success: false, message: 'Campos obrigatórios faltando.' });
         }
 
         const dadosParaCriar = {
@@ -81,11 +78,12 @@ export const criarChamado = async (req, res) => {
         const novoId = await ChamadoModel.create(dadosParaCriar);
         
         if (arquivos && arquivos.length > 0) {
-            console.log(`Salvando ${arquivos.length} anexos para o chamado ${novoId}`);
+            console.log(`Anexos salvos para o chamado ${novoId}`);
         }
         
         const novoChamado = await ChamadoModel.findById(novoId);
         
+        // Notificação Socket
         if (req.io) {
             req.io.emit('novoChamadoInterno', {
                 id: novoChamado.id,
@@ -95,11 +93,13 @@ export const criarChamado = async (req, res) => {
             });
         }
 
+        // Envio de E-mail
         if (novoChamado.emailRequisitante) {
             EmailService.enviarNotificacaoCriacao(novoChamado.emailRequisitante, novoChamado)
-                .catch(err => console.error("Falha ao enviar e-mail de criação:", err));
+                .catch(err => console.error("Falha envio email:", err));
         }
         
+        // Formata Resposta
         const Funcionario = {
             nomeFuncionario: novoChamado.nomeRequisitante,
             email: novoChamado.emailRequisitante,
@@ -111,21 +111,15 @@ export const criarChamado = async (req, res) => {
             nomePai: novoChamado.nomeCategoriaPai
         } : null;
 
-        delete novoChamado.nomeRequisitante;
-        delete novoChamado.emailRequisitante;
-        delete novoChamado.telefoneRequisitante;
-        delete novoChamado.nomeCategoria;
-        delete novoChamado.nomeCategoriaPai;
+        delete novoChamado.nomeRequisitante; delete novoChamado.emailRequisitante; delete novoChamado.telefoneRequisitante;
+        delete novoChamado.nomeCategoria; delete novoChamado.nomeCategoriaPai;
 
         const chamadoFormatado = { ...novoChamado, Funcionario, Categorias };
         res.status(201).json({ success: true, data: chamadoFormatado });
 
     } catch (error) {
-        if (error instanceof SyntaxError) {
-            return res.status(400).json({ success: false, message: 'JSON mal formatado.' });
-        }
         console.error('Erro ao criar chamado:', error);
-        res.status(500).json({ success: false, message: 'Erro interno do servidor.' });
+        res.status(500).json({ success: false, message: 'Erro interno.' });
     }
 };
 
@@ -159,16 +153,14 @@ export const listarChamados = async (req, res) => {
 
         res.status(200).json(chamadosFormatados);
     } catch (error) {
-        console.error('Erro ao buscar chamados:', error);
-        res.status(500).json({ message: 'Erro interno do servidor.' });
+        console.error('Erro listar chamados:', error);
+        res.status(500).json({ message: 'Erro interno.' });
     }
 };
 
 export const buscarChamadoPorId = async (req, res) => {
     try {
         const idNum = parseInt(req.params.id);
-        if (isNaN(idNum)) return res.status(400).json({ success: false, message: 'ID inválido.' });
-
         const chamado = await ChamadoModel.findById(idNum);
         if (!chamado) return res.status(404).json({ success: false, message: 'Não encontrado.' });
 
@@ -192,80 +184,55 @@ export const buscarChamadoPorId = async (req, res) => {
 
         res.status(200).json({ ...chamado, Funcionario, Categorias, Atendente });
     } catch (error) {
-        console.error('Erro ao buscar chamado:', error);
         res.status(500).json({ success: false, message: 'Erro interno.' });
     }
 };
 
 export const deletarChamado = async (req, res) => {
     try {
-        const idNum = parseInt(req.params.id);
-        const result = await ChamadoModel.deleteById(idNum);
+        const result = await ChamadoModel.deleteById(parseInt(req.params.id));
         if (result.affectedRows === 0) return res.status(404).json({ success: false, message: 'Não encontrado.' });
-        res.status(200).json({ success: true, message: 'Deletado com sucesso.' });
-    } catch (error) {
-        console.error('Erro ao deletar:', error);
-        res.status(500).json({ success: false, message: 'Erro interno.' });
-    }
+        res.status(200).json({ success: true });
+    } catch (error) { res.status(500).json({ success: false }); }
 };
-
-// ====================================================
-// ======== ATUALIZAÇÕES (STATUS, ETC) ========
-// ====================================================
 
 export const atualizarStatus = async (req, res) => {
     try {
-        const idNum = parseInt(req.params.id);
-        const { status, atendenteId } = req.body; 
-        const result = await ChamadoModel.updateStatus(idNum, status, atendenteId ? parseInt(atendenteId) : null);
-        
-        if (result.affectedRows === 0) return res.status(404).json({ success: false, message: 'Não encontrado.' });
+        const { status, atendenteId } = req.body;
+        const id = parseInt(req.params.id);
+        const result = await ChamadoModel.updateStatus(id, status, atendenteId ? parseInt(atendenteId) : null);
+        if (result.affectedRows === 0) return res.status(404).json({ success: false });
 
-        const chamado = await ChamadoModel.findById(idNum);
-        if (chamado && chamado.emailRequisitante) {
-            EmailService.enviarNotificacaoStatus(chamado.emailRequisitante, chamado, status)
-                .catch(err => console.error("Erro envio email status:", err));
-        }
+        const chamado = await ChamadoModel.findById(id);
+        if (chamado?.emailRequisitante) EmailService.enviarNotificacaoStatus(chamado.emailRequisitante, chamado, status).catch(console.error);
 
-        res.status(200).json({ success: true, message: 'Status atualizado.' });
-    } catch (error) {
-        console.error('Erro atualizar status:', error);
-        res.status(500).json({ success: false });
-    }
+        res.status(200).json({ success: true });
+    } catch (e) { res.status(500).json({ success: false }); }
 };
 
 export const atualizarPrioridade = async (req, res) => {
     try {
-        const idNum = parseInt(req.params.id);
-        const result = await ChamadoModel.updatePrioridade(idNum, req.body.prioridade);
+        const result = await ChamadoModel.updatePrioridade(parseInt(req.params.id), req.body.prioridade);
         if (result.affectedRows === 0) return res.status(404).json({ success: false });
         res.status(200).json({ success: true });
-    } catch (error) {
-        res.status(500).json({ success: false });
-    }
+    } catch (e) { res.status(500).json({ success: false }); }
 };
 
 export const atualizarAtendente = async (req, res) => {
     try {
-        const idNum = parseInt(req.params.id);
         const atendenteId = req.body.atendenteId ? parseInt(req.body.atendenteId) : null;
-        const result = await ChamadoModel.updateAtendente(idNum, atendenteId);
+        const result = await ChamadoModel.updateAtendente(parseInt(req.params.id), atendenteId);
         if (result.affectedRows === 0) return res.status(404).json({ success: false });
         res.status(200).json({ success: true });
-    } catch (error) {
-        res.status(500).json({ success: false });
-    }
+    } catch (e) { res.status(500).json({ success: false }); }
 };
 
 export const atualizarCategoria = async (req, res) => {
     try {
-        const idNum = parseInt(req.params.id);
-        const result = await ChamadoModel.updateCategoria(idNum, parseInt(req.body.categoriaId));
+        const result = await ChamadoModel.updateCategoria(parseInt(req.params.id), parseInt(req.body.categoriaId));
         if (result.affectedRows === 0) return res.status(404).json({ success: false });
         res.status(200).json({ success: true });
-    } catch (error) {
-        res.status(500).json({ success: false });
-    }
+    } catch (e) { res.status(500).json({ success: false }); }
 };
 
 export const contarChamadosPorStatus = async (req, res) => {
@@ -278,17 +245,14 @@ export const contarChamadosPorStatus = async (req, res) => {
             "Concluído": resultado["Concluído"] || 0,
             "Pausado": resultado["Pausado"] || 0,
         });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Erro contagem.' });
-    }
+    } catch (e) { res.status(500).json({ success: false }); }
 };
 
 // ====================================================
 // ======== RELATÓRIOS PDF (LAYOUT PROFISSIONAL) ========
 // ====================================================
 
-// --- FUNÇÃO AUXILIAR PARA DESENHAR O CARTÃO ---
-// (Esta função é usada pelos dois relatórios para garantir o mesmo design bonito)
+// Função auxiliar para desenhar o "Cartão" do chamado
 const desenharCardChamado = (doc, ch, yPos) => {
     // Barra de Título (Fundo Cinza)
     doc.save();
@@ -299,12 +263,11 @@ const desenharCardChamado = (doc, ch, yPos) => {
     // Texto Título (ID e Assunto)
     doc.fillColor('#000000').fontSize(10).font('Helvetica-Bold');
     let assuntoTopo = ch.assunto || 'Sem assunto';
-    // Trunca assunto muito longo no título
     if (assuntoTopo.length > 60) assuntoTopo = assuntoTopo.substring(0, 60) + '...';
     
     doc.text(`#${ch.id} - ${assuntoTopo}`, 35, yPos + 6);
     
-    // Status no canto direito da barra cinza
+    // Status no canto direito
     doc.fontSize(9).text(ch.status.toUpperCase(), 400, yPos + 6, { align: 'right', width: 160 });
 
     yPos += 30; // Desce para o conteúdo
@@ -320,6 +283,7 @@ const desenharCardChamado = (doc, ch, yPos) => {
     doc.font('Helvetica-Bold').text('Prioridade:', col2X, yPos);
     let corPrio = 'black';
     if (ch.prioridade === 'Alta') corPrio = 'red';
+    if (ch.prioridade === 'Baixa') corPrio = 'green';
     doc.fillColor(corPrio).font('Helvetica-Bold').text(ch.prioridade, col2X + 60, yPos);
     doc.fillColor('black');
 
@@ -354,18 +318,17 @@ const desenharCardChamado = (doc, ch, yPos) => {
     doc.font('Helvetica-Bold').text('Descrição:', col1X, yPos);
     yPos += 12;
     let descricao = ch.descricao || 'Sem descrição.';
-    descricao = descricao.replace(/(\r\n|\n|\r)/gm, " "); // Remove quebras de linha excessivas
+    descricao = descricao.replace(/(\r\n|\n|\r)/gm, " "); 
     
     doc.font('Helvetica').fontSize(8).fillColor('#444444');
     doc.text(descricao, col1X, yPos, { width: 525, align: 'justify' });
     
-    // Calcula altura para saber onde terminar este card
     const heightDesc = doc.heightOfString(descricao, { width: 525, fontSize: 8 });
     
     return yPos + heightDesc + 15; // Retorna nova posição Y
 };
 
-// 1. Relatório Simples (GET) - Com layout bonito
+// 1. Relatório Simples (Lista)
 export const gerarRelatorioChamados = async (req, res) => {
     try {
         const chamados = await ChamadoModel.findAll(req.query);
@@ -377,7 +340,6 @@ export const gerarRelatorioChamados = async (req, res) => {
         res.setHeader('Content-type', 'application/pdf');
         doc.pipe(res);
 
-        // Cabeçalho
         if (fs.existsSync(logoPath)) doc.image(logoPath, 30, 30, { width: 80 });
         doc.fontSize(16).font('Helvetica-Bold').text('Relatório de Chamados', 120, 35);
         doc.fontSize(10).font('Helvetica-Bold').text('Supermercado Rosalina', 120, 55);
@@ -400,7 +362,7 @@ export const gerarRelatorioChamados = async (req, res) => {
     }
 };
 
-// 2. Relatório Completo com Gráfico (POST) - Com layout bonito também
+// 2. Relatório Completo (Gráfico + Estatísticas + Lista Detalhada)
 export const gerarRelatorioCompleto = async (req, res) => {
     try {
         const { filtros, chartImage } = req.body; 
@@ -412,39 +374,52 @@ export const gerarRelatorioCompleto = async (req, res) => {
 
         res.setHeader('Content-disposition', 'attachment; filename="' + filename + '"');
         res.setHeader('Content-type', 'application/pdf');
-
         doc.pipe(res);
 
-        // --- 1. CABEÇALHO ---
+        // --- CÁLCULO DE ESTATÍSTICAS ---
+        const totalTickets = chamados.length;
+        
+        // Calcula período (Menor Data -> Maior Data)
+        let periodoTexto = "Período: N/A";
+        if (chamados.length > 0) {
+            const datas = chamados.map(c => new Date(c.created_at));
+            const minDate = new Date(Math.min.apply(null, datas));
+            const maxDate = new Date(Math.max.apply(null, datas));
+            periodoTexto = `Período: ${minDate.toLocaleDateString('pt-BR')} a ${maxDate.toLocaleDateString('pt-BR')}`;
+        }
+
+        // --- 1. CABEÇALHO GERAL ---
         if (fs.existsSync(logoPath)) {
             doc.image(logoPath, 30, 30, { width: 80 }); 
         }
 
         doc.fontSize(16).font('Helvetica-Bold').text('Relatório de Gestão', 120, 35);
-        doc.fontSize(10).font('Helvetica-Bold').text('Supermercado Rosalina', 120, 55);
-        doc.font('Helvetica').text('Relatório Analítico com Gráficos', 120, 68);
-        doc.fontSize(9).text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 400, 35, { align: 'right' });
+        doc.fontSize(10).font('Helvetica-Bold').text('Cliente: Supermercado Rosalina', 120, 55);
+        doc.font('Helvetica').text(periodoTexto, 120, 68);
+        
+        // Box de Totais no topo direito
+        doc.fontSize(9).text(`Total de Tickets: ${totalTickets}`, 400, 50, { align: 'right' });
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 400, 65, { align: 'right' });
         
         let yPos = 100;
 
-        // --- 2. GRÁFICO (Centralizado) ---
+        // --- 2. ESTATÍSTICAS E GRÁFICOS ---
         if (chartImage) {
             try {
                 const base64Data = chartImage.replace(/^data:image\/\w+;base64,/, "");
                 const imgBuffer = Buffer.from(base64Data, 'base64');
 
-                doc.fontSize(12).font('Helvetica-Bold').text("Análise Gráfica", 30, yPos);
+                doc.fontSize(12).font('Helvetica-Bold').text("Estatísticas e Métricas", 30, yPos);
                 yPos += 20;
 
-                // Centraliza: Largura Pagina (595) - Largura Grafico (450) / 2 = ~72
+                // Centraliza o gráfico
                 const chartWidth = 450;
                 const chartHeight = 250;
-                const xChart = (doc.page.width - chartWidth) / 2; 
+                const xChart = (doc.page.width - chartWidth) / 2;
 
                 doc.image(imgBuffer, xChart, yPos, { width: chartWidth, height: chartHeight });
                 yPos += chartHeight + 30;
             } catch (e) {
-                console.error("Erro imagem:", e);
                 doc.text("[Erro ao renderizar gráfico]", 30, yPos, { color: 'red' });
                 yPos += 40;
             }
@@ -455,19 +430,17 @@ export const gerarRelatorioCompleto = async (req, res) => {
         doc.strokeColor('#aaaaaa').lineWidth(1).moveTo(30, yPos).lineTo(565, yPos).stroke();
         yPos += 20;
 
-        // --- 3. LISTA DE CHAMADOS (LAYOUT PROFISSIONAL) ---
-        doc.fontSize(12).font('Helvetica-Bold').fillColor('black').text("Detalhamento dos Tickets", 30, yPos - 15);
+        // --- 3. LISTA DE TICKETS (Estrutura Detalhada) ---
+        doc.fontSize(12).font('Helvetica-Bold').fillColor('black').text("Estrutura dos Tickets", 30, yPos - 15);
 
         chamados.forEach((ch) => {
-            // Verifica quebra de página
             if (yPos > 700) { doc.addPage(); yPos = 40; }
-            
-            // Usa a MESMA função auxiliar bonita
             yPos = desenharCardChamado(doc, ch, yPos);
-            yPos += 10; 
+            yPos += 10;
         });
 
-        doc.fillColor('black').fontSize(8).text(`Fim do relatório - Total: ${chamados.length} registros.`, 30, 780, { align: 'center' });
+        // Rodapé
+        doc.fillColor('black').fontSize(8).text(`Fim do relatório - ${totalTickets} tickets processados.`, 30, 780, { align: 'center' });
         doc.end();
 
     } catch (error) {
