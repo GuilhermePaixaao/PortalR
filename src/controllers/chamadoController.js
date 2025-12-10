@@ -383,156 +383,16 @@ export const contarChamadosPorStatus = async (req, res) => {
 // ====================================================
 // ======== GERAR RELATÓRIO PDF (LAYOUT PROFISSIONAL) ========
 // ====================================================
-export const gerarRelatorioChamados = async (req, res) => {
-    try {
-        const chamados = await ChamadoModel.findAll(req.query);
-        
-        // Define margens e tamanho
-        const doc = new PDFDocument({ margin: 30, size: 'A4' });
-        const filename = `Relatorio_Atendimentos_${Date.now()}.pdf`;
-
-        // Tenta encontrar a logo em pasta views ou public
-        const logoPath = path.resolve(__dirname, '..', 'views', 'logo.png'); 
-
-        res.setHeader('Content-disposition', 'attachment; filename="' + filename + '"');
-        res.setHeader('Content-type', 'application/pdf');
-
-        doc.pipe(res);
-
-        // --- CABEÇALHO ---
-        // Desenha a logo se existir
-        if (fs.existsSync(logoPath)) {
-            doc.image(logoPath, 30, 30, { width: 80 }); 
-        }
-
-        // Título e Dados da Empresa (Alinhado a direita/centro)
-        // Posição X aproximada 120 para não sobrepor a logo
-        doc.fontSize(16).font('Helvetica-Bold').text('Relatório de Atendimentos', 120, 35, { align: 'left' });
-        
-        doc.fontSize(10).font('Helvetica-Bold').text('Supermercado Rosalina', 120, 55);
-        doc.font('Helvetica').text('Avenida Nicanor Reis, Jardim Torrão de Ouro', 120, 68);
-        doc.text('São José dos Campos - SP', 120, 81);
-
-        // Data de Geração no canto direito
-        doc.fontSize(9).text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 400, 35, { align: 'right' });
-
-        // Exibir Filtros Aplicados
-        let filtrosTexto = [];
-        if (req.query.loja_id) filtrosTexto.push(`Loja ID: ${req.query.loja_id}`);
-        if (req.query.status) filtrosTexto.push(`Status: ${req.query.status}`);
-        if (req.query.categoria_id) filtrosTexto.push(`Categoria ID: ${req.query.categoria_id}`);
-        
-        if (filtrosTexto.length > 0) {
-            doc.text(`Filtros: ${filtrosTexto.join(' | ')}`, 400, 50, { align: 'right', color: 'gray' });
-        }
-
-        // Linha divisória do cabeçalho
-        doc.moveDown(4);
-        let yPos = doc.y;
-        doc.strokeColor('#aaaaaa').lineWidth(1).moveTo(30, yPos).lineTo(565, yPos).stroke();
-        
-        yPos += 15; // Espaço após linha
-
-        // --- LISTA DE CHAMADOS (Estilo "Card") ---
-        doc.fillColor('black');
-
-        chamados.forEach((ch) => {
-            // Verifica quebra de página
-            if (yPos > 700) {
-                doc.addPage();
-                yPos = 40; // Margem topo nova página
-            }
-
-            // --- BLOCO DO CHAMADO ---
-            // ID grande na esquerda
-            doc.fontSize(14).font('Helvetica-Bold').text(`#${ch.id}`, 30, yPos);
-            
-            // Coluna Central (Detalhes) - X = 80
-            let xContent = 90;
-            
-            // Linha 1: Loja e Requisitante
-            const nomeLoja = ch.loja || 'Loja não identificada';
-            const solicitante = (ch.nomeRequisitante || ch.nomeRequisitanteManual || 'N/A').split(' ')[0];
-            doc.fontSize(10).font('Helvetica-Bold').text(nomeLoja.toUpperCase(), xContent, yPos);
-            doc.font('Helvetica').fontSize(9).text(`Solicitante: ${solicitante}`, xContent + 200, yPos); // Na mesma linha, mais à direita
-
-            // Linha 2: Assunto
-            const line2Y = yPos + 15;
-            doc.font('Helvetica-Bold').fontSize(9).text('Assunto:', xContent, line2Y);
-            doc.font('Helvetica').text(ch.assunto || 'Sem assunto', xContent + 45, line2Y);
-
-            // Linha 3: Categoria e Status
-            const line3Y = line2Y + 15;
-            let catTexto = 'N/A';
-            if (ch.nomeCategoria) {
-                 catTexto = ch.nomeCategoriaPai ? `${ch.nomeCategoriaPai} > ${ch.nomeCategoria}` : ch.nomeCategoria;
-            }
-            doc.font('Helvetica-Bold').text('Categoria:', xContent, line3Y);
-            doc.font('Helvetica').text(catTexto, xContent + 50, line3Y);
-            
-            // Status alinhado à direita
-            doc.font('Helvetica-Bold').text('Status:', 400, line3Y);
-            doc.font('Helvetica').text(ch.status, 440, line3Y);
-
-            // Linha 4: Datas e Técnico
-            const line4Y = line3Y + 15;
-            const dataCriacao = ch.created_at ? new Date(ch.created_at).toLocaleString('pt-BR') : 'N/A';
-            doc.font('Helvetica-Bold').text('Criado em:', xContent, line4Y);
-            doc.font('Helvetica').text(dataCriacao, xContent + 50, line4Y);
-
-            if (ch.nomeAtendente) {
-                doc.font('Helvetica-Bold').text('Técnico:', 400, line4Y);
-                doc.font('Helvetica').text(ch.nomeAtendente.split(' ')[0], 440, line4Y);
-            }
-
-            // Linha 5: Descrição (Texto corrido)
-            const line5Y = line4Y + 18;
-            doc.font('Helvetica-Bold').text('Descrição:', xContent, line5Y);
-            
-            let descricao = ch.descricao || '';
-            // Limita descrição para não quebrar layout drasticamente
-            if (descricao.length > 250) descricao = descricao.substring(0, 250) + '...';
-            
-            doc.font('Helvetica').fontSize(8).fillColor('#444444')
-               .text(descricao, xContent, line5Y + 10, { width: 450, align: 'justify' });
-
-            // Linha Separadora Final do Item
-            doc.fillColor('black'); // Reset cor
-            const endY = doc.y + 10;
-            doc.strokeColor('#e0e0e0').lineWidth(1).moveTo(30, endY).lineTo(565, endY).stroke();
-            
-            // Atualiza yPos para o próximo item
-            yPos = endY + 15;
-        });
-
-        // Rodapé
-        doc.fontSize(8).fillColor('#777777').text(`Total de registros: ${chamados.length}`, 30, 780, { align: 'left' });
-        doc.text('Portal Supermercado Rosalina', 30, 780, { align: 'right' });
-
-        doc.end();
-
-    } catch (error) {
-        console.error("Erro ao gerar relatório:", error);
-        if (!res.headersSent) {
-            res.status(500).json({ error: "Erro ao gerar PDF" });
-        }
-    }
-};
 // ====================================================
-// ======== RELATÓRIO COMPLETO (COM GRÁFICO) ========
+// ======== RELATÓRIO COMPLETO (GRÁFICO + LAYOUT PROFISSIONAL) ========
 // ====================================================
 export const gerarRelatorioCompleto = async (req, res) => {
     try {
-        // Pega filtros e a imagem do corpo da requisição
         const { filtros, chartImage } = req.body; 
-        
-        // Busca os dados usando os filtros recebidos
         const chamados = await ChamadoModel.findAll(filtros || {});
 
-        const doc = new PDFDocument({ margin: 30, size: 'A4' });
-        const filename = `Relatorio_Completo_${Date.now()}.pdf`;
-
-        // Caminho da Logo
+        const doc = new PDFDocument({ margin: 30, size: 'A4' }); // Margens menores para aproveitar espaço
+        const filename = `Relatorio_Gestao_${Date.now()}.pdf`;
         const logoPath = path.resolve(__dirname, '..', 'views', 'logo.png');
 
         res.setHeader('Content-disposition', 'attachment; filename="' + filename + '"');
@@ -541,74 +401,154 @@ export const gerarRelatorioCompleto = async (req, res) => {
         doc.pipe(res);
 
         // --- 1. CABEÇALHO ---
+        // Logo
         if (fs.existsSync(logoPath)) {
             doc.image(logoPath, 30, 30, { width: 80 }); 
         }
 
-        doc.fontSize(16).font('Helvetica-Bold').text('Relatório de Atendimentos', 120, 35, { align: 'left' });
-        doc.fontSize(10).font('Helvetica').text('Supermercado Rosalina', 120, 55);
-        doc.fontSize(9).text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 400, 35, { align: 'right' });
+        // Título e Empresa
+        doc.fontSize(16).font('Helvetica-Bold').text('Relatório de Gestão', 120, 35);
+        doc.fontSize(10).font('Helvetica-Bold').text('Supermercado Rosalina', 120, 55);
+        doc.font('Helvetica').text('Relatório Analítico com Gráficos', 120, 68);
 
-        // --- 2. INSERIR O GRÁFICO ---
+        // Data e Filtros (Direita)
+        doc.fontSize(9).text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 400, 35, { align: 'right' });
+        
+        // --- 2. ÁREA DO GRÁFICO ---
+        let yPos = 100; // Posição inicial segura
+
         if (chartImage) {
             try {
-                // Remove o cabeçalho da string base64 (ex: "data:image/png;base64,")
                 const base64Data = chartImage.replace(/^data:image\/\w+;base64,/, "");
                 const imgBuffer = Buffer.from(base64Data, 'base64');
 
-                doc.moveDown(4);
-                doc.text("Análise Gráfica:", { underline: true });
+                // Título da Seção
+                doc.fontSize(12).font('Helvetica-Bold').text("Análise Gráfica", 30, yPos);
                 doc.moveDown(0.5);
+                yPos += 20;
+
+                // Centraliza o gráfico
+                // A4 width ~595pts. Margem 30. Largura útil ~535.
+                // Vamos usar largura 450 pro gráfico.
+                const chartWidth = 450;
+                const chartHeight = 250;
+                const xChart = (doc.page.width - chartWidth) / 2;
+
+                doc.image(imgBuffer, xChart, yPos, { width: chartWidth, height: chartHeight });
                 
-                // Insere a imagem centralizada
-                doc.image(imgBuffer, { 
-                    fit: [500, 300], 
-                    align: 'center',
-                    valign: 'center'
-                });
-                
-                // Espaço extra após o gráfico
-                doc.moveDown(12); 
+                yPos += chartHeight + 30; // Espaço após o gráfico
             } catch (e) {
-                console.error("Erro ao processar imagem do gráfico:", e);
-                doc.text("[Erro ao carregar o gráfico]", { color: 'red' });
-                doc.moveDown(2);
+                console.error("Erro gráfico:", e);
+                doc.text("[Erro ao renderizar gráfico]", 30, yPos, { color: 'red' });
+                yPos += 40;
             }
         } else {
-            doc.moveDown(5);
+            yPos += 20;
         }
 
-        // --- 3. LISTA DE CHAMADOS (Estilo Card) ---
-        // Desenha uma linha divisória antes de começar a lista
-        doc.strokeColor('#aaaaaa').lineWidth(1).moveTo(30, doc.y).lineTo(565, doc.y).stroke();
-        doc.moveDown(1);
+        // Linha Divisória
+        doc.strokeColor('#aaaaaa').lineWidth(1).moveTo(30, yPos).lineTo(565, yPos).stroke();
+        yPos += 20;
+
+        // --- 3. LISTA DE CHAMADOS (LAYOUT ORGANIZADO) ---
+        doc.fontSize(12).font('Helvetica-Bold').fillColor('black').text("Detalhamento dos Tickets", 30, yPos - 15);
 
         chamados.forEach((ch) => {
-            // Verifica quebra de página
-            if (doc.y > 700) doc.addPage();
-
-            let yPos = doc.y;
-
-            // ID
-            doc.fillColor('black').fontSize(12).font('Helvetica-Bold').text(`#${ch.id}`, 30, yPos);
-            
-            // Coluna Principal
-            doc.fontSize(10).text(ch.assunto || 'Sem Assunto', 90, yPos);
-            
-            // Detalhes (Status, Loja, Data)
-            doc.fontSize(9).font('Helvetica').fillColor('#555555');
-            const info = `Status: ${ch.status}  |  Loja: ${ch.loja || 'N/A'}  |  Data: ${new Date(ch.created_at).toLocaleDateString('pt-BR')}`;
-            doc.text(info, 90, yPos + 15);
-
-            // Descrição (Resumida)
-            if (ch.descricao) {
-                let desc = ch.descricao.replace(/\n/g, ' '); // Remove quebras de linha
-                if (desc.length > 120) desc = desc.substring(0, 120) + '...';
-                doc.fontSize(8).font('Helvetica-Oblique').text(desc, 90, yPos + 30, { width: 450 });
+            // Verifica se cabe na página (considerando um bloco de ~100px)
+            if (yPos > 700) {
+                doc.addPage();
+                yPos = 40;
             }
 
-            doc.moveDown(3); // Espaço para o próximo
+            // --- BARRA DE TÍTULO DO CARD (Fundo Cinza) ---
+            // Desenha um retângulo cinza
+            doc.save(); // Salva estado para não afetar o resto
+            doc.fillColor('#f0f0f0');
+            doc.rect(30, yPos, 535, 20).fill();
+            doc.restore();
+
+            // Texto do Título (ID e Assunto)
+            doc.fillColor('#000000').fontSize(10).font('Helvetica-Bold');
+            // Corta assunto se for muito longo
+            let assuntoTopo = ch.assunto || 'Sem assunto';
+            if (assuntoTopo.length > 60) assuntoTopo = assuntoTopo.substring(0, 60) + '...';
+
+            doc.text(`#${ch.id} - ${assuntoTopo}`, 35, yPos + 6);
+            
+            // Status na direita da barra
+            doc.fontSize(9).text(ch.status.toUpperCase(), 400, yPos + 6, { align: 'right', width: 160 });
+
+            yPos += 30; // Desce para o conteúdo do card
+
+            // --- COLUNAS DE DADOS ---
+            const col1X = 35;
+            const col2X = 300;
+            const lineHeight = 14;
+
+            // Linha 1: Loja vs Prioridade
+            doc.fontSize(9).font('Helvetica-Bold').text('Loja:', col1X, yPos);
+            doc.font('Helvetica').text(ch.loja || 'N/A', col1X + 35, yPos);
+
+            doc.font('Helvetica-Bold').text('Prioridade:', col2X, yPos);
+            
+            // Cor da prioridade (Visual)
+            let corPrio = 'black';
+            if (ch.prioridade === 'Alta') corPrio = 'red';
+            if (ch.prioridade === 'Baixa') corPrio = 'green';
+            
+            doc.fillColor(corPrio).font('Helvetica-Bold').text(ch.prioridade, col2X + 60, yPos);
+            doc.fillColor('black'); // Reset
+
+            yPos += lineHeight;
+
+            // Linha 2: Categoria vs Solicitante
+            let catTexto = 'N/A';
+            if (ch.nomeCategoria) catTexto = ch.nomeCategoriaPai ? `${ch.nomeCategoriaPai} > ${ch.nomeCategoria}` : ch.nomeCategoria;
+            
+            doc.font('Helvetica-Bold').text('Categoria:', col1X, yPos);
+            doc.font('Helvetica').text(catTexto, col1X + 55, yPos, { width: 200, lineBreak: false, ellipsis: true });
+
+            const solicitante = (ch.nomeRequisitante || ch.nomeRequisitanteManual || 'N/A').split(' ')[0];
+            doc.font('Helvetica-Bold').text('Solicitante:', col2X, yPos);
+            doc.font('Helvetica').text(solicitante, col2X + 60, yPos);
+
+            yPos += lineHeight;
+
+            // Linha 3: Data vs Técnico
+            const dataCriacao = ch.created_at ? new Date(ch.created_at).toLocaleString('pt-BR') : '-';
+            doc.font('Helvetica-Bold').text('Aberto em:', col1X, yPos);
+            doc.font('Helvetica').text(dataCriacao, col1X + 55, yPos);
+
+            if (ch.nomeAtendente) {
+                doc.font('Helvetica-Bold').text('Técnico:', col2X, yPos);
+                doc.font('Helvetica').text(ch.nomeAtendente.split(' ')[0], col2X + 60, yPos);
+            }
+
+            yPos += lineHeight + 5;
+
+            // --- DESCRIÇÃO (Bloco separado) ---
+            doc.font('Helvetica-Bold').text('Descrição:', col1X, yPos);
+            yPos += 12;
+            
+            let descricao = ch.descricao || 'Sem descrição.';
+            // Remove quebras de linha excessivas para economizar espaço
+            descricao = descricao.replace(/(\r\n|\n|\r)/gm, " ");
+            
+            doc.font('Helvetica').fontSize(8).fillColor('#444444');
+            doc.text(descricao, col1X, yPos, { width: 525, align: 'justify' });
+            
+            // Calcula o quanto o texto ocupou para pular proximo item
+            const heightDesc = doc.heightOfString(descricao, { width: 525, fontSize: 8 });
+            yPos += heightDesc + 15;
+
+            // Linha fina separadora (opcional, já que temos a barra cinza)
+            // doc.strokeColor('#eeeeee').lineWidth(1).moveTo(30, yPos - 5).lineTo(565, yPos - 5).stroke();
+            
+            yPos += 10; // Margem extra para o próximo card
         });
+
+        // Rodapé Final
+        doc.fillColor('black').fontSize(8).text(`Fim do relatório - Total: ${chamados.length} registros.`, 30, 780, { align: 'center' });
 
         doc.end();
 
