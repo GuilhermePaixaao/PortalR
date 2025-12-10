@@ -1,5 +1,6 @@
 import * as ChamadoModel from '../models/chamadoModel.js';
 import * as EmailService from '../services/emailService.js'; 
+import PDFDocument from 'pdfkit';
 
 // ====================================================
 // ======== NOVAS FUNÇÕES PARA DADOS DINÂMICOS ========
@@ -392,5 +393,48 @@ export const contarChamadosPorStatus = async (req, res) => {
     } catch (error) {
         console.error('Erro ao contar chamados por status:', error);
         res.status(500).json({ success: false, message: 'Erro interno do servidor ao buscar contagens.' });
+    }
+};
+export const gerarRelatorioChamados = async (req, res) => {
+    try {
+        // Busca os chamados com os filtros atuais (reutiliza a lógica do findAll)
+        const chamados = await ChamadoModel.findAll(req.query);
+
+        const doc = new PDFDocument();
+        const filename = `Relatorio_Chamados_${Date.now()}.pdf`;
+
+        // Configura o download
+        res.setHeader('Content-disposition', 'attachment; filename="' + filename + '"');
+        res.setHeader('Content-type', 'application/pdf');
+
+        doc.pipe(res);
+
+        // Cabeçalho
+        doc.fontSize(20).text('Relatório de Chamados', { align: 'center' });
+        doc.moveDown();
+        doc.fontSize(10).text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, { align: 'right' });
+        doc.moveDown();
+
+        // Lista de Chamados
+        chamados.forEach(ch => {
+            doc.fontSize(12).font('Helvetica-Bold').text(`Ticket #${ch.id} - ${ch.assunto}`);
+            doc.fontSize(10).font('Helvetica').text(`Status: ${ch.status} | Prioridade: ${ch.prioridade}`);
+            doc.text(`Solicitante: ${ch.nomeRequisitante || 'N/A'} | Aberto em: ${new Date(ch.created_at).toLocaleString('pt-BR')}`);
+
+            if (ch.nomeCategoria) {
+                const cat = ch.nomeCategoriaPai ? `${ch.nomeCategoriaPai} > ${ch.nomeCategoria}` : ch.nomeCategoria;
+                doc.text(`Categoria: ${cat}`);
+            }
+
+            doc.moveDown(0.5);
+            doc.moveTo(doc.x, doc.y).lineTo(500, doc.y).stroke(); // Linha divisória
+            doc.moveDown(0.5);
+        });
+
+        doc.end();
+
+    } catch (error) {
+        console.error("Erro ao gerar relatório:", error);
+        res.status(500).json({ error: "Erro ao gerar PDF" });
     }
 };

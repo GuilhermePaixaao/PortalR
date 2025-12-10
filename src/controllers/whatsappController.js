@@ -2,7 +2,6 @@ import * as evolutionService from '../services/evolutionService.js';
 import * as chamadoModel from '../models/chamadoModel.js'; 
 import * as EmailService from '../services/emailService.js'; 
 import * as contatoModel from '../models/contatoModel.js'; 
-import PDFDocument from 'pdfkit';
 import { OpenAI } from 'openai';
 import fs from 'fs';
 import path from 'path';
@@ -716,53 +715,7 @@ export const criarChamadoDoChat = async (req, res) => {
         console.error("Erro criarChamadoDoChat:", e);
         res.status(500).json({ success: false, message: e.message }); 
     }
-
 };
-
-export const gerarRelatorioChamados = async (req, res) => {
-    try {
-        // Busca os chamados com os filtros atuais (reutiliza a lógica do findAll)
-        const chamados = await ChamadoModel.findAll(req.query);
-
-        const doc = new PDFDocument();
-        const filename = `Relatorio_Chamados_${Date.now()}.pdf`;
-
-        // Configura o download
-        res.setHeader('Content-disposition', 'attachment; filename="' + filename + '"');
-        res.setHeader('Content-type', 'application/pdf');
-
-        doc.pipe(res);
-
-        // Cabeçalho
-        doc.fontSize(20).text('Relatório de Chamados', { align: 'center' });
-        doc.moveDown();
-        doc.fontSize(10).text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, { align: 'right' });
-        doc.moveDown();
-
-        // Lista de Chamados
-        chamados.forEach(ch => {
-            doc.fontSize(12).font('Helvetica-Bold').text(`Ticket #${ch.id} - ${ch.assunto}`);
-            doc.fontSize(10).font('Helvetica').text(`Status: ${ch.status} | Prioridade: ${ch.prioridade}`);
-            doc.text(`Solicitante: ${ch.nomeRequisitante || 'N/A'} | Aberto em: ${new Date(ch.created_at).toLocaleString('pt-BR')}`);
-
-            if (ch.nomeCategoria) {
-                const cat = ch.nomeCategoriaPai ? `${ch.nomeCategoriaPai} > ${ch.nomeCategoria}` : ch.nomeCategoria;
-                doc.text(`Categoria: ${cat}`);
-            }
-
-            doc.moveDown(0.5);
-            doc.moveTo(doc.x, doc.y).lineTo(500, doc.y).stroke(); // Linha divisória
-            doc.moveDown(0.5);
-        });
-
-        doc.end();
-
-    } catch (error) {
-        console.error("Erro ao gerar relatório:", error);
-        res.status(500).json({ error: "Erro ao gerar PDF" });
-    }
-};
-
 export const handleDisconnect = async (req, res) => { try { await evolutionService.desconectarInstancia(); res.status(200).json({ success: true }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
 export const connectInstance = async (req, res) => { try { const r = await evolutionService.criarInstancia(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
 export const checarStatus = async (req, res) => { try { const r = await evolutionService.consultarStatus(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
