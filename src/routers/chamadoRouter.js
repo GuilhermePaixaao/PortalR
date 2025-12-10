@@ -56,5 +56,5 @@ router.delete('/chamados/:id', ChamadoController.deletarChamado);
 router.post('/chamados/:id/comentarios', addComentario);
 router.get('/chamados/:id/comentarios', listarComentariosPorChamado);
 
-
+router.get('/chamados/relatorio/pdf', ChamadoController.gerarRelatorioChamados);
 export default router;
