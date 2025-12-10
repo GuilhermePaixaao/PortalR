@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Supermercado - Dashboard Pro</title>
+
+    <script>
+        const savedTheme = localStorage.getItem("theme");
+        if (savedTheme === "dark") {
+            document.documentElement.classList.add("dark-mode");
+            document.body?.classList.add("dark-mode");
+        }
+    </script>
+    
+    <link rel="icon" type="image/png" href="/logo.png">
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        /* ========================================= */
+        /* 1. VARIÁVEIS E CORES */
+        /* ========================================= */
+        :root {
+            --primary-blue: #0056b3;
+            --primary-red: #d93025;
+            --success-green: #198754;
+            --warning-yellow: #ffc107;
+            
+            --bg-body: #f4f6f9;
+            --bg-card: #ffffff;
+            --bg-sidebar: #0f172a;
+            
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-sidebar: #94a3b8;
+
+            --card-radius: 16px;
+            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            --header-height: 64px;
+            --sidebar-width: 86px; /* Levemente mais larga para os novos ícones respirarem */
+            
+            --modal-bg: #ffffff;
+            --input-bg: #f8fafc;
+            --input-border: #e2e8f0;
+        }
+
+        body.dark-mode {
+            --bg-body: #0f172a;
+            --bg-card: #1e293b;
+            --bg-sidebar: #020617;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --card-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            --modal-bg: #1e293b;
+            --input-bg: #0f172a;
+            --input-border: #334155;
+            --bs-body-color: #f1f5f9;
+        }
+
+        /* ========================================= */
+        /* 2. LAYOUT GERAL */
+        /* ========================================= */
+        * { box-sizing: border-box; }
+        
+        body, html {
+            margin: 0; padding: 0;
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg-body);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: var(--sidebar-width) 1fr;
+            grid-template-rows: var(--header-height) 1fr;
+            grid-template-areas: "sidebar header" "sidebar main";
+            height: 100vh; width: 100vw;
+        }
+
+        /* ========================================= */
+        /* 3. SIDEBAR (NOVOS ÍCONES) */
+        /* ========================================= */
+        .sidebar {
+            grid-area: sidebar;
+            background: var(--bg-sidebar);
+            display: flex; flex-direction: column; align-items: center;
+            padding-top: 20px;
+            border-right: 1px solid rgba(255,255,255,0.05);
+            z-index: 100;
+        }
+        .sidebar nav ul { list-style: none; padding: 0; margin: 0; width: 100%; }
+        .sidebar nav li { margin-bottom: 8px; width: 100%; display: flex; justify-content: center; }
+        .sidebar nav li a {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-decoration: none; color: var(--text-sidebar);
+            width: 56px; height: 56px; border-radius: 12px; transition: 0.2s;
+            gap: 4px;
+        }
+        
+        /* Estilo dos ícones na sidebar */
+        .sidebar i { 
+            font-size: 1.5rem; /* Tamanho bom para ícone Phosphor */
+            margin-bottom: 0;
+        }
+        .sidebar nav li a:hover { background: rgba(255,255,255,0.1); color: #fff; }
+        .sidebar nav li.active a { background: var(--primary-blue); color: #fff; box-shadow: 0 4px 12px rgba(0, 86, 179, 0.4); }
+        
+        .sidebar .text { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.3px; }
+
+        /* Item de Chamado (Destaque) */
+        .sidebar nav li.ticket-item a i { color: var(--primary-red); }
+        .sidebar nav li.ticket-item a:hover { background: rgba(217, 48, 37, 0.15); }
+        .sidebar nav li.ticket-item a:hover i { color: #fff; } /* Ícone fica branco no hover */
+
+        /* ========================================= */
+        /* 4. HEADER */
+        /* ========================================= */
+        .header {
+            grid-area: header;
+            background: var(--bg-card);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            z-index: 90;
+        }
+        
+        .logo {
+            font-size: 1rem; font-weight: 800; color: var(--primary-blue);
+            display: flex; align-items: center; gap: 10px; text-transform: uppercase;
+        }
+        .logo-icon { height: 32px; width: auto; }
+
+        .header-actions { display: flex; align-items: center; gap: 12px; height: 100%; }
+
+        /* Botões do Header com ícones Phosphor */
+        .btn-new-ticket {
+            background: var(--primary-blue); color: #fff; border: none;
+            height: 38px; padding: 0 18px; border-radius: 10px;
+            display: flex; align-items: center; gap: 8px;
+            font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: transform 0.2s;
+        }
+        .btn-new-ticket i { font-size: 1.1rem; }
+        .btn-new-ticket:hover { transform: translateY(-1px); filter: brightness(1.1); }
+
+        .btn-theme-toggle {
+            background: transparent; border: 1px solid var(--input-border);
+            color: var(--text-secondary); width: 38px; height: 38px;
+            border-radius: 10px; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: 0.2s; font-size: 1.2rem;
+        }
+        .btn-theme-toggle:hover { border-color: var(--primary-blue); color: var(--primary-blue); }
+
+        .header-divider { width: 1px; height: 24px; background: var(--input-border); margin: 0 4px; }
+
+        .btn-logout {
+            background: transparent; border: 1px solid var(--primary-red);
+            color: var(--primary-red); padding: 0 16px; height: 36px;
+            border-radius: 8px; font-weight: 600; font-size: 0.85rem;
+            cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 6px;
+        }
+        .btn-logout i { font-size: 1.1rem; }
+        .btn-logout:hover { background: var(--primary-red); color: white; }
+
+        /* ========================================= */
+        /* 5. ÁREA PRINCIPAL */
+        /* ========================================= */
+        .main-content {
+            grid-area: main; padding: 20px; height: 100%; overflow: hidden;
+            display: flex; flex-direction: column; gap: 20px;
+        }
+
+        .top-row { flex: 4; display: flex; gap: 20px; min-height: 0; }
+        .cards-stack { flex: 1; display: flex; flex-direction: column; gap: 15px; min-width: 250px; max-width: 320px; justify-content: space-between; }
+        .pie-chart-wrapper { flex: 1; min-width: 0; }
+        .bottom-row { flex: 6; width: 100%; min-height: 0; }
+
+        .widget {
+            background: var(--bg-card); border-radius: var(--card-radius);
+            box-shadow: var(--card-shadow); padding: 20px;
+            height: 100%; display: flex; flex-direction: column;
+        }
+        .widget h3 {
+            color: var(--text-primary); font-size: 1rem; margin-bottom: 15px;
+            border-bottom: 1px solid var(--input-border); padding-bottom: 10px; font-weight: 600;
+            flex-shrink: 0; display: flex; align-items: center; gap: 8px;
+        }
+        .widget h3 i { color: var(--text-secondary); font-size: 1.1rem; }
+
+        /* Cards de Status (Ícones grandes no fundo) */
+        .stat-card {
+            background: var(--bg-card); border-radius: var(--card-radius);
+            box-shadow: var(--card-shadow); flex: 1;
+            display: flex; align-items: center; justify-content: space-between; padding: 0 24px;
+            position: relative; overflow: hidden;
+        }
+        .stat-info h3 { border: none; padding: 0; margin: 0; font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-info .stat-value { font-size: 2rem; font-weight: 700; line-height: 1; margin-top: 5px; }
+        
+        .stat-card i { 
+            font-size: 2.5rem; 
+            opacity: 0.15; /* Ícone bem suave */
+            position: absolute; right: 20px;
+        }
+
+        .stat-card.open { border-left: 4px solid var(--warning-yellow); color: var(--warning-yellow); }
+        .stat-card.in-progress { border-left: 4px solid var(--primary-blue); color: var(--primary-blue); }
+        .stat-card.completed { border-left: 4px solid var(--success-green); color: var(--success-green); }
+
+        .chart-box { flex-grow: 1; position: relative; width: 100%; min-height: 0; }
+
+        /* ========================================= */
+        /* 6. MODAL */
+        /* ========================================= */
+        dialog {
+            border: none; border-radius: 16px; padding: 0;
+            background: var(--modal-bg); color: var(--text-primary);
+            width: 90%; max-width: 650px; margin: auto;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+        }
+        dialog::backdrop { background: rgba(0,0,0,0.6); backdrop-filter: blur(3px); }
+        
+        .modal-content-wrapper { padding: 30px; }
+        .modal-header-custom {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid var(--input-border);
+        }
+        .modal-header-custom h2 { margin: 0; font-size: 1.25rem; color: var(--primary-blue); font-weight: 700; display: flex; align-items: center; gap: 10px;}
+        
+        .grupo-form { margin-bottom: 15px; }
+        .grupo-form label { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 5px; display: block; }
+        .grupo-form input, .grupo-form select, .grupo-form textarea {
+            background: var(--input-bg); border: 1px solid var(--input-border);
+            color: var(--text-primary); padding: 10px; border-radius: 8px; width: 100%;
+        }
+        .grupo-form input:focus { border-color: var(--primary-blue); outline: none; }
+        
+        .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; border-top: 1px solid var(--input-border); padding-top: 20px; }
+        .form-actions button { padding: 10px 20px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; }
+        #criarTicket { background: var(--success-green); color: white; }
+        
+        .alert { padding: 10px; margin-top: 10px; border-radius: 8px; font-size: 0.9rem; }
+        .alert-success { background: #d1e7dd; color: #0f5132; }
+        .alert-danger { background: #f8d7da; color: #842029; }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <header class="header">
+           <div class="logo">
+                <img src="/img.png" alt="Logo" class="logo-icon">              
+                PORTAL SUPERMERCADO
+            </div>
+            
+            <div class="header-actions">
+                <button id="newTicketButton" class="btn-new-ticket" title="Novo Chamado">
+                    <i class="ph ph-plus-circle"></i> <span class="d-none d-md-inline">Novo Chamado</span>
+                </button>
+
+                <button id="themeToggle" class="btn-theme-toggle" title="Alternar Tema">
+                    <i class="ph ph-moon"></i>
+                </button>
+                
+                <div class="header-divider"></div>
+
+                <div class="user-area" style="display:flex; align-items:center; gap:8px;">
+                    <span id="userNameDisplay">Usuário</span>
+                    <button id="logoutButton" class="btn-logout">
+                        <i class="ph ph-sign-out"></i>
+                        Sair
+                    </button>
+                </div>
+            </div>
+        </header>
+        
+        <aside class="sidebar">
+            <nav>
+                <ul>
+                    <li class="active">
+                        <a href="Dashboard.html">
+                            <i class="ph ph-house"></i>
+                            <span class="text">Início</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="Imprimir.html">
+                            <i class="ph ph-printer"></i>
+                            <span class="text">Print</span>
+                        </a>
+                    </li>
+                    <li class="ticket-item" id="menu-link-chamado">
+                        <a href="Chamado.html">
+                            <i class="ph ph-ticket"></i>
+                            <span class="text">Novo</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="AtendimentoWhatsApp.html">
+                            <i class="ph ph-whatsapp-logo"></i>
+                            <span class="text">Zap</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="Funcionarios.html">
+                            <i class="ph ph-users"></i>
+                            <span class="text">Staff</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="Categorias.html">
+                            <i class="ph ph-tag"></i>
+                            <span class="text">Cat.</span>
+                        </a>
+                    </li>    
+                    <li>
+                        <a href="GerenciarLojas.html">
+                            <i class="ph ph-storefront"></i>
+                            <span class="text">Lojas</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+        
+        <main class="main-content">
+            
+            <div class="top-row">
+                <div class="cards-stack">
+                    <div class="stat-card open">
+                        <div class="stat-info"><h3>Abertos</h3></div>
+                        <span class="stat-value" id="abertoCount">0</span>
+                        <i class="ph ph-warning-circle"></i> </div>
+                    <div class="stat-card in-progress">
+                        <div class="stat-info"><h3>Em Andamento</h3></div>
+                        <span class="stat-value" id="andamentoCount">0</span>
+                        <i class="ph ph-wrench"></i> </div>
+                    <div class="stat-card completed">
+                        <div class="stat-info"><h3>Concluídos</h3></div>
+                        <span class="stat-value" id="concluidoCount">0</span>
+                        <i class="ph ph-check-circle"></i> </div>
+                </div>
+                
+                <div class="pie-chart-wrapper">
+                    <div class="widget">
+                        <h3><i class="ph ph-chart-pie-slice"></i> Status Geral</h3>
+                        <div class="chart-box">
+                            <canvas id="chamadosPieChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bottom-row">
+                <div class="widget">
+                    <h3><i class="ph ph-trend-up"></i> Evolução de Chamados (6 Meses)</h3>
+                    <div class="chart-box">
+                        <canvas id="chamadosLineChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <dialog id="modalTicket">
+        <div class="modal-content-wrapper">
+            <div class="modal-header-custom">
+                <h2><i class="ph ph-plus-circle"></i> Novo Chamado</h2>
+                <button type="button" id="fecharModal" style="background:none; border:none; font-size:1.5rem; cursor:pointer; color: var(--text-secondary);"><i class="ph ph-x"></i></button>
+            </div>
+            <form id="ticketForm">
+                <div class="row">
+                    <div class="col-md-6"><div class="grupo-form"><label>Nome</label><input type="text" id="nomeRequisitante" required></div></div>
+                    <div class="col-md-6"><div class="grupo-form"><label>Email</label><input type="email" id="emailRequisitante"></div></div>
+                </div>
+                <div class="grupo-form"><label>Telefone</label><input type="tel" id="telefoneRequisitante" required></div>
+                <div class="row">
+                    <div class="col-md-6"><div class="grupo-form"><label>Loja</label><select id="loja" required><option value="">Carregando...</option></select></div></div>
+                    <div class="col-md-6"><div class="grupo-form"><label>Departamento</label><select id="departamento" disabled required><option value="">--</option></select></div></div>
+                </div>
+                <div class="grupo-form"><label>Assunto</label><input type="text" id="assunto" required></div>
+                <div class="grupo-form"><label>Descrição</label><textarea id="descricao" rows="3" required></textarea></div>
+                <div class="row">
+                    <div class="col-md-6"><div class="grupo-form"><label>Prioridade</label><select id="prioridade"><option value="Alta">Alta</option><option value="Média" selected>Média</option><option value="Baixa">Baixa</option></select></div></div>
+                    <div class="col-md-6"><div id="categoriaCascataWrapper"></div></div>
+                </div>
+                <div class="grupo-form"><label>Anexos</label><input type="file" id="anexo" multiple></div>
+                <div id="modalResposta"></div>
+                <div class="form-actions"><button type="submit" id="criarTicket">Criar Chamado</button></div>
+            </form>
+        </div>
+    </dialog>
+
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+    <script src="js/globalNotification.js"></script>
+
+    <script type="module">
+        document.addEventListener('DOMContentLoaded', () => {
+            const API_URL = ""; 
+            let pieChart = null, lineChart = null;
+            let userId = 1; let allCategories = [];
+
+            // Elementos
+            const modal = document.getElementById("modalTicket");
+            const btnAbrir = document.getElementById("newTicketButton");
+            const btnFecharHeader = document.getElementById("fecharModal");
+            const ticketForm = document.getElementById("ticketForm");
+            const modalResposta = document.getElementById("modalResposta");
+            const cascataWrapper = document.getElementById("categoriaCascataWrapper");
+            const selectLoja = document.getElementById("loja");
+            const selectDepartamento = document.getElementById("departamento");
+            const inputTelefone = document.getElementById("telefoneRequisitante");
+            const btnTheme = document.getElementById("themeToggle");
+
+            // --- Auth & User ---
+            try {
+                const u = JSON.parse(localStorage.getItem("userData"));
+                if(u?.data?.id) userId = u.data.id;
+                if(u?.data?.nomeFuncionario) document.getElementById('userNameDisplay').textContent = u.data.nomeFuncionario.split(' ')[0];
+                if(u?.data?.perfil === 'AGENTE' || u?.data?.perfil === 'ADMIN'){
+                    const link = document.getElementById("menu-link-chamado");
+                    if(link) { 
+                        link.querySelector('a').href="GerenciarChamados.html"; 
+                        link.querySelector('.text').textContent="Admin";
+                        link.querySelector('i').classList.replace("ph-ticket", "ph-shield-check");
+                    }
+                }
+            } catch(e){}
+
+            document.getElementById("logoutButton")?.addEventListener('click', () => { localStorage.removeItem("userData"); window.location.href="Login.html"; });
+            
+            // --- Tema e Ícone do Tema ---
+            function updateThemeIcon(isDark) {
+                if(btnTheme) btnTheme.innerHTML = isDark ? '<i class="ph ph-sun"></i>' : '<i class="ph ph-moon"></i>';
+            }
+
+            function toggleTheme() {
+                document.body.classList.toggle("dark-mode");
+                const isDark = document.body.classList.contains("dark-mode");
+                localStorage.setItem("theme", isDark ? "dark" : "light");
+                updateThemeIcon(isDark);
+                fetchCounts();
+            }
+
+            btnTheme?.addEventListener('click', toggleTheme);
+            updateThemeIcon(document.body.classList.contains("dark-mode"));
+
+            // --- GRÁFICOS ---
+            function renderPie(counts) {
+                const ctx = document.getElementById('chamadosPieChart');
+                if(!ctx) return;
+                if(pieChart) pieChart.destroy();
+                const color = getComputedStyle(document.body).color;
+                
+                pieChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Abertos', 'Andamento', 'Concluídos'],
+                        datasets: [{ 
+                            data: [counts['Aberto']||0, counts['Em Andamento']||0, counts['Concluído']||0], 
+                            backgroundColor: ['#ffc107', '#0056b3', '#198754'], 
+                            borderWidth: 0, hoverOffset: 10
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { 
+                            legend: { position: 'right', labels: { color: color, boxWidth: 12, font: {family:'Inter', size:11} } },
+                            tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.9)', cornerRadius: 8 }
+                        },
+                        layout: { padding: 0 },
+                        cutout: '70%'
+                    }
+                });
+            }
+
+            function renderLine(counts) {
+                const ctx = document.getElementById('chamadosLineChart');
+                if(!ctx) return;
+                if(lineChart) lineChart.destroy();
+                const color = getComputedStyle(document.body).color;
+                const gridColor = document.body.classList.contains('dark-mode') ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+
+                lineChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Ago', 'Set', 'Out', 'Nov', 'Dez', 'Jan'],
+                        datasets: [
+                            { label: 'Abertos', data: [12, 19, 15, 25, 22, counts['Aberto']||10], borderColor: '#ffc107', backgroundColor: '#ffc107', tension: 0.4, pointRadius: 0, pointHoverRadius: 6, borderWidth: 2 },
+                            { label: 'Andamento', data: [8, 15, 20, 18, 24, counts['Em Andamento']||15], borderColor: '#0056b3', backgroundColor: '#0056b3', tension: 0.4, pointRadius: 0, pointHoverRadius: 6, borderWidth: 2 },
+                            { label: 'Concluídos', data: [25, 30, 45, 50, 60, counts['Concluído']||40], borderColor: '#198754', backgroundColor: '#198754', tension: 0.4, pointRadius: 0, pointHoverRadius: 6, borderWidth: 2 }
+                        ]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: { legend: { position: 'top', align: 'end', labels: { color: color, boxWidth: 8, usePointStyle: true } } },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { color: color, font: {size: 11} }, border: { display: false } },
+                            y: { grid: { color: gridColor, borderDash: [4,4], drawBorder: false }, ticks: { color: color, font: {size: 11} }, border: { display: false } }
+                        }
+                    }
+                });
+            }
+
+            async function fetchCounts() {
+                try {
+                    const res = await fetch(`${API_URL}/chamados/contagem`);
+                    if(!res.ok) return;
+                    const c = await res.json();
+                    document.getElementById('abertoCount').textContent = c['Aberto']||0;
+                    document.getElementById('andamentoCount').textContent = c['Em Andamento']||0;
+                    document.getElementById('concluidoCount').textContent = c['Concluído']||0;
+                    renderPie(c); renderLine(c);
+                } catch(e) { console.error(e); }
+            }
+
+            // --- Helpers e Modal ---
+            async function loadLojas() {
+                try { const res = await fetch(`${API_URL}/chamados/dados/lojas`); const d = await res.json(); selectLoja.innerHTML='<option value="">-- Selecione --</option>'; d.forEach(x => selectLoja.add(new Option(x.nome, x.id))); } catch(e){}
+            }
+            selectLoja.addEventListener('change', async () => {
+                selectDepartamento.innerHTML='<option>...</option>'; selectDepartamento.disabled=true;
+                try { const res = await fetch(`${API_URL}/chamados/dados/lojas/${selectLoja.value}/departamentos`); const d = await res.json(); selectDepartamento.innerHTML='<option value="">-- Selecione --</option>'; d.forEach(x => selectDepartamento.add(new Option(x.nome, x.id))); selectDepartamento.disabled=false; } catch(e){}
+            });
+            async function loadCats() { try { const res = await fetch(`${API_URL}/categorias`); allCategories = await res.json(); renderCascata(null,0); } catch(e){} }
+            function renderCascata(pid, lvl) {
+                const childs = allCategories.filter(c => c.parent_id == pid);
+                if(!childs.length) return;
+                const div = document.createElement('div'); div.className='grupo-form';
+                const s = document.createElement('select'); s.className='form-select'; s.dataset.lvl=lvl;
+                s.add(new Option(lvl===0?'Categoria':'Subcategoria', ""));
+                childs.forEach(c => s.add(new Option(c.nome, c.id)));
+                div.append(s); cascataWrapper.appendChild(div);
+            }
+            cascataWrapper.addEventListener('change', e => {
+                if(e.target.tagName!=='SELECT') return;
+                const lvl = parseInt(e.target.dataset.lvl);
+                cascataWrapper.querySelectorAll('select').forEach(s => { if(parseInt(s.dataset.lvl)>lvl) s.parentElement.remove(); });
+                if(e.target.value) renderCascata(e.target.value, lvl+1);
+            });
+
+            ticketForm.addEventListener('submit', async e => {
+                e.preventDefault();
+                const sels = cascataWrapper.querySelectorAll('select');
+                let catId = null; for(let s of sels) if(s.value) catId=s.value;
+                if(!catId) return alert("Selecione a categoria");
+                
+                const fd = new FormData();
+                const obj = { nome_requisitante_manual: ticketForm.nomeRequisitante.value, email_requisitante_manual: ticketForm.emailRequisitante.value, telefone_requisitante_manual: ticketForm.telefoneRequisitante.value, assunto: ticketForm.assunto.value, descricao: ticketForm.descricao.value, prioridade: document.getElementById('prioridade').value, requisitante_id: userId, categoria_unificada_id: parseInt(catId), loja: selectLoja.value, departamento: selectDepartamento.value };
+                fd.append('chamado', JSON.stringify(obj));
+                Array.from(document.getElementById('anexo').files).forEach(f => fd.append('anexos', f));
+
+                try {
+                    const res = await fetch(`${API_URL}/chamados`, {method:'POST', body:fd});
+                    if(!res.ok) throw new Error((await res.json()).message);
+                    alert("Sucesso!"); modal.close(); fetchCounts();
+                } catch(err) { alert(err.message); }
+            });
+
+            btnAbrir.addEventListener('click', () => { ticketForm.reset(); cascataWrapper.innerHTML=''; renderCascata(null,0); modal.showModal(); });
+            btnFecharHeader.addEventListener('click', () => modal.close());
+            if(inputTelefone) inputTelefone.addEventListener('input', () => { let v=inputTelefone.value.replace(/\D/g,"").substr(0,11); inputTelefone.value = v.length>6?v.replace(/^(\d{2})(\d{5})(\d{0,4}).*/,'($1) $2-$3'):v.length>2?v.replace(/^(\d{2})(\d{0,5}).*/,'($1) $2'):v; });
+
+            // Init
+            fetchCounts(); loadLojas(); loadCats();
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
