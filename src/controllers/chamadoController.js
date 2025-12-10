@@ -1,6 +1,13 @@
 import * as ChamadoModel from '../models/chamadoModel.js';
 import * as EmailService from '../services/emailService.js'; 
 import PDFDocument from 'pdfkit';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Configuração para caminhos de arquivo (necessário para pegar a logo)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // ====================================================
 // ======== NOVAS FUNÇÕES PARA DADOS DINÂMICOS ========
@@ -44,7 +51,6 @@ export const criarChamado = async (req, res) => {
         const chamado = JSON.parse(req.body.chamado);
         const arquivos = req.files; 
 
-        // [ALTERAÇÃO] Extraindo 'loja' e 'departamento' do corpo da requisição
         const {
             assunto, descricao, prioridade, requisitante_id,
             categoria_unificada_id, 
@@ -52,7 +58,6 @@ export const criarChamado = async (req, res) => {
             loja, departamento 
         } = chamado;
 
-        // [CORREÇÃO] Removida a verificação de !email_requisitante_manual para torná-lo opcional
         if (!assunto || !descricao || !requisitante_id ||
             !nome_requisitante_manual || !telefone_requisitante_manual) {
             return res.status(400).json({
@@ -61,7 +66,6 @@ export const criarChamado = async (req, res) => {
             });
         }
 
-        // [ALTERAÇÃO] Convertendo para ID (Inteiro) antes de salvar
         const dadosParaCriar = {
             assunto: assunto,
             descricao: descricao,
@@ -70,27 +74,20 @@ export const criarChamado = async (req, res) => {
             requisitanteIdNum: parseInt(requisitante_id),
             categoriaUnificadaIdNum: categoria_unificada_id ? parseInt(categoria_unificada_id) : null,
             nomeRequisitanteManual: nome_requisitante_manual,
-            emailRequisitanteManual: email_requisitante_manual, // Passa o valor (pode ser vazio)
+            emailRequisitanteManual: email_requisitante_manual,
             telefoneRequisitanteManual: telefone_requisitante_manual,
-            
-            // Salva o ID. Se vier vazio, salva null.
             loja_id: loja ? parseInt(loja) : null,                 
             departamento_id: departamento ? parseInt(departamento) : null 
         };
 
         const novoId = await ChamadoModel.create(dadosParaCriar);
         
-        // (Lógica para salvar anexos no banco de dados iria aqui)
         if (arquivos && arquivos.length > 0) {
             console.log(`Salvando ${arquivos.length} anexos para o chamado ${novoId}`);
         }
         
-        // Busca o chamado completo recém-criado
         const novoChamado = await ChamadoModel.findById(novoId);
         
-        // =================================================
-        // NOTIFICAÇÃO EM TEMPO REAL VIA SOCKET
-        // =================================================
         if (req.io) {
             req.io.emit('novoChamadoInterno', {
                 id: novoChamado.id,
@@ -100,16 +97,11 @@ export const criarChamado = async (req, res) => {
             });
         }
 
-        // =================================================
-        // [NOVO] ENVIO DE E-MAIL DE CRIAÇÃO
-        // =================================================
-        // Só tenta enviar e-mail se o campo emailRequisitante tiver valor
         if (novoChamado.emailRequisitante) {
             EmailService.enviarNotificacaoCriacao(novoChamado.emailRequisitante, novoChamado)
                 .catch(err => console.error("Falha silenciosa ao enviar e-mail de criação:", err));
         }
         
-        // Formata a resposta
         const Funcionario = {
             nomeFuncionario: novoChamado.nomeRequisitante,
             email: novoChamado.emailRequisitante,
@@ -122,14 +114,12 @@ export const criarChamado = async (req, res) => {
             nomePai: novoChamado.nomeCategoriaPai
         } : null;
 
-        // Limpa campos duplicados
         delete novoChamado.nomeRequisitante;
         delete novoChamado.emailRequisitante;
         delete novoChamado.telefoneRequisitante;
         delete novoChamado.nomeCategoria;
         delete novoChamado.nomeCategoriaPai;
 
-        // O objeto 'novoChamado' já contém 'loja' e 'departamento' (nomes) retornados pelo Model via JOIN
         const chamadoFormatado = { ...novoChamado, Funcionario, Categorias };
 
         res.status(201).json({ success: true, data: chamadoFormatado });
@@ -139,7 +129,6 @@ export const criarChamado = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Erro ao processar dados: JSON do chamado mal formatado.' });
         }
         if (error.code === 'ER_NO_REFERENCED_ROW_2') {
-            // Verifica qual chave estrangeira falhou
             let msg = 'Erro de integridade: Registro referenciado não encontrado.';
             if (error.message.includes('fk_Chamados_Loja')) msg = 'Erro: A Loja selecionada é inválida.';
             else if (error.message.includes('fk_Chamados_Departamento')) msg = 'Erro: O Departamento selecionado é inválido.';
@@ -187,7 +176,6 @@ export const listarChamados = async (req, res) => {
             delete chamado.nomeAtendente;
             delete chamado.emailAtendente;
 
-            // Campos 'loja' e 'departamento' são passados automaticamente
             return { ...chamado, Funcionario, Categorias, Atendente };
         });
 
@@ -286,9 +274,6 @@ export const atualizarStatus = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Erro: Chamado não encontrado.' });
         }
 
-        // =================================================
-        // [NOVO] ENVIO DE E-MAIL DE ATUALIZAÇÃO
-        // =================================================
         const chamadoAtualizado = await ChamadoModel.findById(idNum);
         
         if (chamadoAtualizado && chamadoAtualizado.emailRequisitante) {
@@ -359,7 +344,6 @@ export const atualizarCategoria = async (req, res) => {
             return res.status(400).json({ success: false, message: 'ID e Nova Categoria são obrigatórios.' });
         }
 
-        // Chama a função no Model (que deve ter sido adicionada no chamadoModel.js)
         const result = await ChamadoModel.updateCategoria(idNum, parseInt(categoriaId));
 
         if (result.affectedRows === 0) {
@@ -395,69 +379,135 @@ export const contarChamadosPorStatus = async (req, res) => {
         res.status(500).json({ success: false, message: 'Erro interno do servidor ao buscar contagens.' });
     }
 };
+
 // ====================================================
-// ======== GERAR RELATÓRIO PDF (ATUALIZADO) ========
+// ======== GERAR RELATÓRIO PDF (LAYOUT PROFISSIONAL) ========
 // ====================================================
 export const gerarRelatorioChamados = async (req, res) => {
     try {
-        // Busca os chamados com os filtros atuais
         const chamados = await ChamadoModel.findAll(req.query);
+        
+        // Define margens e tamanho
+        const doc = new PDFDocument({ margin: 30, size: 'A4' });
+        const filename = `Relatorio_Atendimentos_${Date.now()}.pdf`;
 
-        const doc = new PDFDocument();
-        const filename = `Relatorio_Chamados_${Date.now()}.pdf`;
+        // Tenta encontrar a logo em pasta views ou public
+        const logoPath = path.resolve(__dirname, '..', 'views', 'logo.png'); 
 
-        // Configura o download
         res.setHeader('Content-disposition', 'attachment; filename="' + filename + '"');
         res.setHeader('Content-type', 'application/pdf');
 
         doc.pipe(res);
 
         // --- CABEÇALHO ---
-        doc.fontSize(20).text('Relatório de Chamados', { align: 'center' });
-        doc.moveDown();
-        
-        doc.fontSize(10).text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, { align: 'right' });
-        
-        // Exibe no topo se houve filtro de Loja ou Status
-        if (req.query.loja_id) doc.text(`Filtro por Loja (ID): ${req.query.loja_id}`, { align: 'right' });
-        if (req.query.status) doc.text(`Filtro Status: ${req.query.status}`, { align: 'right' });
-        
-        doc.moveDown();
-        doc.moveTo(doc.x, doc.y).lineTo(500, doc.y).stroke(); // Linha inicial
-        doc.moveDown();
+        // Desenha a logo se existir
+        if (fs.existsSync(logoPath)) {
+            doc.image(logoPath, 30, 30, { width: 80 }); 
+        }
 
-        // --- LISTA DE CHAMADOS ---
-        chamados.forEach(ch => {
-            if (!ch) return; // Segurança
+        // Título e Dados da Empresa (Alinhado a direita/centro)
+        // Posição X aproximada 120 para não sobrepor a logo
+        doc.fontSize(16).font('Helvetica-Bold').text('Relatório de Atendimentos', 120, 35, { align: 'left' });
+        
+        doc.fontSize(10).font('Helvetica-Bold').text('Supermercado Rosalina', 120, 55);
+        doc.font('Helvetica').text('Avenida Nicanor Reis, Jardim Torrão de Ouro', 120, 68);
+        doc.text('São José dos Campos - SP', 120, 81);
 
-            // Título: ID e Assunto
-            doc.fontSize(12).font('Helvetica-Bold').text(`Ticket #${ch.id} - ${ch.assunto || 'Sem assunto'}`);
-            
-            // Linha 1: Status, Prioridade e Loja
-            const nomeLoja = ch.loja || 'N/A'; // Pega o nome da loja vindo do JOIN no Model
-            const departamento = ch.departamento ? `(${ch.departamento})` : '';
-            
-            doc.fontSize(10).font('Helvetica').text(
-                `Status: ${ch.status} | Prioridade: ${ch.prioridade} | Loja: ${nomeLoja} ${departamento}`
-            );
-            
-            // Linha 2: Solicitante e Data
-            const solicitante = ch.nomeRequisitante || ch.nomeRequisitanteManual || 'N/A';
-            const dataCriacao = ch.created_at ? new Date(ch.created_at).toLocaleString('pt-BR') : 'N/A';
-            
-            doc.text(`Solicitante: ${solicitante} | Aberto em: ${dataCriacao}`);
-            
-            // Linha 3: Categoria (Se houver)
-            if (ch.nomeCategoria) {
-                const cat = ch.nomeCategoriaPai ? `${ch.nomeCategoriaPai} > ${ch.nomeCategoria}` : ch.nomeCategoria;
-                doc.text(`Categoria: ${cat}`);
+        // Data de Geração no canto direito
+        doc.fontSize(9).text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 400, 35, { align: 'right' });
+
+        // Exibir Filtros Aplicados
+        let filtrosTexto = [];
+        if (req.query.loja_id) filtrosTexto.push(`Loja ID: ${req.query.loja_id}`);
+        if (req.query.status) filtrosTexto.push(`Status: ${req.query.status}`);
+        if (req.query.categoria_id) filtrosTexto.push(`Categoria ID: ${req.query.categoria_id}`);
+        
+        if (filtrosTexto.length > 0) {
+            doc.text(`Filtros: ${filtrosTexto.join(' | ')}`, 400, 50, { align: 'right', color: 'gray' });
+        }
+
+        // Linha divisória do cabeçalho
+        doc.moveDown(4);
+        let yPos = doc.y;
+        doc.strokeColor('#aaaaaa').lineWidth(1).moveTo(30, yPos).lineTo(565, yPos).stroke();
+        
+        yPos += 15; // Espaço após linha
+
+        // --- LISTA DE CHAMADOS (Estilo "Card") ---
+        doc.fillColor('black');
+
+        chamados.forEach((ch) => {
+            // Verifica quebra de página
+            if (yPos > 700) {
+                doc.addPage();
+                yPos = 40; // Margem topo nova página
             }
+
+            // --- BLOCO DO CHAMADO ---
+            // ID grande na esquerda
+            doc.fontSize(14).font('Helvetica-Bold').text(`#${ch.id}`, 30, yPos);
             
-            // Espaçamento e Linha Divisória
-            doc.moveDown(0.5);
-            doc.moveTo(doc.x, doc.y).lineTo(500, doc.y).stroke(); 
-            doc.moveDown(0.5);
+            // Coluna Central (Detalhes) - X = 80
+            let xContent = 90;
+            
+            // Linha 1: Loja e Requisitante
+            const nomeLoja = ch.loja || 'Loja não identificada';
+            const solicitante = (ch.nomeRequisitante || ch.nomeRequisitanteManual || 'N/A').split(' ')[0];
+            doc.fontSize(10).font('Helvetica-Bold').text(nomeLoja.toUpperCase(), xContent, yPos);
+            doc.font('Helvetica').fontSize(9).text(`Solicitante: ${solicitante}`, xContent + 200, yPos); // Na mesma linha, mais à direita
+
+            // Linha 2: Assunto
+            const line2Y = yPos + 15;
+            doc.font('Helvetica-Bold').fontSize(9).text('Assunto:', xContent, line2Y);
+            doc.font('Helvetica').text(ch.assunto || 'Sem assunto', xContent + 45, line2Y);
+
+            // Linha 3: Categoria e Status
+            const line3Y = line2Y + 15;
+            let catTexto = 'N/A';
+            if (ch.nomeCategoria) {
+                 catTexto = ch.nomeCategoriaPai ? `${ch.nomeCategoriaPai} > ${ch.nomeCategoria}` : ch.nomeCategoria;
+            }
+            doc.font('Helvetica-Bold').text('Categoria:', xContent, line3Y);
+            doc.font('Helvetica').text(catTexto, xContent + 50, line3Y);
+            
+            // Status alinhado à direita
+            doc.font('Helvetica-Bold').text('Status:', 400, line3Y);
+            doc.font('Helvetica').text(ch.status, 440, line3Y);
+
+            // Linha 4: Datas e Técnico
+            const line4Y = line3Y + 15;
+            const dataCriacao = ch.created_at ? new Date(ch.created_at).toLocaleString('pt-BR') : 'N/A';
+            doc.font('Helvetica-Bold').text('Criado em:', xContent, line4Y);
+            doc.font('Helvetica').text(dataCriacao, xContent + 50, line4Y);
+
+            if (ch.nomeAtendente) {
+                doc.font('Helvetica-Bold').text('Técnico:', 400, line4Y);
+                doc.font('Helvetica').text(ch.nomeAtendente.split(' ')[0], 440, line4Y);
+            }
+
+            // Linha 5: Descrição (Texto corrido)
+            const line5Y = line4Y + 18;
+            doc.font('Helvetica-Bold').text('Descrição:', xContent, line5Y);
+            
+            let descricao = ch.descricao || '';
+            // Limita descrição para não quebrar layout drasticamente
+            if (descricao.length > 250) descricao = descricao.substring(0, 250) + '...';
+            
+            doc.font('Helvetica').fontSize(8).fillColor('#444444')
+               .text(descricao, xContent, line5Y + 10, { width: 450, align: 'justify' });
+
+            // Linha Separadora Final do Item
+            doc.fillColor('black'); // Reset cor
+            const endY = doc.y + 10;
+            doc.strokeColor('#e0e0e0').lineWidth(1).moveTo(30, endY).lineTo(565, endY).stroke();
+            
+            // Atualiza yPos para o próximo item
+            yPos = endY + 15;
         });
+
+        // Rodapé
+        doc.fontSize(8).fillColor('#777777').text(`Total de registros: ${chamados.length}`, 30, 780, { align: 'left' });
+        doc.text('Portal Supermercado Rosalina', 30, 780, { align: 'right' });
 
         doc.end();
 
