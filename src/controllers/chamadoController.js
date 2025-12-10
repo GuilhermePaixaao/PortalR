@@ -395,9 +395,12 @@ export const contarChamadosPorStatus = async (req, res) => {
         res.status(500).json({ success: false, message: 'Erro interno do servidor ao buscar contagens.' });
     }
 };
+// ====================================================
+// ======== GERAR RELATÓRIO PDF (ATUALIZADO) ========
+// ====================================================
 export const gerarRelatorioChamados = async (req, res) => {
     try {
-        // Busca os chamados com os filtros atuais (reutiliza a lógica do findAll)
+        // Busca os chamados com os filtros atuais
         const chamados = await ChamadoModel.findAll(req.query);
 
         const doc = new PDFDocument();
@@ -409,25 +412,50 @@ export const gerarRelatorioChamados = async (req, res) => {
 
         doc.pipe(res);
 
-        // Cabeçalho
+        // --- CABEÇALHO ---
         doc.fontSize(20).text('Relatório de Chamados', { align: 'center' });
         doc.moveDown();
+        
         doc.fontSize(10).text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, { align: 'right' });
+        
+        // Exibe no topo se houve filtro de Loja ou Status
+        if (req.query.loja_id) doc.text(`Filtro por Loja (ID): ${req.query.loja_id}`, { align: 'right' });
+        if (req.query.status) doc.text(`Filtro Status: ${req.query.status}`, { align: 'right' });
+        
+        doc.moveDown();
+        doc.moveTo(doc.x, doc.y).lineTo(500, doc.y).stroke(); // Linha inicial
         doc.moveDown();
 
-        // Lista de Chamados
+        // --- LISTA DE CHAMADOS ---
         chamados.forEach(ch => {
-            doc.fontSize(12).font('Helvetica-Bold').text(`Ticket #${ch.id} - ${ch.assunto}`);
-            doc.fontSize(10).font('Helvetica').text(`Status: ${ch.status} | Prioridade: ${ch.prioridade}`);
-            doc.text(`Solicitante: ${ch.nomeRequisitante || 'N/A'} | Aberto em: ${new Date(ch.created_at).toLocaleString('pt-BR')}`);
+            if (!ch) return; // Segurança
 
+            // Título: ID e Assunto
+            doc.fontSize(12).font('Helvetica-Bold').text(`Ticket #${ch.id} - ${ch.assunto || 'Sem assunto'}`);
+            
+            // Linha 1: Status, Prioridade e Loja
+            const nomeLoja = ch.loja || 'N/A'; // Pega o nome da loja vindo do JOIN no Model
+            const departamento = ch.departamento ? `(${ch.departamento})` : '';
+            
+            doc.fontSize(10).font('Helvetica').text(
+                `Status: ${ch.status} | Prioridade: ${ch.prioridade} | Loja: ${nomeLoja} ${departamento}`
+            );
+            
+            // Linha 2: Solicitante e Data
+            const solicitante = ch.nomeRequisitante || ch.nomeRequisitanteManual || 'N/A';
+            const dataCriacao = ch.created_at ? new Date(ch.created_at).toLocaleString('pt-BR') : 'N/A';
+            
+            doc.text(`Solicitante: ${solicitante} | Aberto em: ${dataCriacao}`);
+            
+            // Linha 3: Categoria (Se houver)
             if (ch.nomeCategoria) {
                 const cat = ch.nomeCategoriaPai ? `${ch.nomeCategoriaPai} > ${ch.nomeCategoria}` : ch.nomeCategoria;
                 doc.text(`Categoria: ${cat}`);
             }
-
+            
+            // Espaçamento e Linha Divisória
             doc.moveDown(0.5);
-            doc.moveTo(doc.x, doc.y).lineTo(500, doc.y).stroke(); // Linha divisória
+            doc.moveTo(doc.x, doc.y).lineTo(500, doc.y).stroke(); 
             doc.moveDown(0.5);
         });
 
@@ -435,6 +463,8 @@ export const gerarRelatorioChamados = async (req, res) => {
 
     } catch (error) {
         console.error("Erro ao gerar relatório:", error);
-        res.status(500).json({ error: "Erro ao gerar PDF" });
+        if (!res.headersSent) {
+            res.status(500).json({ error: "Erro ao gerar PDF" });
+        }
     }
 };

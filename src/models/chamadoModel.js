@@ -147,11 +147,19 @@ export const findAll = async (filtros = {}) => {
         values.push(parseInt(filtros.requisitante_id));
     }
     
+    // Filtro de Categoria (Pai ou Filho)
     if (filtros.categoria_id) {
         whereConditions.push("(cat.id = ? OR cat.parent_id = ?)");
         values.push(parseInt(filtros.categoria_id));
         values.push(parseInt(filtros.categoria_id));
     }
+    
+    // --- [NOVO] Filtro de Loja ---
+    if (filtros.loja_id) {
+        whereConditions.push("ch.loja_id = ?");
+        values.push(parseInt(filtros.loja_id));
+    }
+    // -----------------------------
     
     if (filtros.status) {
         whereConditions.push("ch.status = ?");

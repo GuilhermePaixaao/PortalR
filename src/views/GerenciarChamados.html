@@ -706,6 +706,13 @@
                             </select>
                         </div>
 
+                        <div class="col-md-2">
+                            <label for="filtroLoja" class="form-label">Loja</label>
+                            <select id="filtroLoja" class="form-select">
+                                <option value="">Todas</option>
+                                </select>
+                        </div>
+
                         <div class="col-md-3">
                             <label for="filtroCategoria" class="form-label">Categoria</label>
                             <select id="filtroCategoria" class="form-select">
@@ -717,10 +724,7 @@
                             <button id="btnFiltrar" class="btn btn-primary w-100">Filtrar</button>
                         </div>
                         <div class="col-md-2 d-flex align-items-end">
-                            <button id="btnRelatorio" class="btn btn-secondary w-100" 
-                                    onclick="window.open('/chamados/relatorio/pdf' + window.location.search)">
-                                📄 Relatório PDF
-                            </button>
+                            <button id="btnRelatorio" class="btn btn-secondary w-100" onclick="baixarRelatorioPdf()">📄 PDF</button>
                         </div>
                     </div>
 
@@ -801,6 +805,9 @@
         const filtroPrioridade = document.getElementById("filtroPrioridade");
         const filtroStatus = document.getElementById("filtroStatus");
         const filtroCategoria = document.getElementById("filtroCategoria");
+        // REFERÊNCIA DA NOVA SELECT DE LOJA
+        const filtroLoja = document.getElementById("filtroLoja"); 
+        
         const btnFiltrar = document.getElementById("btnFiltrar");
         const btnLogout = document.getElementById("logoutButton");
         const modalDetalhes = document.getElementById("modalDetalhes");
@@ -885,6 +892,23 @@
                 });
             } catch {
                 filtroCategoria.parentElement.innerHTML = '<p class="text-danger">Falha ao carregar categorias.</p>';
+            }
+        }
+        
+        // ====================================================
+        // ======== (NOVO) CARREGAR LOJAS NO FILTRO ========
+        // ====================================================
+        async function carregarFiltroLojas() {
+            try {
+                const r = await fetch(`${API_URL}/chamados/dados/lojas`);
+                const lojas = await r.json();
+                
+                filtroLoja.innerHTML = '<option value="">Todas as Lojas</option>';
+                lojas.forEach(l => {
+                    filtroLoja.add(new Option(l.nome, l.id));
+                });
+            } catch (e) {
+                console.error("Erro ao carregar lojas para filtro", e);
             }
         }
 
@@ -1140,6 +1164,9 @@
             if (filtroPrioridade.value) p.append('prioridade', filtroPrioridade.value);
             if (filtroStatus.value) p.append('status', filtroStatus.value);
             if (filtroCategoria.value) p.append('categoria_id', filtroCategoria.value);
+            
+            // --- NOVO FILTRO DE LOJA ---
+            if (filtroLoja && filtroLoja.value) p.append('loja_id', filtroLoja.value);
 
             try {
                 const r = await fetch(`${API_URL}/chamados?${p.toString()}`);
@@ -1149,6 +1176,19 @@
                 exibirMensagem(divRespostaGeral, e.message, false);
                 loadingIndicator.innerHTML = '<p style="color:red;">Falha ao carregar.</p>';
             }
+        }
+        
+        // --- FUNÇÃO GLOBAL PARA O BOTÃO DE PDF ---
+        window.baixarRelatorioPdf = function() {
+            const p = new URLSearchParams();
+            if (filtroAssunto.value.trim()) p.append('assunto', filtroAssunto.value.trim());
+            if (filtroPrioridade.value) p.append('prioridade', filtroPrioridade.value);
+            if (filtroStatus.value) p.append('status', filtroStatus.value);
+            if (filtroCategoria.value) p.append('categoria_id', filtroCategoria.value);
+            if (filtroLoja && filtroLoja.value) p.append('loja_id', filtroLoja.value);
+
+            // Abre em nova aba
+            window.open(`${API_URL}/chamados/relatorio/pdf?${p.toString()}`, '_blank');
         }
 
         async function atualizarStatusChamado(id, status) {
@@ -1482,7 +1522,8 @@
             loadTheme(); 
             await Promise.all([
                 carregarCategorias(),
-                carregarOperadores() 
+                carregarOperadores(),
+                carregarFiltroLojas() // <--- Carrega o novo filtro
             ]);
             await listarChamados(); 
         }
