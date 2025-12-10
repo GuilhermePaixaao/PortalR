@@ -1185,9 +1185,7 @@
                 
                 const dados = await r.json(); // CAPTURA OS DADOS
                 
-                renderizarChamados(dados); // RENDERIZA LISTA
-                atualizarGrafico(dados);   // ATUALIZA GRÁFICO
-                
+                renderizarChamados(dados); // RENDERIZA LISTA                
             } catch (e) {
                 exibirMensagem(divRespostaGeral, e.message, false);
                 loadingIndicator.innerHTML = '<p style="color:red;">Falha ao carregar.</p>';
