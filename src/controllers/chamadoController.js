@@ -5,7 +5,6 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Configuração para caminhos de arquivo
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -27,7 +26,6 @@ export const listarDepartamentosDaLoja = async (req, res) => {
     try {
         const { lojaId } = req.params;
         if (!lojaId) return res.status(400).json({ error: 'ID da loja é obrigatório' });
-        
         const departamentos = await ChamadoModel.getDepartamentosPorLoja(lojaId);
         res.json(departamentos);
     } catch (error) {
@@ -42,30 +40,23 @@ export const listarDepartamentosDaLoja = async (req, res) => {
 
 export const criarChamado = async (req, res) => {
     try {
-        if (!req.body.chamado) {
-            return res.status(400).json({ success: false, message: "Dados não encontrados." });
-        }
+        if (!req.body.chamado) return res.status(400).json({ success: false, message: "Dados não encontrados." });
 
         const chamado = JSON.parse(req.body.chamado);
         const arquivos = req.files; 
 
         const {
-            assunto, descricao, prioridade, requisitante_id,
-            categoria_unificada_id, 
+            assunto, descricao, prioridade, requisitante_id, categoria_unificada_id, 
             nome_requisitante_manual, email_requisitante_manual, telefone_requisitante_manual,
             loja, departamento 
         } = chamado;
 
-        if (!assunto || !descricao || !requisitante_id ||
-            !nome_requisitante_manual || !telefone_requisitante_manual) {
+        if (!assunto || !descricao || !requisitante_id || !nome_requisitante_manual || !telefone_requisitante_manual) {
             return res.status(400).json({ success: false, message: 'Campos obrigatórios faltando.' });
         }
 
         const dadosParaCriar = {
-            assunto: assunto,
-            descricao: descricao,
-            prioridade: prioridade || 'Média',
-            status: 'Aberto',
+            assunto, descricao, prioridade: prioridade || 'Média', status: 'Aberto',
             requisitanteIdNum: parseInt(requisitante_id),
             categoriaUnificadaIdNum: categoria_unificada_id ? parseInt(categoria_unificada_id) : null,
             nomeRequisitanteManual: nome_requisitante_manual,
@@ -76,113 +67,53 @@ export const criarChamado = async (req, res) => {
         };
 
         const novoId = await ChamadoModel.create(dadosParaCriar);
-        
-        if (arquivos && arquivos.length > 0) {
-            console.log(`Anexos salvos para o chamado ${novoId}`);
-        }
-        
         const novoChamado = await ChamadoModel.findById(novoId);
         
-        // Notificação Socket
         if (req.io) {
             req.io.emit('novoChamadoInterno', {
-                id: novoChamado.id,
-                assunto: novoChamado.assunto,
-                requisitante: novoChamado.nomeRequisitante || "Alguém",
-                prioridade: novoChamado.prioridade
+                id: novoChamado.id, assunto: novoChamado.assunto,
+                requisitante: novoChamado.nomeRequisitante || "Alguém", prioridade: novoChamado.prioridade
             });
         }
-
-        // Envio de E-mail
         if (novoChamado.emailRequisitante) {
-            EmailService.enviarNotificacaoCriacao(novoChamado.emailRequisitante, novoChamado)
-                .catch(err => console.error("Falha envio email:", err));
+            EmailService.enviarNotificacaoCriacao(novoChamado.emailRequisitante, novoChamado).catch(console.error);
         }
         
-        // Formata Resposta
-        const Funcionario = {
-            nomeFuncionario: novoChamado.nomeRequisitante,
-            email: novoChamado.emailRequisitante,
-            telefone: novoChamado.telefoneRequisitante
-        };
-        const Categorias = novoChamado.categoria_unificada_id ? { 
-            id: novoChamado.categoria_unificada_id, 
-            nome: novoChamado.nomeCategoria,
-            nomePai: novoChamado.nomeCategoriaPai
-        } : null;
-
-        delete novoChamado.nomeRequisitante; delete novoChamado.emailRequisitante; delete novoChamado.telefoneRequisitante;
-        delete novoChamado.nomeCategoria; delete novoChamado.nomeCategoriaPai;
-
-        const chamadoFormatado = { ...novoChamado, Funcionario, Categorias };
-        res.status(201).json({ success: true, data: chamadoFormatado });
-
+        res.status(201).json({ success: true, data: novoChamado });
     } catch (error) {
-        console.error('Erro ao criar chamado:', error);
+        console.error('Erro criar chamado:', error);
         res.status(500).json({ success: false, message: 'Erro interno.' });
     }
 };
 
 export const listarChamados = async (req, res) => {
     try {
-        const filtros = req.query;
-        const chamados = await ChamadoModel.findAll(filtros);
-
-        const chamadosFormatados = chamados.map(chamado => {
-            const Funcionario = {
-                nomeFuncionario: chamado.nomeRequisitante,
-                email: chamado.emailRequisitante,
-                telefone: chamado.telefoneRequisitante
-            };
-            const Atendente = chamado.atendente_id ? {
-                nomeFuncionario: chamado.nomeAtendente, 
-                email: chamado.emailAtendente     
-            } : null; 
-            const Categorias = chamado.categoria_unificada_id ? { 
-                id: chamado.categoria_unificada_id, 
-                nome: chamado.nomeCategoria,
-                nomePai: chamado.nomeCategoriaPai 
-            } : null;
-            
-            delete chamado.nomeRequisitante; delete chamado.emailRequisitante; delete chamado.telefoneRequisitante;
-            delete chamado.nomeCategoria; delete chamado.nomeCategoriaPai; 
-            delete chamado.nomeAtendente; delete chamado.emailAtendente;
-
-            return { ...chamado, Funcionario, Categorias, Atendente };
-        });
-
-        res.status(200).json(chamadosFormatados);
+        const chamados = await ChamadoModel.findAll(req.query);
+        // Formatação simples para o front
+        const formatados = chamados.map(c => ({
+            ...c,
+            Funcionario: { nomeFuncionario: c.nomeRequisitante, email: c.emailRequisitante, telefone: c.telefoneRequisitante },
+            Atendente: c.atendente_id ? { nomeFuncionario: c.nomeAtendente, email: c.emailAtendente } : null,
+            Categorias: c.categoria_unificada_id ? { id: c.categoria_unificada_id, nome: c.nomeCategoria, nomePai: c.nomeCategoriaPai } : null
+        }));
+        res.status(200).json(formatados);
     } catch (error) {
-        console.error('Erro listar chamados:', error);
         res.status(500).json({ message: 'Erro interno.' });
     }
 };
 
 export const buscarChamadoPorId = async (req, res) => {
     try {
-        const idNum = parseInt(req.params.id);
-        const chamado = await ChamadoModel.findById(idNum);
+        const chamado = await ChamadoModel.findById(parseInt(req.params.id));
         if (!chamado) return res.status(404).json({ success: false, message: 'Não encontrado.' });
-
-        const Funcionario = { 
-            nomeFuncionario: chamado.nomeRequisitante,
-            email: chamado.emailRequisitante,
-            telefone: chamado.telefoneRequisitante
+        
+        const resposta = {
+            ...chamado,
+            Funcionario: { nomeFuncionario: chamado.nomeRequisitante, email: chamado.emailRequisitante, telefone: chamado.telefoneRequisitante },
+            Atendente: chamado.atendente_id ? { nomeFuncionario: chamado.nomeAtendente, email: chamado.emailAtendente } : null,
+            Categorias: chamado.categoria_unificada_id ? { id: chamado.categoria_unificada_id, nome: chamado.nomeCategoria, nomePai: chamado.nomeCategoriaPai } : null
         };
-        const Atendente = chamado.atendente_id ? {
-            nomeFuncionario: chamado.nomeAtendente,
-            email: chamado.emailAtendente
-        } : null;
-        const Categorias = chamado.categoria_unificada_id ? { 
-            id: chamado.categoria_unificada_id, 
-            nome: chamado.nomeCategoria,
-            nomePai: chamado.nomeCategoriaPai
-        } : null;
-
-        delete chamado.nomeRequisitante; delete chamado.emailRequisitante; delete chamado.telefoneRequisitante;
-        delete chamado.nomeCategoria; delete chamado.nomeCategoriaPai; delete chamado.nomeAtendente; delete chamado.emailAtendente;
-
-        res.status(200).json({ ...chamado, Funcionario, Categorias, Atendente });
+        res.status(200).json(resposta);
     } catch (error) {
         res.status(500).json({ success: false, message: 'Erro interno.' });
     }
@@ -192,8 +123,8 @@ export const deletarChamado = async (req, res) => {
     try {
         const result = await ChamadoModel.deleteById(parseInt(req.params.id));
         if (result.affectedRows === 0) return res.status(404).json({ success: false, message: 'Não encontrado.' });
-        res.status(200).json({ success: true });
-    } catch (error) { res.status(500).json({ success: false }); }
+        res.status(200).json({ success: true, message: 'Deletado.' });
+    } catch (e) { res.status(500).json({ success: false }); }
 };
 
 export const atualizarStatus = async (req, res) => {
@@ -249,47 +180,45 @@ export const contarChamadosPorStatus = async (req, res) => {
 };
 
 // ====================================================
-// ======== RELATÓRIOS PDF (LAYOUT PROFISSIONAL) ========
+// ======== RELATÓRIOS PDF (ESTRUTURA COMPLETA) ========
 // ====================================================
 
-// Função auxiliar para desenhar o "Cartão" do chamado
+// Função para desenhar Cartão de Chamado (usada na lista detalhada)
 const desenharCardChamado = (doc, ch, yPos) => {
-    // Barra de Título (Fundo Cinza)
+    // Fundo do título
     doc.save();
     doc.fillColor('#f0f0f0');
     doc.rect(30, yPos, 535, 20).fill();
     doc.restore();
 
-    // Texto Título (ID e Assunto)
+    // Título
     doc.fillColor('#000000').fontSize(10).font('Helvetica-Bold');
     let assuntoTopo = ch.assunto || 'Sem assunto';
     if (assuntoTopo.length > 60) assuntoTopo = assuntoTopo.substring(0, 60) + '...';
-    
     doc.text(`#${ch.id} - ${assuntoTopo}`, 35, yPos + 6);
     
-    // Status no canto direito
+    // Status
     doc.fontSize(9).text(ch.status.toUpperCase(), 400, yPos + 6, { align: 'right', width: 160 });
 
-    yPos += 30; // Desce para o conteúdo
+    yPos += 30;
 
     const col1X = 35;
     const col2X = 300;
     const lineHeight = 14;
 
-    // Linha 1: Loja e Prioridade
+    // Linha 1
     doc.fontSize(9).font('Helvetica-Bold').text('Loja:', col1X, yPos);
     doc.font('Helvetica').text(ch.loja || 'N/A', col1X + 35, yPos);
 
     doc.font('Helvetica-Bold').text('Prioridade:', col2X, yPos);
     let corPrio = 'black';
     if (ch.prioridade === 'Alta') corPrio = 'red';
-    if (ch.prioridade === 'Baixa') corPrio = 'green';
     doc.fillColor(corPrio).font('Helvetica-Bold').text(ch.prioridade, col2X + 60, yPos);
     doc.fillColor('black');
 
     yPos += lineHeight;
 
-    // Linha 2: Categoria e Solicitante
+    // Linha 2
     let catTexto = 'N/A';
     if (ch.nomeCategoria) catTexto = ch.nomeCategoriaPai ? `${ch.nomeCategoriaPai} > ${ch.nomeCategoria}` : ch.nomeCategoria;
     
@@ -302,9 +231,9 @@ const desenharCardChamado = (doc, ch, yPos) => {
 
     yPos += lineHeight;
 
-    // Linha 3: Data e Técnico
+    // Linha 3
     const dataCriacao = ch.created_at ? new Date(ch.created_at).toLocaleString('pt-BR') : '-';
-    doc.font('Helvetica-Bold').text('Aberto em:', col1X, yPos);
+    doc.font('Helvetica-Bold').text('Data:', col1X, yPos);
     doc.font('Helvetica').text(dataCriacao, col1X + 55, yPos);
 
     if (ch.nomeAtendente) {
@@ -314,26 +243,24 @@ const desenharCardChamado = (doc, ch, yPos) => {
 
     yPos += lineHeight + 5;
 
-    // Descrição (Texto justificado)
+    // Descrição
     doc.font('Helvetica-Bold').text('Descrição:', col1X, yPos);
     yPos += 12;
     let descricao = ch.descricao || 'Sem descrição.';
     descricao = descricao.replace(/(\r\n|\n|\r)/gm, " "); 
-    
     doc.font('Helvetica').fontSize(8).fillColor('#444444');
     doc.text(descricao, col1X, yPos, { width: 525, align: 'justify' });
     
     const heightDesc = doc.heightOfString(descricao, { width: 525, fontSize: 8 });
-    
-    return yPos + heightDesc + 15; // Retorna nova posição Y
+    return yPos + heightDesc + 15; 
 };
 
-// 1. Relatório Simples (Lista)
+// 1. Relatório Simples
 export const gerarRelatorioChamados = async (req, res) => {
     try {
         const chamados = await ChamadoModel.findAll(req.query);
         const doc = new PDFDocument({ margin: 30, size: 'A4' });
-        const filename = `Relatorio_Chamados_${Date.now()}.pdf`;
+        const filename = `Relatorio_Simples_${Date.now()}.pdf`;
         const logoPath = path.resolve(__dirname, '..', 'views', 'logo.png');
 
         res.setHeader('Content-disposition', 'attachment; filename="' + filename + '"');
@@ -342,30 +269,25 @@ export const gerarRelatorioChamados = async (req, res) => {
 
         if (fs.existsSync(logoPath)) doc.image(logoPath, 30, 30, { width: 80 });
         doc.fontSize(16).font('Helvetica-Bold').text('Relatório de Chamados', 120, 35);
-        doc.fontSize(10).font('Helvetica-Bold').text('Supermercado Rosalina', 120, 55);
-        doc.fontSize(9).text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 400, 35, { align: 'right' });
+        doc.fontSize(10).font('Helvetica').text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 120, 55);
         
         doc.moveDown(4);
         doc.strokeColor('#aaaaaa').lineWidth(1).moveTo(30, doc.y).lineTo(565, doc.y).stroke();
         
         let yPos = doc.y + 20;
-
         chamados.forEach(ch => {
             if (yPos > 700) { doc.addPage(); yPos = 40; }
             yPos = desenharCardChamado(doc, ch, yPos);
             yPos += 10;
         });
-
         doc.end();
-    } catch (error) {
-        if (!res.headersSent) res.status(500).json({ error: "Erro PDF" });
-    }
+    } catch (e) { if (!res.headersSent) res.status(500).json({ error: "Erro PDF" }); }
 };
 
-// 2. Relatório Completo (Gráfico + Estatísticas + Lista Detalhada)
+// 2. Relatório Completo (Gráfico + Estrutura do Prompt)
 export const gerarRelatorioCompleto = async (req, res) => {
     try {
-        const { filtros, chartImage } = req.body; 
+        const { filtros, chartImage, resumoTexto } = req.body; 
         const chamados = await ChamadoModel.findAll(filtros || {});
 
         const doc = new PDFDocument({ margin: 30, size: 'A4' });
@@ -376,62 +298,118 @@ export const gerarRelatorioCompleto = async (req, res) => {
         res.setHeader('Content-type', 'application/pdf');
         doc.pipe(res);
 
-        // --- CÁLCULO DE ESTATÍSTICAS ---
-        const totalTickets = chamados.length;
+        // ====================================================
+        // 1. CABEÇALHO E DADOS GERAIS
+        // ====================================================
         
-        // Calcula período (Menor Data -> Maior Data)
-        let periodoTexto = "Período: N/A";
-        if (chamados.length > 0) {
-            const datas = chamados.map(c => new Date(c.created_at));
-            const minDate = new Date(Math.min.apply(null, datas));
-            const maxDate = new Date(Math.max.apply(null, datas));
-            periodoTexto = `Período: ${minDate.toLocaleDateString('pt-BR')} a ${maxDate.toLocaleDateString('pt-BR')}`;
-        }
-
-        // --- 1. CABEÇALHO GERAL ---
+        // Logo
         if (fs.existsSync(logoPath)) {
             doc.image(logoPath, 30, 30, { width: 80 }); 
         }
 
-        doc.fontSize(16).font('Helvetica-Bold').text('Relatório de Gestão', 120, 35);
-        doc.fontSize(10).font('Helvetica-Bold').text('Cliente: Supermercado Rosalina', 120, 55);
-        doc.font('Helvetica').text(periodoTexto, 120, 68);
+        // Título e Cliente
+        doc.fontSize(18).font('Helvetica-Bold').text('Relatório de Gestão', 120, 35);
+        doc.fontSize(11).font('Helvetica-Bold').text('Cliente: Supermercado Rosalina', 120, 58);
         
-        // Box de Totais no topo direito
-        doc.fontSize(9).text(`Total de Tickets: ${totalTickets}`, 400, 50, { align: 'right' });
-        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 400, 65, { align: 'right' });
-        
-        let yPos = 100;
+        // Período (Calculado automaticamente dos dados)
+        let periodoTexto = "N/A";
+        if (chamados.length > 0) {
+            const datas = chamados.map(c => new Date(c.created_at));
+            const min = new Date(Math.min(...datas)).toLocaleDateString('pt-BR');
+            const max = new Date(Math.max(...datas)).toLocaleDateString('pt-BR');
+            periodoTexto = `${min} a ${max}`;
+        }
+        doc.font('Helvetica').fontSize(10).text(`Período: ${periodoTexto}`, 120, 72);
 
-        // --- 2. ESTATÍSTICAS E GRÁFICOS ---
+        // Box de Totais (Direita)
+        doc.fontSize(10).text(`Total de Tickets: ${chamados.length}`, 400, 58, { align: 'right' });
+        doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 400, 72, { align: 'right' });
+
+        doc.moveDown(4);
+        let yPos = doc.y;
+        doc.strokeColor('#aaaaaa').lineWidth(1).moveTo(30, yPos).lineTo(565, yPos).stroke();
+        yPos += 15;
+
+        // ====================================================
+        // 2. ESTATÍSTICAS E MÉTRICAS (GRÁFICO)
+        // ====================================================
+        
+        doc.fontSize(14).font('Helvetica-Bold').fillColor('#0d6efd').text('2. Estatísticas e Métricas', 30, yPos);
+        yPos += 25;
+
         if (chartImage) {
             try {
                 const base64Data = chartImage.replace(/^data:image\/\w+;base64,/, "");
                 const imgBuffer = Buffer.from(base64Data, 'base64');
-
-                doc.fontSize(12).font('Helvetica-Bold').text("Estatísticas e Métricas", 30, yPos);
-                yPos += 20;
-
-                // Centraliza o gráfico
+                
+                // Centraliza gráfico
                 const chartWidth = 450;
-                const chartHeight = 250;
+                const chartHeight = 220;
                 const xChart = (doc.page.width - chartWidth) / 2;
 
                 doc.image(imgBuffer, xChart, yPos, { width: chartWidth, height: chartHeight });
-                yPos += chartHeight + 30;
+                yPos += chartHeight + 20;
             } catch (e) {
-                doc.text("[Erro ao renderizar gráfico]", 30, yPos, { color: 'red' });
-                yPos += 40;
+                doc.fontSize(10).fillColor('red').text("[Erro ao renderizar gráfico]", 30, yPos);
+                yPos += 20;
             }
-        } else {
-            yPos += 20;
         }
+        
+        // Texto descritivo das estatísticas (Se houver lógica de texto, insira aqui)
+        doc.font('Helvetica').fontSize(10).fillColor('black');
+        doc.text("Abaixo apresentamos a distribuição dos chamados conforme o período selecionado.", 30, yPos);
+        yPos += 30;
 
-        doc.strokeColor('#aaaaaa').lineWidth(1).moveTo(30, yPos).lineTo(565, yPos).stroke();
+        // ====================================================
+        // 3. RESUMO DOS CHAMADOS (LISTAGEM DE PROBLEMAS)
+        // ====================================================
+        
+        // Verifica se cabe na página, senão quebra
+        if (yPos > 650) { doc.addPage(); yPos = 40; }
+
+        doc.fontSize(14).font('Helvetica-Bold').fillColor('#0d6efd').text('3. Resumo dos Chamados (Categorias)', 30, yPos);
+        yPos += 25;
+
+        // Monta um resumo automático das categorias principais
+        const categoriasCount = {};
+        chamados.forEach(c => {
+            const catNome = c.nomeCategoriaPai ? c.nomeCategoriaPai : (c.nomeCategoria || 'Outros');
+            categoriasCount[catNome] = (categoriasCount[catNome] || 0) + 1;
+        });
+
+        doc.font('Helvetica').fontSize(10).fillColor('black');
+        Object.entries(categoriasCount).forEach(([cat, count]) => {
+            doc.font('Helvetica-Bold').text(`• ${cat}:`, 40, yPos, { continued: true });
+            doc.font('Helvetica').text(` ${count} tickets.`);
+            yPos += 15;
+        });
+        
         yPos += 20;
 
-        // --- 3. LISTA DE TICKETS (Estrutura Detalhada) ---
-        doc.fontSize(12).font('Helvetica-Bold').fillColor('black').text("Estrutura dos Tickets", 30, yPos - 15);
+        // ====================================================
+        // 4. LOCAIS DE ATENDIMENTO
+        // ====================================================
+        
+        if (yPos > 650) { doc.addPage(); yPos = 40; }
+
+        doc.fontSize(14).font('Helvetica-Bold').fillColor('#0d6efd').text('4. Locais de Atendimento', 30, yPos);
+        yPos += 25;
+
+        const locaisUnicos = [...new Set(chamados.map(c => c.loja || 'Não identificado'))].sort();
+        doc.font('Helvetica').fontSize(10).fillColor('black');
+        doc.text(`Unidades atendidas neste período: ${locaisUnicos.join(', ')}.`, 30, yPos, { width: 500 });
+        
+        yPos += 40;
+
+        // ====================================================
+        // 5. DETALHAMENTO (LISTA DE TICKETS)
+        // ====================================================
+        
+        doc.addPage(); // Começa lista em nova página para organização
+        yPos = 40;
+
+        doc.fontSize(14).font('Helvetica-Bold').fillColor('#0d6efd').text('5. Estrutura dos Tickets (Detalhamento)', 30, yPos);
+        yPos += 30;
 
         chamados.forEach((ch) => {
             if (yPos > 700) { doc.addPage(); yPos = 40; }
@@ -439,8 +417,9 @@ export const gerarRelatorioCompleto = async (req, res) => {
             yPos += 10;
         });
 
-        // Rodapé
-        doc.fillColor('black').fontSize(8).text(`Fim do relatório - ${totalTickets} tickets processados.`, 30, 780, { align: 'center' });
+        // Rodapé Final
+        doc.fillColor('black').fontSize(8).text(`Fim do relatório - Documento confidencial.`, 30, 780, { align: 'center' });
+
         doc.end();
 
     } catch (error) {
