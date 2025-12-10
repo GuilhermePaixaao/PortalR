@@ -44,6 +44,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="css/chamado.css">
     <link rel="stylesheet" href="css/ticket.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         /* --- ESTILOS DO MODAL DE DETALHES --- */
@@ -490,6 +491,16 @@
         .dark-mode #editCategoriaContainer .text-muted {
             color: #adb5bd !important; /* Cinza claro legível */
         }
+
+        /* --- (NOVO) ESTILOS DO GRÁFICO (DARK MODE) --- */
+        .dark-mode #chartContainer {
+            background-color: #2a2a2a !important; 
+            border-color: #383838 !important;
+            color: #e0e0e0;
+        }
+        .dark-mode #chartContainer .card-title {
+            color: #e0e0e0 !important;
+        }
     </style>
 </head>
 
@@ -678,6 +689,18 @@
 
             <div class="widget card shadow-sm">
                 <div class="card-body">
+                    
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="p-3 border rounded bg-light" id="chartContainer">
+                                <h5 class="card-title text-secondary mb-3">📊 Estatísticas da Seleção Atual</h5>
+                                <div style="height: 250px; position: relative;">
+                                    <canvas id="graficoChamados"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="filters mb-3 row g-2">
                         <div class="col-md-3">
                             <label for="filtroAssunto" class="form-label">Filtrar por Assunto</label>
@@ -723,8 +746,12 @@
                         <div class="col-md-2 d-flex align-items-end">
                             <button id="btnFiltrar" class="btn btn-primary w-100">Filtrar</button>
                         </div>
+                        
+                        <div class="col-md-2 d-flex align-items-end gap-1">
+                            <button id="btnRelatorio" class="btn btn-secondary w-100" onclick="baixarRelatorioPdf()" title="Lista Simples">📄 Lista</button>
+                        </div>
                         <div class="col-md-2 d-flex align-items-end">
-                            <button id="btnRelatorio" class="btn btn-secondary w-100" onclick="baixarRelatorioPdf()">📄 PDF</button>
+                            <button id="btnRelatorioGrafico" class="btn btn-dark w-100" onclick="baixarRelatorioComGrafico()" title="PDF com Gráfico">📊 Completo</button>
                         </div>
                     </div>
 
@@ -758,6 +785,9 @@
         let listaOperadores = [];
         let allCategories = []; // Armazena todas categorias para a cascata
         let categoriaSelecionadaEdicaoId = null; // Armazena seleção temporária na edição
+        
+        // --- VARIÁVEL DO GRÁFICO ---
+        let chartInstance = null;
 
         // --- FUNÇÃO DE LOGOUT ---
         function fazerLogout() {
@@ -1081,6 +1111,91 @@
         // ----------------------------------------------------------------------------
 
         // ====================================================
+        // ======== LÓGICA DO GRÁFICO (NOVO) ========
+        // ====================================================
+        
+        function atualizarGrafico(chamados) {
+            const ctx = document.getElementById('graficoChamados').getContext('2d');
+
+            // 1. Contabiliza os dados da lista atual
+            const contagem = {
+                'Aberto': 0,
+                'Em Andamento': 0,
+                'Pausado': 0,
+                'Concluído': 0
+            };
+
+            if (chamados && chamados.length > 0) {
+                chamados.forEach(c => {
+                    // Normaliza o status para contar (ex: 'Em Andamento' -> 'Em Andamento')
+                    if (contagem[c.status] !== undefined) {
+                        contagem[c.status]++;
+                    }
+                });
+            }
+
+            const dataValues = [
+                contagem['Aberto'], 
+                contagem['Em Andamento'], 
+                contagem['Pausado'], 
+                contagem['Concluído']
+            ];
+
+            // Detect Dark Mode for Chart Colors
+            const isDark = document.body.classList.contains("dark-mode");
+            const textColor = isDark ? '#e0e0e0' : '#666';
+            const gridColor = isDark ? '#444' : '#ddd';
+
+            // 2. Configuração do Gráfico
+            const config = {
+                type: 'bar', // Pode ser 'pie', 'doughnut' ou 'bar'
+                data: {
+                    labels: ['Aberto', 'Em Andamento', 'Pausado', 'Concluído'],
+                    datasets: [{
+                        label: 'Quantidade de Chamados',
+                        data: dataValues,
+                        backgroundColor: [
+                            '#6c757d', // Aberto (Cinza)
+                            '#0d6efd', // Em Andamento (Azul)
+                            '#ffc107', // Pausado (Amarelo)
+                            '#198754'  // Concluído (Verde)
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }, // Esconde legenda se for barras
+                        title: { 
+                            display: true, 
+                            text: `Total Listado: ${chamados.length}`,
+                            color: textColor
+                        }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true, 
+                            ticks: { stepSize: 1, color: textColor },
+                            grid: { color: gridColor }
+                        },
+                        x: {
+                            ticks: { color: textColor },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            };
+
+            // 3. Atualiza ou Cria o Gráfico
+            if (chartInstance) {
+                chartInstance.destroy(); // Destroi o anterior para não sobrepor
+            }
+            chartInstance = new Chart(ctx, config);
+        }
+
+        // ====================================================
 
         function renderizarChamados(chamados) {
             loadingIndicator.style.display = 'none';
@@ -1171,7 +1286,12 @@
             try {
                 const r = await fetch(`${API_URL}/chamados?${p.toString()}`);
                 if (!r.ok) throw new Error("Erro ao buscar chamados.");
-                renderizarChamados(await r.json());
+                
+                const dados = await r.json(); // CAPTURA OS DADOS
+                
+                renderizarChamados(dados); // RENDERIZA LISTA
+                atualizarGrafico(dados);   // ATUALIZA GRÁFICO
+                
             } catch (e) {
                 exibirMensagem(divRespostaGeral, e.message, false);
                 loadingIndicator.innerHTML = '<p style="color:red;">Falha ao carregar.</p>';
@@ -1189,6 +1309,55 @@
 
             // Abre em nova aba
             window.open(`${API_URL}/chamados/relatorio/pdf?${p.toString()}`, '_blank');
+        }
+        
+        // --- FUNÇÃO PARA BAIXAR PDF COM GRÁFICO (NOVO) ---
+        window.baixarRelatorioComGrafico = async function() {
+            const btn = document.getElementById('btnRelatorioGrafico');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ Gerando...';
+            btn.disabled = true;
+
+            try {
+                // 1. Captura a imagem do gráfico atual
+                const canvas = document.getElementById('graficoChamados');
+                const chartImage = canvas.toDataURL('image/png');
+
+                // 2. Prepara os filtros igual ao listarChamados()
+                const filtros = {};
+                if (filtroAssunto.value.trim()) filtros.assunto = filtroAssunto.value.trim();
+                if (filtroPrioridade.value) filtros.prioridade = filtroPrioridade.value;
+                if (filtroStatus.value) filtros.status = filtroStatus.value;
+                if (filtroCategoria.value) filtros.categoria_id = filtroCategoria.value;
+                if (filtroLoja && filtroLoja.value) filtros.loja_id = filtroLoja.value;
+
+                // 3. Envia para o backend (POST)
+                const response = await fetch(`${API_URL}/chamados/relatorio/completo`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filtros, chartImage })
+                });
+
+                if (!response.ok) throw new Error("Erro ao gerar arquivo.");
+
+                // 4. Baixa o arquivo (Blob)
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Relatorio_Grafico_${Date.now()}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
+
+            } catch (error) {
+                console.error(error);
+                alert("Erro ao gerar relatório com gráfico.");
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
         }
 
         async function atualizarStatusChamado(id, status) {

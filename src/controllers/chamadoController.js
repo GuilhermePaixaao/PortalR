@@ -518,3 +518,102 @@ export const gerarRelatorioChamados = async (req, res) => {
         }
     }
 };
+// ====================================================
+// ======== RELATÓRIO COMPLETO (COM GRÁFICO) ========
+// ====================================================
+export const gerarRelatorioCompleto = async (req, res) => {
+    try {
+        // Pega filtros e a imagem do corpo da requisição
+        const { filtros, chartImage } = req.body; 
+        
+        // Busca os dados usando os filtros recebidos
+        const chamados = await ChamadoModel.findAll(filtros || {});
+
+        const doc = new PDFDocument({ margin: 30, size: 'A4' });
+        const filename = `Relatorio_Completo_${Date.now()}.pdf`;
+
+        // Caminho da Logo
+        const logoPath = path.resolve(__dirname, '..', 'views', 'logo.png');
+
+        res.setHeader('Content-disposition', 'attachment; filename="' + filename + '"');
+        res.setHeader('Content-type', 'application/pdf');
+
+        doc.pipe(res);
+
+        // --- 1. CABEÇALHO ---
+        if (fs.existsSync(logoPath)) {
+            doc.image(logoPath, 30, 30, { width: 80 }); 
+        }
+
+        doc.fontSize(16).font('Helvetica-Bold').text('Relatório de Atendimentos', 120, 35, { align: 'left' });
+        doc.fontSize(10).font('Helvetica').text('Supermercado Rosalina', 120, 55);
+        doc.fontSize(9).text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 400, 35, { align: 'right' });
+
+        // --- 2. INSERIR O GRÁFICO ---
+        if (chartImage) {
+            try {
+                // Remove o cabeçalho da string base64 (ex: "data:image/png;base64,")
+                const base64Data = chartImage.replace(/^data:image\/\w+;base64,/, "");
+                const imgBuffer = Buffer.from(base64Data, 'base64');
+
+                doc.moveDown(4);
+                doc.text("Análise Gráfica:", { underline: true });
+                doc.moveDown(0.5);
+                
+                // Insere a imagem centralizada
+                doc.image(imgBuffer, { 
+                    fit: [500, 300], 
+                    align: 'center',
+                    valign: 'center'
+                });
+                
+                // Espaço extra após o gráfico
+                doc.moveDown(12); 
+            } catch (e) {
+                console.error("Erro ao processar imagem do gráfico:", e);
+                doc.text("[Erro ao carregar o gráfico]", { color: 'red' });
+                doc.moveDown(2);
+            }
+        } else {
+            doc.moveDown(5);
+        }
+
+        // --- 3. LISTA DE CHAMADOS (Estilo Card) ---
+        // Desenha uma linha divisória antes de começar a lista
+        doc.strokeColor('#aaaaaa').lineWidth(1).moveTo(30, doc.y).lineTo(565, doc.y).stroke();
+        doc.moveDown(1);
+
+        chamados.forEach((ch) => {
+            // Verifica quebra de página
+            if (doc.y > 700) doc.addPage();
+
+            let yPos = doc.y;
+
+            // ID
+            doc.fillColor('black').fontSize(12).font('Helvetica-Bold').text(`#${ch.id}`, 30, yPos);
+            
+            // Coluna Principal
+            doc.fontSize(10).text(ch.assunto || 'Sem Assunto', 90, yPos);
+            
+            // Detalhes (Status, Loja, Data)
+            doc.fontSize(9).font('Helvetica').fillColor('#555555');
+            const info = `Status: ${ch.status}  |  Loja: ${ch.loja || 'N/A'}  |  Data: ${new Date(ch.created_at).toLocaleDateString('pt-BR')}`;
+            doc.text(info, 90, yPos + 15);
+
+            // Descrição (Resumida)
+            if (ch.descricao) {
+                let desc = ch.descricao.replace(/\n/g, ' '); // Remove quebras de linha
+                if (desc.length > 120) desc = desc.substring(0, 120) + '...';
+                doc.fontSize(8).font('Helvetica-Oblique').text(desc, 90, yPos + 30, { width: 450 });
+            }
+
+            doc.moveDown(3); // Espaço para o próximo
+        });
+
+        doc.end();
+
+    } catch (error) {
+        console.error("Erro Relatório Completo:", error);
+        if (!res.headersSent) res.status(500).json({ error: "Erro ao gerar PDF" });
+    }
+};
