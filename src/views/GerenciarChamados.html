@@ -747,12 +747,6 @@
                             <button id="btnFiltrar" class="btn btn-primary w-100">Filtrar</button>
                         </div>
                         
-                        <div class="col-md-2 d-flex align-items-end gap-1">
-                            <button id="btnRelatorio" class="btn btn-secondary w-100" onclick="baixarRelatorioPdf()" title="Lista Simples">📄 Lista</button>
-                        </div>
-                        <div class="col-md-2 d-flex align-items-end">
-                            <button id="btnRelatorioGrafico" class="btn btn-dark w-100" onclick="baixarRelatorioComGrafico()" title="PDF com Gráfico">📊 Completo</button>
-                        </div>
                     </div>
 
                     <div id="ticketList" class="ticket-list">
@@ -1298,68 +1292,6 @@
             }
         }
         
-        // --- FUNÇÃO GLOBAL PARA O BOTÃO DE PDF ---
-        window.baixarRelatorioPdf = function() {
-            const p = new URLSearchParams();
-            if (filtroAssunto.value.trim()) p.append('assunto', filtroAssunto.value.trim());
-            if (filtroPrioridade.value) p.append('prioridade', filtroPrioridade.value);
-            if (filtroStatus.value) p.append('status', filtroStatus.value);
-            if (filtroCategoria.value) p.append('categoria_id', filtroCategoria.value);
-            if (filtroLoja && filtroLoja.value) p.append('loja_id', filtroLoja.value);
-
-            // Abre em nova aba
-            window.open(`${API_URL}/chamados/relatorio/pdf?${p.toString()}`, '_blank');
-        }
-        
-        // --- FUNÇÃO PARA BAIXAR PDF COM GRÁFICO (NOVO) ---
-        window.baixarRelatorioComGrafico = async function() {
-            const btn = document.getElementById('btnRelatorioGrafico');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '⏳ Gerando...';
-            btn.disabled = true;
-
-            try {
-                // 1. Captura a imagem do gráfico atual
-                const canvas = document.getElementById('graficoChamados');
-                const chartImage = canvas.toDataURL('image/png');
-
-                // 2. Prepara os filtros igual ao listarChamados()
-                const filtros = {};
-                if (filtroAssunto.value.trim()) filtros.assunto = filtroAssunto.value.trim();
-                if (filtroPrioridade.value) filtros.prioridade = filtroPrioridade.value;
-                if (filtroStatus.value) filtros.status = filtroStatus.value;
-                if (filtroCategoria.value) filtros.categoria_id = filtroCategoria.value;
-                if (filtroLoja && filtroLoja.value) filtros.loja_id = filtroLoja.value;
-
-                // 3. Envia para o backend (POST)
-                const response = await fetch(`${API_URL}/chamados/relatorio/completo`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ filtros, chartImage })
-                });
-
-                if (!response.ok) throw new Error("Erro ao gerar arquivo.");
-
-                // 4. Baixa o arquivo (Blob)
-                const blob = await response.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `Relatorio_Grafico_${Date.now()}.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                window.URL.revokeObjectURL(url);
-
-            } catch (error) {
-                console.error(error);
-                alert("Erro ao gerar relatório com gráfico.");
-            } finally {
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-            }
-        }
-
         async function atualizarStatusChamado(id, status) {
             try {
                 const r = await fetch(`${API_URL}/chamados/${id}/status`, {
