@@ -189,7 +189,7 @@
         .ticket-operator { flex: 0 0 120px; }
         
         .ticket-created { flex: 0 0 100px; text-align: center; }
-        .ticket-actions { flex: 0 0 90px; text-align: center; cursor: pointer; } 
+        .ticket-actions { flex: 0 0 90px; text-align: center; cursor: pointer; } /* Aumentei um pouco para caber a lixeira */
 
         .priority-badge, .status-badge {
             padding: 0.2em 0.6em;
@@ -511,7 +511,7 @@
             <img src="/img.png" alt="Logo Portal Supermercado" class="logo-icon">              
                 PORTAL SUPERMERCADO ROSALINA
             </div>
-            
+           
             
             <div class="header-actions">
                 <button id="themeToggle" class="btn-theme-toggle" title="Alternar Tema">🌙</button>
@@ -691,20 +691,11 @@
                 <div class="card-body">
                     
                     <div class="row mb-4">
-                        <div class="col-md-6">
+                        <div class="col-12">
                             <div class="p-3 border rounded bg-light" id="chartContainer">
-                                <h5 class="card-title text-secondary mb-3">📊 Tickets por Categoria</h5>
+                                <h5 class="card-title text-secondary mb-3">📊 Estatísticas da Seleção Atual</h5>
                                 <div style="height: 250px; position: relative;">
                                     <canvas id="graficoChamados"></canvas>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <div class="p-3 border rounded bg-light" id="chartContainerTempo">
-                                <h5 class="card-title text-secondary mb-3">📈 Tickets por Dia</h5>
-                                <div style="height: 250px; position: relative;">
-                                    <canvas id="graficoTempo"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -795,9 +786,8 @@
         let allCategories = []; // Armazena todas categorias para a cascata
         let categoriaSelecionadaEdicaoId = null; // Armazena seleção temporária na edição
         
-        // --- VARIÁVEL DOS GRÁFICOS ---
-        let chartInstance = null;      // Categorias
-        let chartInstanceTempo = null; // Tempo
+        // --- VARIÁVEL DO GRÁFICO ---
+        let chartInstance = null;
 
         // --- FUNÇÃO DE LOGOUT ---
         function fazerLogout() {
@@ -902,7 +892,6 @@
             if (!d) return 'N/A';
             try {
                 const dt = new Date(d);
-                if (isNaN(dt.getTime())) return 'N/A';
                 return dt.toLocaleString('pt-BR', { 
                     timeZone: 'America/Sao_Paulo',
                     day: '2-digit', month: '2-digit', year: 'numeric',
@@ -1122,112 +1111,88 @@
         // ----------------------------------------------------------------------------
 
         // ====================================================
-        // ======== LÓGICA DO GRÁFICO (DUPLO) ========
+        // ======== LÓGICA DO GRÁFICO (NOVO) ========
         // ====================================================
         
         function atualizarGrafico(chamados) {
-            // 1. DADOS GERAIS DO GRÁFICO (CORES)
+            const ctx = document.getElementById('graficoChamados').getContext('2d');
+
+            // 1. Contabiliza os dados da lista atual
+            const contagem = {
+                'Aberto': 0,
+                'Em Andamento': 0,
+                'Pausado': 0,
+                'Concluído': 0
+            };
+
+            if (chamados && chamados.length > 0) {
+                chamados.forEach(c => {
+                    // Normaliza o status para contar (ex: 'Em Andamento' -> 'Em Andamento')
+                    if (contagem[c.status] !== undefined) {
+                        contagem[c.status]++;
+                    }
+                });
+            }
+
+            const dataValues = [
+                contagem['Aberto'], 
+                contagem['Em Andamento'], 
+                contagem['Pausado'], 
+                contagem['Concluído']
+            ];
+
+            // Detect Dark Mode for Chart Colors
             const isDark = document.body.classList.contains("dark-mode");
             const textColor = isDark ? '#e0e0e0' : '#666';
             const gridColor = isDark ? '#444' : '#ddd';
 
-            // ==================================================
-            // GRAFICO 1: CATEGORIAS (Barras)
-            // ==================================================
-            const ctxCat = document.getElementById('graficoChamados').getContext('2d');
-            
-            // Agrupando por Nome da Categoria
-            const catCount = {};
-            chamados.forEach(c => {
-                let nomeCat = 'Sem Categoria';
-                if(c.Categorias) {
-                    // Usa o Pai se tiver, senão o nome da categoria
-                    nomeCat = c.Categorias.nomePai ? c.Categorias.nomePai : c.Categorias.nome;
-                }
-                catCount[nomeCat] = (catCount[nomeCat] || 0) + 1;
-            });
-
-            // Ordena para pegar os Top 5 e agrupa o resto em "Outros" se quiser, ou mostra tudo
-            // Vamos mostrar tudo ordenado
-            const sortedCats = Object.entries(catCount).sort((a,b) => b[1] - a[1]);
-            const labelsCat = sortedCats.map(i => i[0]);
-            const dataCat = sortedCats.map(i => i[1]);
-
-            if (chartInstance) chartInstance.destroy();
-            
-            chartInstance = new Chart(ctxCat, {
-                type: 'bar',
+            // 2. Configuração do Gráfico
+            const config = {
+                type: 'bar', // Pode ser 'pie', 'doughnut' ou 'bar'
                 data: {
-                    labels: labelsCat,
+                    labels: ['Aberto', 'Em Andamento', 'Pausado', 'Concluído'],
                     datasets: [{
-                        label: 'Tickets',
-                        data: dataCat,
-                        backgroundColor: '#0d6efd',
-                        borderRadius: 4
+                        label: 'Quantidade de Chamados',
+                        data: dataValues,
+                        backgroundColor: [
+                            '#6c757d', // Aberto (Cinza)
+                            '#0d6efd', // Em Andamento (Azul)
+                            '#ffc107', // Pausado (Amarelo)
+                            '#198754'  // Concluído (Verde)
+                        ],
+                        borderWidth: 1
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { 
-                        legend: { display: false },
-                        title: { display: true, text: 'Top Categorias', color: textColor }
+                    plugins: {
+                        legend: { display: false }, // Esconde legenda se for barras
+                        title: { 
+                            display: true, 
+                            text: `Total Listado: ${chamados.length}`,
+                            color: textColor
+                        }
                     },
                     scales: {
-                        y: { ticks: { color: textColor, stepSize: 1 }, grid: { color: gridColor } },
-                        x: { ticks: { color: textColor }, grid: { display: false } }
+                        y: { 
+                            beginAtZero: true, 
+                            ticks: { stepSize: 1, color: textColor },
+                            grid: { color: gridColor }
+                        },
+                        x: {
+                            ticks: { color: textColor },
+                            grid: { display: false }
+                        }
                     }
                 }
-            });
+            };
 
-            // ==================================================
-            // GRAFICO 2: TEMPO (Linha)
-            // ==================================================
-            const ctxTempo = document.getElementById('graficoTempo').getContext('2d');
-            
-            // Agrupando por Data (Dia/Mês)
-            const timeCount = {};
-            // Cria um array de datas ordenadas
-            const sortedChamados = [...chamados].sort((a,b) => new Date(a.created_at) - new Date(b.created_at));
-            
-            sortedChamados.forEach(c => {
-                if(!c.created_at) return;
-                const d = new Date(c.created_at);
-                const diaMes = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-                timeCount[diaMes] = (timeCount[diaMes] || 0) + 1;
-            });
-
-            const labelsTempo = Object.keys(timeCount);
-            const dataTempo = Object.values(timeCount);
-
-            if (chartInstanceTempo) chartInstanceTempo.destroy();
-
-            chartInstanceTempo = new Chart(ctxTempo, {
-                type: 'line',
-                data: {
-                    labels: labelsTempo,
-                    datasets: [{
-                        label: 'Volume Diário',
-                        data: dataTempo,
-                        borderColor: '#198754',
-                        backgroundColor: 'rgba(25, 135, 84, 0.2)',
-                        fill: true,
-                        tension: 0.3
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { 
-                        legend: { display: false },
-                        title: { display: true, text: 'Evolução Temporal', color: textColor }
-                    },
-                    scales: {
-                        y: { ticks: { color: textColor, stepSize: 1 }, grid: { color: gridColor }, beginAtZero: true },
-                        x: { ticks: { color: textColor }, grid: { display: false } }
-                    }
-                }
-            });
+            // 3. Atualiza ou Cria o Gráfico
+            if (chartInstance) {
+                chartInstance.destroy(); // Destroi o anterior para não sobrepor
+            }
+            chartInstance = new Chart(ctx, config);
         }
 
         // ====================================================
@@ -1325,7 +1290,7 @@
                 const dados = await r.json(); // CAPTURA OS DADOS
                 
                 renderizarChamados(dados); // RENDERIZA LISTA
-                atualizarGrafico(dados);   // ATUALIZA OS GRÁFICOS
+                atualizarGrafico(dados);   // ATUALIZA GRÁFICO
                 
             } catch (e) {
                 exibirMensagem(divRespostaGeral, e.message, false);
@@ -1346,7 +1311,7 @@
             window.open(`${API_URL}/chamados/relatorio/pdf?${p.toString()}`, '_blank');
         }
         
-        // --- FUNÇÃO PARA BAIXAR PDF COM GRÁFICO (DUPLO) ---
+        // --- FUNÇÃO PARA BAIXAR PDF COM GRÁFICO (NOVO) ---
         window.baixarRelatorioComGrafico = async function() {
             const btn = document.getElementById('btnRelatorioGrafico');
             const originalText = btn.innerHTML;
@@ -1354,12 +1319,9 @@
             btn.disabled = true;
 
             try {
-                // 1. Captura a imagem dos DOIS GRÁFICOS
-                const canvasCat = document.getElementById('graficoChamados');
-                const canvasTemp = document.getElementById('graficoTempo');
-                
-                const chartImageCategoria = canvasCat ? canvasCat.toDataURL('image/png') : null;
-                const chartImageTempo = canvasTemp ? canvasTemp.toDataURL('image/png') : null;
+                // 1. Captura a imagem do gráfico atual
+                const canvas = document.getElementById('graficoChamados');
+                const chartImage = canvas.toDataURL('image/png');
 
                 // 2. Prepara os filtros igual ao listarChamados()
                 const filtros = {};
@@ -1369,15 +1331,11 @@
                 if (filtroCategoria.value) filtros.categoria_id = filtroCategoria.value;
                 if (filtroLoja && filtroLoja.value) filtros.loja_id = filtroLoja.value;
 
-                // 3. Envia para o backend (POST) - AGORA COM DOIS GRÁFICOS
+                // 3. Envia para o backend (POST)
                 const response = await fetch(`${API_URL}/chamados/relatorio/completo`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        filtros, 
-                        chartImageCategoria,  // Nova variável
-                        chartImageTempo       // Nova variável
-                    })
+                    body: JSON.stringify({ filtros, chartImage })
                 });
 
                 if (!response.ok) throw new Error("Erro ao gerar arquivo.");
@@ -1547,7 +1505,7 @@
                 const r = await fetch(`${API_URL}/chamados/${currentTicketId}/status`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ status: novaStatus, atendenteId: userId })
+                    body: JSON.stringify({ status: novoStatus, atendenteId: userId })
                 });
                 const data = await r.json();
                 if (!r.ok) throw new Error(data.message);
@@ -1569,7 +1527,7 @@
                 const r = await fetch(`${API_URL}/chamados/${currentTicketId}/atendente`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ atendenteId: novaAtendenteId })
+                    body: JSON.stringify({ atendenteId: novoAtendenteId })
                 });
                 const data = await r.json();
                 if (!r.ok) throw new Error(data.message);
