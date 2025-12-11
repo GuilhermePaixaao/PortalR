@@ -333,3 +333,29 @@ export const updateCategoria = async (id, categoriaId) => {
     const [result] = await pool.query(sql, [categoriaId, id]);
     return result;
 };
+// --- NOVAS FUNÇÕES DE ATUALIZAÇÃO ---
+
+export const updateAssunto = async (id, assunto) => {
+    const sql = "UPDATE Chamados SET assunto = ? WHERE id = ?";
+    const [result] = await pool.query(sql, [assunto, id]);
+    return result;
+};
+
+export const updateDescricao = async (id, descricao) => {
+    const sql = "UPDATE Chamados SET descricao = ? WHERE id = ?";
+    const [result] = await pool.query(sql, [descricao, id]);
+    return result;
+};
+
+export const updateRequisitante = async (id, requisitanteId) => {
+    // Ao alterar o requisitante via ID, limpamos os campos manuais para manter a consistência
+    const sql = "UPDATE Chamados SET requisitante_id = ?, nome_requisitante_manual = NULL, email_requisitante_manual = NULL, telefone_requisitante_manual = NULL WHERE id = ?";
+    const [result] = await pool.query(sql, [requisitanteId, id]);
+    return result;
+};
+
+export const updateLojaDepartamento = async (id, lojaId, departamentoId) => {
+    const sql = "UPDATE Chamados SET loja_id = ?, departamento_id = ? WHERE id = ?";
+    const [result] = await pool.query(sql, [lojaId, departamentoId, id]);
+    return result;
+};

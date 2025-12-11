@@ -189,7 +189,7 @@
         .ticket-operator { flex: 0 0 120px; }
         
         .ticket-created { flex: 0 0 100px; text-align: center; }
-        .ticket-actions { flex: 0 0 90px; text-align: center; cursor: pointer; } /* Aumentei um pouco para caber a lixeira */
+        .ticket-actions { flex: 0 0 90px; text-align: center; cursor: pointer; } 
 
         .priority-badge, .status-badge {
             padding: 0.2em 0.6em;
@@ -217,22 +217,10 @@
             margin-left: 8px;
         }
         .btn-concluir { color: green; }
-
-        /* --- (INÍCIO) CSS DOS NOVOS BOTÕES --- */
-        .btn-iniciar, .btn-retomar {
-            color: #0d6efd; /* Azul */
-        }
-        .btn-pausar {
-            color: #fd7e14; /* Laranja */
-        }
-        /* --- (NOVO) BOTÃO EXCLUIR --- */
-        .btn-excluir {
-            color: #dc3545; /* Vermelho Bootstrap */
-        }
-        .btn-excluir:hover {
-            color: #bb2d3b;
-        }
-        /* --- (FIM) CSS DOS NOVOS BOTÕES --- */
+        .btn-iniciar, .btn-retomar { color: #0d6efd; }
+        .btn-pausar { color: #fd7e14; }
+        .btn-excluir { color: #dc3545; }
+        .btn-excluir:hover { color: #bb2d3b; }
 
         .header {
             display: flex;
@@ -319,7 +307,6 @@
             line-height: 1.2; 
         }
         
-        /* --- (NOVO) ESTILOS DO BOTÃO DE TEMA --- */
         .btn-theme-toggle {
             background: none;
             border: 1px solid #ced4da;
@@ -330,8 +317,6 @@
             cursor: pointer;
             color: #495057;
             transition: background-color 0.2s, color 0.2s, border-color 0.2s;
-            
-            /* (NOVO) Ajuste para ficar alinhado com o nome/logout */
             display: flex;
             align-items: center;
             justify-content: center;
@@ -340,7 +325,6 @@
         .btn-theme-toggle:hover {
             background-color: #f1f3f5;
         }
-        /* --- FIM ESTILOS BOTÃO --- */
 
         /* --- (NOVO) ESTILOS DO MODO ESCURO --- */
         body.dark-mode {
@@ -370,17 +354,13 @@
             border-color: #383838;
             color: #787878;
         }
-        
-        /* (INÍCIO DA CORREÇÃO) --- */
         .dark-mode .ticket-row.data-row {
-            background-color: #2a2a2a; /* Mesmo fundo do header da tabela */
+            background-color: #2a2a2a; 
             border-bottom-color: #383838;
         }
         .dark-mode .ticket-row.data-row:hover {
-            background-color: #333; /* Um pouco mais claro no hover */
+            background-color: #333;
         }
-        /* (FIM DA CORREÇÃO) --- */
-
         .dark-mode h1,
         .dark-mode label,
         .dark-mode .ticket-cell,
@@ -391,7 +371,6 @@
             color: #f1f1f1;
         }
 
-        /* Forms e Modais no Modo Escuro */
         .dark-mode .form-control,
         .dark-mode .form-select,
         .dark-mode dialog,
@@ -403,14 +382,11 @@
             border-color: #555;
         }
         
-        /* (NOVA REGRA CORRIGIDA) --- */
-        /* Esta regra é mais específica e corrige o fundo branco do select */
         .dark-mode #modalDetalhes .detalhe-valor-select {
             background-color: #333;
             color: #e0e0e0;
             border-color: #555;
         }
-        /* (FIM DA NOVA REGRA) --- */
         
         .dark-mode .form-control::placeholder {
             color: #999;
@@ -421,7 +397,6 @@
             color: #f1f1f1;
         }
 
-        /* Comentários no Modo Escuro */
         .dark-mode .comment-item {
             border-bottom-color: #444;
         }
@@ -435,18 +410,16 @@
             color: #aaa;
         }
 
-        /* Badges no Modo Escuro */
         .dark-mode .priority-badge.alta { background-color: #842029; color: #f8d7da; }
         .dark-mode .priority-badge.media { background-color: #664d03; color: #fff3cd; }
         .dark-mode .priority-badge.baixa { background-color: #084298; color: #cfe2ff; }
         .dark-mode .priority-badge.planejado { background-color: #510f32; color: #e2d1e7; }
         
-        /* --- Bloco de Status (Modo Escuro) --- */
         .dark-mode .status-badge.aberto { background-color: #5a6268; color: #e0e0e0; }
         .dark-mode .status-badge.concluído { background-color: #0f5132; color: #d1e7dd; }
         .dark-mode .status-badge.em-andamento { background-color: #084298; color: #cfe2ff; }
         .dark-mode .status-badge.pausado { background-color: #664d03; color: #fff3cd; } 
-        /* Botão de Tema no Modo Escuro */
+        
         .dark-mode .btn-theme-toggle {
             background-color: #333;
             border-color: #555;
@@ -456,50 +429,39 @@
             background-color: #444;
         }
 
-        /* Para alinhar o ícone e o texto lado a lado e centralizados */
         .logo {
             display: flex;
-            align-items: center; /* Alinha verticalmente */
-            gap: 10px; /* Cria um espaço entre o ícone e o texto */
+            align-items: center; 
+            gap: 10px;
         }
-
-        /* Para definir o tamanho do ícone */
         .logo-icon {
-            height: 30px; /* Ajuste a altura conforme necessário */
-            width: auto;  /* Mantém a proporção da imagem */
+            height: 30px; 
+            width: auto;  
         }
-        /* --- FIM MODO ESCURO --- */
-        
-        /* ============================================================ */
-        /* === CORREÇÃO: CONTAINER DE EDIÇÃO (LIGHT vs DARK) === */
-        /* ============================================================ */
-        
-        /* Padrão (Light Mode) - Simula o bg-light que removemos */
-        #editCategoriaContainer {
+
+        /* --- CLASSE GENÉRICA PARA CONTAINERS DE EDIÇÃO (NOVO) --- */
+        .edit-container {
+            display: none; /* Oculto por padrão */
+            margin-top: 0.5rem;
+            padding: 0.75rem;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
             background-color: #f8f9fa;
-            border-color: #dee2e6 !important;
         }
-
-        /* Modo Escuro (Dark Mode) */
-        .dark-mode #editCategoriaContainer {
-            background-color: #2b2b2b; /* Um tom mais escuro para destacar dentro do modal */
-            border-color: #444 !important;
+        .dark-mode .edit-container {
+            background-color: #2b2b2b;
+            border-color: #444;
             color: #e0e0e0;
         }
-
-        /* Corrige a cor do texto pequeno "Selecione a nova categoria" no modo escuro */
-        .dark-mode #editCategoriaContainer .text-muted {
-            color: #adb5bd !important; /* Cinza claro legível */
+        .dark-mode .edit-container .text-muted {
+            color: #adb5bd !important;
         }
-
-        /* --- (NOVO) ESTILOS DO GRÁFICO (DARK MODE) --- */
-        .dark-mode #chartContainer {
-            background-color: #2a2a2a !important; 
-            border-color: #383838 !important;
-            color: #e0e0e0;
-        }
-        .dark-mode #chartContainer .card-title {
-            color: #e0e0e0 !important;
+        .btn-edit-icon {
+            padding: 0px 5px; 
+            font-size: 0.8rem; 
+            border: none; 
+            background: transparent;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -512,7 +474,6 @@
                 PORTAL SUPERMERCADO ROSALINA
             </div>
            
-            
             <div class="header-actions">
                 <button id="themeToggle" class="btn-theme-toggle" title="Alternar Tema">🌙</button>
                 <span id="userNameDisplay"></span>
@@ -579,24 +540,30 @@
                     <div class="col-md-7">
                         <div class="detalhe-grupo">
                             <span class="detalhe-label">Assunto</span>
-                            <div id="detalheAssunto" class="detalhe-valor">...</div>
+                            <div id="viewAssuntoContainer" class="d-flex justify-content-between align-items-center detalhe-valor">
+                                <span id="detalheAssunto">...</span>
+                                <button type="button" class="btn-edit-icon" id="btnEditarAssunto" title="Editar Assunto">✏️</button>
+                            </div>
+                            <div id="editAssuntoContainer" class="edit-container">
+                                <input type="text" id="inputEditAssunto" class="form-control mb-2">
+                                <div class="d-flex gap-2 justify-content-end">
+                                    <button type="button" class="btn btn-sm btn-secondary" id="btnCancelarAssunto">Cancelar</button>
+                                    <button type="button" class="btn btn-sm btn-success" id="btnSalvarAssunto">Salvar</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
+                    
                     <div class="col-md-5">
                         <div class="detalhe-grupo">
                             <span class="detalhe-label">Categoria</span>
-                            
                             <div id="viewCategoriaContainer" class="d-flex justify-content-between align-items-center detalhe-valor">
                                 <span id="detalheCategoriaText">...</span>
-                                <button type="button" class="btn btn-sm btn-outline-primary" id="btnEditarCategoria" title="Alterar Categoria" style="padding: 0px 5px; font-size: 0.8rem; border: none; background: transparent;">
-                                    ✏️
-                                </button>
+                                <button type="button" class="btn-edit-icon" id="btnEditarCategoria" title="Alterar Categoria">✏️</button>
                             </div>
-
-                            <div id="editCategoriaContainer" style="display: none;" class="mt-2 p-2 border rounded">
+                            <div id="editCategoriaContainer" class="edit-container">
                                 <small class="text-muted d-block mb-2">Selecione a nova categoria:</small>
                                 <div id="cascataEdicaoWrapper"></div> 
-                                
                                 <div class="mt-2 d-flex gap-2 justify-content-end">
                                     <button type="button" class="btn btn-sm btn-secondary" id="btnCancelarEdicaoCategoria">Cancelar</button>
                                     <button type="button" class="btn btn-sm btn-success" id="btnSalvarCategoria">Salvar</button>
@@ -608,14 +575,36 @@
 
                 <div class="detalhe-grupo">
                     <span class="detalhe-label">Descrição</span>
-                    <div id="detalheDescricao" class="detalhe-descricao">Carregando...</div>
+                    <div id="viewDescricaoContainer" class="position-relative">
+                        <div id="detalheDescricao" class="detalhe-descricao">Carregando...</div>
+                        <button type="button" class="btn-edit-icon position-absolute top-0 end-0 m-2" id="btnEditarDescricao" title="Editar Descrição">✏️</button>
+                    </div>
+                    <div id="editDescricaoContainer" class="edit-container">
+                        <textarea id="inputEditDescricao" class="form-control mb-2" rows="5"></textarea>
+                        <div class="d-flex gap-2 justify-content-end">
+                            <button type="button" class="btn btn-sm btn-secondary" id="btnCancelarDescricao">Cancelar</button>
+                            <button type="button" class="btn btn-sm btn-success" id="btnSalvarDescricao">Salvar</button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="row">
                     <div class="col-md-6">
                         <div class="detalhe-grupo">
                             <span class="detalhe-label">Requisitante</span>
-                            <div id="detalheRequisitante" class="detalhe-valor">...</div>
+                            <div id="viewRequisitanteContainer" class="d-flex justify-content-between align-items-center detalhe-valor">
+                                <span id="detalheRequisitante">...</span>
+                                <button type="button" class="btn-edit-icon" id="btnEditarRequisitante" title="Alterar Requisitante">✏️</button>
+                            </div>
+                            <div id="editRequisitanteContainer" class="edit-container">
+                                <select id="selectEditRequisitante" class="form-select mb-2">
+                                    <option value="">Carregando usuários...</option>
+                                </select>
+                                <div class="d-flex gap-2 justify-content-end">
+                                    <button type="button" class="btn btn-sm btn-secondary" id="btnCancelarRequisitante">Cancelar</button>
+                                    <button type="button" class="btn btn-sm btn-success" id="btnSalvarRequisitante">Salvar</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -630,16 +619,33 @@
                 </div>
 
                 <div class="row">
-                    <div class="col-md-6">
-                        <div class="detalhe-grupo">
-                            <span class="detalhe-label">Loja</span>
-                            <div id="detalheLoja" class="detalhe-valor">...</div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="detalhe-grupo">
-                            <span class="detalhe-label">Departamento</span>
-                            <div id="detalheDepartamento" class="detalhe-valor">...</div>
+                    <div class="col-md-12">
+                         <div class="detalhe-grupo">
+                            <span class="detalhe-label">Loja / Departamento</span>
+                             <div id="viewLojaDeptoContainer" class="d-flex justify-content-between align-items-center detalhe-valor">
+                                <div>
+                                    <span id="detalheLoja">...</span> / <span id="detalheDepartamento">...</span>
+                                </div>
+                                <button type="button" class="btn-edit-icon" id="btnEditarLojaDepto" title="Alterar Local">✏️</button>
+                            </div>
+                             <div id="editLojaDeptoContainer" class="edit-container">
+                                <div class="row g-2">
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Loja</label>
+                                        <select id="selectEditLoja" class="form-select"></select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label small">Departamento</label>
+                                        <select id="selectEditDepartamento" class="form-select">
+                                            <option value="">Selecione a Loja primeiro</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mt-2 d-flex gap-2 justify-content-end">
+                                    <button type="button" class="btn btn-sm btn-secondary" id="btnCancelarLojaDepto">Cancelar</button>
+                                    <button type="button" class="btn btn-sm btn-success" id="btnSalvarLojaDepto">Salvar</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -652,7 +658,6 @@
                         </div>
                     </div>
                 </div>
-
                 <div class="row">
                     <div class="col-md-6">
                         <div class="detalhe-grupo">
@@ -667,7 +672,7 @@
                         </div>
                     </div>
                 </div>
-                </div>
+            </div>
             
             <hr style="margin-top: 1rem; margin-bottom: 1.25rem;">
             
@@ -780,13 +785,15 @@
         
         // VARIÁVEIS GLOBAIS
         let listaOperadores = [];
-        let allCategories = []; // Armazena todas categorias para a cascata
-        let categoriaSelecionadaEdicaoId = null; // Armazena seleção temporária na edição
+        let allCategories = []; 
+        let categoriaSelecionadaEdicaoId = null; 
         
-        // --- VARIÁVEL DO GRÁFICO ---
+        // NOVAS VARIÁVEIS GLOBAIS PARA EDIÇÃO
+        let listaTodosUsuarios = []; 
+        let listaLojasCache = [];    
+        
         let chartInstance = null;
 
-        // --- FUNÇÃO DE LOGOUT ---
         function fazerLogout() {
             localStorage.removeItem("userData"); 
             window.location.href = "Login.html"; 
@@ -800,8 +807,6 @@
             userId = userData?.data?.id || userData?.id; 
             userPerfil = userData?.data?.perfil || userData?.perfil;
             userCategoriaAtendimento = userData?.data?.categoria_id_atendimento || userData?.categoria_id_atendimento;
-
-            console.log("Dados do usuário lidos do Local Storage:", userData);
 
             const userNameDisplay = document.getElementById('userNameDisplay');
             if (userNameDisplay && userData?.data?.nomeFuncionario) {
@@ -832,7 +837,6 @@
         const filtroPrioridade = document.getElementById("filtroPrioridade");
         const filtroStatus = document.getElementById("filtroStatus");
         const filtroCategoria = document.getElementById("filtroCategoria");
-        // REFERÊNCIA DA NOVA SELECT DE LOJA
         const filtroLoja = document.getElementById("filtroLoja"); 
         
         const btnFiltrar = document.getElementById("btnFiltrar");
@@ -842,16 +846,14 @@
         const modalDetalhesConteudo = document.getElementById("modalDetalhesConteudo");
         const modalDetalhesResposta = document.getElementById("modalDetalhesResposta");
         const detalheId = document.getElementById("detalheId");
+        
         const detalheAssunto = document.getElementById("detalheAssunto");
         const detalheDescricao = document.getElementById("detalheDescricao");
         const detalheRequisitante = document.getElementById("detalheRequisitante");
-        
-        // Referência do texto da categoria (agora span dentro do container)
-        const detalheCategoriaText = document.getElementById("detalheCategoriaText");
-        
-        // Referências para Loja e Departamento (NOVO)
         const detalheLoja = document.getElementById("detalheLoja");
         const detalheDepartamento = document.getElementById("detalheDepartamento");
+        
+        const detalheCategoriaText = document.getElementById("detalheCategoriaText");
         
         const detalheData = document.getElementById("detalheData");
         const detalheStatusSelect = document.getElementById("detalheStatusSelect");
@@ -870,8 +872,6 @@
         const viewCategoriaContainer = document.getElementById("viewCategoriaContainer");
         const editCategoriaContainer = document.getElementById("editCategoriaContainer");
         const cascataEdicaoWrapper = document.getElementById("cascataEdicaoWrapper");
-        
-        // --- FIM REFERÊNCIAS ---
 
         function exibirMensagem(el, msg, sucesso = true) {
             el.textContent = msg;
@@ -897,19 +897,14 @@
             } catch { return 'Data inválida'; }
         }
 
-        // ====================================================
-        // ======== CARREGAR CATEGORIAS (ATUALIZADO) ========
-        // ====================================================
         async function carregarCategorias() {
             try {
                 filtroCategoria.parentElement.style.display = 'block'; 
                 const r = await fetch(`${API_URL}/categorias`);
                 if (!r.ok) throw new Error("Erro ao carregar categorias.");
                 
-                // SALVA NA VARIÁVEL GLOBAL PARA USO NA EDIÇÃO
                 allCategories = await r.json(); 
                 
-                // Preenche o filtro da página principal
                 filtroCategoria.innerHTML = '<option value="">Todas</option>';
                 allCategories.forEach(cat => {
                     const opt = document.createElement("option");
@@ -922,9 +917,6 @@
             }
         }
         
-        // ====================================================
-        // ======== (NOVO) CARREGAR LOJAS NO FILTRO ========
-        // ====================================================
         async function carregarFiltroLojas() {
             try {
                 const r = await fetch(`${API_URL}/chamados/dados/lojas`);
@@ -941,7 +933,6 @@
 
         async function carregarOperadores() {
             if (listaOperadores.length > 0) return; 
-
             try {
                 const response = await fetch(`${API_URL}/usuarios`); 
                 if (!response.ok) throw new Error("Falha ao carregar operadores.");
@@ -958,54 +949,61 @@
                 detalheAtendenteSelect.innerHTML = `<option value="">Erro ao carregar</option>`;
             }
         }
-
-        // ====================================================
-        // ======== LÓGICA DE EDIÇÃO DE CATEGORIA (NOVO) ========
-        // ====================================================
         
-        // 1. Ativar modo edição
+        // --- FUNÇÕES NOVAS DE CARREGAMENTO PARA EDIÇÃO ---
+        async function carregarTodosUsuarios() {
+            try {
+                const r = await fetch(`${API_URL}/usuarios`);
+                if(r.ok) {
+                    listaTodosUsuarios = await r.json();
+                    const select = document.getElementById('selectEditRequisitante');
+                    select.innerHTML = '<option value="">Selecione...</option>';
+                    listaTodosUsuarios.forEach(u => {
+                        select.add(new Option(u.nomeFuncionario, u.id));
+                    });
+                }
+            } catch(e) { console.error("Erro ao carregar usuários para edição", e); }
+        }
+
+        async function carregarLojasEdicao() {
+            try {
+                const r = await fetch(`${API_URL}/chamados/dados/lojas`);
+                if(r.ok) {
+                    listaLojasCache = await r.json();
+                    const select = document.getElementById('selectEditLoja');
+                    select.innerHTML = '<option value="">Selecione a Loja...</option>';
+                    listaLojasCache.forEach(l => select.add(new Option(l.nome, l.id)));
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        // --- LÓGICA DE EDIÇÃO (CATEGORIA) ---
         function ativarEdicaoCategoria() {
             viewCategoriaContainer.style.display = 'none';
             editCategoriaContainer.style.display = 'block';
-            
-            // Limpa e inicia
             cascataEdicaoWrapper.innerHTML = '';
             categoriaSelecionadaEdicaoId = null;
-            
-            // Cria o primeiro nível
             criarDropdownEdicao(null, 0);
         }
 
-        // 2. Cancelar modo edição
         function cancelarEdicaoCategoria() {
-            viewCategoriaContainer.style.display = 'flex'; // Volta a ser flex para alinhar botão e texto
+            viewCategoriaContainer.style.display = 'flex'; 
             editCategoriaContainer.style.display = 'none';
         }
 
-        // 3. Criar Dropdowns em Cascata
         function criarDropdownEdicao(parentId, level) {
-            // Filtra filhos do pai atual
             const children = allCategories.filter(c => c.parent_id == parentId);
-            
-            // Se não tem filhos, significa que chegamos na ponta (folha)
             if (children.length === 0) {
-                // O ID válido é o próprio pai selecionado anteriormente
                 categoriaSelecionadaEdicaoId = parentId;
                 return;
             }
-
-            // Se abriu novo nível, o ID atual é inválido até selecionar
             categoriaSelecionadaEdicaoId = null;
 
             const div = document.createElement('div');
             div.className = 'mb-2'; 
-            
             const select = document.createElement('select');
             select.className = 'form-select form-select-sm'; 
-            // Se for modo escuro, o CSS global já trata form-select, mas garantimos classes
-            
             select.dataset.level = level;
-            
             const placeholder = level === 0 ? '-- Selecione a Categoria --' : '-- Selecione a Subcategoria --';
             select.add(new Option(placeholder, ""));
 
@@ -1013,12 +1011,9 @@
                 select.add(new Option(cat.nome, cat.id));
             });
 
-            // Evento ao mudar
             select.addEventListener('change', (e) => {
                 const selectedId = e.target.value;
                 const currentLevel = parseInt(e.target.dataset.level);
-
-                // Remove dropdowns de níveis inferiores
                 const allDivs = cascataEdicaoWrapper.querySelectorAll('div');
                 allDivs.forEach(d => {
                     const s = d.querySelector('select');
@@ -1026,7 +1021,6 @@
                         d.remove();
                     }
                 });
-
                 if (selectedId) {
                     criarDropdownEdicao(selectedId, currentLevel + 1);
                 } else {
@@ -1038,43 +1032,33 @@
             cascataEdicaoWrapper.appendChild(div);
         }
 
-        // 4. Salvar Alteração
         async function salvarNovaCategoria() {
-            // Verifica o último ID selecionado nos selects
             const selects = cascataEdicaoWrapper.querySelectorAll('select');
             let idFinal = null;
-            // Pega o valor do último select que tiver valor
             selects.forEach(s => { if(s.value) idFinal = s.value; });
 
             if (!idFinal) {
                 alert("Por favor, selecione uma categoria válida até o final.");
                 return;
             }
-            
             if (!currentTicketId) return;
 
             limparMensagem(modalDetalhesResposta);
 
             try {
-                // Rota PUT configurada no passo anterior
                 const r = await fetch(`${API_URL}/chamados/${currentTicketId}/categoria`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ categoriaId: idFinal })
                 });
-
                 const result = await r.json();
 
                 if (r.ok) {
                     exibirMensagem(modalDetalhesResposta, "Categoria atualizada com sucesso!", true);
-                    
-                    // Atualiza o texto na tela (agora com caminho completo)
                     const nomeExibicao = montarCaminhoCategoria(idFinal);
-
                     detalheCategoriaText.textContent = nomeExibicao;
-                    
                     cancelarEdicaoCategoria();
-                    listarChamados(); // Atualiza a lista de fundo
+                    listarChamados(); 
                 } else {
                     exibirMensagem(modalDetalhesResposta, `Erro: ${result.message}`, false);
                 }
@@ -1084,20 +1068,16 @@
             }
         }
         
-        // --- (NOVO) Função para montar o caminho da categoria (Pai > Filho > Neto) ---
         function montarCaminhoCategoria(categoriaId) {
             if (!categoriaId) return 'N/A';
             let caminho = [];
             let currentId = categoriaId;
             let attempts = 0;
-
-            // Percorre a árvore de categorias subindo pelos pais
             while (currentId && attempts < 20) {
-                // Busca a categoria pelo ID no array carregado
                 const cat = allCategories.find(c => c.id == currentId);
                 if (cat) {
-                    caminho.unshift(cat.nome); // Adiciona ao início do array
-                    currentId = cat.parent_id; // Vai para o pai
+                    caminho.unshift(cat.nome); 
+                    currentId = cat.parent_id; 
                 } else {
                     break;
                 }
@@ -1105,8 +1085,6 @@
             }
             return caminho.join(' / ') || 'N/A';
         }
-        // ----------------------------------------------------------------------------
-        // ====================================================
 
         function renderizarChamados(chamados) {
             loadingIndicator.style.display = 'none';
@@ -1140,24 +1118,18 @@
                     actionButtons += ` <button class="btn-action btn-concluir" data-id="${ch.id}" title="Marcar como Concluído">✔️</button>`;
                 }
                 
-                // --- BOTÃO DE EXCLUIR ADICIONADO AQUI ---
                 actionButtons += ` <button class="btn-action btn-excluir" data-id="${ch.id}" title="Excluir Chamado">🗑️</button>`;
-                // ----------------------------------------
                 
-                // --- ATUALIZADO: Lógica de montagem da categoria com caminho completo ---
                 let nomeExibicao = 'N/A';
                 if (ch.Categorias && ch.Categorias.id) {
-                    // Tenta montar o caminho usando a árvore carregada
                     nomeExibicao = montarCaminhoCategoria(ch.Categorias.id);
                 } else if (ch.Categorias) {
-                    // Fallback se não tiver ID (exibição simples)
                     if (ch.Categorias.nomePai) {
                         nomeExibicao = `${ch.Categorias.nomePai} / ${ch.Categorias.nome}`;
                     } else {
                         nomeExibicao = ch.Categorias.nome;
                     }
                 }
-                // -----------------------------------------------------------------------
 
                 ticketList.insertAdjacentHTML('beforeend', `
                 <div class="ticket-row data-row" data-ticket-id="${ch.id}">
@@ -1190,17 +1162,13 @@
             if (filtroPrioridade.value) p.append('prioridade', filtroPrioridade.value);
             if (filtroStatus.value) p.append('status', filtroStatus.value);
             if (filtroCategoria.value) p.append('categoria_id', filtroCategoria.value);
-            
-            // --- NOVO FILTRO DE LOJA ---
             if (filtroLoja && filtroLoja.value) p.append('loja_id', filtroLoja.value);
 
             try {
                 const r = await fetch(`${API_URL}/chamados?${p.toString()}`);
                 if (!r.ok) throw new Error("Erro ao buscar chamados.");
-                
-                const dados = await r.json(); // CAPTURA OS DADOS
-                
-                renderizarChamados(dados); // RENDERIZA LISTA                
+                const dados = await r.json(); 
+                renderizarChamados(dados);              
             } catch (e) {
                 exibirMensagem(divRespostaGeral, e.message, false);
                 loadingIndicator.innerHTML = '<p style="color:red;">Falha ao carregar.</p>';
@@ -1223,25 +1191,19 @@
             }
         }
         
-        // --- FUNÇÃO PARA EXCLUIR CHAMADO ---
         async function excluirChamado(id) {
             try {
                 const r = await fetch(`${API_URL}/chamados/${id}`, {
                     method: 'DELETE'
                 });
                 const data = await r.json();
-                
                 if (!r.ok) throw new Error(data.message || "Erro ao excluir.");
-                
                 exibirMensagem(divRespostaGeral, "Chamado excluído permanentemente!", true);
                 listarChamados(); 
             } catch (e) {
                 exibirMensagem(divRespostaGeral, `Erro ao excluir: ${e.message}`, false);
             }
         }
-        // ------------------------------------
-
-        // --- FUNÇÕES DO MODAL ---
 
         async function abrirModalDetalhes(chamadoId) {
             limparMensagem(modalDetalhesResposta);
@@ -1253,22 +1215,25 @@
             currentTicketId = null; 
             detalheAtendenteSelect.disabled = true; 
             
-            // RESET DOS CAMPOS
+            // RESET DOS CAMPOS E CONTEÚDO EDITÁVEL
             detalheId.textContent = `#${chamadoId}`;
             detalheAssunto.textContent = 'Carregando...';
+            detalheDescricao.textContent = 'Carregando...';
             detalheRequisitante.textContent = 'Carregando...';
-            detalheLoja.textContent = 'Carregando...';        // Reset Loja
-            detalheDepartamento.textContent = 'Carregando...';  // Reset Depto
+            detalheLoja.textContent = '...'; 
+            detalheDepartamento.textContent = '...';
 
-            // --- RESET DOS TEMPOS ---
             const elTempoAberto = document.getElementById('detalheTempoAberto');
             const elTempoAndamento = document.getElementById('detalheTempoAndamento');
             if(elTempoAberto) elTempoAberto.textContent = "Calculando...";
             if(elTempoAndamento) elTempoAndamento.textContent = "Calculando...";
-            // ------------------------
 
-            // Reseta a visualização da categoria (fecha edição se estava aberta)
+            // Reseta visualizações de edição
             cancelarEdicaoCategoria();
+            document.getElementById('btnCancelarAssunto').click();
+            document.getElementById('btnCancelarDescricao').click();
+            document.getElementById('btnCancelarRequisitante').click();
+            document.getElementById('btnCancelarLojaDepto').click();
 
             modalDetalhesConteudo.style.opacity = '0.5';
 
@@ -1284,25 +1249,21 @@
                 detalheAssunto.textContent = chamado.assunto;
                 detalheDescricao.textContent = chamado.descricao;
                 
-                // --- PREENCHIMENTO MELHORADO DO REQUISITANTE ---
+                // REQUISITANTE
                 const reqNome = chamado.Funcionario?.nomeFuncionario || 'Desconhecido';
                 const reqTel = chamado.Funcionario?.telefone;
                 const reqEmail = chamado.Funcionario?.email;
-                
                 let reqTexto = reqNome;
                 if (reqTel) reqTexto += ` - Tel: ${reqTel}`;
-                if (reqEmail) reqTexto += `\n(${reqEmail})`; // Quebra de linha para o email se precisar
-                
+                if (reqEmail) reqTexto += `\n(${reqEmail})`; 
                 detalheRequisitante.textContent = reqTexto;
-                detalheRequisitante.style.whiteSpace = 'pre-line'; // Permite quebra de linha no nome/email
-                // -----------------------------------------------
+                detalheRequisitante.style.whiteSpace = 'pre-line'; 
 
-                // --- PREENCHIMENTO DE LOJA E DEPARTAMENTO ---
+                // LOJA E DEPARTAMENTO
                 detalheLoja.textContent = chamado.loja || 'N/A';
                 detalheDepartamento.textContent = chamado.departamento || 'N/A';
-                // --------------------------------------------
 
-                // --- PREENCHIMENTO DOS TEMPOS (NOVO) ---
+                // TEMPOS
                 if (chamado.Tempos) {
                     if(elTempoAberto) elTempoAberto.textContent = chamado.Tempos.tempoAbertoFormatado;
                     if(elTempoAndamento) elTempoAndamento.textContent = chamado.Tempos.tempoAndamentoFormatado;
@@ -1310,9 +1271,8 @@
                     if(elTempoAberto) elTempoAberto.textContent = "0m";
                     if(elTempoAndamento) elTempoAndamento.textContent = "0m";
                 }
-                // ---------------------------------------
 
-                // Exibe Categoria (com Pai se houver) -> CAMINHO COMPLETO
+                // CATEGORIA
                 let nomeCat = 'N/A';
                 if (chamado.Categorias && chamado.Categorias.id) {
                      nomeCat = montarCaminhoCategoria(chamado.Categorias.id);
@@ -1391,7 +1351,7 @@
                 const r = await fetch(`${API_URL}/chamados/${currentTicketId}/atendente`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ atendenteId: novoAtendenteId })
+                    body: JSON.stringify({ atendenteId: novaAtendenteId })
                 });
                 const data = await r.json();
                 if (!r.ok) throw new Error(data.message);
@@ -1492,7 +1452,7 @@
         }
 
         // ====================================================
-        // ======== EVENT LISTENERS ========
+        // ======== EVENT LISTENERS GERAIS ========
         // ====================================================
         btnFiltrar.addEventListener('click', listarChamados);
         btnLogout.addEventListener('click', fazerLogout);
@@ -1525,7 +1485,6 @@
                     atualizarStatusChamado(id, 'Concluído');
                 }
             }
-            // --- EVENTO DE EXCLUIR ---
             else if (t.classList.contains('btn-excluir')) {
                 if (confirm(`ATENÇÃO: Deseja realmente EXCLUIR o chamado #${id}?\n\nEsta ação é irreversível e apagará todos os comentários vinculados.`)) {
                     excluirChamado(id);
@@ -1551,12 +1510,137 @@
         btnCancelarEdicaoCategoria.addEventListener('click', cancelarEdicaoCategoria);
         btnSalvarCategoria.addEventListener('click', salvarNovaCategoria);
 
+        // ====================================================
+        // ======== NOVOS EVENT LISTENERS (EDIÇÃO CAMPOS) ========
+        // ====================================================
+
+        // --- ASSUNTO ---
+        document.getElementById('btnEditarAssunto').addEventListener('click', () => {
+            document.getElementById('viewAssuntoContainer').style.display = 'none';
+            document.getElementById('editAssuntoContainer').style.display = 'block';
+            document.getElementById('inputEditAssunto').value = detalheAssunto.textContent;
+        });
+        document.getElementById('btnCancelarAssunto').addEventListener('click', () => {
+            document.getElementById('viewAssuntoContainer').style.display = 'flex';
+            document.getElementById('editAssuntoContainer').style.display = 'none';
+        });
+        document.getElementById('btnSalvarAssunto').addEventListener('click', async () => {
+            const novoAssunto = document.getElementById('inputEditAssunto').value;
+            if(!novoAssunto) return alert("Digite um assunto.");
+            try {
+                const r = await fetch(`${API_URL}/chamados/${currentTicketId}/assunto`, {
+                    method: 'PATCH', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ assunto: novoAssunto })
+                });
+                if(r.ok) {
+                    detalheAssunto.textContent = novoAssunto;
+                    document.getElementById('btnCancelarAssunto').click();
+                    listarChamados();
+                } else alert("Erro ao salvar.");
+            } catch(e) { alert("Erro de conexão."); }
+        });
+
+        // --- DESCRIÇÃO ---
+        document.getElementById('btnEditarDescricao').addEventListener('click', () => {
+            document.getElementById('viewDescricaoContainer').style.display = 'none';
+            document.getElementById('editDescricaoContainer').style.display = 'block';
+            document.getElementById('inputEditDescricao').value = detalheDescricao.textContent;
+        });
+        document.getElementById('btnCancelarDescricao').addEventListener('click', () => {
+            document.getElementById('viewDescricaoContainer').style.display = 'block';
+            document.getElementById('editDescricaoContainer').style.display = 'none';
+        });
+        document.getElementById('btnSalvarDescricao').addEventListener('click', async () => {
+            const novaDesc = document.getElementById('inputEditDescricao').value;
+            try {
+                const r = await fetch(`${API_URL}/chamados/${currentTicketId}/descricao`, {
+                    method: 'PATCH', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ descricao: novaDesc })
+                });
+                if(r.ok) {
+                    detalheDescricao.textContent = novaDesc;
+                    document.getElementById('btnCancelarDescricao').click();
+                } else alert("Erro ao salvar.");
+            } catch(e) { alert("Erro de conexão."); }
+        });
+
+        // --- REQUISITANTE ---
+        document.getElementById('btnEditarRequisitante').addEventListener('click', () => {
+            document.getElementById('viewRequisitanteContainer').style.display = 'none';
+            document.getElementById('editRequisitanteContainer').style.display = 'block';
+        });
+        document.getElementById('btnCancelarRequisitante').addEventListener('click', () => {
+            document.getElementById('viewRequisitanteContainer').style.display = 'flex';
+            document.getElementById('editRequisitanteContainer').style.display = 'none';
+        });
+        document.getElementById('btnSalvarRequisitante').addEventListener('click', async () => {
+            const novoId = document.getElementById('selectEditRequisitante').value;
+            if(!novoId) return alert("Selecione um usuário.");
+            try {
+                const r = await fetch(`${API_URL}/chamados/${currentTicketId}/requisitante`, {
+                    method: 'PATCH', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ requisitanteId: novoId })
+                });
+                if(r.ok) {
+                    const sel = document.getElementById('selectEditRequisitante');
+                    // Simplesmente atualiza visualmente com o nome do select, 
+                    // ao recarregar (listarChamados) os dados reais virão.
+                    detalheRequisitante.textContent = sel.options[sel.selectedIndex].text;
+                    document.getElementById('btnCancelarRequisitante').click();
+                    listarChamados();
+                } else alert("Erro ao salvar.");
+            } catch(e) { alert("Erro de conexão."); }
+        });
+
+        // --- LOJA / DEPARTAMENTO ---
+        const selLoja = document.getElementById('selectEditLoja');
+        const selDepto = document.getElementById('selectEditDepartamento');
+
+        selLoja.addEventListener('change', async () => {
+            selDepto.innerHTML = '<option value="">Carregando...</option>';
+            if(!selLoja.value) { selDepto.innerHTML = ''; return; }
+            try {
+                const r = await fetch(`${API_URL}/chamados/dados/lojas/${selLoja.value}/departamentos`);
+                const deptos = await r.json();
+                selDepto.innerHTML = '<option value="">Selecione o Departamento</option>';
+                deptos.forEach(d => selDepto.add(new Option(d.nome, d.id)));
+            } catch { selDepto.innerHTML = '<option>Erro</option>'; }
+        });
+
+        document.getElementById('btnEditarLojaDepto').addEventListener('click', () => {
+            document.getElementById('viewLojaDeptoContainer').style.display = 'none';
+            document.getElementById('editLojaDeptoContainer').style.display = 'block';
+        });
+        document.getElementById('btnCancelarLojaDepto').addEventListener('click', () => {
+            document.getElementById('viewLojaDeptoContainer').style.display = 'flex';
+            document.getElementById('editLojaDeptoContainer').style.display = 'none';
+        });
+        document.getElementById('btnSalvarLojaDepto').addEventListener('click', async () => {
+            const lId = selLoja.value;
+            const dId = selDepto.value;
+            if(!lId || !dId) return alert("Selecione Loja e Departamento.");
+            try {
+                const r = await fetch(`${API_URL}/chamados/${currentTicketId}/loja-departamento`, {
+                    method: 'PATCH', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ lojaId: lId, departamentoId: dId })
+                });
+                if(r.ok) {
+                    detalheLoja.textContent = selLoja.options[selLoja.selectedIndex].text;
+                    detalheDepartamento.textContent = selDepto.options[selDepto.selectedIndex].text;
+                    document.getElementById('btnCancelarLojaDepto').click();
+                } else alert("Erro ao salvar.");
+            } catch(e) { alert("Erro de conexão."); }
+        });
+
+
         async function init() {
             loadTheme(); 
             await Promise.all([
                 carregarCategorias(),
                 carregarOperadores(),
-                carregarFiltroLojas() // <--- Carrega o novo filtro
+                carregarFiltroLojas(),
+                carregarTodosUsuarios(), 
+                carregarLojasEdicao()    
             ]);
             await listarChamados(); 
         }

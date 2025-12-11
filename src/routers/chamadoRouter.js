@@ -56,4 +56,10 @@ router.delete('/chamados/:id', ChamadoController.deletarChamado);
 router.post('/chamados/:id/comentarios', addComentario);
 router.get('/chamados/:id/comentarios', listarComentariosPorChamado);
 
+
+// Adicione estas linhas junto com as outras rotas PATCH/PUT
+router.patch('/chamados/:id/assunto', ChamadoController.atualizarAssunto);
+router.patch('/chamados/:id/descricao', ChamadoController.atualizarDescricao);
+router.patch('/chamados/:id/requisitante', ChamadoController.atualizarRequisitante);
+router.patch('/chamados/:id/loja-departamento', ChamadoController.atualizarLojaDepartamento);
 export default router;

@@ -182,3 +182,37 @@ export const contarChamadosPorStatus = async (req, res) => {
         });
     } catch (e) { res.status(500).json({ success: false }); }
 };
+// --- NOVOS CONTROLADORES ---
+
+export const atualizarAssunto = async (req, res) => {
+    try {
+        const result = await ChamadoModel.updateAssunto(parseInt(req.params.id), req.body.assunto);
+        if (result.affectedRows === 0) return res.status(404).json({ success: false });
+        res.status(200).json({ success: true });
+    } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+};
+
+export const atualizarDescricao = async (req, res) => {
+    try {
+        const result = await ChamadoModel.updateDescricao(parseInt(req.params.id), req.body.descricao);
+        if (result.affectedRows === 0) return res.status(404).json({ success: false });
+        res.status(200).json({ success: true });
+    } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+};
+
+export const atualizarRequisitante = async (req, res) => {
+    try {
+        const result = await ChamadoModel.updateRequisitante(parseInt(req.params.id), parseInt(req.body.requisitanteId));
+        if (result.affectedRows === 0) return res.status(404).json({ success: false });
+        res.status(200).json({ success: true });
+    } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+};
+
+export const atualizarLojaDepartamento = async (req, res) => {
+    try {
+        const { lojaId, departamentoId } = req.body;
+        const result = await ChamadoModel.updateLojaDepartamento(parseInt(req.params.id), parseInt(lojaId), parseInt(departamentoId));
+        if (result.affectedRows === 0) return res.status(404).json({ success: false });
+        res.status(200).json({ success: true });
+    } catch (e) { res.status(500).json({ success: false, message: e.message }); }
+};
