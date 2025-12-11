@@ -667,6 +667,12 @@ export const criarChamadoDoChat = async (req, res) => {
             return res.status(400).json({ success: false, message: 'ID do Requisitante inválido ou não fornecido.' });
         }
 
+        // Remove sufixo do whatsapp se vier no numero ou telefone manual
+        const limpaNumero = (n) => n ? n.replace('@s.whatsapp.net', '') : '';
+        const telefoneFinal = chamado.telefone_requisitante_manual 
+            ? limpaNumero(chamado.telefone_requisitante_manual) 
+            : limpaNumero(numero);
+
         // Mapeamento para o formato do Model (camelCase e sufixos Num)
         const dadosParaModel = {
             assunto: chamado.assunto,
@@ -682,8 +688,8 @@ export const criarChamadoDoChat = async (req, res) => {
             departamento_id: chamado.departamento ? parseInt(chamado.departamento) : null,
             
             // [NOVO] Mapeia Nome e Telefone do Contato
-            nomeRequisitanteManual: chamado.nome_requisitante_manual || null,
-            telefoneRequisitanteManual: chamado.telefone_requisitante_manual || numero, 
+            nomeRequisitanteManual: chamado.nome_requisitante_manual || 'Cliente WhatsApp',
+            telefoneRequisitanteManual: telefoneFinal, 
             
             emailRequisitanteManual: null
         };
