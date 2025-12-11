@@ -56,7 +56,7 @@ export const enviarTexto = async (numero, mensagem) => {
     // console.log(`[EVOLUTION] Enviando para: ${numero}`);
     const response = await apiClient.post(`/message/sendText/${INSTANCE_NAME}`, {
       number: numero,
-      options: { delay: 1200, presence: 'composing' },
+      options: { delay: 0, presence: 'composing' },
       text: mensagem 
     });
     return response.data;
@@ -79,7 +79,7 @@ export const enviarMidia = async (numero, midiaBase64, nomeArquivo, legenda) => 
                 media: midiaBase64, 
                 caption: legenda || ""
             },
-            options: { delay: 1200, presence: 'composing' }
+            options: { delay: 0, presence: 'composing' }
         });
         return response.data;
     } catch (error) {

@@ -2,9 +2,8 @@ import * as evolutionService from '../services/evolutionService.js';
 import * as chamadoModel from '../models/chamadoModel.js'; 
 import * as EmailService from '../services/emailService.js'; 
 import * as contatoModel from '../models/contatoModel.js'; 
+import * as whatsappModel from '../models/whatsappModel.js'; // <--- NOVO IMPORT
 import { OpenAI } from 'openai';
-import fs from 'fs';
-import path from 'path';
 
 // ==================================================
 // 1. CONFIGURAÇÕES DA GROQ
@@ -16,44 +15,11 @@ const groq = new OpenAI({
 
 const MODELO_IA = "llama-3.1-8b-instant"; 
 
-// --- CACHE ANTI-DUPLICAÇÃO ---
+// --- CACHE ANTI-DUPLICAÇÃO (Apenas memória RAM, seguro reiniciar) ---
 const processedMessageIds = new Set();
 
 // ==================================================
-// 2. PERSISTÊNCIA DE DADOS (CORREÇÃO DA AMNÉSIA)
-// ==================================================
-// Arquivo onde salvaremos quem é dono de qual chat
-const STATE_FILE = path.resolve('whatsappState.json');
-
-// Carrega memória local
-let userContext = {};
-
-function loadStateDisk() {
-    try {
-        if (fs.existsSync(STATE_FILE)) {
-            const raw = fs.readFileSync(STATE_FILE, 'utf-8');
-            userContext = JSON.parse(raw);
-            console.log("💾 [SISTEMA] Memória de atendimentos carregada do disco.");
-        }
-    } catch (e) {
-        console.error("Erro ao carregar estado:", e);
-        userContext = {};
-    }
-}
-
-function saveStateDisk() {
-    try {
-        fs.writeFileSync(STATE_FILE, JSON.stringify(userContext, null, 2));
-    } catch (e) {
-        console.error("Erro ao salvar estado:", e);
-    }
-}
-
-// Carrega ao iniciar
-loadStateDisk();
-
-// ==================================================
-// 3. O CÉREBRO DA IA (APENAS PARA O SUBMENU T.I.)
+// 2. TEXTOS E PROMPTS
 // ==================================================
 const gerarPromptSistema = (nomeUsuario) => {
     const nome = nomeUsuario || 'Colaborador';
@@ -69,13 +35,6 @@ Seja breve e profissional.
 `;
 };
 
-const calcularPosicaoFila = () => {
-    return Object.values(userContext).filter(ctx => ctx.etapa === 'FILA_ESPERA').length;
-};
-
-// ==================================================
-// 4. TEXTOS FIXOS
-// ==================================================
 const MENSAGENS = {
     SAUDACAO: (nome) => `👋 Olá, *${nome}*. Bem-vindo ao Suporte Técnico do *Supermercado Rosalina*.
 
@@ -98,51 +57,46 @@ Opção selecionada: Suporte T.I
 📌 *Sua posição na fila:* ${posicao}º
 
 Você entrou na fila, logo você será atendido.
+📞 *Em caso de urgência:* (12) 98142-2925`,
 
-📞 *Em caso de urgência pode nos acionar no número:* (12) 98142-2925`,
-
-    OPCAO_INVALIDA: `⚠️ *Opção inválida.*
-Por favor, digite apenas o número correspondente.`,
+    OPCAO_INVALIDA: `⚠️ *Opção inválida.* Digite apenas o número correspondente.`,
 
     AVALIACAO_INICIO: `⏹️ *Atendimento Finalizado.*
-
 Por favor, avalie nosso suporte técnico:
-
 1️⃣ 😡 Insatisfeito
 2️⃣ 🙁 Ruim
 3️⃣ 😐 Regular
 4️⃣ 🙂 Bom
 5️⃣ 🤩 Excelente
-
 9️⃣ ❌ Pular`,
 
-    AVALIACAO_MOTIVO: `Obrigado. Se houver alguma observação sobre o atendimento, digite abaixo (ou 9 para sair).`,
+    AVALIACAO_MOTIVO: `Obrigado. Se houver alguma observação, digite abaixo (ou 9 para sair).`,
 
-    ENCERRAMENTO_FINAL: `✅ *Chamado Encerrado.*
-O Supermercado Rosalina agradece.
-_Envie uma mensagem se precisar de novo suporte._`
+    ENCERRAMENTO_FINAL: `✅ *Chamado Encerrado.* O Supermercado Rosalina agradece.`
 };
 
 // ==================================================
-// 5. PROCESSAMENTO DA IA
+// 3. PROCESSAMENTO DA IA
 // ==================================================
-async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
-    const contexto = userContext[numeroUsuario];
-    if (!contexto || contexto.botPausado) return null;
+async function processarComGroq(session, textoUsuario, nomeUsuario) {
+    if (session.botPausado) return null;
 
     try {
-        if (!contexto.historico || contexto.historico.length === 0) {
-            contexto.historico = [{ role: "system", content: gerarPromptSistema(nomeUsuario) }];
+        let historico = session.historico_ia || [];
+        
+        if (historico.length === 0) {
+            historico = [{ role: "system", content: gerarPromptSistema(nomeUsuario) }];
         }
         
-        contexto.historico.push({ role: "user", content: textoUsuario });
+        historico.push({ role: "user", content: textoUsuario });
         
-        if (contexto.historico.length > 6) {
-            contexto.historico = [contexto.historico[0], ...contexto.historico.slice(-5)];
+        // Mantém contexto de ~6 mensagens anteriores (system + 5)
+        if (historico.length > 7) {
+            historico = [historico[0], ...historico.slice(-6)];
         }
 
         const completion = await groq.chat.completions.create({
-            messages: contexto.historico,
+            messages: historico,
             model: MODELO_IA,
             temperature: 0.1,
             max_tokens: 150,  
@@ -151,7 +105,9 @@ async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
         const respostaIA = completion.choices[0]?.message?.content || "";
         
         if (respostaIA) {
-            contexto.historico.push({ role: "assistant", content: respostaIA });
+            historico.push({ role: "assistant", content: respostaIA });
+            // Atualiza histórico no Banco
+            await whatsappModel.updateSession(session.numero, { historico_ia: historico });
         }
         return respostaIA;
 
@@ -162,7 +118,7 @@ async function processarComGroq(numeroUsuario, textoUsuario, nomeUsuario) {
 }
 
 // ==================================================
-// 6. WEBHOOK
+// 4. WEBHOOK
 // ==================================================
 export const handleWebhook = async (req, res) => {
   const payload = req.body;
@@ -177,112 +133,93 @@ export const handleWebhook = async (req, res) => {
       const idMensagem = msg.key.id; 
       const idRemoto = msg.key.remoteJid;
       const isFromMe = msg.key.fromMe;
-      
+
+      // [ATENÇÃO] Mantendo bloqueio de grupos conforme solicitado
+      if (idRemoto.includes('@g.us')) return res.status(200).json({ success: true });
+
       if (processedMessageIds.has(idMensagem)) return res.status(200).json({ success: true });
       processedMessageIds.add(idMensagem);
-      setTimeout(() => processedMessageIds.delete(idMensagem), 10000);
+      setTimeout(() => processedMessageIds.delete(idMensagem), 15000);
 
-      // Tenta pegar o nome do pushName (padrão) ou pushname (banco)
       const nomeAutor = msg.pushName || msg.pushname || idRemoto.split('@')[0];
-      
-      // [ATUALIZAÇÃO] Pega texto OU legenda da imagem
       const texto = (msg.message?.conversation || msg.message?.extendedTextMessage?.text || msg.message?.imageMessage?.caption || "").trim();
       const isImage = !!msg.message?.imageMessage;
-
-      const isGroup = idRemoto.includes('@g.us'); 
       const isStatus = idRemoto === 'status@broadcast'; 
 
-      // Processa se tiver texto OU for imagem
-      if (!isStatus && !isGroup && (texto || isImage)) {
+      if (!isStatus && (texto || isImage)) {
         
-        // =================================================================
-        // [NOVO] LÓGICA DE HISTÓRICO DE CONTATOS
-        // =================================================================
-        try {
-            // Salva ou atualiza o contato no banco de dados usando o pushname correto
-            await contatoModel.salvarContato(idRemoto, nomeAutor);
-        } catch (err) {
-            // Loga o erro mas NÃO para o fluxo do bot
-            console.error("Erro ao salvar histórico de contato:", err.message);
-        }
-        // =================================================================
+        // Salva histórico de contato (Model existente)
+        contatoModel.salvarContato(idRemoto, nomeAutor).catch(e => console.error("Erro contato:", e.message));
 
-        const ctxAtual = userContext[idRemoto] || {};
+        // =================================================================
+        // RECUPERA SESSÃO DO BANCO DE DADOS (Substitui userContext)
+        // =================================================================
+        const session = await whatsappModel.findOrCreateSession(idRemoto, nomeAutor);
         
-        // [SEGURANÇA] Envia o dono do chat para o frontend filtrar
         io.emit('novaMensagemWhatsapp', { 
             id: idMensagem, 
             chatId: idRemoto, 
             nome: nomeAutor, 
             texto: texto || (isImage ? "📷 [Imagem]" : ""), 
             fromMe: isFromMe,
-            mostrarNaFila: ctxAtual.mostrarNaFila || false,
-            nomeAgente: ctxAtual.nomeAgente 
+            mostrarNaFila: session.mostrar_na_fila,
+            nomeAgente: session.nome_agente 
         });
 
         if (!isFromMe) {
-            if (!userContext[idRemoto]) {
-                userContext[idRemoto] = { 
-                    etapa: 'INICIO', 
-                    botPausado: false, 
-                    historico: [], 
-                    mostrarNaFila: false 
-                };
-                saveStateDisk(); // Salva novo estado
-            }
-            const ctx = userContext[idRemoto];
             let respostaBot = null;
             
-            // Lógica do BOT (apenas se tiver texto para interpretar)
             if (texto) {
                 const textoMin = texto.toLowerCase();
-
                 const gatilhosInicio = ['oi', 'ola', 'menu', 'inicio', 'start', 'bom dia', 'boa tarde', 'ajuda', 'suporte'];
                 const textoLimpo = textoMin.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g,"").trim(); 
                 const ehSaudacao = gatilhosInicio.some(s => textoLimpo === s || (textoLimpo.startsWith(s) && textoLimpo.length < 50));
 
-                // --- COMANDOS GERAIS ---
+                // --- RESET / SAIR ---
                 if (texto === '#' || textoMin === 'encerrar' || textoMin === 'sair') {
                     respostaBot = MENSAGENS.AVALIACAO_INICIO;
-                    ctx.etapa = 'AVALIACAO_NOTA';
-                    ctx.botPausado = true; 
-                    ctx.nomeAgente = null;
-                    saveStateDisk(); // Atualiza
+                    await whatsappModel.updateSession(idRemoto, { 
+                        etapa: 'AVALIACAO_NOTA', 
+                        bot_pausado: true,
+                        nome_agente: null 
+                    });
                 }
+                // --- INICIO / SAUDACAO ---
                 else if (ehSaudacao) {
-                    if (ctx.etapa === 'MENU' && textoMin !== 'menu') {
+                    if (session.etapa === 'MENU' && textoMin !== 'menu') {
                         respostaBot = MENSAGENS.OPCAO_INVALIDA;
                     } else {
-                        ctx.etapa = 'MENU';
-                        ctx.botPausado = false;
-                        ctx.nomeAgente = null;
-                        ctx.mostrarNaFila = false;
-                        ctx.historico = [{ role: "system", content: gerarPromptSistema(nomeAutor) }];
                         respostaBot = MENSAGENS.SAUDACAO(nomeAutor);
-                        saveStateDisk(); // Atualiza
+                        await whatsappModel.updateSession(idRemoto, { 
+                            etapa: 'MENU', 
+                            bot_pausado: false, 
+                            nome_agente: null,
+                            mostrar_na_fila: false,
+                            historico_ia: [{ role: "system", content: gerarPromptSistema(nomeAutor) }]
+                        });
                     }
                 }
                 // --- MENU PRINCIPAL ---
-                else if (ctx.etapa === 'MENU') {
+                else if (session.etapa === 'MENU') {
                     if (texto === '1' || textoMin.includes('problema') || textoMin.includes('suporte')) {
                         respostaBot = MENSAGENS.MENU_TI_COM_FILA;
-                        ctx.etapa = 'AGUARDANDO_DESCRICAO'; 
-                        ctx.botPausado = false; 
-                        saveStateDisk();
+                        await whatsappModel.updateSession(idRemoto, { 
+                            etapa: 'AGUARDANDO_DESCRICAO', 
+                            bot_pausado: false 
+                        });
                     } 
                     else if (texto.startsWith('*') || textoMin.includes('ticket')) {
                         let ticketNumeroStr = texto.startsWith('*') ? texto.substring(1).trim() : texto.replace(/\D/g,'');
                         if (!ticketNumeroStr) {
                             respostaBot = "ℹ️ Digite o número do ticket com asterisco. Ex: ***123**";
                         } else {
-                            const ticketId = parseInt(ticketNumeroStr);
-                            const ticket = await chamadoModel.findById(ticketId); 
+                            const ticket = await chamadoModel.findById(parseInt(ticketNumeroStr)); 
                             if (ticket) {
                                 respostaBot = `🎫 *Ticket #${ticket.id}*\nStatus: ${ticket.status}\n\n_Digite menu para retornar._`;
-                                ctx.botPausado = true;
-                                setTimeout(() => { ctx.botPausado = false; }, 30000); 
+                                await whatsappModel.updateSession(idRemoto, { bot_pausado: true });
+                                setTimeout(() => whatsappModel.updateSession(idRemoto, { bot_pausado: false }), 30000); 
                             } else {
-                                respostaBot = `🚫 *Ticket #${ticketId} não localizado.*`;
+                                respostaBot = `🚫 *Ticket não localizado.*`;
                             }
                         }
                     } else {
@@ -290,41 +227,45 @@ export const handleWebhook = async (req, res) => {
                     }
                 }
                 // --- FILA ---
-                else if (ctx.etapa === 'AGUARDANDO_DESCRICAO') {
-                    ctx.mostrarNaFila = true; 
+                else if (session.etapa === 'AGUARDANDO_DESCRICAO') {
+                    // 1. IA processa o texto para entender o problema
+                    await processarComGroq(session, texto, nomeAutor);
+                    
+                    // 2. Coloca na fila
+                    await whatsappModel.updateSession(idRemoto, { 
+                        etapa: 'FILA_ESPERA', 
+                        bot_pausado: true,
+                        mostrar_na_fila: true 
+                    });
+
                     io.emit('notificacaoChamado', { chatId: idRemoto, nome: nomeAutor, status: 'PENDENTE_TI' });
-                    const posicaoAtual = calcularPosicaoFila() + 1;
-                    respostaBot = MENSAGENS.CONFIRMACAO_FINAL(posicaoAtual);
-                    ctx.etapa = 'FILA_ESPERA';
-                    ctx.botPausado = true; 
-                    saveStateDisk();
+                    
+                    const posicaoFila = (await whatsappModel.contarFila()) + 1; // +1 só visual, pois ele já conta no DB
+                    respostaBot = MENSAGENS.CONFIRMACAO_FINAL(posicaoFila);
                 }
                 // --- AVALIAÇÃO ---
-                else if (ctx.etapa === 'AVALIACAO_NOTA') {
+                else if (session.etapa === 'AVALIACAO_NOTA') {
                     if (['1', '2', '3', '4', '5'].includes(texto)) {
                         respostaBot = MENSAGENS.AVALIACAO_MOTIVO;
-                        ctx.etapa = 'AVALIACAO_MOTIVO';
-                        saveStateDisk();
+                        await whatsappModel.updateSession(idRemoto, { etapa: 'AVALIACAO_MOTIVO' });
                     } else if (texto === '9') {
                         respostaBot = MENSAGENS.ENCERRAMENTO_FINAL;
-                        ctx.mostrarNaFila = false; 
-                        delete userContext[idRemoto];
-                        saveStateDisk();
+                        await whatsappModel.resetSession(idRemoto);
                     } else {
                         respostaBot = "Digite uma nota de **1 a 5** ou **9** para sair.";
                     }
                 }
-                else if (ctx.etapa === 'AVALIACAO_MOTIVO') {
+                else if (session.etapa === 'AVALIACAO_MOTIVO') {
                     respostaBot = MENSAGENS.ENCERRAMENTO_FINAL;
-                    ctx.mostrarNaFila = false; 
-                    delete userContext[idRemoto]; 
-                    saveStateDisk();
+                    await whatsappModel.resetSession(idRemoto);
                 }
-                else if (!respostaBot && !ctx.botPausado && ctx.etapa === 'INICIO') {
-                    ctx.etapa = 'MENU';
-                    ctx.historico = [{ role: "system", content: gerarPromptSistema(nomeAutor) }];
+                // --- RESPOSTA PADRÃO / LOOP ---
+                else if (!respostaBot && !session.bot_pausado && session.etapa === 'INICIO') {
                     respostaBot = MENSAGENS.SAUDACAO(nomeAutor);
-                    saveStateDisk();
+                    await whatsappModel.updateSession(idRemoto, { 
+                        etapa: 'MENU', 
+                        historico_ia: [{ role: "system", content: gerarPromptSistema(nomeAutor) }]
+                    });
                 }
 
                 if (respostaBot) {
@@ -335,8 +276,8 @@ export const handleWebhook = async (req, res) => {
                         nome: "Bot", 
                         texto: respostaBot, 
                         fromMe: true,
-                        mostrarNaFila: ctx.mostrarNaFila,
-                        nomeAgente: ctx.nomeAgente
+                        mostrarNaFila: session.etapa === 'FILA_ESPERA' || session.etapa === 'ATENDIMENTO_HUMANO',
+                        nomeAgente: session.nomeAgente
                     });
                 }
             }
@@ -351,37 +292,30 @@ export const handleWebhook = async (req, res) => {
 };
 
 // ==================================================
-// 7. FUNÇÕES ADMINISTRATIVAS (BLINDADAS)
+// 5. FUNÇÕES ADMINISTRATIVAS (AGORA COM DB)
 // ==================================================
 
 export const atenderAtendimento = async (req, res) => {
     const { numero, nomeAgente } = req.body;
     try {
-        if (!userContext[numero]) userContext[numero] = { historico: [] };
+        const session = await whatsappModel.findOrCreateSession(numero, 'Cliente');
 
-        // [SEGURANÇA] Bloqueio de Concorrência
-        if (userContext[numero].nomeAgente && userContext[numero].nomeAgente !== nomeAgente) {
-             return res.status(409).json({ 
-                 success: false, 
-                 message: `Atendimento já assumido por ${userContext[numero].nomeAgente}.` 
-             });
+        if (session.nome_agente && session.nome_agente !== nomeAgente) {
+             return res.status(409).json({ success: false, message: `Atendimento já assumido por ${session.nome_agente}.` });
         }
 
-        userContext[numero].nomeAgente = nomeAgente;
-        userContext[numero].botPausado = true; 
-        userContext[numero].etapa = 'ATENDIMENTO_HUMANO';
-        userContext[numero].mostrarNaFila = true; 
-        
-        saveStateDisk(); // Salva no disco
+        await whatsappModel.updateSession(numero, {
+            nome_agente: nomeAgente,
+            bot_pausado: true,
+            etapa: 'ATENDIMENTO_HUMANO',
+            mostrar_na_fila: true
+        });
 
         const msg = `👨‍💻 *Atendimento Humano Iniciado*\n\nO técnico *${nomeAgente}* assumiu o chamado.`;
         await evolutionService.enviarTexto(numero, msg);
         
         if (req.io) {
-            req.io.emit('atendimentoAssumido', {
-                chatId: numero,
-                nomeAgente: nomeAgente
-            });
+            req.io.emit('atendimentoAssumido', { chatId: numero, nomeAgente: nomeAgente });
         }
 
         res.status(200).json({ success: true });
@@ -391,34 +325,25 @@ export const atenderAtendimento = async (req, res) => {
 export const finalizarAtendimento = async (req, res) => {
     const { numero } = req.body;
     try {
-        if (!userContext[numero]) userContext[numero] = {};
-        userContext[numero].etapa = 'AVALIACAO_NOTA';
-        userContext[numero].botPausado = true;
-        userContext[numero].nomeAgente = null;
-        userContext[numero].mostrarNaFila = false; 
-        
-        saveStateDisk(); // Salva
+        await whatsappModel.updateSession(numero, {
+            etapa: 'AVALIACAO_NOTA',
+            bot_pausado: true,
+            nome_agente: null,
+            mostrar_na_fila: false
+        });
 
         await evolutionService.enviarTexto(numero, MENSAGENS.AVALIACAO_INICIO);
         res.status(200).json({ success: true });
     } catch (error) { res.status(500).json({ success: false }); }
 };
 
-// [SEGURANÇA TOTAL] Envio de mensagem com validação rígida de dono
 export const handleSendMessage = async (req, res) => {
   const { numero, mensagem, nomeAgenteTemporario } = req.body;
   try {
-      // 1. Verifica se o chat tem dono
-      const contexto = userContext[numero];
+      const session = await whatsappModel.findOrCreateSession(numero, 'Cliente');
       
-      if (contexto && contexto.nomeAgente) {
-          // 2. Se tem dono, OBRIGA que seja quem está enviando
-          if (contexto.nomeAgente !== nomeAgenteTemporario) {
-              return res.status(403).json({ 
-                  success: false, 
-                  message: `⛔ ACESSO NEGADO: Este chat pertence a ${contexto.nomeAgente}.` 
-              });
-          }
+      if (session.nome_agente && session.nome_agente !== nomeAgenteTemporario) {
+          return res.status(403).json({ success: false, message: `⛔ ACESSO NEGADO: Este chat pertence a ${session.nome_agente}.` });
       }
 
       let mensagemFinal = mensagem;
@@ -426,40 +351,30 @@ export const handleSendMessage = async (req, res) => {
           mensagemFinal = `*${nomeAgenteTemporario}*\n${mensagem}`;
       }
 
-      if(contexto) contexto.mostrarNaFila = true;
-      else if (!contexto) userContext[numero] = { etapa: 'ATENDIMENTO_HUMANO', botPausado: true, mostrarNaFila: true };
-      
-      saveStateDisk(); // Salva se mudar algo
+      // Garante que apareça na fila e pause o bot
+      if(session.etapa !== 'ATENDIMENTO_HUMANO') {
+          await whatsappModel.updateSession(numero, { etapa: 'ATENDIMENTO_HUMANO', bot_pausado: true, mostrar_na_fila: true });
+      }
 
       const r = await evolutionService.enviarTexto(numero, mensagemFinal);
       res.status(200).json({ success: true, data: r });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };
 
-// [NOVO] Controlador para Envio de Mídia
 export const enviarMidiaController = async (req, res) => {
     const { numero, midia, nomeArquivo, legenda, nomeAgenteTemporario } = req.body;
-    
     try {
-        const contexto = userContext[numero];
-        // Verifica se quem está enviando é o dono do chat
-        if (contexto && contexto.nomeAgente) {
-            if (contexto.nomeAgente !== nomeAgenteTemporario && nomeAgenteTemporario) {
-                // Se o agente temporário foi enviado, valida. Se não, permite (pode ser bot ou auto)
-                 return res.status(403).json({ 
-                     success: false, 
-                     message: `⛔ ACESSO NEGADO: Este chat pertence a ${contexto.nomeAgente}.` 
-                 });
-            }
+        const session = await whatsappModel.findOrCreateSession(numero, 'Cliente');
+        
+        if (session.nome_agente && session.nome_agente !== nomeAgenteTemporario && nomeAgenteTemporario) {
+             return res.status(403).json({ success: false, message: `⛔ ACESSO NEGADO: Este chat pertence a ${session.nome_agente}.` });
         }
 
-        if(contexto) contexto.mostrarNaFila = true;
-        
-        // Se tem legenda, adiciona a assinatura do agente
+        // Garante visibilidade
+        if(!session.mostrar_na_fila) await whatsappModel.updateSession(numero, { mostrar_na_fila: true });
+
         let legendaFinal = legenda || "";
-        if (nomeAgenteTemporario) {
-            legendaFinal = `*${nomeAgenteTemporario}*\n${legendaFinal}`;
-        }
+        if (nomeAgenteTemporario) legendaFinal = `*${nomeAgenteTemporario}*\n${legendaFinal}`;
 
         const r = await evolutionService.enviarMidia(numero, midia, nomeArquivo, legendaFinal);
         res.status(200).json({ success: true, data: r });
@@ -469,30 +384,27 @@ export const enviarMidiaController = async (req, res) => {
     }
 };
 
-// [SEGURANÇA TOTAL] Listagem filtrada no servidor
 export const listarConversas = async (req, res) => { 
     try { 
         const agenteSolicitante = req.query.agente;
         const mode = req.query.mode; 
         
-        // --- DEFINIÇÃO DE LIMITES ---
-        // Se for modo histórico, busca mais (ex: 200 ou 500).
-        // Se for normal (fila), busca pelo menos 100 ou 200 para garantir que ninguém suma.
         const limiteBusca = mode === 'history' ? 500 : 200; 
-
-        // Agora passamos o limite para o serviço
         const todosChats = await evolutionService.buscarConversas(limiteBusca, 0) || []; 
 
-        if (!Array.isArray(todosChats)) {
-             return res.status(200).json({ success: true, data: [] });
-        }  
-        // --- NOVO: MODO HISTÓRICO (Retorna TUDO) ---
+        if (!Array.isArray(todosChats)) return res.status(200).json({ success: true, data: [] });
+
+        // Busca todas as sessões do banco para cruzar dados
+        const sessions = await whatsappModel.getAllSessions();
+        const sessionMap = {};
+        sessions.forEach(s => sessionMap[s.numero] = s);
+
+        // --- MODO HISTÓRICO ---
         if (mode === 'history') {
              const m = todosChats
                 .filter(x => x && x.id) 
                 .map(x => {
-                    const ctx = userContext[x.id] || {};
-                    // AQUI: Usa o pushname (banco) ou pushName (API)
+                    const sessao = sessionMap[x.id] || {};
                     const nomeContato = x.pushname || x.pushName || (x.id ? x.id.split('@')[0] : 'Desconhecido');
                     return { 
                         numero: x.id, 
@@ -500,29 +412,29 @@ export const listarConversas = async (req, res) => {
                         ultimaMensagem: x.conversation || "...", 
                         unread: false,
                         visivel: true, 
-                        etapa: ctx.etapa || 'FINALIZADO', 
-                        nomeAgente: ctx.nomeAgente || null
+                        etapa: sessao.etapa || 'FINALIZADO', 
+                        nomeAgente: sessao.nome_agente || null
                     };
                 });
             return res.status(200).json({ success: true, data: m }); 
         }
 
-        // --- MODO PADRÃO: FILA DE ATENDIMENTO ---
+        // --- MODO FILA ---
         const chatsFiltrados = todosChats
             .filter(x => x && x.id) 
             .filter(chat => {
-                 const ctx = userContext[chat.id] || {};
-                 const temDono = !!ctx.nomeAgente;
+                 const sessao = sessionMap[chat.id] || {};
+                 const temDono = !!sessao.nome_agente;
                  
+                 // Lógica de filtro por agente
                  if (!temDono) return true; 
-                 if (temDono && ctx.nomeAgente === agenteSolicitante) return true; 
+                 if (temDono && sessao.nome_agente === agenteSolicitante) return true; 
                  return false; 
             });
 
         const m = chatsFiltrados.map(x => {
-            const ctx = userContext[x.id] || {};
-            const deveAparecer = ctx.mostrarNaFila === true || ctx.etapa === 'ATENDIMENTO_HUMANO';
-            // AQUI TAMBÉM: Garante o uso do pushname
+            const sessao = sessionMap[x.id] || {};
+            const deveAparecer = sessao.mostrar_na_fila === 1 || sessao.etapa === 'ATENDIMENTO_HUMANO';
             const nomeContato = x.pushname || x.pushName || (x.id ? x.id.split('@')[0] : 'Desconhecido');
             
             return { 
@@ -531,8 +443,8 @@ export const listarConversas = async (req, res) => {
                 ultimaMensagem: x.conversation || "...", 
                 unread: x.unreadCount > 0,
                 visivel: deveAparecer, 
-                etapa: ctx.etapa || 'INICIO', 
-                nomeAgente: ctx.nomeAgente || null 
+                etapa: sessao.etapa || 'INICIO', 
+                nomeAgente: sessao.nome_agente || null 
             };
         }); 
         
@@ -544,77 +456,45 @@ export const listarConversas = async (req, res) => {
 };
 
 export const listarMensagensChat = async (req, res) => {
-    // 1. Aceita o parâmetro LIMIT
     const { numero, nomeSolicitante, limit } = req.body; 
-    
     if (!numero) return res.status(400).json({ success: false, message: 'Número obrigatório' });
     
     try {
-        const contexto = userContext[numero];
-        // Validação de permissão relaxada para leitura simples ou mantida se necessário
-        if (contexto && contexto.nomeAgente && limit < 60) {
-             if (contexto.nomeAgente !== nomeSolicitante) {
-                 return res.status(403).json({ 
-                     success: false, 
-                     message: "⛔ Você não tem permissão para ver este chat.",
-                     data: [] 
-                 });
+        const session = await whatsappModel.findOrCreateSession(numero, 'Cliente');
+        
+        if (session.nome_agente && limit < 60) {
+             if (session.nome_agente !== nomeSolicitante) {
+                 return res.status(403).json({ success: false, message: "⛔ Permissão negada.", data: [] });
              }
         }
 
         const qtdMensagens = limit || 50;
         let rawMessages = await evolutionService.buscarMensagensHistorico(numero, qtdMensagens);
         
-        // CORREÇÃO: Garante que rawMessages seja um array
         if (!Array.isArray(rawMessages)) {
-            // Tenta recuperar array de dentro de objetos comuns da Evolution
-            if (rawMessages && Array.isArray(rawMessages.messages)) {
-                rawMessages = rawMessages.messages;
-            } else if (rawMessages && Array.isArray(rawMessages.data)) {
-                rawMessages = rawMessages.data;
-            } else {
-                // Se não achou array, retorna vazio para não quebrar
-                rawMessages = [];
-            }
+            if (rawMessages?.messages) rawMessages = rawMessages.messages;
+            else if (rawMessages?.data) rawMessages = rawMessages.data;
+            else rawMessages = [];
         }
 
         const formattedMessages = rawMessages.map(msg => {
-            // AQUI: TRATAMENTO DO JSON DA MENSAGEM DO POSTGRES
             let messageObj = msg.message;
-            
-            // Se vier como string do banco, faz o parse
             if (typeof messageObj === 'string') {
-                try {
-                    messageObj = JSON.parse(messageObj);
-                } catch (e) {
-                    messageObj = {};
-                }
+                try { messageObj = JSON.parse(messageObj); } catch (e) { messageObj = {}; }
             }
-
-            // [ATUALIZAÇÃO] Melhoria na detecção de Mídia e Legenda
-            const content = messageObj?.conversation || 
-                            messageObj?.extendedTextMessage?.text || 
-                            messageObj?.imageMessage?.caption ||
-                            (messageObj?.imageMessage ? "📷 [Imagem Recebida]" : null) ||
-                            (messageObj?.audioMessage ? "🎤 [Áudio Recebido]" : null) ||
-                            "Conteúdo não suportado";
-            
-            const timestamp = msg.messageTimestamp 
-                ? (typeof msg.messageTimestamp === 'number' ? msg.messageTimestamp * 1000 : msg.messageTimestamp)
-                : Date.now();
+            const content = messageObj?.conversation || messageObj?.extendedTextMessage?.text || messageObj?.imageMessage?.caption || (messageObj?.imageMessage ? "📷 [Imagem]" : null) || "Conteúdo não suportado";
+            const timestamp = msg.messageTimestamp ? (typeof msg.messageTimestamp === 'number' ? msg.messageTimestamp * 1000 : msg.messageTimestamp) : Date.now();
                 
             return {
                 fromMe: msg.key.fromMe,
                 text: content,
                 time: timestamp, 
-                // AQUI: Usa pushname (banco) ou pushName (API)
                 name: msg.pushname || msg.pushName || (msg.key.fromMe ? "Eu" : "Cliente")
             };
         });
         formattedMessages.sort((a, b) => new Date(a.time) - new Date(b.time));
         res.status(200).json({ success: true, data: formattedMessages });
     } catch (e) {
-        console.error("Erro ao listar mensagens:", e);
         res.status(500).json({ success: false, data: [] });
     }
 };
@@ -622,24 +502,20 @@ export const listarMensagensChat = async (req, res) => {
 export const transferirAtendimento = async (req, res) => {
     const { numero, novoAgente, nomeAgenteAtual, nomeCliente } = req.body; 
     try {
-        if (!userContext[numero]) return res.status(404).json({ success: false, message: "Chat não encontrado." });
-        const oldAgent = nomeAgenteAtual || userContext[numero].nomeAgente || "Atendente";
-        userContext[numero].nomeAgente = novoAgente;
-        userContext[numero].etapa = 'ATENDIMENTO_HUMANO'; 
-        userContext[numero].botPausado = true;
-        userContext[numero].mostrarNaFila = true; 
-        
-        saveStateDisk(); // Salva
+        const oldAgent = nomeAgenteAtual || "Atendente";
+        await whatsappModel.updateSession(numero, {
+            nome_agente: novoAgente,
+            etapa: 'ATENDIMENTO_HUMANO',
+            bot_pausado: true,
+            mostrar_na_fila: true
+        });
 
         const msgTransferencia = `🔄 *Transferência*\n\nChamado repassado de *${oldAgent}* para *${novoAgente}*.`;
         await evolutionService.enviarTexto(numero, msgTransferencia);
+        
         if(req.io) {
              req.io.emit('transferenciaChamado', { 
-                chatId: numero, 
-                novoAgente: novoAgente, 
-                antigoAgente: oldAgent, 
-                nomeCliente: nomeCliente, 
-                timestamp: new Date()
+                chatId: numero, novoAgente, antigoAgente: oldAgent, nomeCliente, timestamp: new Date()
              });
         }
         res.status(200).json({ success: true });
@@ -657,66 +533,41 @@ export const verificarTicket = async (req, res) => {
 };
 
 export const criarChamadoDoChat = async (req, res) => {
-    // req.body.chamado traz { requisitante_id, categoria_id, assunto ... }
     const { chamado, numero } = req.body; 
-    
     try {
-        // Validação
         const reqId = parseInt(chamado.requisitante_id);
-        if (isNaN(reqId) || reqId <= 0) {
-            return res.status(400).json({ success: false, message: 'ID do Requisitante inválido ou não fornecido.' });
-        }
+        if (isNaN(reqId) || reqId <= 0) return res.status(400).json({ success: false, message: 'ID Requisitante inválido.' });
 
-        // Remove sufixo do whatsapp se vier no numero ou telefone manual
         const limpaNumero = (n) => n ? n.replace('@s.whatsapp.net', '') : '';
-        const telefoneFinal = chamado.telefone_requisitante_manual 
-            ? limpaNumero(chamado.telefone_requisitante_manual) 
-            : limpaNumero(numero);
+        const telefoneFinal = chamado.telefone_requisitante_manual ? limpaNumero(chamado.telefone_requisitante_manual) : limpaNumero(numero);
 
-        // Mapeamento para o formato do Model (camelCase e sufixos Num)
         const dadosParaModel = {
             assunto: chamado.assunto,
             descricao: chamado.descricao,
             prioridade: chamado.prioridade || 'Média',
             status: 'Aberto',
-            
-            requisitanteIdNum: reqId, // Mapeia requisitante_id -> requisitanteIdNum
+            requisitanteIdNum: reqId, 
             categoriaUnificadaIdNum: chamado.categoria_id ? parseInt(chamado.categoria_id) : null,
-            
-            // Campos Mapeados Corretamente
             loja_id: chamado.loja ? parseInt(chamado.loja) : null,
             departamento_id: chamado.departamento ? parseInt(chamado.departamento) : null,
-            
-            // [NOVO] Mapeia Nome e Telefone do Contato
             nomeRequisitanteManual: chamado.nome_requisitante_manual || 'Cliente WhatsApp',
             telefoneRequisitanteManual: telefoneFinal, 
-            
             emailRequisitanteManual: null
         };
 
         const novoId = await chamadoModel.create(dadosParaModel);
-        
-        // Pós-criação
         const ticketCriado = await chamadoModel.findById(novoId);
-        const msgZap = `🎫 *Ticket Aberto: #${novoId}*\nAssunto: ${ticketCriado.assunto}\n\nAguarde nosso retorno.`;
         
-        await evolutionService.enviarTexto(numero, msgZap);
+        await evolutionService.enviarTexto(numero, `🎫 *Ticket Aberto: #${novoId}*\nAssunto: ${ticketCriado.assunto}\n\nAguarde nosso retorno.`);
         
-        if(userContext[numero]) {
-            userContext[numero].ultimoTicketId = novoId;
-            saveStateDisk();
-        }
+        // Atualiza o ultimo ticket na sessão do DB
+        await whatsappModel.updateSession(numero, { ultimo_ticket_id: novoId });
 
-        if (ticketCriado.emailRequisitante) {
-            EmailService.enviarNotificacaoCriacao(ticketCriado.emailRequisitante, ticketCriado).catch(console.error);
-        }
+        if (ticketCriado.emailRequisitante) EmailService.enviarNotificacaoCriacao(ticketCriado.emailRequisitante, ticketCriado).catch(console.error);
 
         if (req.io) {
             req.io.emit('novoChamadoInterno', {
-                id: novoId,
-                assunto: ticketCriado.assunto,
-                requisitante: ticketCriado.nomeRequisitante || "WhatsApp",
-                prioridade: ticketCriado.prioridade
+                id: novoId, assunto: ticketCriado.assunto, requisitante: ticketCriado.nomeRequisitante || "WhatsApp", prioridade: ticketCriado.prioridade
             });
         }
         res.status(201).json({ success: true, id: novoId });
@@ -725,6 +576,7 @@ export const criarChamadoDoChat = async (req, res) => {
         res.status(500).json({ success: false, message: e.message }); 
     }
 };
+
 export const handleDisconnect = async (req, res) => { try { await evolutionService.desconectarInstancia(); res.status(200).json({ success: true }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
 export const connectInstance = async (req, res) => { try { const r = await evolutionService.criarInstancia(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
 export const checarStatus = async (req, res) => { try { const r = await evolutionService.consultarStatus(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
