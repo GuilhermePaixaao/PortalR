@@ -365,21 +365,26 @@ export const handleSendMessage = async (req, res) => {
 
 // src/controllers/whatsappController.js
 
+// Em src/controllers/whatsappController.js
+
 export const enviarMidiaController = async (req, res) => {
-    // 1. RECEBER O TIPO (video, image, document)
+    // 1. ADICIONE 'tipo' NA LEITURA (req.body)
     const { numero, midia, nomeArquivo, legenda, nomeAgenteTemporario, tipo } = req.body;
     
     try {
         const session = await whatsappModel.findOrCreateSession(numero, 'Cliente');
         
-        // ... (validações de segurança mantidas) ...
+        // Validação de segurança (mantida)
+        if (session.nome_agente && session.nome_agente !== nomeAgenteTemporario && nomeAgenteTemporario) {
+             return res.status(403).json({ success: false, message: `⛔ ACESSO NEGADO: Este chat pertence a ${session.nome_agente}.` });
+        }
 
         if(!session.mostrar_na_fila) await whatsappModel.updateSession(numero, { mostrar_na_fila: true });
 
         let legendaFinal = legenda || "";
         if (nomeAgenteTemporario) legendaFinal = `*${nomeAgenteTemporario}*\n${legendaFinal}`;
 
-        // 2. PASSAR O TIPO PARA O SERVIÇO
+        // 2. PASSE O 'tipo' PARA O SERVIÇO
         const r = await evolutionService.enviarMidia(numero, midia, nomeArquivo, legendaFinal, tipo);
         
         res.status(200).json({ success: true, data: r });

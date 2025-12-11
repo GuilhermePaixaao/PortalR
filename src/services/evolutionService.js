@@ -71,14 +71,17 @@ export const enviarTexto = async (numero, mensagem) => {
 // ==============================================================================
 // src/services/evolutionService.js
 
-export const enviarMidia = async (numero, midiaBase64, nomeArquivo, legenda, tipo = "image") => { 
-    // ^^^ O segredo está aqui: tipo = "image" garante que nunca seja undefined
+// Em src/services/evolutionService.js
+
+export const enviarMidia = async (numero, midiaBase64, nomeArquivo, legenda, tipo = "image") => {
+    //                                                                     ^^^^^^^^^^^^^^
+    // O segredo está aqui: se 'tipo' vier vazio, ele assume "image" e não quebra o envio.
     try {
         const response = await apiClient.post(`/message/sendMedia/${INSTANCE_NAME}`, {
             number: numero,
             mediaMessage: {
-                mediatype: tipo, // Aqui ele usa o valor recebido
-                fileName: nomeArquivo || "arquivo",
+                mediatype: tipo, // Agora nunca será undefined
+                fileName: nomeArquivo || `arquivo.${tipo === 'video' ? 'mp4' : 'png'}`,
                 media: midiaBase64, 
                 caption: legenda || ""
             },
@@ -86,8 +89,8 @@ export const enviarMidia = async (numero, midiaBase64, nomeArquivo, legenda, tip
         });
         return response.data;
     } catch (error) {
-        // ... logs de erro ...
-        throw error;
+        console.error("❌ ERRO AO ENVIAR MÍDIA:", JSON.stringify(error.response?.data || error.message, null, 2));
+        throw new Error('Falha técnica ao enviar mídia.');
     }
 };
 
