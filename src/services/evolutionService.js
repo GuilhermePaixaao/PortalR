@@ -73,15 +73,21 @@ export const enviarTexto = async (numero, mensagem) => {
 
 // Em src/services/evolutionService.js
 
-export const enviarMidia = async (numero, midiaBase64, nomeArquivo, legenda, tipo = "image") => {
-    //                                                                     ^^^^^^^^^^^^^^
-    // O segredo está aqui: se 'tipo' vier vazio, ele assume "image" e não quebra o envio.
+// src/services/evolutionService.js
+
+export const enviarMidia = async (numero, midiaBase64, nomeArquivo, legenda, tipo) => {
     try {
+        // 1. Tratamento de Segurança: Se 'tipo' vier vazio, assume 'image'
+        const mediaTypeFinal = (tipo === 'video' || tipo === 'document') ? tipo : 'image';
+        
+        // 2. Log para depuração (opcional, mas ajuda a ver o que está acontecendo)
+        console.log(`[EVOLUTION] Enviando Mídia. Tipo recebido: '${tipo}', Tipo final: '${mediaTypeFinal}'`);
+
         const response = await apiClient.post(`/message/sendMedia/${INSTANCE_NAME}`, {
             number: numero,
             mediaMessage: {
-                mediatype: tipo, // Agora nunca será undefined
-                fileName: nomeArquivo || `arquivo.${tipo === 'video' ? 'mp4' : 'png'}`,
+                mediatype: mediaTypeFinal, 
+                fileName: nomeArquivo || `arquivo.${mediaTypeFinal === 'video' ? 'mp4' : 'png'}`,
                 media: midiaBase64, 
                 caption: legenda || ""
             },

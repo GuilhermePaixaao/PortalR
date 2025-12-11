@@ -1620,17 +1620,13 @@
             inputArquivo.value = '';
         });
 
+        // No seu <script> do HTML...
+        
         btnConfirmarEnvioMidia.addEventListener('click', async () => {
-            if(!AppState.activeNumber || !arquivoSelecionadoBase64) return;
-
-            const legenda = inputLegendaArquivo.value.trim();
-            const btnOriginalText = btnConfirmarEnvioMidia.innerHTML;
-            btnConfirmarEnvioMidia.disabled = true;
-            btnConfirmarEnvioMidia.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+            // ... (código anterior) ...
 
             try {
-                const user = JSON.parse(localStorage.getItem("userData"));
-                
+                // ...
                 const response = await fetch('/api/whatsapp/send-media', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1639,10 +1635,14 @@
                         midia: arquivoSelecionadoBase64,
                         nomeArquivo: arquivoSelecionadoNome,
                         legenda: legenda,
-                        tipo: arquivoSelecionadoTipo, // Passando o tipo correto!
+                        
+                        // ESSA LINHA É CRUCIAL:
+                        tipo: arquivoSelecionadoTipo, // Tem que estar enviando 'image', 'video' ou 'document'
+                        
                         nomeAgenteTemporario: user?.data?.nomeFuncionario
                     })
                 });
+                // ...
 
                 const data = await response.json();
 
