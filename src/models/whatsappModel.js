@@ -71,7 +71,7 @@ export const resetSession = async (numero) => {
     );
 };
 
-// [ESSENCIAL] Esta é a função que o Histórico Global usa!
+// [ESSA É A FUNÇÃO QUE FALTAVA E ESTÁ CAUSANDO O ERRO]
 export const getAllSessions = async () => {
     const [rows] = await pool.query("SELECT * FROM whatsapp_sessoes");
     return rows;
