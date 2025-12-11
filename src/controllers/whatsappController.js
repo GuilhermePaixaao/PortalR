@@ -395,11 +395,14 @@ export const enviarMidiaController = async (req, res) => {
     }
 };
 
+// Em src/controllers/whatsappController.js
+
 export const listarConversas = async (req, res) => { 
     try { 
         const agenteSolicitante = req.query.agente;
         const mode = req.query.mode; 
         
+        // Busca mais chats se for modo histórico
         const limiteBusca = mode === 'history' ? 500 : 200; 
         const todosChats = await evolutionService.buscarConversas(limiteBusca, 0) || []; 
 
@@ -408,17 +411,27 @@ export const listarConversas = async (req, res) => {
         // Busca todas as sessões do banco para cruzar dados
         const sessions = await whatsappModel.getAllSessions();
         const sessionMap = {};
+        
+        // Mapeia sessões pelo número (garante que está normalizando o ID)
         sessions.forEach(s => sessionMap[s.numero] = s);
+
+        // --- FUNÇÃO AUXILIAR PARA PEGAR O NÚMERO CORRETO ---
+        // Aqui está o pulo do gato: prioriza remoteJid para evitar o erro do "cmj..."
+        const getNumeroReal = (chat) => chat.remoteJid || chat.id;
 
         // --- MODO HISTÓRICO ---
         if (mode === 'history') {
              const m = todosChats
-                .filter(x => x && x.id) 
+                .filter(x => x && (x.id || x.remoteJid)) 
                 .map(x => {
-                    const sessao = sessionMap[x.id] || {};
-                    const nomeContato = x.pushname || x.pushName || (x.id ? x.id.split('@')[0] : 'Desconhecido');
+                    const numeroReal = getNumeroReal(x);
+                    const sessao = sessionMap[numeroReal] || {};
+                    
+                    // Tenta pegar o nome de várias fontes possíveis
+                    const nomeContato = x.pushName || x.pushname || x.name || (numeroReal.split('@')[0]);
+                    
                     return { 
-                        numero: x.id, 
+                        numero: numeroReal, // Agora envia o número certo (5511...)
                         nome: nomeContato, 
                         ultimaMensagem: x.conversation || "...", 
                         unread: false,
@@ -430,11 +443,12 @@ export const listarConversas = async (req, res) => {
             return res.status(200).json({ success: true, data: m }); 
         }
 
-        // --- MODO FILA ---
+        // --- MODO FILA (ATENDIMENTO) ---
         const chatsFiltrados = todosChats
-            .filter(x => x && x.id) 
+            .filter(x => x && (x.id || x.remoteJid)) 
             .filter(chat => {
-                 const sessao = sessionMap[chat.id] || {};
+                 const numeroReal = getNumeroReal(chat);
+                 const sessao = sessionMap[numeroReal] || {};
                  const temDono = !!sessao.nome_agente;
                  
                  // Lógica de filtro por agente
@@ -444,12 +458,14 @@ export const listarConversas = async (req, res) => {
             });
 
         const m = chatsFiltrados.map(x => {
-            const sessao = sessionMap[x.id] || {};
+            const numeroReal = getNumeroReal(x);
+            const sessao = sessionMap[numeroReal] || {};
+            
             const deveAparecer = sessao.mostrar_na_fila === 1 || sessao.etapa === 'ATENDIMENTO_HUMANO';
-            const nomeContato = x.pushname || x.pushName || (x.id ? x.id.split('@')[0] : 'Desconhecido');
+            const nomeContato = x.pushName || x.pushname || x.name || (numeroReal.split('@')[0]);
             
             return { 
-                numero: x.id, 
+                numero: numeroReal, // Agora envia o número certo
                 nome: nomeContato,
                 ultimaMensagem: x.conversation || "...", 
                 unread: x.unreadCount > 0,
