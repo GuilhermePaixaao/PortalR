@@ -397,29 +397,38 @@ export const enviarMidiaController = async (req, res) => {
 
 // Em src/controllers/whatsappController.js
 
+// Em src/controllers/whatsappController.js
+
 export const listarConversas = async (req, res) => { 
     try { 
         const agenteSolicitante = req.query.agente;
         const mode = req.query.mode; 
         
-        // Busca mais chats se for modo histórico
+        // Se for histórico, busca mais conversas
         const limiteBusca = mode === 'history' ? 500 : 200; 
+        
+        // Busca conversas na API da Evolution
         const todosChats = await evolutionService.buscarConversas(limiteBusca, 0) || []; 
 
-        if (!Array.isArray(todosChats)) return res.status(200).json({ success: true, data: [] });
+        if (!Array.isArray(todosChats)) {
+             return res.status(200).json({ success: true, data: [] });
+        }  
 
-        // Busca todas as sessões do banco para cruzar dados
+        // Busca dados do banco para cruzar (etapa, atendente, etc)
         const sessions = await whatsappModel.getAllSessions();
         const sessionMap = {};
         
-        // Mapeia sessões pelo número (garante que está normalizando o ID)
+        // Mapeia as sessões
         sessions.forEach(s => sessionMap[s.numero] = s);
 
-        // --- FUNÇÃO AUXILIAR PARA PEGAR O NÚMERO CORRETO ---
-        // Aqui está o pulo do gato: prioriza remoteJid para evitar o erro do "cmj..."
-        const getNumeroReal = (chat) => chat.remoteJid || chat.id;
+        // --- FUNÇÃO DE CORREÇÃO (O SEGREDO) ---
+        // Prioriza o 'remoteJid' (número real) e ignora o 'id' se ele for estranho
+        const getNumeroReal = (chat) => {
+            if (chat.remoteJid && chat.remoteJid.includes('@')) return chat.remoteJid;
+            return chat.id; // Fallback
+        };
 
-        // --- MODO HISTÓRICO ---
+        // --- MODO HISTÓRICO (Retorna TUDO) ---
         if (mode === 'history') {
              const m = todosChats
                 .filter(x => x && (x.id || x.remoteJid)) 
@@ -427,11 +436,11 @@ export const listarConversas = async (req, res) => {
                     const numeroReal = getNumeroReal(x);
                     const sessao = sessionMap[numeroReal] || {};
                     
-                    // Tenta pegar o nome de várias fontes possíveis
+                    // Tenta pegar o nome de várias fontes
                     const nomeContato = x.pushName || x.pushname || x.name || (numeroReal.split('@')[0]);
                     
                     return { 
-                        numero: numeroReal, // Agora envia o número certo (5511...)
+                        numero: numeroReal, // <--- Aqui vai o 5512... correto
                         nome: nomeContato, 
                         ultimaMensagem: x.conversation || "...", 
                         unread: false,
@@ -443,7 +452,7 @@ export const listarConversas = async (req, res) => {
             return res.status(200).json({ success: true, data: m }); 
         }
 
-        // --- MODO FILA (ATENDIMENTO) ---
+        // --- MODO PADRÃO: FILA DE ATENDIMENTO ---
         const chatsFiltrados = todosChats
             .filter(x => x && (x.id || x.remoteJid)) 
             .filter(chat => {
@@ -451,7 +460,6 @@ export const listarConversas = async (req, res) => {
                  const sessao = sessionMap[numeroReal] || {};
                  const temDono = !!sessao.nome_agente;
                  
-                 // Lógica de filtro por agente
                  if (!temDono) return true; 
                  if (temDono && sessao.nome_agente === agenteSolicitante) return true; 
                  return false; 
@@ -465,7 +473,7 @@ export const listarConversas = async (req, res) => {
             const nomeContato = x.pushName || x.pushname || x.name || (numeroReal.split('@')[0]);
             
             return { 
-                numero: numeroReal, // Agora envia o número certo
+                numero: numeroReal, 
                 nome: nomeContato,
                 ultimaMensagem: x.conversation || "...", 
                 unread: x.unreadCount > 0,
