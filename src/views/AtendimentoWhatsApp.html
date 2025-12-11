@@ -1287,6 +1287,9 @@
             btnSalvarChamado.textContent = "Criando...";
             btnSalvarChamado.style.cursor = "wait";
 
+            // [NOVO] Captura o nome do contato para enviar
+            const nomeContato = AppState.contactNames[AppState.activeNumber] || AppState.activeNumber;
+
             try {
                 const userDataString = localStorage.getItem("userData");
                 let agenteId = 1; 
@@ -1309,7 +1312,11 @@
                         requisitante_id: agenteId, 
                         status: 'Aberto',
                         loja: loja, // Enviando ID da loja
-                        departamento: departamento // Enviando ID do departamento
+                        departamento: departamento, // Enviando ID do departamento
+                        
+                        // [NOVO] Enviando dados manuais do contato
+                        nome_requisitante_manual: nomeContato,
+                        telefone_requisitante_manual: AppState.activeNumber
                     },
                     numero: AppState.activeNumber 
                 };

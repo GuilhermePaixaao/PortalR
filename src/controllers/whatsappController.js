@@ -677,12 +677,15 @@ export const criarChamadoDoChat = async (req, res) => {
             requisitanteIdNum: reqId, // Mapeia requisitante_id -> requisitanteIdNum
             categoriaUnificadaIdNum: chamado.categoria_id ? parseInt(chamado.categoria_id) : null,
             
-            // Campos opcionais que não vêm do chat, mas o model pode esperar
-            loja_id: null,
-            departamento_id: null,
-            nomeRequisitanteManual: null,
-            emailRequisitanteManual: null,
-            telefoneRequisitanteManual: null
+            // Campos Mapeados Corretamente
+            loja_id: chamado.loja ? parseInt(chamado.loja) : null,
+            departamento_id: chamado.departamento ? parseInt(chamado.departamento) : null,
+            
+            // [NOVO] Mapeia Nome e Telefone do Contato
+            nomeRequisitanteManual: chamado.nome_requisitante_manual || null,
+            telefoneRequisitanteManual: chamado.telefone_requisitante_manual || numero, 
+            
+            emailRequisitanteManual: null
         };
 
         const novoId = await chamadoModel.create(dadosParaModel);
