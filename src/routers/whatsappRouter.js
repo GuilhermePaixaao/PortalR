@@ -48,5 +48,5 @@ router.post('/api/whatsapp/ticket/criar', WhatsappController.criarChamadoDoChat)
 router.get('/api/whatsapp/configure-webhook', WhatsappController.configurarUrlWebhook);
 
 router.post('/api/whatsapp/disconnect', WhatsappController.handleDisconnect);
-
+router.post('/api/whatsapp/send-media', WhatsappController.enviarMidiaController);
 export default router;

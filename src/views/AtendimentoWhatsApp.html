@@ -103,6 +103,10 @@
         .btn-send { background: none; border: none; color: var(--text-secondary); font-size: 1.5rem; cursor: pointer; }
         .btn-send:hover { color: var(--wa-primary); }
         
+        /* NOVO: Botão de Anexo */
+        .btn-attach { background: none; border: none; color: var(--text-secondary); font-size: 1.5rem; cursor: pointer; transform: rotate(45deg); display:flex; align-items:center; justify-content:center; }
+        .btn-attach:hover { color: var(--wa-primary); }
+        
         .header { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 2rem; background-color: #ffffff; border-bottom: 1px solid #dee2e6; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 1030; }
         .logo { display: flex; align-items: center; gap: 10px; font-size: 1.4rem; font-weight: 700; color: #0d6efd; text-transform: uppercase; letter-spacing: 0.5px; margin: 0; white-space: nowrap; }
         .logo-icon { height: 30px; width: auto; }
@@ -187,6 +191,11 @@
         .hist-in { align-self: flex-start; background-color: var(--wa-msg-in); border-top-left-radius: 0; color: var(--text-primary); }
         .hist-out { align-self: flex-end; background-color: var(--wa-msg-out); border-top-right-radius: 0; color: var(--text-primary); }
         .hist-time { font-size: 0.7rem; color: var(--text-secondary); display: block; text-align: right; margin-top: 3px; }
+
+        /* --- PREVIEW DE MÍDIA (CSS NOVO) --- */
+        #previewContainer { text-align: center; margin-bottom: 15px; background: #f0f2f5; padding: 10px; border-radius: 8px; }
+        #previewImage { max-width: 100%; max-height: 200px; border-radius: 5px; display: none; margin: 0 auto; }
+        #previewFileIcon { font-size: 3rem; color: #555; display: none; margin-bottom: 5px; }
     </style>
 </head>
 
@@ -292,6 +301,11 @@
                     <div class="messages-container" id="messagesContainer"></div>
                     
                     <div class="input-area">
+                        <input type="file" id="inputArquivo" style="display:none;" />
+                        <button id="btnAnexo" class="btn-attach" title="Anexar Arquivo">
+                            <i class="fas fa-paperclip"></i>
+                        </button>
+
                         <input type="text" id="chatInput" class="input-field" placeholder="Digite uma mensagem" disabled>
                         <button id="sendButton" class="btn-send"><i class="fas fa-paper-plane"></i></button>
                     </div>
@@ -419,6 +433,29 @@
         </div>
     </div>
 
+    <div id="modalPreview" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-title">📎 Enviar Arquivo</div>
+            <div id="previewContainer">
+                <i id="previewFileIcon" class="fas fa-file-alt"></i>
+                <img id="previewImage" src="" alt="Preview">
+                <p id="previewFileName" style="font-size: 0.9rem; color: #666; margin-top:5px; word-break: break-all;"></p>
+            </div>
+            
+            <div class="modal-form-group">
+                <label class="modal-label">Legenda (Opcional)</label>
+                <input type="text" id="inputLegendaArquivo" class="modal-input" placeholder="Adicione uma legenda...">
+            </div>
+
+            <div class="modal-actions">
+                <button id="btnCancelarEnvioMidia" class="btn-cancelar">Cancelar</button>
+                <button id="btnConfirmarEnvioMidia" class="btn-confirmar-transfer">
+                    <i class="fas fa-paper-plane"></i> Enviar
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
     <script src="js/globalNotification.js"></script>
 
@@ -501,6 +538,22 @@
         const btnVoltarListaHistory = document.getElementById('btnVoltarListaHistory');
         const historyChatTitle = document.getElementById('historyChatTitle');
         const inputSearchHistory = document.getElementById('inputSearchHistory');
+
+        // --- NOVAS REFERÊNCIAS: MÍDIA ---
+        const btnAnexo = document.getElementById('btnAnexo');
+        const inputArquivo = document.getElementById('inputArquivo');
+        const modalPreview = document.getElementById('modalPreview');
+        const previewImage = document.getElementById('previewImage');
+        const previewFileIcon = document.getElementById('previewFileIcon');
+        const previewFileName = document.getElementById('previewFileName');
+        const inputLegendaArquivo = document.getElementById('inputLegendaArquivo');
+        const btnCancelarEnvioMidia = document.getElementById('btnCancelarEnvioMidia');
+        const btnConfirmarEnvioMidia = document.getElementById('btnConfirmarEnvioMidia');
+
+        // Variáveis temporárias para arquivo
+        let arquivoSelecionadoBase64 = null;
+        let arquivoSelecionadoNome = "";
+        let arquivoSelecionadoTipo = ""; // 'image', 'video', 'document'
 
         let allHistoryChats = []; 
 
@@ -1501,6 +1554,128 @@
 
         btnFecharHistorico.addEventListener('click', () => {
             modalHistorico.style.display = 'none';
+        });
+
+        // --- MANIPULAÇÃO DO ARQUIVO (NOVO CÓDIGO) ---
+        
+        btnAnexo.addEventListener('click', () => {
+            if(!AppState.activeNumber) return;
+            inputArquivo.value = ''; // Reseta para garantir evento change
+            inputArquivo.click();
+        });
+
+        const toBase64 = file => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+                // Pega apenas a parte do base64 (depois da vírgula)
+                const result = reader.result;
+                const base64Clean = result.split(',')[1];
+                resolve(base64Clean);
+            };
+            reader.onerror = error => reject(error);
+        });
+
+        inputArquivo.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if(!file) return;
+
+            // Define tipo
+            if (file.type.startsWith('image/')) arquivoSelecionadoTipo = 'image';
+            else if (file.type.startsWith('video/')) arquivoSelecionadoTipo = 'video';
+            else arquivoSelecionadoTipo = 'document';
+
+            arquivoSelecionadoNome = file.name;
+            previewFileName.textContent = file.name;
+            inputLegendaArquivo.value = '';
+
+            // Configura preview visual
+            if(arquivoSelecionadoTipo === 'image') {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    previewImage.src = e.target.result;
+                    previewImage.style.display = 'block';
+                    previewFileIcon.style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                previewImage.style.display = 'none';
+                previewFileIcon.style.display = 'block';
+                if(arquivoSelecionadoTipo === 'video') previewFileIcon.className = 'fas fa-video';
+                else previewFileIcon.className = 'fas fa-file-alt';
+            }
+
+            try {
+                arquivoSelecionadoBase64 = await toBase64(file);
+                modalPreview.style.display = 'flex';
+                inputLegendaArquivo.focus();
+            } catch(err) {
+                alert("Erro ao ler arquivo.");
+            }
+        });
+
+        btnCancelarEnvioMidia.addEventListener('click', () => {
+            modalPreview.style.display = 'none';
+            arquivoSelecionadoBase64 = null;
+            inputArquivo.value = '';
+        });
+
+        btnConfirmarEnvioMidia.addEventListener('click', async () => {
+            if(!AppState.activeNumber || !arquivoSelecionadoBase64) return;
+
+            const legenda = inputLegendaArquivo.value.trim();
+            const btnOriginalText = btnConfirmarEnvioMidia.innerHTML;
+            btnConfirmarEnvioMidia.disabled = true;
+            btnConfirmarEnvioMidia.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+
+            try {
+                const user = JSON.parse(localStorage.getItem("userData"));
+                
+                const response = await fetch('/api/whatsapp/send-media', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        numero: AppState.activeNumber,
+                        midia: arquivoSelecionadoBase64,
+                        nomeArquivo: arquivoSelecionadoNome,
+                        legenda: legenda,
+                        tipo: arquivoSelecionadoTipo, // Passando o tipo correto!
+                        nomeAgenteTemporario: user?.data?.nomeFuncionario
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    modalPreview.style.display = 'none';
+                    // Adiciona na tela como mensagem enviada (simplificado como texto para feedback)
+                    const msgDisplay = `📎 [Arquivo Enviado] ${arquivoSelecionadoNome}\n${legenda}`;
+                    appendMessageToView(msgDisplay, true, "Eu", new Date());
+                    
+                    // Adiciona ao histórico local
+                    if (!AppState.conversas[AppState.activeNumber]) AppState.conversas[AppState.activeNumber] = [];
+                    AppState.conversas[AppState.activeNumber].push({ fromMe: true, text: msgDisplay, time: new Date(), name: "Eu" });
+                    
+                    // Atualiza sidebar
+                    const idx = AppState.chatList.findIndex(c => c.numero === AppState.activeNumber);
+                    if(idx > -1) {
+                        const c = AppState.chatList[idx]; c.ultimaMensagem = `Você: 📎 Arquivo`;
+                        AppState.chatList.splice(idx, 1); AppState.chatList.unshift(c);
+                        saveState(); renderSidebar();
+                    }
+                } else {
+                    alert("Erro ao enviar: " + (data.message || "Desconhecido"));
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Erro de conexão ao enviar arquivo.");
+            } finally {
+                btnConfirmarEnvioMidia.disabled = false;
+                btnConfirmarEnvioMidia.innerHTML = btnOriginalText;
+                // Limpeza
+                arquivoSelecionadoBase64 = null;
+                inputArquivo.value = '';
+            }
         });
 
         function resetConnectionState() {

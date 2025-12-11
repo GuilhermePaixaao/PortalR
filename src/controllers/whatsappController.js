@@ -361,8 +361,12 @@ export const handleSendMessage = async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };
 
+// Localize a função 'enviarMidiaController' no final do arquivo e substitua por esta:
+
 export const enviarMidiaController = async (req, res) => {
-    const { numero, midia, nomeArquivo, legenda, nomeAgenteTemporario } = req.body;
+    // 1. Adicione 'tipo' aqui na leitura dos dados
+    const { numero, midia, nomeArquivo, legenda, nomeAgenteTemporario, tipo } = req.body;
+    
     try {
         const session = await whatsappModel.findOrCreateSession(numero, 'Cliente');
         
@@ -370,13 +374,16 @@ export const enviarMidiaController = async (req, res) => {
              return res.status(403).json({ success: false, message: `⛔ ACESSO NEGADO: Este chat pertence a ${session.nome_agente}.` });
         }
 
-        // Garante visibilidade
+        // Garante visibilidade na fila se você enviar um arquivo
         if(!session.mostrar_na_fila) await whatsappModel.updateSession(numero, { mostrar_na_fila: true });
 
         let legendaFinal = legenda || "";
         if (nomeAgenteTemporario) legendaFinal = `*${nomeAgenteTemporario}*\n${legendaFinal}`;
 
-        const r = await evolutionService.enviarMidia(numero, midia, nomeArquivo, legendaFinal);
+        // 2. Passe o 'tipo' para o serviço (Evolution)
+        // Se 'tipo' não vier, ele assume 'image' por padrão lá no serviço
+        const r = await evolutionService.enviarMidia(numero, midia, nomeArquivo, legendaFinal, tipo);
+        
         res.status(200).json({ success: true, data: r });
     } catch (e) { 
         console.error("Erro controller midia:", e);

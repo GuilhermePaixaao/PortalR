@@ -53,7 +53,6 @@ export const desconectarInstancia = async () => {
 
 export const enviarTexto = async (numero, mensagem) => {
   try {
-    // console.log(`[EVOLUTION] Enviando para: ${numero}`);
     const response = await apiClient.post(`/message/sendText/${INSTANCE_NAME}`, {
       number: numero,
       options: { delay: 0, presence: 'composing' },
@@ -67,15 +66,22 @@ export const enviarTexto = async (numero, mensagem) => {
   }
 };
 
-// [NOVO] Função para Enviar Mídia (Imagem/Foto)
-export const enviarMidia = async (numero, midiaBase64, nomeArquivo, legenda) => {
+// ==============================================================================
+// === [ATUALIZADO] FUNÇÃO PARA ENVIAR QUALQUER MÍDIA (IMG, VÍDEO, PDF) ===
+// ==============================================================================
+export const enviarMidia = async (numero, midiaBase64, nomeArquivo, legenda, tipo = "image") => {
+    // tipo aceita: "image", "video", "document"
     try {
-        // console.log(`[EVOLUTION] Enviando Mídia para: ${numero}`);
+        // console.log(`[EVOLUTION] Enviando Mídia (${tipo}) para: ${numero}`);
+        
+        // Garante que se for documento, o mimetype seja passado corretamente se possível,
+        // mas a Evolution geralmente se vira bem só com o mediatype e base64.
+        
         const response = await apiClient.post(`/message/sendMedia/${INSTANCE_NAME}`, {
             number: numero,
             mediaMessage: {
-                mediatype: "image",
-                fileName: nomeArquivo || "imagem.png",
+                mediatype: tipo, // Agora é dinâmico!
+                fileName: nomeArquivo || `arquivo.${tipo === 'image' ? 'png' : tipo === 'video' ? 'mp4' : 'pdf'}`,
                 media: midiaBase64, 
                 caption: legenda || ""
             },
@@ -86,6 +92,25 @@ export const enviarMidia = async (numero, midiaBase64, nomeArquivo, legenda) => 
         const erroDetalhado = error.response?.data || error.message;
         console.error("❌ ERRO AO ENVIAR MÍDIA:", JSON.stringify(erroDetalhado, null, 2));
         throw new Error(error.response?.data?.message || 'Falha técnica ao enviar mídia.');
+    }
+};
+
+// ==============================================================================
+// === [NOVO] FUNÇÃO ESPECÍFICA PARA ÁUDIO (GRAVADO NA HORA) ===
+// ==============================================================================
+export const enviarAudio = async (numero, audioBase64) => {
+    try {
+        const response = await apiClient.post(`/message/sendWhatsAppAudio/${INSTANCE_NAME}`, {
+            number: numero,
+            audioMessage: {
+                audio: audioBase64
+            },
+            options: { delay: 0, presence: 'recording', encoding: true }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("❌ ERRO AO ENVIAR ÁUDIO:", error.response?.data || error.message);
+        throw new Error('Falha ao enviar áudio.');
     }
 };
 
@@ -162,7 +187,6 @@ export const buscarMensagensHistorico = async (numero, quantidade = 50) => {
     else if (dados && Array.isArray(dados.data)) mensagensEncontradas = dados.data;
 
     if (mensagensEncontradas.length > 0) {
-        // console.log(`✅ [EVOLUTION] ${mensagensEncontradas.length} mensagens encontradas na Tentativa 1.`);
         return mensagensEncontradas;
     }
 
