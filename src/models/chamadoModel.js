@@ -1,7 +1,7 @@
 import pool from '../config/database.js';
 
 // =================================================================
-// 1. FUNÇÕES AUXILIARES (DADOS DINÂMICOS)
+// 1. FUNÇÕES AUXILIARES (DADOS DINÂMICOS E CÁLCULOS)
 // =================================================================
 
 /**
@@ -25,6 +25,73 @@ export const getDepartamentosPorLoja = async (lojaId) => {
     `;
     const [rows] = await pool.query(sql, [lojaId]);
     return rows;
+};
+
+/**
+ * [NOVO] Calcula o tempo que o chamado ficou em cada status.
+ * Requer a tabela 'chamado_status_historico'.
+ */
+export const getTemposChamado = async (chamadoId) => {
+    // 1. Busca o chamado para saber a data de criação e status atual
+    const [chamado] = await pool.query('SELECT created_at, status FROM Chamados WHERE id = ?', [chamadoId]);
+    if (!chamado.length) return null;
+    
+    // 2. Busca o histórico de alterações ordenado por data
+    const sqlHist = `SELECT * FROM chamado_status_historico WHERE chamado_id = ? ORDER BY data_alteracao ASC`;
+    const [historico] = await pool.query(sqlHist, [chamadoId]);
+
+    let tempoAberto = 0;     // em milissegundos
+    let tempoAndamento = 0; // em milissegundos
+    
+    // Ponto de partida é a criação do chamado
+    let ultimoMarco = new Date(chamado[0].created_at);
+    let statusAtualNoLoop = 'Aberto'; // Todo chamado nasce Aberto
+
+    // 3. Percorre o histórico para somar os tempos entre as mudanças
+    for (const reg of historico) {
+        const dataAlteracao = new Date(reg.data_alteracao);
+        const diferenca = dataAlteracao - ultimoMarco;
+
+        if (statusAtualNoLoop === 'Aberto') {
+            tempoAberto += diferenca;
+        } else if (statusAtualNoLoop === 'Em Andamento') {
+            tempoAndamento += diferenca;
+        }
+
+        ultimoMarco = dataAlteracao;
+        statusAtualNoLoop = reg.status_novo;
+    }
+
+    // 4. Soma o tempo do último status registrado até o momento "agora" 
+    // (apenas se o chamado ainda não estiver Concluído)
+    if (statusAtualNoLoop !== 'Concluído') {
+        const agora = new Date();
+        const diferenca = agora - ultimoMarco;
+        
+        if (statusAtualNoLoop === 'Aberto') tempoAberto += diferenca;
+        if (statusAtualNoLoop === 'Em Andamento') tempoAndamento += diferenca;
+    }
+
+    // Função auxiliar para formatar ms em texto legível
+    const formatarTempo = (ms) => {
+        if (ms <= 0) return "0m";
+        const minutos = Math.floor((ms / (1000 * 60)) % 60);
+        const horas = Math.floor((ms / (1000 * 60 * 60)) % 24);
+        const dias = Math.floor(ms / (1000 * 60 * 60 * 24));
+        
+        let resultado = "";
+        if (dias > 0) resultado += `${dias}d `;
+        if (horas > 0) resultado += `${horas}h `;
+        resultado += `${minutos}m`;
+        return resultado;
+    };
+
+    return {
+        tempoAbertoMs: tempoAberto,
+        tempoAndamentoMs: tempoAndamento,
+        tempoAbertoFormatado: formatarTempo(tempoAberto),
+        tempoAndamentoFormatado: formatarTempo(tempoAndamento)
+    };
 };
 
 
@@ -195,7 +262,14 @@ export const deleteById = async (id) => {
     return result;
 };
 
+/**
+ * Atualiza o status do chamado e registra no histórico.
+ */
 export const updateStatus = async (id, status, atendenteId) => {
+    // 1. Busca status atual antes de mudar (para o histórico)
+    const [rows] = await pool.query('SELECT status FROM Chamados WHERE id = ?', [id]);
+    const statusAnterior = rows[0] ? rows[0].status : null;
+
     let sql;
     let values;
 
@@ -208,6 +282,19 @@ export const updateStatus = async (id, status, atendenteId) => {
     }
     
     const [result] = await pool.query(sql, values);
+
+    // 2. Se atualizou e o status mudou, salva no histórico
+    if (result.affectedRows > 0 && statusAnterior && statusAnterior !== status) {
+        try {
+            await pool.query(
+                'INSERT INTO chamado_status_historico (chamado_id, status_anterior, status_novo) VALUES (?, ?, ?)',
+                [id, statusAnterior, status]
+            );
+        } catch (error) {
+            console.error("Erro ao salvar histórico (verifique se a tabela 'chamado_status_historico' existe):", error);
+        }
+    }
+
     return result;
 };
 

@@ -97,17 +97,25 @@ export const listarChamados = async (req, res) => {
 
 export const buscarChamadoPorId = async (req, res) => {
     try {
-        const chamado = await ChamadoModel.findById(parseInt(req.params.id));
+        const id = parseInt(req.params.id);
+        const chamado = await ChamadoModel.findById(id);
+        
         if (!chamado) return res.status(404).json({ success: false, message: 'Não encontrado.' });
         
+        // --- [NOVO] Busca os tempos calculados ---
+        const tempos = await ChamadoModel.getTemposChamado(id);
+        // ----------------------------------------
+
         const resposta = {
             ...chamado,
+            Tempos: tempos, // Adiciona o objeto com os tempos na resposta
             Funcionario: { nomeFuncionario: chamado.nomeRequisitante, email: chamado.emailRequisitante, telefone: chamado.telefoneRequisitante },
             Atendente: chamado.atendente_id ? { nomeFuncionario: chamado.nomeAtendente, email: chamado.emailAtendente } : null,
             Categorias: chamado.categoria_unificada_id ? { id: chamado.categoria_unificada_id, nome: chamado.nomeCategoria, nomePai: chamado.nomeCategoriaPai } : null
         };
         res.status(200).json(resposta);
     } catch (error) {
+        console.error(error);
         res.status(500).json({ success: false, message: 'Erro interno.' });
     }
 };
@@ -124,7 +132,10 @@ export const atualizarStatus = async (req, res) => {
     try {
         const { status, atendenteId } = req.body;
         const id = parseInt(req.params.id);
+        
+        // ChamadoModel.updateStatus agora já salva no histórico automaticamente
         const result = await ChamadoModel.updateStatus(id, status, atendenteId ? parseInt(atendenteId) : null);
+        
         if (result.affectedRows === 0) return res.status(404).json({ success: false });
 
         const chamado = await ChamadoModel.findById(id);
