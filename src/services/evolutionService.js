@@ -69,19 +69,16 @@ export const enviarTexto = async (numero, mensagem) => {
 // ==============================================================================
 // === [ATUALIZADO] FUNÇÃO PARA ENVIAR QUALQUER MÍDIA (IMG, VÍDEO, PDF) ===
 // ==============================================================================
-export const enviarMidia = async (numero, midiaBase64, nomeArquivo, legenda, tipo = "image") => {
-    // tipo aceita: "image", "video", "document"
+// src/services/evolutionService.js
+
+export const enviarMidia = async (numero, midiaBase64, nomeArquivo, legenda, tipo = "image") => { 
+    // ^^^ O segredo está aqui: tipo = "image" garante que nunca seja undefined
     try {
-        // console.log(`[EVOLUTION] Enviando Mídia (${tipo}) para: ${numero}`);
-        
-        // Garante que se for documento, o mimetype seja passado corretamente se possível,
-        // mas a Evolution geralmente se vira bem só com o mediatype e base64.
-        
         const response = await apiClient.post(`/message/sendMedia/${INSTANCE_NAME}`, {
             number: numero,
             mediaMessage: {
-                mediatype: tipo, // Agora é dinâmico!
-                fileName: nomeArquivo || `arquivo.${tipo === 'image' ? 'png' : tipo === 'video' ? 'mp4' : 'pdf'}`,
+                mediatype: tipo, // Aqui ele usa o valor recebido
+                fileName: nomeArquivo || "arquivo",
                 media: midiaBase64, 
                 caption: legenda || ""
             },
@@ -89,9 +86,8 @@ export const enviarMidia = async (numero, midiaBase64, nomeArquivo, legenda, tip
         });
         return response.data;
     } catch (error) {
-        const erroDetalhado = error.response?.data || error.message;
-        console.error("❌ ERRO AO ENVIAR MÍDIA:", JSON.stringify(erroDetalhado, null, 2));
-        throw new Error(error.response?.data?.message || 'Falha técnica ao enviar mídia.');
+        // ... logs de erro ...
+        throw error;
     }
 };
 
