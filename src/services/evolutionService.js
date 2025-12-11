@@ -75,24 +75,35 @@ export const enviarTexto = async (numero, mensagem) => {
 
 // src/services/evolutionService.js
 
+// src/services/evolutionService.js
+
 export const enviarMidia = async (numero, midiaBase64, nomeArquivo, legenda, tipo) => {
     try {
-        // 1. Tratamento de Segurança: Se 'tipo' vier vazio, assume 'image'
-        const mediaTypeFinal = (tipo === 'video' || tipo === 'document') ? tipo : 'image';
+        // 1. Garante que o tipo tenha um valor válido
+        const mediaTypeFinal = (tipo === 'video' || tipo === 'document' || tipo === 'audio') ? tipo : 'image';
         
-        // 2. Log para depuração (opcional, mas ajuda a ver o que está acontecendo)
-        console.log(`[EVOLUTION] Enviando Mídia. Tipo recebido: '${tipo}', Tipo final: '${mediaTypeFinal}'`);
+        console.log(`[EVOLUTION] Enviando Mídia. Tipo: ${mediaTypeFinal} | Arquivo: ${nomeArquivo}`);
 
-        const response = await apiClient.post(`/message/sendMedia/${INSTANCE_NAME}`, {
+        // 2. CORREÇÃO PRINCIPAL: Removido o wrapper "mediaMessage". 
+        // Os campos vão direto na raiz do objeto.
+        const payload = {
             number: numero,
-            mediaMessage: {
-                mediatype: mediaTypeFinal, 
-                fileName: nomeArquivo || `arquivo.${mediaTypeFinal === 'video' ? 'mp4' : 'png'}`,
-                media: midiaBase64, 
-                caption: legenda || ""
-            },
-            options: { delay: 0, presence: 'composing' }
+            mediatype: mediaTypeFinal, // <--- Agora está na raiz, onde a API procura
+            mimetype: mediaTypeFinal === 'image' ? 'image/png' : (mediaTypeFinal === 'video' ? 'video/mp4' : 'application/pdf'), // Ajuda a API a não se perder
+            fileName: nomeArquivo || `arquivo.${mediaTypeFinal === 'image' ? 'png' : 'pdf'}`,
+            media: midiaBase64, 
+            caption: legenda || ""
+        };
+
+        // Opções extras
+        const options = { delay: 1000, presence: 'composing' };
+        
+        // Junta tudo no body
+        const response = await apiClient.post(`/message/sendMedia/${INSTANCE_NAME}`, {
+            ...payload,
+            options
         });
+
         return response.data;
     } catch (error) {
         console.error("❌ ERRO AO ENVIAR MÍDIA:", JSON.stringify(error.response?.data || error.message, null, 2));
