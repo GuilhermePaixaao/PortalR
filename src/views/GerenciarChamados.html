@@ -652,7 +652,22 @@
                         </div>
                     </div>
                 </div>
-            </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="detalhe-grupo">
+                            <span class="detalhe-label">Tempo Aberto</span>
+                            <div id="detalheTempoAberto" class="detalhe-valor" style="color: #666;">--</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="detalhe-grupo">
+                            <span class="detalhe-label">Tempo em Andamento</span>
+                            <div id="detalheTempoAndamento" class="detalhe-valor" style="color: #0d6efd;">--</div>
+                        </div>
+                    </div>
+                </div>
+                </div>
             
             <hr style="margin-top: 1rem; margin-bottom: 1.25rem;">
             
@@ -1245,6 +1260,13 @@
             detalheLoja.textContent = 'Carregando...';        // Reset Loja
             detalheDepartamento.textContent = 'Carregando...';  // Reset Depto
 
+            // --- RESET DOS TEMPOS ---
+            const elTempoAberto = document.getElementById('detalheTempoAberto');
+            const elTempoAndamento = document.getElementById('detalheTempoAndamento');
+            if(elTempoAberto) elTempoAberto.textContent = "Calculando...";
+            if(elTempoAndamento) elTempoAndamento.textContent = "Calculando...";
+            // ------------------------
+
             // Reseta a visualização da categoria (fecha edição se estava aberta)
             cancelarEdicaoCategoria();
 
@@ -1279,6 +1301,16 @@
                 detalheLoja.textContent = chamado.loja || 'N/A';
                 detalheDepartamento.textContent = chamado.departamento || 'N/A';
                 // --------------------------------------------
+
+                // --- PREENCHIMENTO DOS TEMPOS (NOVO) ---
+                if (chamado.Tempos) {
+                    if(elTempoAberto) elTempoAberto.textContent = chamado.Tempos.tempoAbertoFormatado;
+                    if(elTempoAndamento) elTempoAndamento.textContent = chamado.Tempos.tempoAndamentoFormatado;
+                } else {
+                    if(elTempoAberto) elTempoAberto.textContent = "0m";
+                    if(elTempoAndamento) elTempoAndamento.textContent = "0m";
+                }
+                // ---------------------------------------
 
                 // Exibe Categoria (com Pai se houver) -> CAMINHO COMPLETO
                 let nomeCat = 'N/A';
