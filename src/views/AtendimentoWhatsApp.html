@@ -340,6 +340,19 @@
             <div class="modal-title">📝 Novo Chamado (WhatsApp)</div>
             
             <div class="modal-form-group">
+                <label class="modal-label">Loja</label>
+                <select id="selectLoja" class="modal-select">
+                    <option value="">Carregando...</option>
+                </select>
+            </div>
+
+            <div class="modal-form-group">
+                <label class="modal-label">Departamento</label>
+                <select id="selectDepartamento" class="modal-select" disabled>
+                    <option value="">Selecione a Loja primeiro</option>
+                </select>
+            </div>
+            <div class="modal-form-group">
                 <label class="modal-label">Assunto</label>
                 <input type="text" id="inputAssunto" class="modal-input" placeholder="Resumo do problema">
             </div>
@@ -474,6 +487,8 @@
         const inputDescricao = document.getElementById('inputDescricao');
         const btnCancelarCriar = document.getElementById('btnCancelarCriar');
         const btnSalvarChamado = document.getElementById('btnSalvarChamado');
+        const selectLoja = document.getElementById('selectLoja'); // NOVO
+        const selectDepartamento = document.getElementById('selectDepartamento'); // NOVO
         
         // --- NOVAS REFERÊNCIAS AO HISTÓRICO GLOBAL ---
         const btnGlobalHistory = document.getElementById('btnGlobalHistory'); 
@@ -1102,6 +1117,50 @@
             }
         });
 
+        // --- FUNÇÕES DE CARREGAMENTO DE LOJAS E DEPTOS ---
+        async function carregarLojasSelect() {
+            try {
+                // Utilizando a rota /chamados/dados/lojas conforme padrão em Chamado.html
+                const response = await fetch('/chamados/dados/lojas');
+                if (!response.ok) throw new Error("Erro ao carregar lojas.");
+                const lojas = await response.json();
+                selectLoja.innerHTML = '<option value="">-- Selecione a Loja --</option>';
+                lojas.forEach(loja => {
+                    const opt = document.createElement('option');
+                    opt.value = loja.id;
+                    opt.textContent = loja.nome;
+                    selectLoja.appendChild(opt);
+                });
+            } catch (error) {
+                console.error(error);
+                selectLoja.innerHTML = '<option value="">Erro ao carregar</option>';
+            }
+        }
+
+        async function carregarDepartamentosSelect(lojaId) {
+            selectDepartamento.innerHTML = '<option value="">Carregando...</option>';
+            selectDepartamento.disabled = true;
+            if (!lojaId) {
+                selectDepartamento.innerHTML = '<option value="">-- Selecione Loja Primeiro --</option>';
+                return;
+            }
+            try {
+                const response = await fetch(`/chamados/dados/lojas/${lojaId}/departamentos`);
+                if (!response.ok) throw new Error("Erro ao carregar departamentos.");
+                const departamentos = await response.json();
+                selectDepartamento.innerHTML = '<option value="">-- Selecione o Departamento --</option>';
+                if (departamentos.length === 0) selectDepartamento.add(new Option("Nenhum vinculado", ""));
+                else departamentos.forEach(dept => selectDepartamento.add(new Option(dept.nome, dept.id)));
+                selectDepartamento.disabled = false; 
+            } catch (error) {
+                console.error(error);
+                selectDepartamento.innerHTML = '<option value="">Erro ao carregar</option>';
+            }
+        }
+
+        // Event listener para carregar departamentos quando a loja mudar
+        selectLoja.addEventListener('change', () => carregarDepartamentosSelect(selectLoja.value));
+
         btnCriarChamado.addEventListener('click', async () => {
             if(btnCriarChamado.disabled) return;
             if(!AppState.activeNumber) return;
@@ -1114,6 +1173,11 @@
             inputDescricao.value = '';
             
             selectPrioridade.value = 'Média'; 
+
+            // Carrega as lojas e reseta os departamentos
+            carregarLojasSelect();
+            selectDepartamento.innerHTML = '<option value="">-- Selecione Loja Primeiro --</option>';
+            selectDepartamento.disabled = true;
 
             if(allCategories.length === 0) {
                 containerCascata.innerHTML = 'Carregando...';
@@ -1199,6 +1263,8 @@
             const assunto = inputAssunto.value.trim();
             const descricao = inputDescricao.value.trim();
             const prioridade = selectPrioridade.value;
+            const loja = selectLoja.value; // Novo campo
+            const departamento = selectDepartamento.value; // Novo campo
 
             if(!assunto) return alert("Preencha o Assunto.");
             
@@ -1208,6 +1274,10 @@
 
             if (!categoriaSelecionadaId || pendente) {
                 return alert("Por favor, selecione a categoria até o final (subcategorias).");
+            }
+
+            if(!loja || !departamento) {
+                return alert("Por favor, selecione a Loja e o Departamento.");
             }
 
             if(!descricao) return alert("A descrição é obrigatória.");
@@ -1237,7 +1307,9 @@
                         categoria_id: categoriaSelecionadaId, 
                         prioridade,
                         requisitante_id: agenteId, 
-                        status: 'Aberto'
+                        status: 'Aberto',
+                        loja: loja, // Enviando ID da loja
+                        departamento: departamento // Enviando ID do departamento
                     },
                     numero: AppState.activeNumber 
                 };
