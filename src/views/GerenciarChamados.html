@@ -743,7 +743,12 @@
                                 <option value="">Todas</option>
                                 </select>
                         </div>
-
+                        <div class="col-md-2">
+                                <label for="filtroOperador" class="form-label">Operador</label>
+                            <select id="filtroOperador" class="form-select">
+                                <option value="">Todos</option>
+                            </select>
+                        </div>
                         <div class="col-md-3">
                             <label for="filtroCategoria" class="form-label">Categoria</label>
                             <select id="filtroCategoria" class="form-select">
@@ -838,6 +843,7 @@
         const filtroStatus = document.getElementById("filtroStatus");
         const filtroCategoria = document.getElementById("filtroCategoria");
         const filtroLoja = document.getElementById("filtroLoja"); 
+        const filtroOperador = document.getElementById("filtroOperador");
         
         const btnFiltrar = document.getElementById("btnFiltrar");
         const btnLogout = document.getElementById("logoutButton");
@@ -932,18 +938,35 @@
         }
 
         async function carregarOperadores() {
+            // Se já carregou, não busca de novo, mas garante que o filtro esteja preenchido
             if (listaOperadores.length > 0) return; 
+
             try {
                 const response = await fetch(`${API_URL}/usuarios`); 
                 if (!response.ok) throw new Error("Falha ao carregar operadores.");
+                
                 const todosFuncionarios = await response.json();
+                // Filtra apenas AGENTE ou ADMIN
                 listaOperadores = todosFuncionarios.filter(f => f.perfil === 'AGENTE' || f.perfil === 'ADMIN');
 
+                // 1. Preenche o select do MODAL DE DETALHES
                 detalheAtendenteSelect.innerHTML = ''; 
                 detalheAtendenteSelect.add(new Option("-- Não Atribuído --", "")); 
+                
+                // 2. Preenche o select do FILTRO PRINCIPAL [NOVO]
+                if(filtroOperador) {
+                    filtroOperador.innerHTML = '<option value="">Todos</option>';
+                }
+
                 listaOperadores.forEach(op => {
+                    // Modal
                     detalheAtendenteSelect.add(new Option(op.nomeFuncionario, op.id));
+                    // Filtro [NOVO]
+                    if(filtroOperador) {
+                        filtroOperador.add(new Option(op.nomeFuncionario, op.id));
+                    }
                 });
+
             } catch (error) {
                 console.error(error); 
                 detalheAtendenteSelect.innerHTML = `<option value="">Erro ao carregar</option>`;
@@ -1163,6 +1186,7 @@
             if (filtroStatus.value) p.append('status', filtroStatus.value);
             if (filtroCategoria.value) p.append('categoria_id', filtroCategoria.value);
             if (filtroLoja && filtroLoja.value) p.append('loja_id', filtroLoja.value);
+            if (filtroOperador && filtroOperador.value) p.append('atendente_id', filtroOperador.value);
 
             try {
                 const r = await fetch(`${API_URL}/chamados?${p.toString()}`);

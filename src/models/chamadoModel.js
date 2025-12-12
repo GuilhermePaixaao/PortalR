@@ -221,12 +221,15 @@ export const findAll = async (filtros = {}) => {
         values.push(parseInt(filtros.categoria_id));
     }
     
-    // --- [NOVO] Filtro de Loja ---
     if (filtros.loja_id) {
         whereConditions.push("ch.loja_id = ?");
         values.push(parseInt(filtros.loja_id));
     }
-    // -----------------------------
+    if (filtros.atendente_id) {
+        whereConditions.push("ch.atendente_id = ?");
+        values.push(parseInt(filtros.atendente_id));
+    }
+    
     
     if (filtros.status) {
         whereConditions.push("ch.status = ?");
