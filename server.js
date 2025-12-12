@@ -106,57 +106,35 @@ httpServer.listen(PORT, () => {
   console.log(`Servidor rodando liso na porta ${PORT}`);
   console.log(`API disponível em: http://localhost:${PORT}`);
 });
-// --- COLE ISSO NO FINAL DO SEU src/server.js ---
-import pool from './src/config/database.js'; // Ajuste o caminho se necessário
+// --- ATUALIZAÇÃO DE BANCO DE DADOS (Pode colar no final do server.js) ---
+import pool from './src/config/database.js';
 
-async function setupDatabase() {
-    console.log('🔄 Verificando tabelas do WhatsApp no Railway...');
-
-    const createSessoes = `
-        CREATE TABLE IF NOT EXISTS whatsapp_sessoes (
-            numero VARCHAR(50) NOT NULL,
-            nome_contato VARCHAR(255) NULL,
-            etapa VARCHAR(50) DEFAULT 'INICIO',
-            historico_ia JSON NULL,
-            mostrar_na_fila TINYINT(1) DEFAULT 0,
-            nome_agente VARCHAR(255) NULL,
-            bot_pausado TINYINT(1) DEFAULT 0,
-            ultimo_ticket_id INT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (numero)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-    `;
-
-    const createMensagens = `
-        CREATE TABLE IF NOT EXISTS whatsapp_mensagens (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            remote_jid VARCHAR(50) NOT NULL,
-            message_id VARCHAR(255) NULL,
-            conteudo TEXT,
-            media_url LONGTEXT NULL, 
-            from_me TINYINT(1) DEFAULT 0,
-            tipo VARCHAR(50) DEFAULT 'text',
-            nome_autor VARCHAR(255) NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            INDEX idx_remote_jid (remote_jid)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-    `;
-
+async function adicionarColunaMedia() {
+    console.log('🔄 Verificando atualização da tabela whatsapp_mensagens...');
+    
     try {
         const connection = await pool.getConnection();
         
-        await connection.query(createSessoes);
-        console.log('✅ Tabela "whatsapp_sessoes" verificada/criada.');
-
-        await connection.query(createMensagens);
-        console.log('✅ Tabela "whatsapp_mensagens" verificada/criada.');
-
+        // Tenta adicionar a coluna 'media_url'. 
+        // Se ela já existir, o MySQL vai gerar um erro, que tratamos abaixo.
+        await connection.query(`
+            ALTER TABLE whatsapp_mensagens 
+            ADD COLUMN media_url LONGTEXT NULL;
+        `);
+        
+        console.log('✅ SUCESSO: Coluna "media_url" adicionada na tabela whatsapp_mensagens!');
         connection.release();
+        
     } catch (error) {
-        console.error('❌ Erro ao criar tabelas:', error);
+        // Código de erro para "Coluna duplicada" no MySQL é ER_DUP_FIELDNAME (1060)
+        if (error.code === 'ER_DUP_FIELDNAME' || error.errno === 1060) {
+            console.log('ℹ️ AVISO: A coluna "media_url" já existe. Nenhuma ação necessária.');
+        } else {
+            // Se for outro erro (ex: tabela não existe), mostra no log
+            console.error('❌ ERRO ao tentar alterar a tabela:', error.message);
+        }
     }
 }
 
-// Executa a função imediatamente ao iniciar
-setupDatabase();
+// Executa a função
+adicionarColunaMedia();
