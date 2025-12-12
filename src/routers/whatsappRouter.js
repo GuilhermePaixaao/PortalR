@@ -59,9 +59,12 @@ import {
 // ... (dentro das definições de rota) ...
 
 // Rotas para a Aba de Contatos (Disparo Ativo)
-router.get('/contacts', listarContatos);
-router.post('/send-template', (req, res) => {
-    req.io = req.app.get('socketio'); // Injeta o socket
+// Rotas para a Aba de Contatos (Disparo Ativo)
+// Adicionei o prefixo /api/whatsapp/ para casar com a chamada do front
+router.get('/api/whatsapp/contacts', listarContatos); 
+
+router.post('/api/whatsapp/send-template', (req, res) => {
+    req.io = req.app.get('socketio'); 
     enviarMensagemPronta(req, res);
 });
 export default router;
