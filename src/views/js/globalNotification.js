@@ -42,6 +42,9 @@ function saveWhatsAppState(state) {
 // =================================================================
 
 function showToast(titulo, mensagem, tipo = 'info') {
+    if (window.location.href.includes('Chamado.html')) {
+        return; 
+    }
     let container = document.getElementById('toast-container');
     if (!container) {
         container = document.createElement('div');
