@@ -2,7 +2,7 @@ import * as evolutionService from '../services/evolutionService.js';
 import * as chamadoModel from '../models/chamadoModel.js'; 
 import * as EmailService from '../services/emailService.js'; 
 import * as contatoModel from '../models/contatoModel.js'; 
-import * as whatsappModel from '../models/whatsappModel.js'; // <--- NOVO IMPORT
+import * as whatsappModel from '../models/whatsappModel.js'; 
 import { OpenAI } from 'openai';
 
 // ==================================================
@@ -234,15 +234,20 @@ export const handleWebhook = async (req, res) => {
                     // ==================================================================
                     // [MODIFICAÇÃO] ATRIBUIÇÃO AUTOMÁTICA DE ATENDENTE
                     // ==================================================================
-                    const FUNCIONARIO_PADRAO = "Daniel"; // <--- COLOQUE O NOME EXATO DO SEU USUÁRIO AQUI
+                    const FUNCIONARIO_PADRAO = "Daniel"; // <--- NOME EXATO DO LOGIN
                     
                     // 2. Coloca na fila JÁ ATRIBUÍDO e como ATENDIMENTO HUMANO
                     await whatsappModel.updateSession(idRemoto, { 
-                        etapa: 'ATENDIMENTO_HUMANO', // <--- Já entra como atendimento humano
+                        etapa: 'ATENDIMENTO_HUMANO', 
                         bot_pausado: true,
                         mostrar_na_fila: true,
-                        nome_agente: FUNCIONARIO_PADRAO // <--- Define o dono inicial do chat
+                        nome_agente: FUNCIONARIO_PADRAO 
                     });
+
+                    // ⭐ [CORREÇÃO CRÍTICA] Atualiza a memória para o io.emit pegar o dado certo
+                    session.nome_agente = FUNCIONARIO_PADRAO;
+                    session.etapa = 'ATENDIMENTO_HUMANO';
+                    session.mostrar_na_fila = true;
 
                     io.emit('notificacaoChamado', { 
                         chatId: idRemoto, 
@@ -289,7 +294,7 @@ export const handleWebhook = async (req, res) => {
                         texto: respostaBot, 
                         fromMe: true,
                         mostrarNaFila: session.etapa === 'FILA_ESPERA' || session.etapa === 'ATENDIMENTO_HUMANO',
-                        nomeAgente: session.nomeAgente
+                        nomeAgente: session.nome_agente // <--- CORRIGIDO (estava nomeAgente)
                     });
                 }
             }
