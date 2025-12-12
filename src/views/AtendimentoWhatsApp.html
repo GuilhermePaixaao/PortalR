@@ -103,7 +103,6 @@
         .btn-send { background: none; border: none; color: var(--text-secondary); font-size: 1.5rem; cursor: pointer; }
         .btn-send:hover { color: var(--wa-primary); }
         
-        /* NOVO: Botão de Anexo */
         .btn-attach { background: none; border: none; color: var(--text-secondary); font-size: 1.5rem; cursor: pointer; transform: rotate(45deg); display:flex; align-items:center; justify-content:center; }
         .btn-attach:hover { color: var(--wa-primary); }
         
@@ -175,7 +174,6 @@
         body.dark-mode .modal-content { background-color: var(--wa-sidebar-bg); border: 1px solid var(--wa-border); }
         body.dark-mode .btn-cancelar { background: #444; color: #fff; }
 
-        /* --- HISTÓRICO GLOBAL --- */
         .modal-history-layout { display: flex; flex-direction: column; height: 500px; overflow: hidden; }
         .history-search-bar { padding: 10px; border-bottom: 1px solid #ddd; display: flex; gap: 10px; }
         .history-list-view { flex: 1; overflow-y: auto; }
@@ -192,7 +190,6 @@
         .hist-out { align-self: flex-end; background-color: var(--wa-msg-out); border-top-right-radius: 0; color: var(--text-primary); }
         .hist-time { font-size: 0.7rem; color: var(--text-secondary); display: block; text-align: right; margin-top: 3px; }
 
-        /* --- PREVIEW DE MÍDIA (CSS NOVO) --- */
         #previewContainer { text-align: center; margin-bottom: 15px; background: #f0f2f5; padding: 10px; border-radius: 8px; }
         #previewImage { max-width: 100%; max-height: 200px; border-radius: 5px; display: none; margin: 0 auto; }
         #previewFileIcon { font-size: 3rem; color: #555; display: none; margin-bottom: 5px; }
@@ -496,27 +493,23 @@
         const filaHeader = document.getElementById('filaHeader');
         const chatTitle = document.getElementById('chatTitle'); 
         
-        // Referências aos botões da Toolbar
         const btnAssumir = document.getElementById('btnAssumir');
         const btnFinalizar = document.getElementById('btnFinalizar');
         const btnTransferir = document.getElementById('btnTransferir');
         const btnAssociarTicket = document.getElementById('btnAssociarTicket'); 
         const btnCriarChamado = document.getElementById('btnCriarChamado'); 
 
-        // Referências ao Modal de Transferência
         const modalTransfer = document.getElementById('modalTransferencia');
         const selectAgentes = document.getElementById('selectAgentes');
         const btnCancelarTransfer = document.getElementById('btnCancelarTransfer');
         const btnConfirmarTransfer = document.getElementById('btnConfirmarTransfer');
 
-        // Referências ao Modal Associar
         const modalAssociar = document.getElementById('modalAssociarTicket');
         const inputTicketId = document.getElementById('inputTicketId');
         const btnCancelarAssociar = document.getElementById('btnCancelarAssociar');
         const btnConfirmarAssociar = document.getElementById('btnConfirmarAssociar');
         const associarResult = document.getElementById('associarResult');
 
-        // Referências ao Modal Criar Chamado
         const modalCriar = document.getElementById('modalCriarChamado');
         const inputAssunto = document.getElementById('inputAssunto');
         const containerCascata = document.getElementById('containerCascataCategorias');
@@ -524,10 +517,9 @@
         const inputDescricao = document.getElementById('inputDescricao');
         const btnCancelarCriar = document.getElementById('btnCancelarCriar');
         const btnSalvarChamado = document.getElementById('btnSalvarChamado');
-        const selectLoja = document.getElementById('selectLoja'); // NOVO
-        const selectDepartamento = document.getElementById('selectDepartamento'); // NOVO
+        const selectLoja = document.getElementById('selectLoja'); 
+        const selectDepartamento = document.getElementById('selectDepartamento'); 
         
-        // --- NOVAS REFERÊNCIAS AO HISTÓRICO GLOBAL ---
         const btnGlobalHistory = document.getElementById('btnGlobalHistory'); 
         const modalHistorico = document.getElementById('modalHistorico');
         const btnFecharHistorico = document.getElementById('btnFecharHistorico');
@@ -539,7 +531,6 @@
         const historyChatTitle = document.getElementById('historyChatTitle');
         const inputSearchHistory = document.getElementById('inputSearchHistory');
 
-        // --- NOVAS REFERÊNCIAS: MÍDIA ---
         const btnAnexo = document.getElementById('btnAnexo');
         const inputArquivo = document.getElementById('inputArquivo');
         const modalPreview = document.getElementById('modalPreview');
@@ -550,10 +541,9 @@
         const btnCancelarEnvioMidia = document.getElementById('btnCancelarEnvioMidia');
         const btnConfirmarEnvioMidia = document.getElementById('btnConfirmarEnvioMidia');
 
-        // Variáveis temporárias para arquivo
         let arquivoSelecionadoBase64 = null;
         let arquivoSelecionadoNome = "";
-        let arquivoSelecionadoTipo = ""; // 'image', 'video', 'document'
+        let arquivoSelecionadoTipo = ""; 
 
         let allHistoryChats = []; 
 
@@ -799,7 +789,7 @@
         });
         
         socket.on('novaMensagemWhatsapp', (data) => {
-            const { chatId, texto, fromMe, nome, mostrarNaFila } = data;
+            const { chatId, texto, fromMe, nome, mostrarNaFila, nomeAgente } = data;
             
             if (!AppState.conversas[chatId]) AppState.conversas[chatId] = [];
             AppState.conversas[chatId].push({ fromMe, text: texto, time: new Date(), name: nome || "Eu" });
@@ -810,14 +800,24 @@
             if (idx > -1) { currentChat = AppState.chatList[idx]; AppState.chatList.splice(idx, 1); }
 
             let isVisivel = false;
-            if (mostrarNaFila !== undefined) isVisivel = mostrarNaFila;
-            else if (currentChat) isVisivel = currentChat.visivel;
+            let meuNome = "";
+            try { meuNome = JSON.parse(localStorage.getItem("userData")).data.nomeFuncionario; } catch(e){}
+
+            // LOGICA CORRIGIDA: Se tem agente, verifica se sou eu.
+            if (nomeAgente) {
+                if (nomeAgente === meuNome) isVisivel = true;
+                else isVisivel = false;
+            } else {
+                // Se não tem agente, segue a lógica da fila ou do chat atual
+                if (mostrarNaFila !== undefined) isVisivel = mostrarNaFila;
+                else if (currentChat) isVisivel = currentChat.visivel;
+            }
+
+            // Fallback: Se for mensagem minha e eu já estava vendo, mantenho visível (se não tiver restrição de agente)
+            if (fromMe && currentChat && currentChat.visivel && !nomeAgente) isVisivel = true;
+
+            let isPending = (mostrarNaFila === true && !nomeAgente);
             
-            if(fromMe && currentChat && currentChat.visivel) isVisivel = true;
-
-            let isPending = (mostrarNaFila === true);
-            if (currentChat && !currentChat.pending && isVisivel) isPending = false;
-
             AppState.chatList.unshift({
                 numero: chatId,
                 nome: AppState.contactNames[chatId] || nome,
@@ -825,7 +825,8 @@
                 unreadCount: fromMe ? 0 : 1,
                 visivel: isVisivel,
                 pending: isPending,
-                etapa: currentChat ? currentChat.etapa : 'INICIO' 
+                etapa: currentChat ? currentChat.etapa : 'INICIO',
+                nomeAgente: nomeAgente || (currentChat ? currentChat.nomeAgente : null)
             });
 
             saveState();
@@ -1170,10 +1171,8 @@
             }
         });
 
-        // --- FUNÇÕES DE CARREGAMENTO DE LOJAS E DEPTOS ---
         async function carregarLojasSelect() {
             try {
-                // Utilizando a rota /chamados/dados/lojas conforme padrão em Chamado.html
                 const response = await fetch('/chamados/dados/lojas');
                 if (!response.ok) throw new Error("Erro ao carregar lojas.");
                 const lojas = await response.json();
@@ -1211,7 +1210,6 @@
             }
         }
 
-        // Event listener para carregar departamentos quando a loja mudar
         selectLoja.addEventListener('change', () => carregarDepartamentosSelect(selectLoja.value));
 
         btnCriarChamado.addEventListener('click', async () => {
@@ -1227,7 +1225,6 @@
             
             selectPrioridade.value = 'Média'; 
 
-            // Carrega as lojas e reseta os departamentos
             carregarLojasSelect();
             selectDepartamento.innerHTML = '<option value="">-- Selecione Loja Primeiro --</option>';
             selectDepartamento.disabled = true;
@@ -1316,8 +1313,8 @@
             const assunto = inputAssunto.value.trim();
             const descricao = inputDescricao.value.trim();
             const prioridade = selectPrioridade.value;
-            const loja = selectLoja.value; // Novo campo
-            const departamento = selectDepartamento.value; // Novo campo
+            const loja = selectLoja.value; 
+            const departamento = selectDepartamento.value; 
 
             if(!assunto) return alert("Preencha o Assunto.");
             
@@ -1340,7 +1337,6 @@
             btnSalvarChamado.textContent = "Criando...";
             btnSalvarChamado.style.cursor = "wait";
 
-            // [NOVO] Captura o nome do contato para enviar
             const nomeContato = AppState.contactNames[AppState.activeNumber] || AppState.activeNumber;
 
             try {
@@ -1364,10 +1360,9 @@
                         prioridade,
                         requisitante_id: agenteId, 
                         status: 'Aberto',
-                        loja: loja, // Enviando ID da loja
-                        departamento: departamento, // Enviando ID do departamento
+                        loja: loja, 
+                        departamento: departamento, 
                         
-                        // [NOVO] Enviando dados manuais do contato
                         nome_requisitante_manual: nomeContato,
                         telefone_requisitante_manual: AppState.activeNumber
                     },
@@ -1448,19 +1443,15 @@
             }
         });
 
-        // --- LÓGICA DO HISTÓRICO GLOBAL (NOVO) ---
-        
         btnGlobalHistory.addEventListener('click', async () => {
             modalHistorico.style.display = 'flex';
             
-            // Reseta para a vista da lista
             viewHistoryList.style.display = 'flex';
             viewHistoryMessages.style.display = 'none';
             inputSearchHistory.value = '';
             historyListContainer.innerHTML = '<div style="text-align:center; padding:20px;"><i class="fas fa-spinner fa-spin"></i> Buscando todas as conversas...</div>';
 
             try {
-                // Busca com mode=history para pegar TUDO
                 const response = await fetch('/api/whatsapp/chats?mode=history');
                 const json = await response.json();
 
@@ -1556,11 +1547,9 @@
             modalHistorico.style.display = 'none';
         });
 
-        // --- MANIPULAÇÃO DO ARQUIVO (NOVO CÓDIGO) ---
-        
         btnAnexo.addEventListener('click', () => {
             if(!AppState.activeNumber) return;
-            inputArquivo.value = ''; // Reseta para garantir evento change
+            inputArquivo.value = ''; 
             inputArquivo.click();
         });
 
@@ -1568,7 +1557,6 @@
             const reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onload = () => {
-                // Pega apenas a parte do base64 (depois da vírgula)
                 const result = reader.result;
                 const base64Clean = result.split(',')[1];
                 resolve(base64Clean);
@@ -1580,7 +1568,6 @@
             const file = e.target.files[0];
             if(!file) return;
 
-            // Define tipo
             if (file.type.startsWith('image/')) arquivoSelecionadoTipo = 'image';
             else if (file.type.startsWith('video/')) arquivoSelecionadoTipo = 'video';
             else arquivoSelecionadoTipo = 'document';
@@ -1589,7 +1576,6 @@
             previewFileName.textContent = file.name;
             inputLegendaArquivo.value = '';
 
-            // Configura preview visual
             if(arquivoSelecionadoTipo === 'image') {
                 const reader = new FileReader();
                 reader.onload = (e) => {
@@ -1620,13 +1606,18 @@
             inputArquivo.value = '';
         });
 
-        // No seu <script> do HTML...
-        
         btnConfirmarEnvioMidia.addEventListener('click', async () => {
-            // ... (código anterior) ...
+            if (!AppState.activeNumber || !arquivoSelecionadoBase64) return;
+            
+            const legenda = inputLegendaArquivo.value.trim();
+            const btnOriginalText = btnConfirmarEnvioMidia.innerHTML;
+            btnConfirmarEnvioMidia.disabled = true;
+            btnConfirmarEnvioMidia.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+
+            let user = null;
+            try { user = JSON.parse(localStorage.getItem("userData")); } catch(e){}
 
             try {
-                // ...
                 const response = await fetch('/api/whatsapp/send-media', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1635,28 +1626,21 @@
                         midia: arquivoSelecionadoBase64,
                         nomeArquivo: arquivoSelecionadoNome,
                         legenda: legenda,
-                        
-                        // ESSA LINHA É CRUCIAL:
-                        tipo: arquivoSelecionadoTipo, // Tem que estar enviando 'image', 'video' ou 'document'
-                        
+                        tipo: arquivoSelecionadoTipo, 
                         nomeAgenteTemporario: user?.data?.nomeFuncionario
                     })
                 });
-                // ...
 
                 const data = await response.json();
 
                 if (data.success) {
                     modalPreview.style.display = 'none';
-                    // Adiciona na tela como mensagem enviada (simplificado como texto para feedback)
                     const msgDisplay = `📎 [Arquivo Enviado] ${arquivoSelecionadoNome}\n${legenda}`;
                     appendMessageToView(msgDisplay, true, "Eu", new Date());
                     
-                    // Adiciona ao histórico local
                     if (!AppState.conversas[AppState.activeNumber]) AppState.conversas[AppState.activeNumber] = [];
                     AppState.conversas[AppState.activeNumber].push({ fromMe: true, text: msgDisplay, time: new Date(), name: "Eu" });
                     
-                    // Atualiza sidebar
                     const idx = AppState.chatList.findIndex(c => c.numero === AppState.activeNumber);
                     if(idx > -1) {
                         const c = AppState.chatList[idx]; c.ultimaMensagem = `Você: 📎 Arquivo`;
@@ -1672,7 +1656,6 @@
             } finally {
                 btnConfirmarEnvioMidia.disabled = false;
                 btnConfirmarEnvioMidia.innerHTML = btnOriginalText;
-                // Limpeza
                 arquivoSelecionadoBase64 = null;
                 inputArquivo.value = '';
             }
