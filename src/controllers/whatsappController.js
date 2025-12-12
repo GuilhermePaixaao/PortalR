@@ -2,7 +2,7 @@ import * as evolutionService from '../services/evolutionService.js';
 import * as chamadoModel from '../models/chamadoModel.js'; 
 import * as EmailService from '../services/emailService.js'; 
 import * as contatoModel from '../models/contatoModel.js'; 
-import * as whatsappModel from '../models/whatsappModel.js'; 
+import * as whatsappModel from '../models/whatsappModel.js'; // <--- NOVO IMPORT
 import { OpenAI } from 'openai';
 
 // ==================================================
@@ -230,35 +230,18 @@ export const handleWebhook = async (req, res) => {
                 else if (session.etapa === 'AGUARDANDO_DESCRICAO') {
                     // 1. IA processa o texto para entender o problema
                     await processarComGroq(session, texto, nomeAutor);
-
-                    // ==================================================================
-                    // [MODIFICAÇÃO] ATRIBUIÇÃO AUTOMÁTICA DE ATENDENTE
-                    // ==================================================================
-                    const FUNCIONARIO_PADRAO = "Daniel"; // <--- NOME EXATO DO LOGIN
                     
-                    // 2. Coloca na fila JÁ ATRIBUÍDO e como ATENDIMENTO HUMANO
+                    // 2. Coloca na fila
                     await whatsappModel.updateSession(idRemoto, { 
-                        etapa: 'ATENDIMENTO_HUMANO', 
+                        etapa: 'FILA_ESPERA', 
                         bot_pausado: true,
-                        mostrar_na_fila: true,
-                        nome_agente: FUNCIONARIO_PADRAO 
+                        mostrar_na_fila: true 
                     });
 
-                    // ⭐ [CORREÇÃO CRÍTICA] Atualiza a memória para o io.emit pegar o dado certo
-                    session.nome_agente = FUNCIONARIO_PADRAO;
-                    session.etapa = 'ATENDIMENTO_HUMANO';
-                    session.mostrar_na_fila = true;
-
-                    io.emit('notificacaoChamado', { 
-                        chatId: idRemoto, 
-                        nome: nomeAutor, 
-                        status: 'ATRIBUIDO_AUTO',
-                        atendente: FUNCIONARIO_PADRAO
-                    });
+                    io.emit('notificacaoChamado', { chatId: idRemoto, nome: nomeAutor, status: 'PENDENTE_TI' });
                     
-                    const posicaoFila = (await whatsappModel.contarFila()) + 1; 
-                    respostaBot = MENSAGENS.CONFIRMACAO_FINAL(posicaoFila) + 
-                                  `\n\n👨‍💻 O atendente *${FUNCIONARIO_PADRAO}* já foi notificado.`;
+                    const posicaoFila = (await whatsappModel.contarFila()) + 1; // +1 só visual, pois ele já conta no DB
+                    respostaBot = MENSAGENS.CONFIRMACAO_FINAL(posicaoFila);
                 }
                 // --- AVALIAÇÃO ---
                 else if (session.etapa === 'AVALIACAO_NOTA') {
@@ -294,7 +277,7 @@ export const handleWebhook = async (req, res) => {
                         texto: respostaBot, 
                         fromMe: true,
                         mostrarNaFila: session.etapa === 'FILA_ESPERA' || session.etapa === 'ATENDIMENTO_HUMANO',
-                        nomeAgente: session.nome_agente // <--- CORRIGIDO (estava nomeAgente)
+                        nomeAgente: session.nomeAgente
                     });
                 }
             }
@@ -378,6 +361,14 @@ export const handleSendMessage = async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };
 
+// Localize a função 'enviarMidiaController' no final do arquivo e substitua por esta:
+
+// src/controllers/whatsappController.js
+
+// Em src/controllers/whatsappController.js
+
+// src/controllers/whatsappController.js
+
 export const enviarMidiaController = async (req, res) => {
     // Certifique-se de que 'tipo' está sendo desestruturado do req.body
     const { numero, midia, nomeArquivo, legenda, nomeAgenteTemporario, tipo } = req.body;
@@ -403,6 +394,10 @@ export const enviarMidiaController = async (req, res) => {
         res.status(500).json({ success: false, message: e.message }); 
     }
 };
+
+// Em src/controllers/whatsappController.js
+
+// Em src/controllers/whatsappController.js
 
 export const listarConversas = async (req, res) => { 
     try { 
