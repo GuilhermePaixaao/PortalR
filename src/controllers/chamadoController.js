@@ -2,6 +2,12 @@ import * as ChamadoModel from '../models/chamadoModel.js';
 import * as EmailService from '../services/emailService.js'; 
 
 // ====================================================
+// ======== CONFIGURAÇÕES ========
+// ====================================================
+// Defina aqui o ID do operador Daniel
+const ID_OPERADOR_PADRAO = 4; // <--- Substitua 4 pelo ID real do Daniel se for diferente
+
+// ====================================================
 // ======== FUNÇÕES AUXILIARES (DADOS) ========
 // ====================================================
 
@@ -57,7 +63,8 @@ export const criarChamado = async (req, res) => {
             telefoneRequisitanteManual: telefone_requisitante_manual,
             loja_id: loja ? parseInt(loja) : null,                 
             departamento_id: departamento ? parseInt(departamento) : null,
-            atendenteId: 4
+            // Aqui definimos que o chamado já nasce atribuído ao Daniel
+            atendenteId: ID_OPERADOR_PADRAO 
         };
 
         const novoId = await ChamadoModel.create(dadosParaCriar);
@@ -103,13 +110,11 @@ export const buscarChamadoPorId = async (req, res) => {
         
         if (!chamado) return res.status(404).json({ success: false, message: 'Não encontrado.' });
         
-        // --- [NOVO] Busca os tempos calculados ---
         const tempos = await ChamadoModel.getTemposChamado(id);
-        // ----------------------------------------
 
         const resposta = {
             ...chamado,
-            Tempos: tempos, // Adiciona o objeto com os tempos na resposta
+            Tempos: tempos, 
             Funcionario: { nomeFuncionario: chamado.nomeRequisitante, email: chamado.emailRequisitante, telefone: chamado.telefoneRequisitante },
             Atendente: chamado.atendente_id ? { nomeFuncionario: chamado.nomeAtendente, email: chamado.emailAtendente } : null,
             Categorias: chamado.categoria_unificada_id ? { id: chamado.categoria_unificada_id, nome: chamado.nomeCategoria, nomePai: chamado.nomeCategoriaPai } : null
@@ -134,7 +139,6 @@ export const atualizarStatus = async (req, res) => {
         const { status, atendenteId } = req.body;
         const id = parseInt(req.params.id);
         
-        // ChamadoModel.updateStatus agora já salva no histórico automaticamente
         const result = await ChamadoModel.updateStatus(id, status, atendenteId ? parseInt(atendenteId) : null);
         
         if (result.affectedRows === 0) return res.status(404).json({ success: false });
@@ -183,7 +187,6 @@ export const contarChamadosPorStatus = async (req, res) => {
         });
     } catch (e) { res.status(500).json({ success: false }); }
 };
-// --- NOVOS CONTROLADORES ---
 
 export const atualizarAssunto = async (req, res) => {
     try {
