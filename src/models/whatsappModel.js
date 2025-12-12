@@ -105,3 +105,26 @@ export const buscarMensagens = async (numero, limite = 50) => {
     // Invertemos o array para entregar na ordem cronológica (antiga -> nova) para o chat
     return rows.reverse();
 };
+// ... (mantenha o código anterior)
+
+// [NOVO] Lista apenas conversas que têm registro no banco (para o Histórico Global)
+export const listarChatsComHistorico = async () => {
+    // Essa query pega a sessão e a última mensagem de cada um
+    const sql = `
+        SELECT 
+            s.numero, 
+            s.nome_contato, 
+            s.etapa, 
+            s.nome_agente,
+            m.conteudo as ultima_mensagem,
+            m.created_at as data_ultima_msg
+        FROM whatsapp_sessoes s
+        INNER JOIN whatsapp_mensagens m ON m.id = (
+            SELECT MAX(id) FROM whatsapp_mensagens WHERE remote_jid = s.numero
+        )
+        ORDER BY m.id DESC
+    `;
+    
+    const [rows] = await pool.query(sql);
+    return rows;
+};

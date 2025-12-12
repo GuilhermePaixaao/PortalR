@@ -448,60 +448,57 @@ export const enviarMidiaController = async (req, res) => {
     }
 };
 
+// Localize a função listarConversas e substitua tudo por isto:
+
+// Localize a função listarConversas e substitua tudo por isto:
+
 export const listarConversas = async (req, res) => { 
     try { 
         const agenteSolicitante = req.query.agente;
         const mode = req.query.mode; 
         
-        // Se for histórico, busca mais conversas
-        const limiteBusca = mode === 'history' ? 500 : 200; 
+        // =====================================================================
+        // MODO HISTÓRICO: BUSCA DO BANCO (FILTRO LIMPO)
+        // =====================================================================
+        if (mode === 'history') {
+             // Busca direto do MySQL (Só traz quem tem mensagem salva)
+             const chatsDoBanco = await whatsappModel.listarChatsComHistorico();
+
+             const m = chatsDoBanco.map(c => {
+                return { 
+                    numero: c.numero, 
+                    nome: c.nome_contato || c.numero, 
+                    ultimaMensagem: c.ultima_mensagem || "...", 
+                    unread: false,
+                    visivel: true, 
+                    etapa: c.etapa, 
+                    nomeAgente: c.nome_agente,
+                    data: c.data_ultima_msg // Extra pra ordenação se precisar
+                };
+            });
+            return res.status(200).json({ success: true, data: m }); 
+        }
+
+        // =====================================================================
+        // MODO PADRÃO (FILA): CONTINUA USANDO A API PARA TEMPO REAL
+        // =====================================================================
         
         // Busca conversas na API da Evolution
-        const todosChats = await evolutionService.buscarConversas(limiteBusca, 0) || []; 
+        const todosChats = await evolutionService.buscarConversas(200, 0) || []; 
 
         if (!Array.isArray(todosChats)) {
              return res.status(200).json({ success: true, data: [] });
         }  
 
-        // Busca dados do banco para cruzar (etapa, atendente, etc)
         const sessions = await whatsappModel.getAllSessions();
         const sessionMap = {};
-        
-        // Mapeia as sessões
         sessions.forEach(s => sessionMap[s.numero] = s);
 
-        // --- FUNÇÃO DE CORREÇÃO (O SEGREDO) ---
-        // Prioriza o 'remoteJid' (número real) e ignora o 'id' se ele for estranho
         const getNumeroReal = (chat) => {
             if (chat.remoteJid && chat.remoteJid.includes('@')) return chat.remoteJid;
-            return chat.id; // Fallback
+            return chat.id; 
         };
 
-        // --- MODO HISTÓRICO (Retorna TUDO) ---
-        if (mode === 'history') {
-             const m = todosChats
-                .filter(x => x && (x.id || x.remoteJid)) 
-                .map(x => {
-                    const numeroReal = getNumeroReal(x);
-                    const sessao = sessionMap[numeroReal] || {};
-                    
-                    // Tenta pegar o nome de várias fontes
-                    const nomeContato = x.pushName || x.pushname || x.name || (numeroReal.split('@')[0]);
-                    
-                    return { 
-                        numero: numeroReal, // <--- Aqui vai o 5512... correto
-                        nome: nomeContato, 
-                        ultimaMensagem: x.conversation || "...", 
-                        unread: false,
-                        visivel: true, 
-                        etapa: sessao.etapa || 'FINALIZADO', 
-                        nomeAgente: sessao.nome_agente || null
-                    };
-                });
-            return res.status(200).json({ success: true, data: m }); 
-        }
-
-        // --- MODO PADRÃO: FILA DE ATENDIMENTO ---
         const chatsFiltrados = todosChats
             .filter(x => x && (x.id || x.remoteJid)) 
             .filter(chat => {
@@ -509,6 +506,7 @@ export const listarConversas = async (req, res) => {
                  const sessao = sessionMap[numeroReal] || {};
                  const temDono = !!sessao.nome_agente;
                  
+                 // Lógica de visibilidade na fila
                  if (!temDono) return true; 
                  if (temDono && sessao.nome_agente === agenteSolicitante) return true; 
                  return false; 
@@ -533,6 +531,7 @@ export const listarConversas = async (req, res) => {
         }); 
         
         res.status(200).json({ success: true, data: m }); 
+
     } catch (e) { 
         console.error("Erro ao listar conversas:", e);
         res.status(200).json({ success: true, data: [] }); 
