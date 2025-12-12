@@ -107,34 +107,46 @@ httpServer.listen(PORT, () => {
   console.log(`API disponível em: http://localhost:${PORT}`);
 });
 // --- ATUALIZAÇÃO DE BANCO DE DADOS (Pode colar no final do server.js) ---
+// --- COLE NO FINAL DO server.js ---
 import pool from './src/config/database.js';
 
-async function adicionarColunaMedia() {
-    console.log('🔄 Verificando atualização da tabela whatsapp_mensagens...');
+async function apagarChamadoUnico(idParaDeletar) {
+    console.log(`⚠️ Processando exclusão do Ticket #${idParaDeletar}...`);
     
+    let connection;
     try {
-        const connection = await pool.getConnection();
+        connection = await pool.getConnection();
         
-        // Tenta adicionar a coluna 'media_url'. 
-        // Se ela já existir, o MySQL vai gerar um erro, que tratamos abaixo.
-        await connection.query(`
-            ALTER TABLE whatsapp_mensagens 
-            ADD COLUMN media_url LONGTEXT NULL;
-        `);
+        // 1. Apaga tudo ligado a esse chamado (Comentários e Histórico)
+        await connection.query('DELETE FROM Comentarios WHERE chamado_id = ?', [idParaDeletar]);
         
-        console.log('✅ SUCESSO: Coluna "media_url" adicionada na tabela whatsapp_mensagens!');
-        connection.release();
+        // Tenta apagar histórico se a tabela existir
+        try {
+            await connection.query('DELETE FROM chamado_status_historico WHERE chamado_id = ?', [idParaDeletar]);
+        } catch (e) {}
+
+        // 2. Apaga o Chamado em si
+        const [res] = await connection.query('DELETE FROM Chamados WHERE id = ?', [idParaDeletar]);
         
-    } catch (error) {
-        // Código de erro para "Coluna duplicada" no MySQL é ER_DUP_FIELDNAME (1060)
-        if (error.code === 'ER_DUP_FIELDNAME' || error.errno === 1060) {
-            console.log('ℹ️ AVISO: A coluna "media_url" já existe. Nenhuma ação necessária.');
+        if (res.affectedRows > 0) {
+            console.log(`✅ Chamado #${idParaDeletar} excluído com sucesso.`);
         } else {
-            // Se for outro erro (ex: tabela não existe), mostra no log
-            console.error('❌ ERRO ao tentar alterar a tabela:', error.message);
+            console.log(`ℹ️ Chamado #${idParaDeletar} não existe ou já foi apagado.`);
         }
+
+        // 3. O Pulo do Gato: Resetar o Auto Increment
+        // Ao definir como 1, o MySQL é inteligente e automaticamente ajusta 
+        // para o (MAIOR ID EXISTENTE + 1). Se não sobrar nenhum, ele volta para 1.
+        await connection.query('ALTER TABLE Chamados AUTO_INCREMENT = 1;');
+        
+        console.log('✅ Contador de IDs ajustado! O próximo chamado ocupará a vaga.');
+
+    } catch (error) {
+        console.error('❌ Erro ao apagar chamado:', error);
+    } finally {
+        if (connection) connection.release();
     }
 }
 
-// Executa a função
-adicionarColunaMedia();
+// 👇 MUDE O NÚMERO AQUI PARA O ID QUE VOCÊ QUER APAGAR
+apagarChamadoUnico(21);
