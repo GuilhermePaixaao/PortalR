@@ -72,8 +72,11 @@ export const criarChamado = async (req, res) => {
         
         if (req.io) {
             req.io.emit('novoChamadoInterno', {
-                id: novoChamado.id, assunto: novoChamado.assunto,
-                requisitante: novoChamado.nomeRequisitante || "Alguém", prioridade: novoChamado.prioridade
+                id: novoChamado.id, 
+                assunto: novoChamado.assunto,
+                requisitante: novoChamado.nomeRequisitante || "Alguém",
+                 prioridade: novoChamado.prioridade,
+                targetId: ID_OPERADOR_PADRAO
             });
         }
         if (novoChamado.emailRequisitante) {

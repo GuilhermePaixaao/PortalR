@@ -100,6 +100,20 @@ function removeToast(toast) {
 
 // A. Novo Chamado Interno (Ticket)
 socket.on('novoChamadoInterno', (data) => {
+    // 1. Descobre quem sou eu
+    let myId = null;
+    try {
+        const userData = JSON.parse(localStorage.getItem("userData"));
+        myId = userData?.data?.id || userData?.id;
+    } catch(e) { console.error(e); }
+
+    // 2. [FILTRO] Se a notificação tem um alvo e NÃO SOU EU, ignora.
+    // O ID pode vir como número ou string, por isso usamos "==" para garantir
+    if (data.targetId && data.targetId != myId) {
+        return; // Sai da função silenciosamente
+    }
+
+    // 3. Se passou pelo filtro, exibe o Toast
     const msg = `Ticket #${data.id}: ${data.assunto}\nPor: ${data.requisitante}`;
     showToast('Novo Chamado Aberto!', msg, 'info');
 });
