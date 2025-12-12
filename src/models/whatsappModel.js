@@ -77,13 +77,13 @@ export const getAllSessions = async () => {
 };
 
 // [NOVO] Função para registrar mensagens no histórico
-export const salvarMensagem = async (remoteJid, conteudo, fromMe, messageId = null, tipo = 'text', nomeAutor = null) => {
+export const salvarMensagem = async (remoteJid, conteudo, fromMe, messageId = null, tipo = 'text', nomeAutor = null, mediaUrl = null) => {
     try {
         await pool.query(
             `INSERT INTO whatsapp_mensagens 
-            (remote_jid, message_id, conteudo, from_me, tipo, nome_autor) 
-            VALUES (?, ?, ?, ?, ?, ?)`,
-            [remoteJid, messageId, conteudo, fromMe ? 1 : 0, tipo, nomeAutor]
+            (remote_jid, message_id, conteudo, from_me, tipo, nome_autor, media_url) 
+            VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [remoteJid, messageId, conteudo, fromMe ? 1 : 0, tipo, nomeAutor, mediaUrl]
         );
     } catch (error) {
         console.error("Erro ao salvar mensagem no DB:", error.message);
@@ -93,7 +93,6 @@ export const salvarMensagem = async (remoteJid, conteudo, fromMe, messageId = nu
 
 // [NOVO] Busca o histórico de mensagens do Banco de Dados
 export const buscarMensagens = async (numero, limite = 50) => {
-    // Buscamos as últimas X mensagens ordenadas por ID decrescente (mais novas primeiro)
     const [rows] = await pool.query(
         `SELECT * FROM whatsapp_mensagens 
          WHERE remote_jid = ? 
@@ -101,8 +100,7 @@ export const buscarMensagens = async (numero, limite = 50) => {
          LIMIT ?`, 
         [numero, limite]
     );
-
-    // Invertemos o array para entregar na ordem cronológica (antiga -> nova) para o chat
+    // Invertemos para ordem cronológica (antiga -> nova)
     return rows.reverse();
 };
 // ... (mantenha o código anterior)
