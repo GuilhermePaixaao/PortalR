@@ -7,9 +7,9 @@ import chamadoRouter from './chamadoRouter.js';
 import chatRouter from './chatRouter.js';
 import funcionarioRouter from './funcionarioRouter.js';
 import whatsappRouter from './whatsappRouter.js';
-import organizacaoRouter from './organizacaoRouter.js'; // Confirme se já existe ou se usa direto no server.js
+// organizacaoRouter já está no server.js, pode remover daqui ou manter se tiver outras rotas
 
-// --- (NOVO) IMPORTAR O PDF ROUTER ---
+// --- IMPORTAR O PDF ROUTER ---
 import pdfRouter from './pdfRouter.js';
 
 const router = Router();
@@ -20,10 +20,12 @@ router.use(categoriaRouter);
 router.use(chamadoRouter);
 router.use(chatRouter);
 router.use(funcionarioRouter);
-router.use(whatsappRouter);
-// Se organizacaoRouter estiver aqui, mantenha.
 
-// --- (NOVO) ADICIONAR O PDF ROUTER ---
+// 👇 [CORREÇÃO] Adicionando o prefixo '/api/whatsapp' aqui!
+// Assim, as rotas viram: /api/whatsapp/contacts, /api/whatsapp/status, etc.
+router.use('/api/whatsapp', whatsappRouter);
+
+// PDF Router
 router.use(pdfRouter);
 
 export default router;
