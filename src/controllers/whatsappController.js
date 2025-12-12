@@ -715,7 +715,6 @@ export const enviarMensagemPronta = async (req, res) => {
                 nomeAgente: nomeAgente
             });
         }
-
         res.status(200).json({ success: true });
     } catch (e) {
         console.error(e);
