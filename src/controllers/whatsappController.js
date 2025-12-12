@@ -242,33 +242,33 @@ export const handleWebhook = async (req, res) => {
                     await processarComGroq(session, texto, nomeAutor);
 
                     // ==================================================================
-                    // [MODIFICAÇÃO] ATRIBUIÇÃO AUTOMÁTICA DE ATENDENTE
+                    // [CORRIGIDO] ENVIAR PARA FILA DE ESPERA (SEM ATENDENTE)
                     // ==================================================================
-                    const FUNCIONARIO_PADRAO = "Daniel"; // <--- NOME EXATO DO LOGIN
                     
-                    // 2. Coloca na fila JÁ ATRIBUÍDO e como ATENDIMENTO HUMANO
+                    // 2. Atualiza a sessão para FILA_ESPERA e deixa nome_agente NULL
                     await whatsappModel.updateSession(idRemoto, { 
-                        etapa: 'ATENDIMENTO_HUMANO', 
+                        etapa: 'FILA_ESPERA', 
                         bot_pausado: true,
                         mostrar_na_fila: true,
-                        nome_agente: FUNCIONARIO_PADRAO 
+                        nome_agente: null // <--- Garante que fica sem dono
                     });
 
-                    // ⭐ [CORREÇÃO CRÍTICA] Atualiza a memória para o io.emit pegar o dado certo
-                    session.nome_agente = FUNCIONARIO_PADRAO;
-                    session.etapa = 'ATENDIMENTO_HUMANO';
+                    // Atualiza a memória para o evento de socket
+                    session.etapa = 'FILA_ESPERA';
                     session.mostrar_na_fila = true;
+                    session.nome_agente = null;
 
+                    // Notifica todos os agentes conectados que há um novo chamado na fila
                     io.emit('notificacaoChamado', { 
                         chatId: idRemoto, 
                         nome: nomeAutor, 
-                        status: 'ATRIBUIDO_AUTO',
-                        atendente: FUNCIONARIO_PADRAO
+                        status: 'PENDENTE',
+                        atendente: null
                     });
                     
+                    // Conta posição e responde ao cliente
                     const posicaoFila = (await whatsappModel.contarFila()) + 1; 
-                    respostaBot = MENSAGENS.CONFIRMACAO_FINAL(posicaoFila) + 
-                                  `\n\n👨‍💻 O atendente *${FUNCIONARIO_PADRAO}* já foi notificado.`;
+                    respostaBot = MENSAGENS.CONFIRMACAO_FINAL(posicaoFila);
                 }
                 // --- AVALIAÇÃO ---
                 else if (session.etapa === 'AVALIACAO_NOTA') {
@@ -447,10 +447,6 @@ export const enviarMidiaController = async (req, res) => {
         res.status(500).json({ success: false, message: e.message }); 
     }
 };
-
-// Localize a função listarConversas e substitua tudo por isto:
-
-// Localize a função listarConversas e substitua tudo por isto:
 
 export const listarConversas = async (req, res) => { 
     try { 
@@ -654,7 +650,6 @@ export const criarChamadoDoChat = async (req, res) => {
         res.status(500).json({ success: false, message: e.message }); 
     }
 };
-// ... (mantenha todo o código anterior)
 
 // [NOVO] Lista todos os contatos salvos no banco (Nome e Telefone)
 export const listarContatos = async (req, res) => {
