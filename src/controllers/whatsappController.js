@@ -2,7 +2,7 @@ import * as evolutionService from '../services/evolutionService.js';
 import * as chamadoModel from '../models/chamadoModel.js'; 
 import * as EmailService from '../services/emailService.js'; 
 import * as contatoModel from '../models/contatoModel.js'; 
-import * as whatsappModel from '../models/whatsappModel.js'; // <--- NOVO IMPORT
+import * as whatsappModel from '../models/whatsappModel.js'; 
 import { OpenAI } from 'openai';
 
 // ==================================================
@@ -152,10 +152,20 @@ export const handleWebhook = async (req, res) => {
         contatoModel.salvarContato(idRemoto, nomeAutor).catch(e => console.error("Erro contato:", e.message));
 
         // =================================================================
-        // RECUPERA SESSÃO DO BANCO DE DADOS (Substitui userContext)
+        // RECUPERA SESSÃO DO BANCO DE DADOS
         // =================================================================
         const session = await whatsappModel.findOrCreateSession(idRemoto, nomeAutor);
         
+        // [NOVO] SALVA MENSAGEM DO CLIENTE NO BANCO DE DADOS
+        await whatsappModel.salvarMensagem(
+            idRemoto, 
+            texto || (isImage ? "[Imagem]" : ""), 
+            isFromMe, 
+            idMensagem, 
+            isImage ? 'image' : 'text', 
+            nomeAutor
+        );
+
         io.emit('novaMensagemWhatsapp', { 
             id: idMensagem, 
             chatId: idRemoto, 
@@ -230,18 +240,35 @@ export const handleWebhook = async (req, res) => {
                 else if (session.etapa === 'AGUARDANDO_DESCRICAO') {
                     // 1. IA processa o texto para entender o problema
                     await processarComGroq(session, texto, nomeAutor);
+
+                    // ==================================================================
+                    // [MODIFICAÇÃO] ATRIBUIÇÃO AUTOMÁTICA DE ATENDENTE
+                    // ==================================================================
+                    const FUNCIONARIO_PADRAO = "Daniel"; // <--- NOME EXATO DO LOGIN
                     
-                    // 2. Coloca na fila
+                    // 2. Coloca na fila JÁ ATRIBUÍDO e como ATENDIMENTO HUMANO
                     await whatsappModel.updateSession(idRemoto, { 
-                        etapa: 'FILA_ESPERA', 
+                        etapa: 'ATENDIMENTO_HUMANO', 
                         bot_pausado: true,
-                        mostrar_na_fila: true 
+                        mostrar_na_fila: true,
+                        nome_agente: FUNCIONARIO_PADRAO 
                     });
 
-                    io.emit('notificacaoChamado', { chatId: idRemoto, nome: nomeAutor, status: 'PENDENTE_TI' });
+                    // ⭐ [CORREÇÃO CRÍTICA] Atualiza a memória para o io.emit pegar o dado certo
+                    session.nome_agente = FUNCIONARIO_PADRAO;
+                    session.etapa = 'ATENDIMENTO_HUMANO';
+                    session.mostrar_na_fila = true;
+
+                    io.emit('notificacaoChamado', { 
+                        chatId: idRemoto, 
+                        nome: nomeAutor, 
+                        status: 'ATRIBUIDO_AUTO',
+                        atendente: FUNCIONARIO_PADRAO
+                    });
                     
-                    const posicaoFila = (await whatsappModel.contarFila()) + 1; // +1 só visual, pois ele já conta no DB
-                    respostaBot = MENSAGENS.CONFIRMACAO_FINAL(posicaoFila);
+                    const posicaoFila = (await whatsappModel.contarFila()) + 1; 
+                    respostaBot = MENSAGENS.CONFIRMACAO_FINAL(posicaoFila) + 
+                                  `\n\n👨‍💻 O atendente *${FUNCIONARIO_PADRAO}* já foi notificado.`;
                 }
                 // --- AVALIAÇÃO ---
                 else if (session.etapa === 'AVALIACAO_NOTA') {
@@ -269,15 +296,27 @@ export const handleWebhook = async (req, res) => {
                 }
 
                 if (respostaBot) {
-                    await evolutionService.enviarTexto(idRemoto, respostaBot);
+                    const sentMsg = await evolutionService.enviarTexto(idRemoto, respostaBot);
+                    const botMsgId = sentMsg?.key?.id || 'bot-'+Date.now();
+
+                    // [NOVO] SALVA A RESPOSTA DO BOT NO BANCO
+                    await whatsappModel.salvarMensagem(
+                        idRemoto, 
+                        respostaBot, 
+                        true, // fromMe
+                        botMsgId, 
+                        'text', 
+                        'Bot'
+                    );
+
                     io.emit('novaMensagemWhatsapp', { 
-                        id: 'bot-'+Date.now(), 
+                        id: botMsgId, 
                         chatId: idRemoto, 
                         nome: "Bot", 
                         texto: respostaBot, 
                         fromMe: true,
                         mostrarNaFila: session.etapa === 'FILA_ESPERA' || session.etapa === 'ATENDIMENTO_HUMANO',
-                        nomeAgente: session.nomeAgente
+                        nomeAgente: session.nome_agente 
                     });
                 }
             }
@@ -357,17 +396,21 @@ export const handleSendMessage = async (req, res) => {
       }
 
       const r = await evolutionService.enviarTexto(numero, mensagemFinal);
+      const msgId = r?.key?.id || 'agent-'+Date.now();
+
+      // [NOVO] SALVA MENSAGEM DO ATENDENTE NO BANCO
+      await whatsappModel.salvarMensagem(
+          numero, 
+          mensagemFinal, 
+          true, // fromMe
+          msgId, 
+          'text', 
+          nomeAgenteTemporario || 'Agente'
+      );
+
       res.status(200).json({ success: true, data: r });
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 };
-
-// Localize a função 'enviarMidiaController' no final do arquivo e substitua por esta:
-
-// src/controllers/whatsappController.js
-
-// Em src/controllers/whatsappController.js
-
-// src/controllers/whatsappController.js
 
 export const enviarMidiaController = async (req, res) => {
     // Certifique-se de que 'tipo' está sendo desestruturado do req.body
@@ -388,16 +431,22 @@ export const enviarMidiaController = async (req, res) => {
         // Chama o serviço passando o tipo explicitamente
         const r = await evolutionService.enviarMidia(numero, midia, nomeArquivo, legendaFinal, tipo);
         
+        // [NOVO] SALVA REGISTRO DE MÍDIA NO BANCO
+        await whatsappModel.salvarMensagem(
+            numero, 
+            `[Arquivo: ${tipo}] ${legendaFinal}`, 
+            true, 
+            r?.key?.id, 
+            tipo, 
+            nomeAgenteTemporario || 'Agente'
+        );
+        
         res.status(200).json({ success: true, data: r });
     } catch (e) { 
         console.error("Erro controller midia:", e);
         res.status(500).json({ success: false, message: e.message }); 
     }
 };
-
-// Em src/controllers/whatsappController.js
-
-// Em src/controllers/whatsappController.js
 
 export const listarConversas = async (req, res) => { 
     try { 
@@ -492,44 +541,39 @@ export const listarConversas = async (req, res) => {
 
 export const listarMensagensChat = async (req, res) => {
     const { numero, nomeSolicitante, limit } = req.body; 
+    
     if (!numero) return res.status(400).json({ success: false, message: 'Número obrigatório' });
     
     try {
         const session = await whatsappModel.findOrCreateSession(numero, 'Cliente');
         
-        if (session.nome_agente && limit < 60) {
-             if (session.nome_agente !== nomeSolicitante) {
-                 return res.status(403).json({ success: false, message: "⛔ Permissão negada.", data: [] });
-             }
+        // Verificação de segurança: Se o chat tiver dono, só ele pode ver (exceto Admin se tiver lógica pra isso)
+        if (session.nome_agente && session.nome_agente !== nomeSolicitante) {
+             return res.status(403).json({ success: false, message: "⛔ Permissão negada.", data: [] });
         }
 
         const qtdMensagens = limit || 50;
-        let rawMessages = await evolutionService.buscarMensagensHistorico(numero, qtdMensagens);
-        
-        if (!Array.isArray(rawMessages)) {
-            if (rawMessages?.messages) rawMessages = rawMessages.messages;
-            else if (rawMessages?.data) rawMessages = rawMessages.data;
-            else rawMessages = [];
-        }
 
-        const formattedMessages = rawMessages.map(msg => {
-            let messageObj = msg.message;
-            if (typeof messageObj === 'string') {
-                try { messageObj = JSON.parse(messageObj); } catch (e) { messageObj = {}; }
-            }
-            const content = messageObj?.conversation || messageObj?.extendedTextMessage?.text || messageObj?.imageMessage?.caption || (messageObj?.imageMessage ? "📷 [Imagem]" : null) || "Conteúdo não suportado";
-            const timestamp = msg.messageTimestamp ? (typeof msg.messageTimestamp === 'number' ? msg.messageTimestamp * 1000 : msg.messageTimestamp) : Date.now();
-                
+        // ==========================================================
+        // [MUDANÇA] BUSCA DO BANCO DE DADOS AO INVÉS DA API EXTERNA
+        // ==========================================================
+        const mensagensDoBanco = await whatsappModel.buscarMensagens(numero, qtdMensagens);
+        
+        // Formatamos para o padrão que o seu Frontend já espera
+        const formattedMessages = mensagensDoBanco.map(msg => {
             return {
-                fromMe: msg.key.fromMe,
-                text: content,
-                time: timestamp, 
-                name: msg.pushname || msg.pushName || (msg.key.fromMe ? "Eu" : "Cliente")
+                fromMe: !!msg.from_me, // Converte 0/1 para false/true
+                text: msg.conteudo,
+                time: new Date(msg.created_at).getTime(), // Timestamp em milissegundos
+                name: msg.nome_autor || (msg.from_me ? "Eu" : "Cliente"),
+                type: msg.tipo // Extra: caso queira usar ícones diferentes no front
             };
         });
-        formattedMessages.sort((a, b) => new Date(a.time) - new Date(b.time));
+
         res.status(200).json({ success: true, data: formattedMessages });
+
     } catch (e) {
+        console.error("Erro ao listar histórico do banco:", e);
         res.status(500).json({ success: false, data: [] });
     }
 };
@@ -587,8 +631,7 @@ export const criarChamadoDoChat = async (req, res) => {
             departamento_id: chamado.departamento ? parseInt(chamado.departamento) : null,
             nomeRequisitanteManual: chamado.nome_requisitante_manual || 'Cliente WhatsApp',
             telefoneRequisitanteManual: telefoneFinal, 
-            emailRequisitanteManual: null,
-            atendenteId: chamado.atendente_id ? parseInt(chamado.atendente_id) : null
+            emailRequisitanteManual: null
         };
 
         const novoId = await chamadoModel.create(dadosParaModel);

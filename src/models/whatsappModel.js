@@ -71,8 +71,37 @@ export const resetSession = async (numero) => {
     );
 };
 
-// [ESSA É A FUNÇÃO QUE FALTAVA E ESTÁ CAUSANDO O ERRO]
 export const getAllSessions = async () => {
     const [rows] = await pool.query("SELECT * FROM whatsapp_sessoes");
     return rows;
+};
+
+// [NOVO] Função para registrar mensagens no histórico
+export const salvarMensagem = async (remoteJid, conteudo, fromMe, messageId = null, tipo = 'text', nomeAutor = null) => {
+    try {
+        await pool.query(
+            `INSERT INTO whatsapp_mensagens 
+            (remote_jid, message_id, conteudo, from_me, tipo, nome_autor) 
+            VALUES (?, ?, ?, ?, ?, ?)`,
+            [remoteJid, messageId, conteudo, fromMe ? 1 : 0, tipo, nomeAutor]
+        );
+    } catch (error) {
+        console.error("Erro ao salvar mensagem no DB:", error.message);
+    }
+};
+// ... (mantenha as funções anteriores salvarMensagem, etc)
+
+// [NOVO] Busca o histórico de mensagens do Banco de Dados
+export const buscarMensagens = async (numero, limite = 50) => {
+    // Buscamos as últimas X mensagens ordenadas por ID decrescente (mais novas primeiro)
+    const [rows] = await pool.query(
+        `SELECT * FROM whatsapp_mensagens 
+         WHERE remote_jid = ? 
+         ORDER BY id DESC 
+         LIMIT ?`, 
+        [numero, limite]
+    );
+
+    // Invertemos o array para entregar na ordem cronológica (antiga -> nova) para o chat
+    return rows.reverse();
 };
