@@ -680,7 +680,7 @@ export const enviarMensagemPronta = async (req, res) => {
     const { numero, nomeCliente, nomeAgente } = req.body;
 
     // 👇 EDITE AQUI A SUA MENSAGEM PRONTA
-    const MENSAGEM_PADRAO = `Olá *${nomeCliente}*! 👋\n\nSomos do *Supermercado Rosalina*.\nEstamos entrando em contato para saber se precisa de alguma ajuda hoje?`;
+    const MENSAGEM_PADRAO = `Olá *${nomeCliente}*! 👋\n\nSou o *${nomeAgente}* do *Supermercado Rosalina*.\n Estou entrando em contato devido a uma demanda pendente.`;
 
     try {
         // 1. Envia via Evolution
