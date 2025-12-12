@@ -1526,11 +1526,19 @@
             historyChatTitle.textContent = nome || numero;
             historyMsgsContainer.innerHTML = '<div style="text-align:center; padding:20px;">Carregando mensagens...</div>';
 
+            // [CORREÇÃO] Pegar o nome do usuário logado
+            let meuNome = "";
+            try { 
+                const u = JSON.parse(localStorage.getItem("userData")); 
+                meuNome = u?.data?.nomeFuncionario || "Admin";
+            } catch(e){}
+
             try {
                 const response = await fetch('/api/whatsapp/messages', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ numero: numero, limit: 100 }) 
+                    // [CORREÇÃO] Adicionado nomeSolicitante e limit alto
+                    body: JSON.stringify({ numero: number, limit: 100, nomeSolicitante: meuNome }) 
                 });
                 const json = await response.json();
 
