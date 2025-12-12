@@ -56,7 +56,8 @@ export const criarChamado = async (req, res) => {
             emailRequisitanteManual: email_requisitante_manual,
             telefoneRequisitanteManual: telefone_requisitante_manual,
             loja_id: loja ? parseInt(loja) : null,                 
-            departamento_id: departamento ? parseInt(departamento) : null 
+            departamento_id: departamento ? parseInt(departamento) : null,
+            atendenteId: 4
         };
 
         const novoId = await ChamadoModel.create(dadosParaCriar);

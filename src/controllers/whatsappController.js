@@ -587,7 +587,8 @@ export const criarChamadoDoChat = async (req, res) => {
             departamento_id: chamado.departamento ? parseInt(chamado.departamento) : null,
             nomeRequisitanteManual: chamado.nome_requisitante_manual || 'Cliente WhatsApp',
             telefoneRequisitanteManual: telefoneFinal, 
-            emailRequisitanteManual: null
+            emailRequisitanteManual: null,
+            atendenteId: chamado.atendente_id ? parseInt(chamado.atendente_id) : null
         };
 
         const novoId = await chamadoModel.create(dadosParaModel);
