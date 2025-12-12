@@ -657,23 +657,20 @@ export const criarChamadoDoChat = async (req, res) => {
 // ... (mantenha todo o código anterior)
 
 // [NOVO] Lista todos os contatos salvos no banco (Nome e Telefone)
-// Localize a função listarContatos no final do arquivo e substitua por esta:
-
 export const listarContatos = async (req, res) => {
     try {
-        // AGORA: Busca apenas quem realmente interagiu (tem mensagem recebida)
-        const contatos = await whatsappModel.listarContatosReais();
+        // Pega todos da tabela de sessões
+        const sessions = await whatsappModel.getAllSessions();
         
-        // Formata os dados para o frontend
-        const dadosFormatados = contatos.map(c => ({
-            numero: c.numero,
-            nome: c.nome_contato || "Cliente",
-            ultima_interacao: c.ultima_interacao
+        // Mapeia para ficar bonito pro frontend
+        const contatos = sessions.map(s => ({
+            numero: s.numero,
+            nome: s.nome_contato || "Sem Nome",
+            ultima_interacao: s.updated_at
         }));
 
-        res.status(200).json({ success: true, data: dadosFormatados });
+        res.status(200).json({ success: true, data: contatos });
     } catch (e) {
-        console.error("Erro ao listar contatos reais:", e);
         res.status(500).json({ success: false, message: e.message });
     }
 };
@@ -715,6 +712,7 @@ export const enviarMensagemPronta = async (req, res) => {
                 nomeAgente: nomeAgente
             });
         }
+
         res.status(200).json({ success: true });
     } catch (e) {
         console.error(e);

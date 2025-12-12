@@ -128,22 +128,3 @@ export const listarChatsComHistorico = async () => {
     const [rows] = await pool.query(sql);
     return rows;
 };
-// ... (mantenha as funções anteriores)
-
-// [NOVO] Lista APENAS contatos que enviaram mensagem (from_me = 0)
-export const listarContatosReais = async () => {
-    const sql = `
-        SELECT 
-            s.numero, 
-            s.nome_contato, 
-            MAX(m.created_at) as ultima_interacao
-        FROM whatsapp_sessoes s
-        INNER JOIN whatsapp_mensagens m ON s.numero = m.remote_jid
-        WHERE m.from_me = 0  -- <--- O SEGREDINHO: Só traz se o cliente mandou msg
-        GROUP BY s.numero, s.nome_contato
-        ORDER BY ultima_interacao DESC
-    `;
-    
-    const [rows] = await pool.query(sql);
-    return rows;
-};

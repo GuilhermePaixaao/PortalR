@@ -1,73 +1,67 @@
-import express from 'express';
+import { Router } from 'express';
+import * as WhatsappController from '../controllers/whatsappController.js';
+
+const router = Router();
+
+// Webhook (Evolution chama isso)
+router.post('/api/evolution/webhook', WhatsappController.handleWebhook);
+
+// Frontend chama isso para conectar/gerar QR
+router.get('/api/whatsapp/connect', WhatsappController.connectInstance);
+
+// Frontend chama isso para enviar msg
+router.post('/api/whatsapp/send', WhatsappController.handleSendMessage);
+
+// Frontend chama isso para ver se já está conectado
+router.get('/api/whatsapp/status', WhatsappController.checarStatus);
+
+// Rota para listar conversas (Sidebar)
+router.get('/api/whatsapp/chats', WhatsappController.listarConversas);
+
+// --- [CORREÇÃO] ROTA QUE FALTAVA ---
+// Rota para listar mensagens de um chat específico
+router.post('/api/whatsapp/messages', WhatsappController.listarMensagensChat);
+// -----------------------------------
+
+// Rota para o agente assumir o chamado
+router.post('/api/whatsapp/atender', WhatsappController.atenderAtendimento);
+
+// Rota para finalizar atendimento
+router.post('/api/whatsapp/finalizar', WhatsappController.finalizarAtendimento);
+
+// Rota para transferir atendimento
+router.post('/api/whatsapp/transferir', WhatsappController.transferirAtendimento);
+
+// =========================================================
+// === NOVAS ROTAS (TICKETS) ===
+// =========================================================
+
+// Validar se um ticket existe (Botão Associar)
+router.post('/api/whatsapp/ticket/verificar', WhatsappController.verificarTicket);
+
+// Criar um novo ticket a partir do chat (Botão Criar)
+router.post('/api/whatsapp/ticket/criar', WhatsappController.criarChamadoDoChat);
+
+// =========================================================
+
+// Rota para forçar a configuração do Webhook
+router.get('/api/whatsapp/configure-webhook', WhatsappController.configurarUrlWebhook);
+
+router.post('/api/whatsapp/disconnect', WhatsappController.handleDisconnect);
+router.post('/api/whatsapp/send-media', WhatsappController.enviarMidiaController);
+// Adicione no import lá em cima:
 import { 
-    handleWebhook, 
-    handleSendMessage, 
-    enviarMidiaController,
-    listarConversas, 
-    listarMensagensChat, // <--- Importante estar aqui
-    atenderAtendimento,
-    finalizarAtendimento,
-    transferirAtendimento,
-    verificarTicket,
-    criarChamadoDoChat,
-    handleDisconnect,
-    connectInstance,
-    checarStatus,
-    configurarUrlWebhook,
-    listarContatos,        // <--- NOVO
-    enviarMensagemPronta   // <--- NOVO
+    // ... outros imports ...
+    listarContatos,        // <--- Adicione este
+    enviarMensagemPronta   // <--- E este
 } from '../controllers/whatsappController.js';
 
-const router = express.Router();
+// ... (dentro das definições de rota) ...
 
-// Rotas Webhook e Mensagens
-router.post('/webhook', (req, res) => {
-    const io = req.app.get('socketio');
-    req.io = io;
-    handleWebhook(req, res);
-});
-
-router.post('/send', handleSendMessage);
-router.post('/send-media', enviarMidiaController);
-
-// Rotas de Listagem
-router.get('/chats', listarConversas);
-router.post('/messages', listarMensagensChat); // <--- A rota que estava dando 403 usa isso
-
-// Rotas de Atendimento
-router.post('/atender', (req, res) => {
-    req.io = req.app.get('socketio');
-    atenderAtendimento(req, res);
-});
-
-router.post('/finalizar', finalizarAtendimento);
-
-router.post('/transferir', (req, res) => {
-    req.io = req.app.get('socketio');
-    transferirAtendimento(req, res);
-});
-
-// Rotas de Ticket
-router.post('/ticket/verificar', verificarTicket);
-router.post('/ticket/criar', (req, res) => {
-    req.io = req.app.get('socketio');
-    criarChamadoDoChat(req, res);
-});
-
-// Rotas de Conexão/Instância
-router.post('/disconnect', handleDisconnect);
-router.get('/connect', connectInstance);
-router.get('/status', checarStatus);
-router.get('/configure-webhook', configurarUrlWebhook);
-
-// ============================================================
-// [NOVAS ROTAS] - Adicionadas para a Lista de Contatos
-// ============================================================
-router.get('/contacts', listarContatos); 
-
+// Rotas para a Aba de Contatos (Disparo Ativo)
+router.get('/contacts', listarContatos);
 router.post('/send-template', (req, res) => {
-    req.io = req.app.get('socketio'); 
+    req.io = req.app.get('socketio'); // Injeta o socket
     enviarMensagemPronta(req, res);
 });
-
 export default router;
