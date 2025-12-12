@@ -654,7 +654,71 @@ export const criarChamadoDoChat = async (req, res) => {
         res.status(500).json({ success: false, message: e.message }); 
     }
 };
+// ... (mantenha todo o código anterior)
 
+// [NOVO] Lista todos os contatos salvos no banco (Nome e Telefone)
+export const listarContatos = async (req, res) => {
+    try {
+        // Pega todos da tabela de sessões
+        const sessions = await whatsappModel.getAllSessions();
+        
+        // Mapeia para ficar bonito pro frontend
+        const contatos = sessions.map(s => ({
+            numero: s.numero,
+            nome: s.nome_contato || "Sem Nome",
+            ultima_interacao: s.updated_at
+        }));
+
+        res.status(200).json({ success: true, data: contatos });
+    } catch (e) {
+        res.status(500).json({ success: false, message: e.message });
+    }
+};
+
+// [NOVO] Envia a mensagem pronta (Disparo Ativo)
+export const enviarMensagemPronta = async (req, res) => {
+    const { numero, nomeCliente, nomeAgente } = req.body;
+
+    // 👇 EDITE AQUI A SUA MENSAGEM PRONTA
+    const MENSAGEM_PADRAO = `Olá *${nomeCliente}*! 👋\n\nSomos do *Supermercado Rosalina*.\nEstamos entrando em contato para saber se precisa de alguma ajuda hoje?`;
+
+    try {
+        // 1. Envia via Evolution
+        const r = await evolutionService.enviarTexto(numero, MENSAGEM_PADRAO);
+        const msgId = r?.key?.id || 'ativo-'+Date.now();
+
+        // 2. Salva no Banco de Dados (Para aparecer no histórico)
+        await whatsappModel.salvarMensagem(
+            numero, 
+            MENSAGEM_PADRAO, 
+            true, // fromMe (nós enviamos)
+            msgId, 
+            'text', 
+            nomeAgente || 'Ativo'
+        );
+
+        // 3. Garante que a sessão existe e atualiza a data
+        await whatsappModel.findOrCreateSession(numero, nomeCliente);
+        
+        // 4. Notifica o socket para a mensagem aparecer na tela na hora
+        if(req.io) {
+             req.io.emit('novaMensagemWhatsapp', { 
+                id: msgId, 
+                chatId: numero, 
+                nome: "Eu", 
+                texto: MENSAGEM_PADRAO, 
+                fromMe: true,
+                mostrarNaFila: true, 
+                nomeAgente: nomeAgente
+            });
+        }
+
+        res.status(200).json({ success: true });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, message: "Erro ao enviar." });
+    }
+};
 export const handleDisconnect = async (req, res) => { try { await evolutionService.desconectarInstancia(); res.status(200).json({ success: true }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
 export const connectInstance = async (req, res) => { try { const r = await evolutionService.criarInstancia(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };
 export const checarStatus = async (req, res) => { try { const r = await evolutionService.consultarStatus(); res.status(200).json({ success: true, data: r }); } catch (e) { res.status(500).json({ success: false, message: e.message }); } };

@@ -49,4 +49,19 @@ router.get('/api/whatsapp/configure-webhook', WhatsappController.configurarUrlWe
 
 router.post('/api/whatsapp/disconnect', WhatsappController.handleDisconnect);
 router.post('/api/whatsapp/send-media', WhatsappController.enviarMidiaController);
+// Adicione no import lá em cima:
+import { 
+    // ... outros imports ...
+    listarContatos,        // <--- Adicione este
+    enviarMensagemPronta   // <--- E este
+} from '../controllers/whatsappController.js';
+
+// ... (dentro das definições de rota) ...
+
+// Rotas para a Aba de Contatos (Disparo Ativo)
+router.get('/contacts', listarContatos);
+router.post('/send-template', (req, res) => {
+    req.io = req.app.get('socketio'); // Injeta o socket
+    enviarMensagemPronta(req, res);
+});
 export default router;

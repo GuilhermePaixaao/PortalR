@@ -239,9 +239,14 @@
                 
                 <div id="filaHeader">
                     <span>Fila de Atendimento</span>
-                    <button id="btnGlobalHistory" class="btn-mini-history" title="Ver Histórico de Todas as Conversas">
-                        <i class="fas fa-history"></i>
-                    </button>
+                    <div style="display:flex; gap:5px;">
+                        <button id="btnListaContatos" class="btn-mini-history" title="Lista de Clientes (Disparo Ativo)">
+                            <i class="fas fa-users"></i>
+                        </button>
+                        <button id="btnGlobalHistory" class="btn-mini-history" title="Ver Histórico Global">
+                            <i class="fas fa-history"></i>
+                        </button>
+                    </div>
                 </div>
                 
                 <div id="filaAtendimento">
@@ -430,6 +435,7 @@
         </div>
     </div>
 
+
     <div id="modalPreview" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-title">📎 Enviar Arquivo</div>
@@ -452,7 +458,21 @@
             </div>
         </div>
     </div>
+     <div id="modalContatos" class="modal-overlay">
+    <div class="modal-content" style="width: 500px; height: 600px; padding: 0;">
+        <div style="padding: 15px; border-bottom: 1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+            <div class="modal-title" style="margin:0;">📢 Lista de Clientes</div>
+            <button id="btnFecharContatos" style="background:none; border:none; font-size:1.2rem; cursor:pointer;">&times;</button>
+        </div>
+        
+        <div style="padding: 10px; border-bottom: 1px solid #ddd;">
+            <input type="text" id="inputSearchContatos" class="modal-input" placeholder="Buscar cliente..." style="margin:0;">
+        </div>
 
+        <div id="listaContatosContainer" style="flex: 1; overflow-y: auto; padding: 0;">
+            </div>
+    </div>
+</div>    
     <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
     <script src="js/globalNotification.js"></script>
 
@@ -1729,6 +1749,131 @@
             }
         });
     });
+    // --- REFERÊNCIAS NOVAS ---
+    const btnListaContatos = document.getElementById('btnListaContatos');
+    const modalContatos = document.getElementById('modalContatos');
+    const btnFecharContatos = document.getElementById('btnFecharContatos');
+    const listaContatosContainer = document.getElementById('listaContatosContainer');
+    const inputSearchContatos = document.getElementById('inputSearchContatos');
+
+    let todosContatos = [];
+
+    // Abrir Modal
+    btnListaContatos.addEventListener('click', async () => {
+        modalContatos.style.display = 'flex';
+        listaContatosContainer.innerHTML = '<div style="text-align:center; padding:20px;">Carregando clientes...</div>';
+        
+        try {
+            const res = await fetch('/api/whatsapp/contacts');
+            const json = await res.json();
+            
+            if(json.success) {
+                todosContatos = json.data;
+                renderizarContatos(todosContatos);
+            } else {
+                listaContatosContainer.innerHTML = 'Erro ao carregar.';
+            }
+        } catch(e) {
+            console.error(e);
+            listaContatosContainer.innerHTML = 'Erro de conexão.';
+        }
+    });
+
+    // Fechar Modal
+    btnFecharContatos.addEventListener('click', () => {
+        modalContatos.style.display = 'none';
+    });
+
+    // Buscar
+    inputSearchContatos.addEventListener('input', (e) => {
+        const termo = e.target.value.toLowerCase();
+        const filtrados = todosContatos.filter(c => 
+            c.nome.toLowerCase().includes(termo) || 
+            c.numero.includes(termo)
+        );
+        renderizarContatos(filtrados);
+    });
+
+    // Renderizar Lista
+    function renderizarContatos(lista) {
+        listaContatosContainer.innerHTML = '';
+        if(lista.length === 0) {
+            listaContatosContainer.innerHTML = '<div style="padding:20px; text-align:center;">Nenhum contato encontrado.</div>';
+            return;
+        }
+
+        lista.forEach(c => {
+            const item = document.createElement('div');
+            item.style.padding = '12px';
+            item.style.borderBottom = '1px solid #eee';
+            item.style.display = 'flex';
+            item.style.justifyContent = 'space-between';
+            item.style.alignItems = 'center';
+            item.style.backgroundColor = '#fff';
+
+            // Formata numero
+            const numDisplay = c.numero.replace('@s.whatsapp.net','');
+
+            item.innerHTML = `
+                <div>
+                    <div style="font-weight:bold; color:#333;">${c.nome}</div>
+                    <div style="font-size:0.85rem; color:#666;">${numDisplay}</div>
+                </div>
+                <button class="btn-disparo" style="background-color:#20c997; color:white; border:none; padding:8px 12px; border-radius:5px; cursor:pointer; font-size:0.8rem;">
+                    <i class="fas fa-paper-plane"></i> Enviar Olá
+                </button>
+            `;
+
+            // Clique no botão "Enviar Olá"
+            const btn = item.querySelector('.btn-disparo');
+            btn.addEventListener('click', () => confirmarEnvioMensagemPronta(c));
+
+            listaContatosContainer.appendChild(item);
+        });
+    }
+
+    // Função de Envio
+    async function confirmarEnvioMensagemPronta(contato) {
+        if(!confirm(`Deseja enviar a mensagem padrão para ${contato.nome}?`)) return;
+
+        try {
+            const userData = JSON.parse(localStorage.getItem("userData"));
+            
+            const res = await fetch('/api/whatsapp/send-template', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    numero: contato.numero,
+                    nomeCliente: contato.nome,
+                    nomeAgente: userData?.data?.nomeFuncionario || 'Atendente'
+                })
+            });
+
+            const json = await res.json();
+            if(json.success) {
+                alert("Mensagem enviada com sucesso!");
+                modalContatos.style.display = 'none';
+                
+                // Já abre o chat na tela
+                if(typeof openChat === 'function') {
+                    // Adiciona na lista local para aparecer no topo
+                    if(!AppState.chatList.find(c => c.numero === contato.numero)) {
+                         AppState.chatList.unshift({
+                            numero: contato.numero, 
+                            nome: contato.nome, 
+                            ultimaMensagem: "Você: [Mensagem Pronta]",
+                            visivel: true
+                         });
+                    }
+                    openChat(contato.numero);
+                }
+            } else {
+                alert("Erro ao enviar: " + json.message);
+            }
+        } catch(e) {
+            alert("Erro de conexão.");
+        }
+    }
     </script>
 </body>
 </html>
