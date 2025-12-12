@@ -1526,7 +1526,7 @@
             historyChatTitle.textContent = nome || numero;
             historyMsgsContainer.innerHTML = '<div style="text-align:center; padding:20px;">Carregando mensagens...</div>';
 
-            // [CORREÇÃO] Pegar o nome do usuário logado
+            // 👇 1. PEGA O NOME DO USUÁRIO LOGADO
             let meuNome = "";
             try { 
                 const u = JSON.parse(localStorage.getItem("userData")); 
@@ -1537,8 +1537,12 @@
                 const response = await fetch('/api/whatsapp/messages', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    // [CORREÇÃO] Adicionado nomeSolicitante e limit alto
-                    body: JSON.stringify({ numero: number, limit: 100, nomeSolicitante: meuNome }) 
+                    // 👇 2. ENVIA O NOME SOLICITANTE (A CORREÇÃO É AQUI)
+                    body: JSON.stringify({ 
+                        numero: numero, 
+                        limit: 100,
+                        nomeSolicitante: meuNome 
+                    }) 
                 });
                 const json = await response.json();
 
@@ -1558,11 +1562,14 @@
                     });
                     historyMsgsContainer.scrollTop = historyMsgsContainer.scrollHeight;
                 } else {
-                    historyMsgsContainer.innerHTML = '<div style="color:red; text-align:center;">Erro ao carregar mensagens.</div>';
+                    // Mostra o erro real se houver (ex: Permissão Negada)
+                    console.error(json.message);
+                    historyMsgsContainer.innerHTML = `<div style="color:red; text-align:center;">${json.message || 'Erro ao carregar.'}</div>`;
                 }
 
             } catch (e) {
-                historyMsgsContainer.innerHTML = '<div style="color:red; text-align:center;">Erro ao carregar mensagens.</div>';
+                console.error(e);
+                historyMsgsContainer.innerHTML = '<div style="color:red; text-align:center;">Erro de conexão.</div>';
             }
         }
 
